@@ -1,0 +1,940 @@
+/* ═══════════════════════════════════════════════════════════════
+   VIBES NOVA — تصميم 2026: طبقة الترقية البصرية الشاملة
+   تُحمّل أخيراً فتتفوق على كل الطبقات السابقة.
+   الفكرة: سيدار قيادة داكن فخم + خلفية متدرجة ناعمة + زجاجية
+   + أزرار متوهجة + تفاصيل دقيقة ترفع تجربة الاستخدام.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ───────────────────────────────
+   1) الخلفية العامة — مسح تدرجي ناعم
+   ─────────────────────────────── */
+.app-canvas {
+  background-image:
+    radial-gradient(ellipse 60% 42% at 88% -8%, rgb(99 102 241 / 0.09), transparent 55%),
+    radial-gradient(ellipse 42% 34% at 4% 12%, rgb(45 212 191 / 0.06), transparent 50%),
+    radial-gradient(ellipse 50% 40% at 50% 108%, rgb(139 92 246 / 0.05), transparent 55%),
+    linear-gradient(180deg, var(--color-paper) 0%, var(--color-surface) 100%);
+}
+
+html[data-theme="dark"] .app-canvas {
+  background-image:
+    radial-gradient(ellipse 60% 42% at 88% -8%, rgb(129 140 248 / 0.10), transparent 55%),
+    radial-gradient(ellipse 42% 34% at 4% 12%, rgb(45 212 191 / 0.05), transparent 50%),
+    radial-gradient(ellipse 50% 40% at 50% 108%, rgb(167 139 250 / 0.06), transparent 55%),
+    linear-gradient(180deg, var(--color-paper) 0%, var(--color-surface) 100%);
+}
+
+/* ───────────────────────────────
+   2) السيدار — قطعة القيادة الداكنة
+   ─────────────────────────────── */
+.sidebar-bloom {
+  background:
+    radial-gradient(ellipse 90% 24% at 50% -6%, rgb(129 140 248 / 0.16), transparent 60%),
+    radial-gradient(ellipse 70% 20% at 50% 104%, rgb(45 212 191 / 0.08), transparent 60%),
+    linear-gradient(185deg, #10142b 0%, #0b0f22 46%, #0a0e1e 100%);
+  border: none;
+  border-inline-start: 1px solid rgb(255 255 255 / 0.06);
+  box-shadow:
+    -12px 0 40px rgb(8 10 25 / 0.18),
+    inset -1px 0 0 rgb(255 255 255 / 0.03);
+}
+
+html[data-theme="dark"] .sidebar-bloom {
+  background:
+    radial-gradient(ellipse 90% 24% at 50% -6%, rgb(129 140 248 / 0.14), transparent 60%),
+    linear-gradient(185deg, #0d1226 0%, #090d1c 52%, #080b18 100%);
+  border-inline-start-color: rgb(255 255 255 / 0.04);
+}
+
+.sidebar-header {
+  border-bottom: 1px solid rgb(255 255 255 / 0.07);
+  margin-bottom: 1.125rem;
+  padding-bottom: 1rem;
+}
+
+/* الشعار داخل السيدار الداكن */
+.sidebar-bloom .brand--light .brand-wordmark {
+  color: #f4f6ff;
+  -webkit-text-fill-color: #f4f6ff;
+  letter-spacing: -0.01em;
+}
+
+.sidebar-bloom .brand--light .brand-tagline {
+  color: rgb(196 205 235 / 0.65);
+}
+
+.sidebar-bloom .brand-logo-mark {
+  box-shadow:
+    0 0 0 3px rgb(129 140 248 / 0.22),
+    0 4px 14px rgb(8 10 25 / 0.5);
+}
+
+/* زر الإضافة — تدرج + لمعة */
+.sidebar-cta {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.875rem;
+  padding: 0.6875rem 1rem;
+  background: linear-gradient(135deg, #6366f1 0%, #7c5cf5 55%, #8b5cf6 100%);
+  box-shadow:
+    0 6px 20px rgb(99 102 241 / 0.4),
+    inset 0 1px 0 rgb(255 255 255 / 0.22);
+  letter-spacing: 0.01em;
+}
+
+.sidebar-cta::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgb(255 255 255 / 0.18) 50%, transparent 60%);
+  transform: translateX(120%);
+  transition: transform 0.6s ease;
+}
+
+.sidebar-cta:hover::after {
+  transform: translateX(-120%);
+}
+
+.sidebar-cta:hover {
+  background: linear-gradient(135deg, #5458ee 0%, #7050f2 55%, #7f4ff0 100%);
+  box-shadow: 0 8px 26px rgb(99 102 241 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.22);
+}
+
+/* تسميات الأقسام — شرطة مضيئة */
+.sidebar-bloom .section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgb(160 170 200 / 0.6);
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+}
+
+.sidebar-bloom .section-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgb(255 255 255 / 0.09), transparent);
+}
+
+/* عناصر التنقل */
+.sidebar-bloom .nav-item {
+  position: relative;
+  color: rgb(178 187 214 / 0.82);
+  border-radius: 0.8rem;
+  padding: 0.5rem 0.625rem;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.sidebar-bloom .nav-item:hover {
+  background: rgb(255 255 255 / 0.05);
+  color: #fff;
+  transform: translateX(-2px);
+}
+
+html[dir="ltr"] .sidebar-bloom .nav-item:hover {
+  transform: translateX(2px);
+}
+
+.sidebar-bloom .nav-item-active {
+  background: linear-gradient(90deg, rgb(99 102 241 / 0.22) 0%, rgb(139 92 246 / 0.12) 100%);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgb(129 140 248 / 0.25);
+}
+
+.sidebar-bloom .nav-item-active::before {
+  inset-block: 0.4rem;
+  inset-inline-end: 0;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #a5b4fc 0%, #6366f1 100%);
+  box-shadow: 0 0 10px rgb(129 140 248 / 0.8);
+}
+
+/* أيقونات السيدار — دوائر ملوّنة حية على الداكن */
+.sidebar-bloom .nav-icon-wrap {
+  background: rgb(255 255 255 / 0.06);
+  color: rgb(178 187 214 / 0.9);
+  border-radius: 0.625rem;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.sidebar-bloom .nav-item:hover .nav-icon-wrap {
+  background: rgb(255 255 255 / 0.1);
+  color: #fff;
+}
+
+.sidebar-bloom .nav-item-active .nav-icon-wrap {
+  background: rgb(255 255 255 / 0.12);
+  color: #c7d2fe;
+  box-shadow: 0 0 14px rgb(99 102 241 / 0.35);
+}
+
+/* ألوان الأيقونات داخل السيدار الداكن */
+.sidebar-bloom .icon-chip-indigo { background: rgb(129 140 248 / 0.16); color: #a5b4fc; }
+.sidebar-bloom .icon-chip-violet { background: rgb(167 139 250 / 0.16); color: #c4b5fd; }
+.sidebar-bloom .icon-chip-teal { background: rgb(45 212 191 / 0.14); color: #5eead4; }
+.sidebar-bloom .icon-chip-rose { background: rgb(251 113 133 / 0.15); color: #fda4af; }
+.sidebar-bloom .icon-chip-amber { background: rgb(251 191 36 / 0.14); color: #fcd34d; }
+.sidebar-bloom .icon-chip-sky { background: rgb(56 189 248 / 0.15); color: #7dd3fc; }
+
+.sidebar-bloom .nav-item-active .icon-chip-indigo,
+.sidebar-bloom .nav-item-active .icon-chip-violet,
+.sidebar-bloom .nav-item-active .icon-chip-teal,
+.sidebar-bloom .nav-item-active .icon-chip-rose,
+.sidebar-bloom .nav-item-active .icon-chip-amber,
+.sidebar-bloom .nav-item-active .icon-chip-sky {
+  background: rgb(255 255 255 / 0.13);
+}
+
+/* شارة العدّاد */
+.sidebar-bloom .nav-badge {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  box-shadow: 0 2px 10px rgb(99 102 241 / 0.5);
+}
+
+/* بطاقة المستخدم */
+.sidebar-bloom .sidebar-user {
+  border: 1px solid rgb(255 255 255 / 0.07);
+  background: rgb(255 255 255 / 0.04);
+}
+
+.sidebar-bloom .sidebar-user .text-ink { color: #f4f6ff; }
+.sidebar-bloom .sidebar-user .text-muted { color: rgb(160 170 200 / 0.65); }
+
+.sidebar-bloom .sidebar-user-avatar {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: #fff;
+  box-shadow: 0 0 0 2px rgb(129 140 248 / 0.25), 0 4px 12px rgb(8 10 25 / 0.45);
+  border-radius: 0.75rem;
+}
+
+.sidebar-bloom .sidebar-footer {
+  border-color: rgb(255 255 255 / 0.07);
+}
+
+.sidebar-bloom .sidebar-footer .nav-item {
+  color: rgb(160 170 200 / 0.7);
+}
+
+.sidebar-overlay {
+  background: rgb(8 10 25 / 0.55);
+  backdrop-filter: blur(3px);
+}
+
+/* ───────────────────────────────
+   3) الشريط العلوي — زجاجي محسّن
+   ─────────────────────────────── */
+.topbar-bloom {
+  background: rgb(var(--color-paper-rgb) / 0.78);
+  backdrop-filter: blur(20px) saturate(1.4);
+  border-bottom: 1px solid color-mix(in oklab, var(--color-line) 78%, transparent);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 8px 24px rgb(15 23 42 / 0.04);
+}
+
+.topbar-bloom .topbar-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--color-accent);
+  font-size: 0.625rem;
+}
+
+.topbar-bloom .topbar-eyebrow::before {
+  content: "";
+  width: 1.25rem;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--color-accent), rgb(139 92 246 / 0.8));
+}
+
+.topbar-bloom .topbar-title {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  background: linear-gradient(120deg, var(--color-ink) 30%, var(--color-ink-secondary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* شريحة التاريخ في التوبار */
+.topbar-date-chip {
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--color-line) 85%, transparent);
+  background: color-mix(in oklab, var(--color-surface) 70%, transparent);
+  color: var(--color-muted);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.topbar-icon-btn {
+  border-radius: 0.75rem;
+  background: color-mix(in oklab, var(--color-paper) 88%, transparent);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.topbar-icon-btn:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in oklab, var(--color-accent) 40%, var(--color-line));
+  box-shadow: 0 4px 14px rgb(99 102 241 / 0.16);
+}
+
+/* زر البحث */
+.search-trigger {
+  border-radius: 0.875rem;
+  transition: box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.search-trigger:hover {
+  border-color: color-mix(in oklab, var(--color-accent) 45%, var(--color-line));
+  box-shadow: 0 4px 18px rgb(99 102 241 / 0.14);
+}
+
+/* ───────────────────────────────
+   4) الأزرار — تدرج ولمعة وانبعاث
+   ─────────────────────────────── */
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, #6366f1 0%, #7c5cf5 60%, #8b5cf6 100%);
+  box-shadow:
+    0 3px 12px rgb(99 102 241 / 0.32),
+    inset 0 1px 0 rgb(255 255 255 / 0.18);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+}
+
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 42%, rgb(255 255 255 / 0.16) 50%, transparent 58%);
+  transform: translateX(130%);
+  transition: transform 0.55s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px rgb(99 102 241 / 0.42), inset 0 1px 0 rgb(255 255 255 / 0.2);
+}
+
+.btn-primary:hover:not(:disabled)::after {
+  transform: translateX(-130%);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+html[data-theme="dark"] .btn-primary {
+  background: linear-gradient(135deg, #6d70f4 0%, #8460f6 60%, #9257f2 100%);
+  box-shadow: 0 4px 18px rgb(99 102 241 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.14);
+}
+
+.btn-accent {
+  border-radius: 0.75rem;
+}
+
+.btn-ghost {
+  border-radius: 0.75rem;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 12px rgb(15 23 42 / 0.08);
+}
+
+.btn-danger {
+  border-radius: 0.75rem;
+  box-shadow: 0 3px 12px rgb(197 48 48 / 0.22);
+}
+
+/* ───────────────────────────────
+   5) البطاقات — رفع + حافة مضيئة عند التحويم
+   ─────────────────────────────── */
+.card-premium,
+.content-panel,
+.dash-panel {
+  border-radius: 1.125rem;
+  transition: box-shadow 0.22s ease, border-color 0.22s ease, transform 0.22s ease;
+}
+
+.card-interactive:hover {
+  border-color: color-mix(in oklab, var(--color-accent) 32%, var(--color-line));
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-accent) 14%, transparent),
+    0 8px 28px rgb(15 23 42 / 0.09),
+    0 24px 48px rgb(15 23 42 / 0.08);
+  transform: translateY(-3px);
+}
+
+/* رؤوس الأقسام داخل البطاقات — نقطة لون + عنوان */
+.card-section-title,
+.dash-panel-title,
+.section-header h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+.card-section-title::before,
+.dash-panel-title::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 0.2rem;
+  background: linear-gradient(135deg, var(--color-accent), rgb(139 92 246));
+  box-shadow: 0 0 8px rgb(99 102 241 / 0.45);
+  flex-shrink: 0;
+}
+
+/* ───────────────────────────────
+   6) عناوين الصفحات — شرارة مميزة
+   ─────────────────────────────── */
+.page-head-modern .page-eyebrow,
+.dash-hero-modern .dash-hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.2rem 0.625rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--color-accent) 25%, transparent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-hover);
+}
+
+html[data-theme="dark"] .page-head-modern .page-eyebrow,
+html[data-theme="dark"] .dash-hero-modern .dash-hero-eyebrow {
+  color: var(--color-accent);
+}
+
+.page-head-modern .page-title,
+.dash-hero-modern .dash-hero-modern-title {
+  letter-spacing: -0.03em;
+}
+
+/* ───────────────────────────────
+   7) حقول الإدخال — تركيز متوهج
+   ─────────────────────────────── */
+.input-field {
+  border-radius: 0.75rem;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+/* ── بطاقة الترحيب — لوحة قيادة متدرجة داكنة ── */
+.dash-welcome-card {
+  position: relative;
+  overflow: hidden;
+  border: none;
+  border-radius: 1.375rem;
+  padding: 1.625rem 1.75rem;
+  background:
+    radial-gradient(ellipse 60% 90% at 100% -20%, rgb(129 140 248 / 0.35), transparent 55%),
+    radial-gradient(ellipse 45% 70% at 0% 120%, rgb(45 212 191 / 0.18), transparent 55%),
+    linear-gradient(135deg, #171b3d 0%, #11142e 55%, #0d1027 100%);
+  box-shadow:
+    0 20px 60px rgb(13 16 39 / 0.35),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+  color: #fff;
+}
+
+.dash-welcome-card::before {
+  height: 0;
+  background: none;
+}
+
+.dash-welcome-card::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  bottom: 0;
+  height: 4px;
+  width: 100%;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6 40%, #2dd4bf 80%, transparent);
+  opacity: 0.9;
+}
+
+.dash-welcome-card .dash-hero-modern-title {
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+}
+
+.dash-welcome-card .dash-hero-modern-sub {
+  color: rgb(203 210 240 / 0.78);
+}
+
+.dash-welcome-card .dash-hero-eyebrow {
+  border-color: rgb(255 255 255 / 0.16);
+  background: rgb(255 255 255 / 0.08);
+  color: #c7d2fe;
+}
+
+.dash-welcome-card .btn-ghost {
+  background: rgb(255 255 255 / 0.08);
+  color: #e4e8ff;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  backdrop-filter: blur(6px);
+}
+
+.dash-welcome-card .btn-ghost:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.14);
+  color: #fff;
+  box-shadow: 0 4px 16px rgb(8 10 25 / 0.3);
+}
+
+.dash-welcome-card .dash-status-chip--urgent {
+  border-color: rgb(251 191 36 / 0.35);
+  background: rgb(251 191 36 / 0.12);
+  color: #fcd34d;
+}
+
+.dash-welcome-card .dash-status-chip--calm {
+  border-color: rgb(45 212 191 / 0.35);
+  background: rgb(45 212 191 / 0.12);
+  color: #5eead4;
+}
+
+.input-field:hover:not(:disabled) {
+  border-color: color-mix(in oklab, var(--color-accent) 30%, var(--color-line));
+}
+
+.input-field:focus {
+  border-color: color-mix(in oklab, var(--color-accent) 55%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-accent) 12%, transparent);
+  outline: none;
+}
+
+select.input-field {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 0.75rem center;
+  padding-inline-end: 0.75rem;
+  padding-inline-start: 2rem;
+}
+
+html[dir="ltr"] select.input-field {
+  background-position: right 0.75rem center;
+  padding-inline-start: 0.75rem;
+  padding-inline-end: 2rem;
+}
+
+/* ───────────────────────────────
+   8) الشارات — حبوب ناعمة بنقطة حالة
+   ─────────────────────────────── */
+.badge {
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: inset 0 0 0 1px rgb(15 23 42 / 0.03);
+}
+
+.badge-success { box-shadow: inset 0 0 0 1px rgb(4 120 87 / 0.16); }
+.badge-warning { box-shadow: inset 0 0 0 1px rgb(180 83 9 / 0.16); }
+.badge-danger  { box-shadow: inset 0 0 0 1px rgb(197 48 48 / 0.16); }
+.badge-default { box-shadow: inset 0 0 0 1px rgb(99 102 241 / 0.2); }
+
+/* ───────────────────────────────
+   9) الجداول — صفوف متراقصة برفق
+   ─────────────────────────────── */
+.data-table thead th {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted-light);
+  background: color-mix(in oklab, var(--color-surface) 82%, transparent);
+  backdrop-filter: blur(6px);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.data-table tbody tr {
+  transition: background 0.14s ease;
+}
+
+.data-table tbody tr:hover {
+  background: color-mix(in oklab, var(--color-accent) 4%, transparent);
+}
+
+.data-table tbody td {
+  border-bottom: 1px solid color-mix(in oklab, var(--color-line) 72%, transparent);
+}
+
+.list-row {
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+}
+
+.list-row:hover {
+  border-color: color-mix(in oklab, var(--color-accent) 24%, var(--color-line));
+  background: color-mix(in oklab, var(--color-accent) 3%, transparent);
+}
+
+/* منطقة الرفع — تدرج وحدود حيوية */
+.upload-zone {
+  border-radius: 1.125rem;
+  border: 2px dashed color-mix(in oklab, var(--color-line) 90%, transparent);
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 0%, color-mix(in oklab, var(--color-accent) 5%, transparent), transparent 70%),
+    var(--color-surface);
+  transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.upload-zone:hover,
+.upload-zone-active {
+  border-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
+  box-shadow: 0 6px 24px rgb(99 102 241 / 0.12);
+  transform: translateY(-1px);
+}
+
+.upload-zone .btn-primary {
+  box-shadow: 0 4px 14px rgb(99 102 241 / 0.3);
+}
+
+/* التنبيهات Alert */
+.alert {
+  border-radius: 0.875rem;
+}
+
+/* الترقيم Pagination */
+.pagination-page-btn {
+  transition: background 0.14s ease, color 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease;
+}
+
+.pagination-page-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.pagination-page-btn-active {
+  background: linear-gradient(135deg, var(--color-accent), #8b5cf6);
+  color: #fff;
+  box-shadow: 0 3px 12px rgb(99 102 241 / 0.35);
+  border-color: transparent;
+}
+
+/* ───────────────────────────────
+   10) التبويبات والمرشّحات
+   ─────────────────────────────── */
+.simple-tab {
+  border-radius: 0.75rem;
+  transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.simple-tab-active {
+  background: var(--color-paper);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-accent) 30%, var(--color-line)), 0 3px 12px rgb(99 102 241 / 0.14);
+  color: var(--color-accent-hover);
+}
+
+.filter-chip-active {
+  box-shadow: 0 3px 12px rgb(99 102 241 / 0.28);
+}
+
+/* ───────────────────────────────
+   11) النوافذ المنبثقة والتوست
+   ─────────────────────────────── */
+.modal-overlay {
+  background: rgb(8 10 25 / 0.5);
+  backdrop-filter: blur(6px);
+}
+
+.modal-overlay .card-premium {
+  border-radius: 1.25rem;
+  box-shadow: 0 24px 80px rgb(8 10 25 / 0.35), 0 0 0 1px rgb(255 255 255 / 0.06) inset;
+}
+
+.toast-bloom {
+  border-radius: 1rem;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 12px 40px rgb(8 10 25 / 0.22), inset 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+
+.toast-bloom-success { box-shadow: 0 12px 40px rgb(8 10 25 / 0.22), inset 0 0 0 1px rgb(4 120 87 / 0.3); }
+.toast-bloom-error   { box-shadow: 0 12px 40px rgb(8 10 25 / 0.22), inset 0 0 0 1px rgb(197 48 48 / 0.3); }
+
+/* ───────────────────────────────
+   12) شريط الجوال — حبة زجاجية عائمة
+   ─────────────────────────────── */
+.mobile-tab-bar {
+  inset-inline: 0.875rem;
+  bottom: 0.875rem;
+  width: auto;
+  padding: 0.375rem;
+  border-radius: 1.25rem;
+  border: 1px solid color-mix(in oklab, var(--color-line) 70%, transparent);
+  background: rgb(var(--color-paper-rgb) / 0.82);
+  backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow: 0 12px 40px rgb(8 10 25 / 0.22);
+}
+
+html[data-theme="dark"] .mobile-tab-bar {
+  border-color: rgb(255 255 255 / 0.07);
+}
+
+.mobile-tab-active {
+  color: var(--color-accent);
+}
+
+.mobile-tab-active .mobile-tab-icon {
+  background: var(--color-accent-soft);
+  border-radius: 0.625rem;
+}
+
+.mobile-tab-icon {
+  border-radius: 0.625rem;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.mobile-tab:active .mobile-tab-icon {
+  transform: scale(0.92);
+}
+
+/* مساحة سفلية إضافية للمحتوى فوق الشريط العائم */
+@media (max-width: 1023px) {
+  main.page-enter {
+    padding-bottom: 7.5rem;
+  }
+}
+
+/* ───────────────────────────────
+   13) الزر العائم FAB
+   ─────────────────────────────── */
+.fab {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  box-shadow: 0 10px 32px rgb(99 102 241 / 0.45), inset 0 1px 0 rgb(255 255 255 / 0.25);
+  border: 1px solid rgb(255 255 255 / 0.14);
+}
+
+.fab:hover {
+  box-shadow: 0 14px 40px rgb(99 102 241 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.25);
+}
+
+/* ───────────────────────────────
+   14) KPI — أيقونات متدرجة وميول
+   ─────────────────────────────── */
+.page-kpi-item,
+.dash-kpi-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.page-kpi-item::after,
+.dash-kpi-card::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--color-accent), rgb(139 92 246 / 0.5));
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+
+.page-kpi-item:hover::after,
+.dash-kpi-card:hover::after {
+  opacity: 1;
+}
+
+.dash-kpi-card-featured::after,
+.page-kpi-item-accent::after {
+  opacity: 1;
+  background: linear-gradient(180deg, #6366f1, #2dd4bf);
+}
+
+.dash-kpi-icon {
+  border-radius: 0.875rem;
+}
+
+/* ───────────────────────────────
+   15) الحالات الفارغة والتحميل
+   ─────────────────────────────── */
+.empty-state-icon-wrap {
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(circle at 30% 25%, color-mix(in oklab, var(--color-accent) 12%, transparent), transparent 60%),
+    var(--color-surface);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-line) 80%, transparent);
+}
+
+.skeleton {
+  border-radius: 0.625rem;
+}
+
+.loading-block-spinner {
+  border-radius: 999px;
+}
+
+/* ───────────────────────────────
+   16) التقويم وخلايا التوفر
+   ─────────────────────────────── */
+.avail-day-cell,
+.cal-grid-card [class*="cal-cell"] {
+  transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+}
+
+.avail-day-cell:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgb(15 23 42 / 0.1);
+  z-index: 1;
+}
+
+/* ───────────────────────────────
+   17) شريط التمرير والتفاصيل الدقيقة
+   ─────────────────────────────── */
+.soft-scroll::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.soft-scroll::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--color-muted-light) 36%, transparent);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.soft-scroll::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--color-accent) 45%, transparent);
+  background-clip: padding-box;
+}
+
+.soft-scroll::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-accent) 24%, transparent);
+}
+
+/* روابط تفاعلية أوضح */
+a.text-accent {
+  transition: color 0.14s ease;
+}
+
+/* ───────────────────────────────
+   18) صفحة الدخول — لمسة نهائية
+   ─────────────────────────────── */
+.login-card {
+  border-radius: 1.375rem;
+  box-shadow: 0 24px 80px rgb(8 10 25 / 0.28);
+}
+
+.login-card-accent {
+  height: 4px;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6, #2dd4bf);
+}
+
+/* الجانب التعريفي — لوحة شفق داكنة */
+.login-aside {
+  position: relative;
+  overflow: hidden;
+  border: none;
+  background:
+    radial-gradient(ellipse 80% 50% at 90% -10%, rgb(129 140 248 / 0.35), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 0% 110%, rgb(45 212 191 / 0.22), transparent 55%),
+    linear-gradient(160deg, #151a3a 0%, #0f1229 55%, #0b0e20 100%);
+  color: #fff;
+}
+
+.login-aside::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6 40%, #2dd4bf);
+}
+
+.login-aside .login-aside-title {
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+}
+
+.login-aside .login-aside-desc,
+.login-aside .text-muted,
+.login-aside .text-xs {
+  color: rgb(203 210 240 / 0.72) !important;
+}
+
+.login-aside .login-feature {
+  border-color: rgb(255 255 255 / 0.08);
+  background: rgb(255 255 255 / 0.05);
+  color: rgb(228 232 255 / 0.92);
+  backdrop-filter: blur(4px);
+}
+
+.login-aside .icon-chip-indigo { background: rgb(129 140 248 / 0.2); color: #c7d2fe; }
+.login-aside .icon-chip-teal   { background: rgb(45 212 191 / 0.18);  color: #5eead4; }
+.login-aside .icon-chip-violet { background: rgb(167 139 250 / 0.2); color: #c4b5fd; }
+.login-aside .icon-chip-sky    { background: rgb(56 189 248 / 0.18); color: #7dd3fc; }
+
+.login-aside .brand--light .brand-wordmark {
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+}
+
+.login-aside .brand--light .brand-tagline {
+  color: rgb(196 205 235 / 0.65);
+}
+
+.login-aside .brand-logo-mark {
+  box-shadow: 0 0 0 3px rgb(129 140 248 / 0.25), 0 6px 18px rgb(8 10 25 / 0.5);
+}
+
+/* ───────────────────────────────
+   19) حركات دخول متدرجة للبطاقات
+   ─────────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  .page-enter > * {
+    animation: nova-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .page-enter > *:nth-child(2) { animation-delay: 0.04s; }
+  .page-enter > *:nth-child(3) { animation-delay: 0.08s; }
+  .page-enter > *:nth-child(4) { animation-delay: 0.12s; }
+  .page-enter > *:nth-child(5) { animation-delay: 0.16s; }
+  .page-enter > *:nth-child(n+6) { animation-delay: 0.2s; }
+
+  @keyframes nova-rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* ───────────────────────────────
+   20) الطباعة — نظافة كاملة
+   ─────────────────────────────── */
+@media print {
+  .sidebar-bloom,
+  .topbar-bloom,
+  .mobile-tab-bar,
+  .fab {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+}

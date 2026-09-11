@@ -1,0 +1,225 @@
+/* ═══════════════════════════════════════════════════════
+   VIBES Bloom Pro — Theme engine (dark mode + micro-polish)
+   Loaded last: only overrides CSS variables + adds new
+   presentational utilities. Never redefines component layout.
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  color-scheme: light;
+}
+
+/* Smooth, non-jarring theme switch. Component-specific transitions
+   (buttons, nav items, etc.) keep their own higher-specificity rules. */
+*,
+*::before,
+*::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* ── Dark theme token overrides ──
+   Every variable referenced across the app is redefined here so the
+   existing 4000+ lines of component CSS "just work" in dark mode. */
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-brand: #e8ecf5;
+  --color-brand-hover: #f1f4fa;
+  --color-brand-light: #b6c0d6;
+  --color-brand-soft: #16203a;
+  --color-brand-muted: #232e47;
+
+  --color-accent: #818cf8;
+  --color-accent-hover: #a5b4fc;
+  --color-accent-soft: rgb(129 140 248 / 0.14);
+  --color-accent-muted: #3730a3;
+  --color-accent-glow: rgb(129 140 248 / 0.35);
+
+  --color-violet: #a78bfa;
+  --color-teal: #2dd4bf;
+  --color-rose: #fb7185;
+  --color-amber: #fbbf24;
+  --color-sky: #38bdf8;
+
+  --color-gold: #818cf8;
+  --color-gold-light: #c7d2fe;
+  --color-gold-deep: #c7d2fe;
+
+  --color-sidebar: #0d1424;
+  --color-sidebar-border: #1c2740;
+  --color-sidebar-text: #8b96ac;
+  --color-sidebar-text-active: #f1f4fa;
+
+  --color-surface: #0a0f1c;
+  --color-surface-2: #101828;
+  --color-paper: #131b2e;
+  --color-paper-rgb: 19 27 46;
+  --color-paper-elevated: #16213a;
+
+  --color-ink: #e8ecf5;
+  --color-ink-secondary: #b6c0d6;
+  --color-muted: #8b96ac;
+  --color-muted-light: #64708a;
+
+  --color-line: #212c46;
+  --color-line-strong: #2c3a5c;
+
+  --color-danger: #f87171;
+  --color-danger-soft: rgb(248 113 113 / 0.14);
+  --color-danger-hover: #ef4444;
+  --color-danger-text: #f87171;
+
+  --color-success: #34d399;
+  --color-success-soft: rgb(52 211 153 / 0.14);
+  --color-success-text: #34d399;
+
+  --color-warning: #fbbf24;
+  --color-warning-soft: rgb(251 191 36 / 0.14);
+  --color-warning-text: #fbbf24;
+
+  --color-info: #38bdf8;
+  --color-info-soft: rgb(56 189 248 / 0.14);
+
+  --color-teal-soft: rgb(45 212 191 / 0.14);
+  --color-teal-text: #2dd4bf;
+  --color-amber-soft: rgb(251 191 36 / 0.14);
+  --color-amber-text: #fb923c;
+
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-sm: 0 1px 3px rgb(0 0 0 / 0.35), 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.35);
+  --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.04), 0 4px 16px rgb(0 0 0 / 0.4);
+  --shadow-float: 0 0 0 1px rgb(255 255 255 / 0.05), 0 8px 24px rgb(0 0 0 / 0.45), 0 24px 48px rgb(0 0 0 / 0.5);
+  --shadow-lift: 0 4px 20px rgb(129 140 248 / 0.25);
+  --shadow-gold: 0 4px 20px rgb(129 140 248 / 0.3);
+}
+
+html[data-theme="dark"] .app-canvas {
+  background-image:
+    radial-gradient(ellipse 70% 50% at 100% -15%, rgb(129 140 248 / 0.12), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 0% 100%, rgb(129 140 248 / 0.06), transparent 50%),
+    linear-gradient(180deg, var(--color-surface) 0%, var(--color-surface) 100%);
+}
+
+html[data-theme="dark"] .app-canvas::before {
+  opacity: 0.04;
+}
+
+/* Calendar heat cells + a few remaining literal light-mode accents. */
+html[data-theme="dark"] .cal-cell-v2-heat-1 { background: rgb(129 140 248 / 0.12) !important; }
+html[data-theme="dark"] .cal-cell-v2-heat-2 { background: rgb(129 140 248 / 0.22) !important; }
+html[data-theme="dark"] .cal-cell-v2-heat-3 { background: rgb(129 140 248 / 0.35) !important; }
+html[data-theme="dark"] .cal-cell-v2-heat-4 { background: var(--color-accent) !important; }
+
+html[data-theme="dark"] img:not([data-no-dim]) {
+  filter: brightness(0.92) contrast(1.02);
+}
+
+html[data-theme="dark"] ::selection {
+  background: color-mix(in oklab, var(--color-accent) 45%, black);
+  color: #fff;
+}
+
+/* Scrollbars */
+.soft-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 999px;
+  border: 2px solid transparent;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted-light);
+}
+
+/* ── Theme toggle switch ── */
+.theme-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.375rem;
+  width: 2.375rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-paper);
+  color: var(--color-muted);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.15s;
+}
+
+.theme-toggle:hover {
+  border-color: var(--color-accent-muted);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.theme-toggle:active {
+  transform: scale(0.92);
+}
+
+.theme-toggle svg {
+  position: absolute;
+  transition: opacity 0.25s var(--ease-bloom, ease), transform 0.4s var(--ease-bloom, ease);
+}
+
+.theme-toggle .icon-moon {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.5);
+}
+
+html[data-theme="dark"] .theme-toggle .icon-sun {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.5);
+}
+
+html[data-theme="dark"] .theme-toggle .icon-moon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+/* ── Gradient text / glow utilities ── */
+.text-gradient-accent {
+  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-violet) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glow-ring {
+  box-shadow: 0 0 0 1px rgb(99 102 241 / 0.15), 0 0 24px rgb(99 102 241 / 0.18);
+}
+
+/* ── Colored icon chips (nav groups, KPI icons) ── */
+.icon-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.625rem;
+  flex-shrink: 0;
+}
+
+.icon-chip-indigo { background: rgb(99 102 241 / 0.14); color: var(--color-accent); }
+.icon-chip-violet { background: rgb(139 92 246 / 0.14); color: var(--color-violet); }
+.icon-chip-teal { background: rgb(13 148 136 / 0.14); color: var(--color-teal); }
+.icon-chip-rose { background: rgb(225 29 72 / 0.14); color: var(--color-rose); }
+.icon-chip-amber { background: rgb(217 119 6 / 0.14); color: var(--color-amber); }
+.icon-chip-sky { background: rgb(2 132 199 / 0.14); color: var(--color-sky); }
+
+/* ── Motion-safe fallback ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
+}
