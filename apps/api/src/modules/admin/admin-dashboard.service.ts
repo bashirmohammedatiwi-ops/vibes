@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BookingStatus, KycStatus, PaymentStatus, PropertyStatus } from '@prisma/client';
+import { BookingStatus, ConversationKind, KycStatus, PaymentStatus, PropertyStatus, RequestStatus, OfferStatus, SocialPostStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -31,6 +31,11 @@ export class AdminDashboardService {
       todayCheckIns,
       pendingProviders,
       pendingProviderProperties,
+      pendingRefunds,
+      pendingCancellations,
+      pendingOffers,
+      pendingSocialReports,
+      pendingSupport,
     ] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.property.count(),
@@ -76,6 +81,16 @@ export class AdminDashboardService {
       this.prisma.property.count({
         where: { status: PropertyStatus.PENDING, providerId: { not: null } },
       }),
+      this.prisma.refundRequest.count({ where: { status: RequestStatus.PENDING } }),
+      this.prisma.cancellationRequest.count({ where: { status: RequestStatus.PENDING } }),
+      this.prisma.priceOffer.count({ where: { status: OfferStatus.PENDING } }),
+      this.prisma.socialPost.count({ where: { status: SocialPostStatus.REPORTED } }),
+      this.prisma.conversation.count({
+        where: {
+          kind: ConversationKind.SUPPORT,
+          updatedAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
+        },
+      }),
     ]);
 
     const provinceMap = new Map<string, number>();
@@ -103,6 +118,11 @@ export class AdminDashboardService {
       todayCheckIns,
       pendingProviders,
       pendingProviderProperties,
+      pendingRefunds,
+      pendingCancellations,
+      pendingOffers,
+      pendingSocialReports,
+      pendingSupport,
       recentBookings,
       recentActivities,
     };

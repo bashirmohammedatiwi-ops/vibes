@@ -165,6 +165,7 @@ export type Property = {
   phone?: string | null;
   whatsapp?: string | null;
   featured: boolean;
+  isNew?: boolean;
   amenities: string[];
   tags: string[];
   rules?: string | null;
@@ -209,6 +210,11 @@ export type DashboardStats = {
   todayCheckIns?: number;
   pendingProviders?: number;
   pendingProviderProperties?: number;
+  pendingRefunds?: number;
+  pendingCancellations?: number;
+  pendingOffers?: number;
+  pendingSocialReports?: number;
+  pendingSupport?: number;
   recentBookings: Array<{
     id: string;
     status: string;
@@ -267,6 +273,9 @@ export type AvailabilitySlot = {
 export type Booking = {
   id: string;
   status: string;
+  origin?: "PLATFORM" | "EXTERNAL";
+  guestName?: string | null;
+  guestPhone?: string | null;
   totalPrice: number | string;
   discountAmount?: number | string;
   couponId?: string | null;
@@ -312,6 +321,17 @@ export type ActivityRecord = {
   metadata?: Record<string, unknown> | null;
   createdAt: string;
   user?: { id?: string; name?: string | null; phone: string };
+};
+
+export type HomeSpotlight = {
+  id: string;
+  title: string;
+  imageUrl: string;
+  propertyId: string;
+  height: number;
+  sortOrder: number;
+  isActive: boolean;
+  property?: { id: string; name: string; type: string; slug?: string };
 };
 
 export type Banner = {

@@ -45,6 +45,11 @@ export const BOOKING_STATUS_LABELS: Record<string, string> = {
   DISPUTED: "نزاع",
 };
 
+export const BOOKING_ORIGIN_LABELS: Record<string, string> = {
+  PLATFORM: "تطبيق VIBES",
+  EXTERNAL: "حجز خارجي",
+};
+
 export const ACTIVITY_LABELS: Record<string, string> = {
   "property.create": "إنشاء مكان",
   "property.update": "تحديث مكان",
@@ -76,6 +81,9 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   "payment.review": "مراجعة دفعة",
   "payment.proof": "رفع إثبات دفع",
   "payment.refund": "استرداد دفعة",
+  "refund.approve": "قبول استرداد",
+  "refund.reject": "رفض استرداد",
+  "social.moderate": "مراجعة منشور",
   "banner.create": "إنشاء بانر",
   "banner.update": "تحديث بانر",
   "banner.delete": "حذف بانر",
@@ -134,6 +142,11 @@ export const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
   REVIEW_NEW: "تقييم جديد",
   PROVIDER_REQUEST: "طلب مزود",
   DISPUTE: "نزاع",
+  MESSAGE: "رسالة",
+  OFFER: "عرض سعر",
+  INVOICE: "فاتورة",
+  REFUND_REQUEST: "طلب استرداد",
+  SOCIAL: "تجربة اجتماعية",
   SYSTEM: "نظام",
 };
 
@@ -167,6 +180,9 @@ export function activityEntityHref(entityType: string, entityId?: string | null)
   if (entityType === "banner") return `/banners`;
   if (entityType === "location") return `/locations`;
   if (entityType === "provider") return `/providers/${entityId}`;
+  if (entityType === "conversation") return `/conversations`;
+  if (entityType === "refund") return `/refunds`;
+  if (entityType === "social") return `/social`;
   if (entityType === "settings") return `/settings`;
   return null;
 }

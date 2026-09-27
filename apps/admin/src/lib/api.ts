@@ -222,3 +222,19 @@ export async function downloadCsv(path: string, filename = "export.csv") {
   link.remove();
   URL.revokeObjectURL(url);
 }
+
+export async function openPrintHtml(path: string) {
+  const token = getToken();
+  const headers = new Headers();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  const response = await fetch(`${API_URL}${path}`, { headers });
+  if (!response.ok) throw new Error("تعذر فتح الفاتورة للطباعة");
+  const html = await response.text();
+  const popup = window.open("", "_blank");
+  if (!popup) throw new Error("اسمح بالنوافذ المنبثقة لطباعة الفاتورة");
+  popup.document.write(html);
+  popup.document.close();
+  popup.focus();
+  popup.print();
+}

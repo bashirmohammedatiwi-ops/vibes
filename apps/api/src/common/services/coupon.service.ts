@@ -89,4 +89,40 @@ export class CouponService {
       data: { couponId, bookingId, userId, discountAmount: discount },
     });
   }
+
+  /**
+   * Promotional coupons only (non-empty description). Secret partner codes
+   * stay hidden when the admin leaves the description blank.
+   */
+  async listPublic(propertyType?: PropertyType) {
+    const now = new Date();
+    const rows = await this.prisma.coupon.findMany({
+      where: {
+        isActive: true,
+        NOT: { description: '' },
+        AND: [
+          { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+          { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+        ],
+      },
+      include: { property: { select: { id: true, name: true } } },
+      orderBy: { expiresAt: 'asc' },
+      take: 40,
+    });
+
+    return rows
+      .filter((coupon) => coupon.maxUses == null || coupon.usedCount < coupon.maxUses)
+      .filter((coupon) => !propertyType || coupon.appliesToTypes.length === 0 || coupon.appliesToTypes.includes(propertyType))
+      .slice(0, 20)
+      .map((coupon) => ({
+        code: coupon.code,
+        description: coupon.description,
+        discountType: coupon.discountType,
+        discountValue: Number(coupon.discountValue),
+        minBookingTotal: coupon.minBookingTotal == null ? null : Number(coupon.minBookingTotal),
+        expiresAt: coupon.expiresAt,
+        appliesToTypes: coupon.appliesToTypes,
+        property: coupon.property,
+      }));
+  }
 }

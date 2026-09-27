@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { BookingStatus, PaymentMethod, PaymentStatus, Prisma, PropertyType, ShiftType, UserRole } from '@prisma/client';
+import { BookingOrigin, BookingStatus, PaymentMethod, PaymentStatus, Prisma, PropertyType, ShiftType, UserRole } from '@prisma/client';
 import { ActivityLogService } from '../../common/services/activity-log.service';
 import { CouponService } from '../../common/services/coupon.service';
 import { NotificationService } from '../../common/services/notification.service';
@@ -45,10 +45,15 @@ export class AdminBookingsService {
 
     if (query.status) where.status = query.status as BookingStatus;
     if (query.propertyId) where.propertyId = query.propertyId;
+    if (query.origin === 'EXTERNAL' || query.origin === 'PLATFORM') {
+      where.origin = query.origin as BookingOrigin;
+    }
     if (query.q) {
       where.OR = [
         { user: { phone: { contains: query.q } } },
         { user: { name: { contains: query.q, mode: 'insensitive' } } },
+        { guestName: { contains: query.q, mode: 'insensitive' } },
+        { guestPhone: { contains: query.q } },
         { property: { name: { contains: query.q, mode: 'insensitive' } } },
       ];
     }
@@ -392,15 +397,17 @@ export class AdminBookingsService {
       this.prisma.booking.count({ where: { status: BookingStatus.PENDING } }),
       this.prisma.booking.count({ where: { status: BookingStatus.CONFIRMED } }),
       this.prisma.booking.count({ where: { status: BookingStatus.COMPLETED } }),
+      this.prisma.booking.count({ where: { origin: BookingOrigin.EXTERNAL } }),
       this.prisma.booking.aggregate({
         where: { status: { in: [BookingStatus.CONFIRMED, BookingStatus.COMPLETED] } },
         _sum: { totalPrice: true },
       }),
-    ]).then(([total, pending, confirmed, completed, revenue]) => ({
+    ]).then(([total, pending, confirmed, completed, external, revenue]) => ({
       total,
       pending,
       confirmed,
       completed,
+      external,
       revenue: revenue._sum.totalPrice ?? 0,
     }));
   }

@@ -199,6 +199,19 @@ export default function PropertiesPageContent() {
     }
   }
 
+  async function toggleNew(item: Property) {
+    try {
+      await api(`/api/admin/properties/${item.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isNew: !item.isNew }),
+      });
+      toast(item.isNew ? "أُزيل من الجديدة" : "ظهرت ضمن الجديدة");
+      await load();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "تعذر التحديث", "error");
+    }
+  }
+
   function FeaturedStar({ item }: { item: Property }) {
     return (
       <button
@@ -218,6 +231,15 @@ export default function PropertiesPageContent() {
   function PropertyActions({ item }: { item: Property }) {
     return (
       <div className="flex flex-wrap gap-2">
+        {(item.type === "FARM" || item.type === "HALL") && (
+          <Button
+            variant={item.isNew ? "primary" : "ghost"}
+            className="px-2 py-1 text-xs"
+            onClick={() => toggleNew(item)}
+          >
+            {item.isNew ? "جديدة" : "تفعيل جديدة"}
+          </Button>
+        )}
         <Link href={`/properties/${item.id}/edit`}>
           <Button variant="ghost" className="px-2 py-1 text-xs">تعديل</Button>
         </Link>
@@ -263,7 +285,7 @@ export default function PropertiesPageContent() {
         }
       />
 
-      <HelpTip>اضغط على أي مكان للتعديل — النجمة تميّز المكان في التطبيق</HelpTip>
+      <HelpTip>النجمة تميّز المكان. «تفعيل جديدة» على المزرعة أو القاعة يظهرها في قسم الجديدة بالصفحة الرئيسية.</HelpTip>
 
       <ContentPanel>
         {selected.size > 0 && (

@@ -19,6 +19,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import {
   ACTIVITY_LABELS,
+  BOOKING_ORIGIN_LABELS,
   BOOKING_STATUS_LABELS,
   KYC_STATUS_LABELS,
   PROPERTY_STATUS_LABELS,
@@ -35,6 +36,8 @@ type ProviderDetail = {
     verified: boolean;
     kycStatus: string;
     rejectionReason?: string | null;
+    requestNote?: string;
+    placeTypes?: string;
     createdAt: string;
     user?: { id: string; name?: string | null; phone: string; isActive: boolean; createdAt: string };
     _count?: { properties: number };
@@ -53,9 +56,21 @@ type ProviderDetail = {
     confirmedBookings: number;
     bookingsByStatus: Array<{ status: string; count: number }>;
   };
+  coverage?: {
+    days: number;
+    propertyCount: number;
+    totalSlots: number;
+    platformDays: number;
+    externalDays: number;
+    closedDays: number;
+    openDays: number;
+  };
   recentBookings: Array<{
     id: string;
     status: string;
+    origin?: string;
+    guestName?: string | null;
+    guestPhone?: string | null;
     startDate: string;
     totalPrice: number | string;
     property?: { name: string };
@@ -130,8 +145,14 @@ export default function ProviderDetailPage() {
     );
   }
 
-  const { provider, properties, stats, recentBookings, recentActivities } = data;
+  const { provider, properties, stats, recentBookings, recentActivities, coverage } = data;
   const pendingBookings = stats.bookingsByStatus.find((s) => s.status === "PENDING")?.count ?? 0;
+  const placeTypes = (provider.placeTypes ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => PROPERTY_TYPE_LABELS[item as keyof typeof PROPERTY_TYPE_LABELS] ?? item)
+    .join(" · ");
 
   return (
     <PageShell>
@@ -178,6 +199,20 @@ export default function ProviderDetailPage() {
         ]}
       />
 
+      {coverage && (
+        <div className="mt-4">
+          <StatStrip
+            stats={[
+              { label: "أيام غير مسجّلة (30 يوماً)", value: coverage.openDays, accent: coverage.openDays > 0, icon: <IconCalendar className="h-5 w-5" /> },
+              { label: "حجوزات التطبيق", value: coverage.platformDays, icon: <IconCalendar className="h-5 w-5" /> },
+              { label: "حجوزات خارجية", value: coverage.externalDays, icon: <IconWallet className="h-5 w-5" /> },
+              { label: "أيام مغلقة", value: coverage.closedDays, icon: <IconBuilding className="h-5 w-5" /> },
+            ]}
+          />
+          <p className="mt-2 text-sm text-muted">كل يوم غير مسجّل يظهر متاحاً للضيوف. ذكّر المالك بتسجيل الحجوزات الخارجية من تطبيقه.</p>
+        </div>
+      )}
+
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card padded={false} className="overflow-hidden">
@@ -210,7 +245,7 @@ export default function ProviderDetailPage() {
               ]}
               rows={properties}
               rowKey={(p) => p.id}
-              empty={<EmptyState title="لا أماكن بعد" description="لم يرفع المزود أي مكان" />}
+              empty={<EmptyState title="لا أماكن بعد" description="المالك يضيف البيانات فقط — التصوير من مسؤولية الفريق" />}
             />
           </Card>
 
@@ -229,7 +264,12 @@ export default function ProviderDetailPage() {
                     </Link>
                   ),
                 },
-                { key: "customer", header: "العميل", cell: (b) => b.user?.name ?? b.user?.phone ?? "—" },
+                { key: "customer", header: "العميل", cell: (b) => (
+                  <span>
+                    {b.user?.name ?? b.guestName ?? b.user?.phone ?? b.guestPhone ?? "—"}
+                    {b.origin === "EXTERNAL" ? ` · ${BOOKING_ORIGIN_LABELS.EXTERNAL}` : ""}
+                  </span>
+                ) },
                 { key: "date", header: "التاريخ", cell: (b) => formatShortDayAr(b.startDate) },
                 {
                   key: "status",
@@ -269,6 +309,17 @@ export default function ProviderDetailPage() {
                 <dt className="text-muted">تاريخ التسجيل</dt>
                 <dd>{formatShortDayAr(provider.createdAt)}</dd>
               </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted">النوع</dt>
+                <dd>{placeTypes || "—"}</dd>
+              </div>
+              {provider.requestNote ? (
+                <div className="flex justify-between gap-2">
+                  <dt className="text-muted">ملاحظة الطلب</dt>
+                  <dd className="text-left">{provider.requestNote}</dd>
+                </div>
+              ) : null}
+              <p className="pt-2 text-xs text-muted">الصور يرفعها فريق VIBES من صفحة المكان بعد الزيارة. المالك يدير الحجوزات الخارجية من تطبيقه.</p>
             </dl>
           </Card>
 

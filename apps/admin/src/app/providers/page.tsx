@@ -20,11 +20,11 @@ import { PageShell } from "@/components/page-shell";
 import { IconUsers } from "@/components/nav-icons";
 import { PhoneActions } from "@/components/phone-actions";
 import { useToast } from "@/components/ui/toast";
-import { KYC_STATUS_LABELS } from "@/lib/constants";
+import { KYC_STATUS_LABELS, PROPERTY_TYPE_LABELS } from "@/lib/constants";
 import { PaginationBar } from "@/components/pagination-bar";
 import { api, buildQuery } from "@/lib/api";
 import { useCsvExport } from "@/lib/use-csv-export";
-import type { Paginated } from "@/lib/types";
+import type { Paginated, PropertyType } from "@/lib/types";
 
 type Provider = {
   id: string;
@@ -32,9 +32,21 @@ type Provider = {
   verified: boolean;
   kycStatus: string;
   rejectionReason?: string | null;
+  requestNote?: string;
+  placeTypes?: string;
   user?: { id: string; name?: string; phone: string };
   _count?: { properties: number };
 };
+
+function placeTypesLabel(value?: string) {
+  if (!value) return "";
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => PROPERTY_TYPE_LABELS[item as PropertyType] ?? item)
+    .join(" · ");
+}
 
 export default function ProvidersPage() {
   const { toast } = useToast();
@@ -141,7 +153,7 @@ export default function ProvidersPage() {
     <PageShell>
       <PageHeader
         title="المزودون"
-        description="وافق على حساب صاحب المكان ليتمكن من الرفع من التطبيق لاحقاً"
+        description="راجع طلبات أصحاب المزارع والقاعات. بعد الموافقة يُدار التقويم من تطبيقهم، والصور يرفعها الفريق."
         eyebrow="VIBES Admin"
         onRefresh={load}
         refreshing={loading}
@@ -156,7 +168,7 @@ export default function ProvidersPage() {
         }
       />
 
-      <HelpTip>صاحب المزرعة أو القاعة يسجّل من التطبيق. بعد موافقتك يمكنه رفع الصور والمعلومات، وأنت تنشر للعامة.</HelpTip>
+      <HelpTip>المالك لا يرفع صور المكان. بعد موافقتك يفتح له تطبيق الإدارة لتسجيل الحجوزات الخارجية حتى يظهر التوفر الحقيقي. فريق VIBES يصور المكان عند النشر.</HelpTip>
 
       <StatStrip
         stats={[
@@ -196,6 +208,8 @@ export default function ProvidersPage() {
                   <span dir="ltr">{item.user?.phone}</span>
                   {" · "}
                   {item._count?.properties ?? 0} مكان
+                  {placeTypesLabel(item.placeTypes) ? ` · ${placeTypesLabel(item.placeTypes)}` : ""}
+                  {item.requestNote ? ` · ${item.requestNote}` : ""}
                   {item.kycStatus === "REJECTED" && item.rejectionReason && (
                     <span className="mt-1 block text-danger">سبب الرفض: {item.rejectionReason}</span>
                   )}
@@ -226,6 +240,7 @@ export default function ProvidersPage() {
                 ),
               },
               { key: "props", header: "الأماكن", cell: (item) => item._count?.properties ?? 0 },
+              { key: "types", header: "النوع", cell: (item) => placeTypesLabel(item.placeTypes) || "—" },
               {
                 key: "kyc",
                 header: "التحقق",
@@ -257,7 +272,7 @@ export default function ProvidersPage() {
       <ConfirmDialog
         open={!!rejectId}
         title="رفض الحساب"
-        message="اكتب سبباً واضحاً. لن يتمكن المزود من رفع أماكن حتى توافق لاحقاً."
+        message="اكتب سبباً واضحاً. لن يتمكن المالك من إدارة الحجوزات حتى توافق لاحقاً."
         confirmLabel="رفض"
         danger
         confirmDisabled={!rejectReason.trim()}
@@ -273,7 +288,7 @@ export default function ProvidersPage() {
       <ConfirmDialog
         open={!!revokeId}
         title="إلغاء التوثيق"
-        message="سيعود الحساب لحالة المراجعة ولن يتمكن من رفع أماكن جديدة. أماكنه المنشورة تبقى كما هي."
+        message="سيعود الحساب لحالة المراجعة. أماكنه المنشورة تبقى كما هي، ولن يدخل بوابة الإدارة حتى توافق مجدداً."
         confirmLabel="إلغاء التوثيق"
         danger
         onConfirm={revoke}

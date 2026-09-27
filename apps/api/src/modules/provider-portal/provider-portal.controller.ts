@@ -8,8 +8,10 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { UserRole } from '@prisma/client';
+import { ApiBearerAuth, ApiProperty, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
+import { ShiftType, UserRole } from '@prisma/client';
+import { Type } from 'class-transformer';
+import { IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
 import { AuthUser, CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { AdminAvailabilityService } from '../admin/admin-availability.service';
@@ -17,6 +19,58 @@ import { AdminPricingService } from '../admin/admin-pricing.service';
 import { AdminPriceRuleDto } from '../admin/dto/admin-property.dto';
 import { ClearAvailabilityDto, BulkAvailabilityDto } from '../admin/dto/admin-property.dto';
 import { ProviderPortalService } from './provider-portal.service';
+
+class CreateExternalBookingDto {
+  @ApiProperty()
+  @IsUUID()
+  propertyId!: string;
+
+  @ApiProperty({ example: '2026-09-20' })
+  @IsString()
+  startDate!: string;
+
+  @ApiPropertyOptional({ example: '2026-09-21' })
+  @IsOptional()
+  @IsString()
+  endDate?: string;
+
+  @ApiPropertyOptional({ enum: ShiftType })
+  @IsOptional()
+  @IsEnum(ShiftType)
+  shift?: ShiftType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  guestName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  guestPhone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  guests?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  totalPrice?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(400)
+  notes?: string;
+}
 
 @ApiTags('provider-portal')
 @ApiBearerAuth()
@@ -52,6 +106,16 @@ export class ProviderPortalController {
   @Get('bookings/:id')
   bookingDetail(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.portal.bookingDetail(user, id);
+  }
+
+  @Post('external-bookings')
+  createExternal(@CurrentUser() user: AuthUser, @Body() dto: CreateExternalBookingDto) {
+    return this.portal.createExternal(user, dto);
+  }
+
+  @Patch('bookings/:id/cancel')
+  cancelExternal(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.portal.cancelExternal(user, id);
   }
 
   @Get('properties/:id/pricing-rules')

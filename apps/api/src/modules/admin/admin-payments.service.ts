@@ -5,6 +5,7 @@ import { NotificationService } from '../../common/services/notification.service'
 import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { PaginationService } from '../../common/services/query-helpers';
 import { PrismaService } from '../../prisma/prisma.service';
+import { MarketplaceLifecycleService } from '../marketplace/marketplace-lifecycle.service';
 
 function proofPublicUrl(filename: string) {
   const base = (process.env.MEDIA_PUBLIC_URL ?? 'http://localhost:3000/media').replace(/\/$/, '');
@@ -18,6 +19,7 @@ export class AdminPaymentsService {
     private readonly pagination: PaginationService,
     private readonly activity: ActivityLogService,
     private readonly notifications: NotificationService,
+    private readonly lifecycle: MarketplaceLifecycleService,
   ) {}
 
   async list(query: Record<string, string | undefined>) {
@@ -117,6 +119,7 @@ export class AdminPaymentsService {
         entityType: 'payment',
         entityId: id,
       });
+      await this.lifecycle.afterPaymentConfirmed(payment.bookingId);
     }
 
     await this.activity.log({
@@ -191,6 +194,8 @@ export class AdminPaymentsService {
       entityId: id,
       metadata: { reason: adminNote.trim() },
     });
+
+    await this.lifecycle.afterPaymentRefunded(payment.bookingId, adminNote);
 
     return updated;
   }

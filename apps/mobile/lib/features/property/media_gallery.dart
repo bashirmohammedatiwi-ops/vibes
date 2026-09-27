@@ -1,11 +1,13 @@
+import 'dart:ui';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/vibes_net_image.dart';
 import '../../shared/models/models.dart';
-import '../../shared/widgets/vibes_widgets.dart';
 
 /// ═══════════════════════════════════════════════════════════
 /// المعرض — صور + فيديو + جولات 360° بترقيم أنيق
@@ -36,10 +38,8 @@ class _MediaGalleryState extends State<MediaGallery> {
       PageRouteBuilder<void>(
         opaque: false,
         transitionDuration: VibesMotion.slow,
-        pageBuilder: (_, __, ___) => _GalleryFullscreen(
-          items: widget.items,
-          initialIndex: _index,
-        ),
+        pageBuilder: (_, __, ___) =>
+            _GalleryFullscreen(items: widget.items, initialIndex: _index),
         transitionsBuilder: (_, animation, __, child) =>
             FadeTransition(opacity: animation, child: child),
       ),
@@ -88,36 +88,73 @@ class _MediaGalleryState extends State<MediaGallery> {
                   return AnimatedContainer(
                     duration: VibesMotion.fast,
                     margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: active ? 18 : 6,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: active
-                          ? GoldColors.gold
-                          : Colors.white.withValues(alpha: .45),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
+                    width: active ? 20 : 8,
+                    height: 2,
+                    color: active
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: .45),
                   );
                 }),
               ),
             ),
 
-          // عدّاد أنيق
+          // عدّاد + شارات الوسائط
           Positioned(
             top: 12,
             left: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: .45),
-                borderRadius: BorderRadius.circular(VibesRadius.pill),
+            child: ClipPath(
+              clipper: const ShapeBorderClipper(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(8),
+                    topRight: Radius.circular(2),
+                    bottomRight: Radius.circular(8),
+                    bottomLeft: Radius.circular(8),
+                  ),
+                ),
               ),
-              child: Text(
-                '${_index + 1} / ${widget.items.length}',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: .38),
+                  ),
+                  child: Text(
+                    '${_index + 1} / ${widget.items.length}',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
                     ),
+                  ),
+                ),
               ),
+            ),
+          ),
+          // شارة نوع الوسيط الحالي
+          Positioned(
+            top: 12,
+            right: 52,
+            child: Builder(
+              builder: (context) {
+                final kind = widget.items[_index];
+                if (kind.kind == MediaKind.panorama) {
+                  return _MediaChip(
+                    icon: Icons.threed_rotation_rounded,
+                    label: 'جولة 360°',
+                  );
+                }
+                if (kind.isVideo) {
+                  return _MediaChip(
+                    icon: Icons.videocam_rounded,
+                    label: 'فيديو',
+                  );
+                }
+                return const SizedBox.shrink();
+              },
             ),
           ),
         ],
@@ -150,8 +187,9 @@ class _MediaPageState extends State<_MediaPage> {
       setState(() {});
       return;
     }
-    final controller =
-        VideoPlayerController.networkUrl(Uri.parse(widget.media.url));
+    final controller = VideoPlayerController.networkUrl(
+      Uri.parse(widget.media.url),
+    );
     try {
       await controller.initialize();
       await controller.setLooping(true);
@@ -163,9 +201,9 @@ class _MediaPageState extends State<_MediaPage> {
       await controller.play();
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تعذّر تشغيل الفيديو')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('تعذّر تشغيل الفيديو')));
       }
     }
   }
@@ -188,25 +226,26 @@ class _MediaPageState extends State<_MediaPage> {
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: Colors.black45,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: GoldColors.gold, width: 1),
+                    border: Border.all(color: Vibes.coral, width: 1),
                   ),
-                  child: const Icon(Icons.threed_rotation_rounded,
-                      color: GoldColors.gold, size: 30),
+                  child: const Icon(
+                    Icons.threed_rotation_rounded,
+                    color: Vibes.coral,
+                    size: 30,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.black45,
-                    borderRadius: BorderRadius.circular(VibesRadius.pill),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 5,
                   ),
+                  decoration: const BoxDecoration(color: Colors.black45),
                   child: Text(
                     'جولة 360° — اسحب للاستكشاف',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelSmall?.copyWith(color: Colors.white),
                   ),
                 ),
               ],
@@ -230,10 +269,7 @@ class _MediaPageState extends State<_MediaPage> {
               ),
             )
           else if (media.posterUrl != null)
-            CachedNetworkImage(
-              imageUrl: media.posterUrl!,
-              fit: BoxFit.cover,
-            )
+            VibesNetImage(url: media.posterUrl!, fit: BoxFit.cover)
           else
             Container(color: VibesTheme.surfaceHighOf(context)),
           // زر تشغيل ذهبي
@@ -243,17 +279,19 @@ class _MediaPageState extends State<_MediaPage> {
                 : GestureDetector(
                     onTap: _playVideo,
                     child: Container(
-                      padding: const EdgeInsets.all(18),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: .45),
-                        shape: BoxShape.circle,
                         border: Border.all(
-                          color: GoldColors.gold.withValues(alpha: .8),
+                          color: Vibes.coral.withValues(alpha: .8),
                           width: 1.2,
                         ),
                       ),
-                      child: const Icon(Icons.play_arrow_rounded,
-                          color: GoldColors.gold, size: 38),
+                      child: const Icon(
+                        Icons.play_arrow_rounded,
+                        color: Vibes.coral,
+                        size: 38,
+                      ),
                     ),
                   ),
           ),
@@ -261,13 +299,7 @@ class _MediaPageState extends State<_MediaPage> {
       );
     }
 
-    return CachedNetworkImage(
-      imageUrl: media.url,
-      fit: BoxFit.cover,
-      fadeInDuration: VibesMotion.base,
-      placeholder: (_, __) =>
-          ShimmerBox(height: widget.media.height?.toDouble() ?? 200, radius: 0),
-    );
+    return VibesNetImage(url: media.url, fit: BoxFit.cover);
   }
 }
 
@@ -292,16 +324,16 @@ class _GalleryFullscreen extends StatelessWidget {
             itemBuilder: (context, i) {
               final media = items[i];
               if (media.isVideo) {
-                return Center(
-                  child: _FullscreenVideo(url: media.url),
-                );
+                return Center(child: _FullscreenVideo(url: media.url));
               }
               return PhotoView(
                 imageProvider: CachedNetworkImageProvider(media.url),
                 backgroundDecoration: const BoxDecoration(color: Colors.black),
                 minScale: PhotoViewComputedScale.contained,
                 maxScale: PhotoViewComputedScale.covered * 2.4,
-                heroAttributes: PhotoViewHeroAttributes(tag: 'media-${media.id}'),
+                heroAttributes: PhotoViewHeroAttributes(
+                  tag: 'media-${media.id}',
+                ),
               );
             },
           ),
@@ -313,12 +345,12 @@ class _GalleryFullscreen extends StatelessWidget {
               onTap: () => Navigator.pop(context),
               child: Container(
                 padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  color: Colors.black54,
-                  shape: BoxShape.circle,
+                decoration: const BoxDecoration(color: Colors.black54),
+                child: const Icon(
+                  Icons.close_rounded,
+                  color: Colors.white,
+                  size: 22,
                 ),
-                child: const Icon(Icons.close_rounded,
-                    color: Colors.white, size: 22),
               ),
             ),
           ),
@@ -346,14 +378,17 @@ class _FullscreenVideoState extends State<_FullscreenVideo> {
   @override
   void initState() {
     super.initState();
-    _controller.initialize().then((_) {
-      if (mounted) {
-        setState(() => _ready = true);
-        _controller.play();
-      }
-    }).catchError((_) {
-      if (mounted) setState(() => _failed = true);
-    });
+    _controller
+        .initialize()
+        .then((_) {
+          if (mounted) {
+            setState(() => _ready = true);
+            _controller.play();
+          }
+        })
+        .catchError((_) {
+          if (mounted) setState(() => _failed = true);
+        });
   }
 
   @override
@@ -366,13 +401,15 @@ class _FullscreenVideoState extends State<_FullscreenVideo> {
   Widget build(BuildContext context) {
     if (_failed) {
       return const Center(
-        child: Text('تعذّر تشغيل الفيديو',
-            style: TextStyle(color: Colors.white70)),
+        child: Text(
+          'تعذّر تشغيل الفيديو',
+          style: TextStyle(color: Colors.white70),
+        ),
       );
     }
     if (!_ready) {
       return const Center(
-        child: CircularProgressIndicator(color: GoldColors.gold),
+        child: CircularProgressIndicator(color: Vibes.coral),
       );
     }
     return AspectRatio(
@@ -416,13 +453,14 @@ class _PanoramaViewState extends State<_PanoramaView> {
   Widget build(BuildContext context) {
     return CachedNetworkImage(
       imageUrl: widget.url,
+      memCacheWidth: VibesNetImage.decodeWidth(context),
+      fadeInDuration: const Duration(milliseconds: 80),
       imageBuilder: (context, provider) {
         final image = Image(image: provider);
         return GestureDetector(
           onHorizontalDragUpdate: (details) {
             if (!_controller.hasClients) return;
-            final target =
-                (_controller.offset - details.delta.dx * 1.6).clamp(
+            final target = (_controller.offset - details.delta.dx * 1.6).clamp(
               0.0,
               _controller.position.maxScrollExtent,
             );
@@ -441,8 +479,48 @@ class _PanoramaViewState extends State<_PanoramaView> {
           ),
         );
       },
-      placeholder: (_, __) => const ColoredBox(color: Color(0xFF16181D)),
-      errorWidget: (_, __, ___) => const ColoredBox(color: Color(0xFF16181D)),
+      placeholder: (_, __) => const ColoredBox(color: VibesDark.canvas),
+      errorWidget: (_, __, ___) => const ColoredBox(color: VibesDark.canvas),
+    );
+  }
+}
+
+/// شارة نوع الوسيط — زجاجية فوق المعرض
+class _MediaChip extends StatelessWidget {
+  const _MediaChip({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipPath(
+      clipper: const ShapeBorderClipper(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(7)),
+        ),
+      ),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: const BoxDecoration(color: Color(0x61000000)),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 12, color: Colors.white),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

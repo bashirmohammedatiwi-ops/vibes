@@ -57,7 +57,7 @@ class MediaItem {
         'PANORAMA' => MediaKind.panorama,
         _ => MediaKind.image,
       },
-      posterUrl: j['posterUrl'] as String?,
+      posterUrl: j['posterUrl'] as String? ?? j['thumbnailUrl'] as String?,
       aspectRatio: j['aspectRatio'] as String?,
       durationSec: j['durationSec'] != null ? _num(j['durationSec']).toInt() : null,
       width: j['width'] != null ? _num(j['width']).toInt() : null,
@@ -125,6 +125,7 @@ class Property {
     this.phone,
     this.whatsapp,
     this.featured = false,
+    this.isNew = false,
     this.status,
     this.ratingAvg = 0,
     this.ratingCount = 0,
@@ -137,6 +138,8 @@ class Property {
     this.reviews = const [],
     this.providerName,
     this.providerPhone,
+    this.providerId,
+    this.followersCount = 0,
     this.bookingsCount = 0,
     this.createdAt,
   });
@@ -164,6 +167,7 @@ class Property {
   final String? phone;
   final String? whatsapp;
   final bool featured;
+  final bool isNew;
   final String? status;
   final num ratingAvg;
   final int ratingCount;
@@ -176,6 +180,8 @@ class Property {
   final List<Review> reviews;
   final String? providerName;
   final String? providerPhone;
+  final String? providerId;
+  final int followersCount;
   final int bookingsCount;
   final DateTime? createdAt;
 
@@ -238,6 +244,7 @@ class Property {
       phone: j['phone'] as String?,
       whatsapp: j['whatsapp'] as String?,
       featured: j['featured'] == true,
+      isNew: j['isNew'] == true,
       status: j['status'] as String?,
       ratingAvg: _num(j['ratingAvg']),
       ratingCount: _num(j['ratingCount']).toInt(),
@@ -266,6 +273,10 @@ class Property {
       providerPhone: provider?['user'] is Map<String, dynamic>
           ? (provider!['user'] as Map<String, dynamic>)['phone'] as String?
           : null,
+      providerId: provider?['id'] as String? ?? j['providerId'] as String?,
+      followersCount: provider?['_count'] is Map<String, dynamic>
+          ? _num((provider!['_count'] as Map<String, dynamic>)['followers']).toInt()
+          : 0,
       bookingsCount:
           j['_count'] is Map<String, dynamic> && j['_count']['bookings'] != null
               ? _num(j['_count']['bookings']).toInt()
@@ -277,10 +288,12 @@ class Property {
   /// أول صورة جاهزة — للبطاقات
   String? get coverUrl {
     for (final m in media) {
-      if (m.kind == MediaKind.image && m.isPrimary) return m.url;
+      if (m.kind == MediaKind.image && m.isPrimary) {
+        return m.posterUrl ?? m.url;
+      }
     }
     for (final m in media) {
-      if (m.kind == MediaKind.image) return m.url;
+      if (m.kind == MediaKind.image) return m.posterUrl ?? m.url;
     }
     for (final m in media) {
       return m.posterUrl ?? m.url;
@@ -308,6 +321,34 @@ class Property {
         PropertyType.farm => 'مزرعة',
         PropertyType.hall => 'قاعة',
         PropertyType.decoration => 'تزيين',
+      };
+
+  Map<String, dynamic> toCacheJson() => {
+        'id': id,
+        'name': name,
+        'type': switch (type) {
+          PropertyType.farm => 'FARM',
+          PropertyType.hall => 'HALL',
+          PropertyType.decoration => 'DECORATION',
+        },
+        'description': description,
+        'pricePerDay': pricePerDay,
+        'capacity': capacity,
+        'ratingAvg': ratingAvg,
+        'ratingCount': ratingCount,
+        'city': {
+          'nameAr': cityName,
+          'province': {'nameAr': provinceName},
+        },
+        if (coverUrl != null)
+          'media': [
+            {
+              'id': 'cover',
+              'url': coverUrl,
+              'type': 'IMAGE',
+              'isPrimary': true,
+            },
+          ],
       };
 }
 
@@ -369,7 +410,14 @@ class Booking {
     this.notes,
     this.payment,
     this.canReview = false,
+    this.coverUrl,
     this.createdAt,
+    this.conversationId,
+    this.invoiceNumber,
+    this.cancellationStatus,
+    this.origin = 'PLATFORM',
+    this.guestName,
+    this.guestPhone,
   });
 
   final String id;
@@ -389,7 +437,14 @@ class Booking {
   final String? notes;
   final PaymentInfo? payment;
   final bool canReview;
+  final String? coverUrl;
   final DateTime? createdAt;
+  final String? conversationId;
+  final String? invoiceNumber;
+  final String? cancellationStatus;
+  final String origin;
+  final String? guestName;
+  final String? guestPhone;
 
   static BookingStatus _status(String v) => switch (v) {
         'PENDING' => BookingStatus.pending,
@@ -417,12 +472,20 @@ class Booking {
       cityName: property?['city'] is Map<String, dynamic>
           ? (property!['city'] as Map<String, dynamic>)['nameAr'] as String?
           : null,
-      userName: j['user'] is Map<String, dynamic>
-          ? (j['user'] as Map<String, dynamic>)['name'] as String?
-          : null,
-      userPhone: j['user'] is Map<String, dynamic>
-          ? (j['user'] as Map<String, dynamic>)['phone'] as String?
-          : null,
+      userName: () {
+        if (j['user'] is Map<String, dynamic>) {
+          final name = (j['user'] as Map<String, dynamic>)['name'] as String?;
+          if (name != null && name.trim().isNotEmpty) return name;
+        }
+        return j['guestName'] as String?;
+      }(),
+      userPhone: () {
+        if (j['user'] is Map<String, dynamic>) {
+          final phone = (j['user'] as Map<String, dynamic>)['phone'] as String?;
+          if (phone != null && phone.trim().isNotEmpty) return phone;
+        }
+        return j['guestPhone'] as String?;
+      }(),
       startDate: _date(j['startDate']) ?? DateTime.now(),
       endDate: _date(j['endDate']) ?? DateTime.now(),
       shift: _shift(j['shift'] as String?),
@@ -434,7 +497,36 @@ class Booking {
       payment: j['payment'] is Map<String, dynamic>
           ? PaymentInfo.fromJson(j['payment'] as Map<String, dynamic>)
           : null,
+      canReview: j.containsKey('canReview')
+          ? j['canReview'] == true
+          : _status(_str(j['status'], 'PENDING')) == BookingStatus.completed,
+      coverUrl: () {
+        final media = property?['media'];
+        if (media is List && media.isNotEmpty && media.first is Map) {
+          final first = media.first as Map<String, dynamic>;
+          return (first['posterUrl'] ?? first['url']) as String?;
+        }
+        return property?['coverUrl'] as String?;
+      }(),
       createdAt: _date(j['createdAt']),
+      conversationId: j['conversation'] is Map<String, dynamic>
+          ? _str((j['conversation'] as Map<String, dynamic>)['id'])
+          : j['conversationId'] as String?,
+      invoiceNumber: j['invoice'] is Map<String, dynamic>
+          ? (j['invoice'] as Map<String, dynamic>)['number'] as String?
+          : null,
+      cancellationStatus: () {
+        final requests = j['cancellationRequests'];
+        if (requests is List &&
+            requests.isNotEmpty &&
+            requests.first is Map<String, dynamic>) {
+          return (requests.first as Map<String, dynamic>)['status'] as String?;
+        }
+        return null;
+      }(),
+      origin: _str(j['origin'], 'PLATFORM'),
+      guestName: j['guestName'] as String?,
+      guestPhone: j['guestPhone'] as String?,
     );
   }
 
@@ -452,6 +544,10 @@ class Booking {
         ShiftType.evening => 'شفت مسائي',
         ShiftType.full => 'يوم كامل',
       };
+
+  bool get isExternal => origin == 'EXTERNAL';
+
+  String get originLabelAr => isExternal ? 'خارجي' : 'تطبيق VIBEES';
 
   int get nights =>
       endDate.difference(startDate).inDays.clamp(1, 365);
@@ -497,6 +593,7 @@ class User {
     this.name,
     this.role = 'CUSTOMER',
     this.avatar,
+    this.kycStatus,
   });
 
   final String id;
@@ -504,17 +601,33 @@ class User {
   final String? name;
   final String role;
   final String? avatar;
+  final String? kycStatus;
 
-  factory User.fromJson(Map<String, dynamic> j) => User(
-        id: _str(j['id']),
-        phone: _str(j['phone']),
-        name: j['name'] as String?,
-        role: _str(j['role'], 'CUSTOMER'),
-        avatar: j['avatar'] as String?,
-      );
+  factory User.fromJson(Map<String, dynamic> j) {
+    final provider = j['provider'] is Map<String, dynamic>
+        ? j['provider'] as Map<String, dynamic>
+        : null;
+    return User(
+      id: _str(j['id']),
+      phone: _str(j['phone']),
+      name: j['name'] as String?,
+      role: _str(j['role'], 'CUSTOMER'),
+      avatar: j['avatar'] as String?,
+      kycStatus: provider?['kycStatus'] as String? ?? j['kycStatus'] as String?,
+    );
+  }
 
   bool get isProvider => role == 'PROVIDER';
   bool get isStaff => role == 'ADMIN' || role == 'STAFF';
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'phone': phone,
+        'name': name,
+        'role': role,
+        'avatar': avatar,
+        'kycStatus': kycStatus,
+      };
 }
 
 // ── التوفر والأسعار اليومية ──
@@ -698,4 +811,365 @@ class Banner {
         imageUrl: _str(j['imageUrl']),
         linkUrl: j['linkUrl'] as String?,
       );
+}
+
+class HomeSpotlight {
+  const HomeSpotlight({
+    required this.id,
+    this.title = '',
+    required this.imageUrl,
+    required this.propertyId,
+    this.propertyName = '',
+    this.height = 176,
+  });
+
+  final String id;
+  final String title;
+  final String imageUrl;
+  final String propertyId;
+  final String propertyName;
+  final int height;
+
+  factory HomeSpotlight.fromJson(Map<String, dynamic> j) {
+    final property = j['property'] as Map<String, dynamic>?;
+    return HomeSpotlight(
+      id: _str(j['id']),
+      title: _str(j['title']),
+      imageUrl: _str(j['imageUrl']),
+      propertyId: _str(j['propertyId'], property?['id'] as String? ?? ''),
+      propertyName: _str(property?['name']),
+      height: _num(j['height']).round().clamp(140, 280).toInt(),
+    );
+  }
+}
+
+class AppNotification {
+  const AppNotification({
+    required this.id,
+    required this.type,
+    required this.title,
+    this.body = '',
+    this.linkUrl,
+    this.isRead = false,
+    this.createdAt,
+  });
+
+  final String id;
+  final String type;
+  final String title;
+  final String body;
+  final String? linkUrl;
+  final bool isRead;
+  final DateTime? createdAt;
+
+  factory AppNotification.fromJson(Map<String, dynamic> j) => AppNotification(
+        id: _str(j['id']),
+        type: _str(j['type'], 'SYSTEM'),
+        title: _str(j['title']),
+        body: _str(j['body']),
+        linkUrl: j['linkUrl'] as String?,
+        isRead: j['isRead'] == true,
+        createdAt: _date(j['createdAt']),
+      );
+}
+
+class ConversationSummary {
+  const ConversationSummary({
+    required this.id,
+    this.kind = 'BOOKING',
+    this.title = '',
+    this.lastMessage,
+    this.unread = 0,
+    this.updatedAt,
+    this.bookingId,
+    this.cityName,
+    this.pricePerDay,
+    this.stage,
+  });
+
+  final String id;
+  final String kind;
+  final String title;
+  final String? lastMessage;
+  final int unread;
+  final DateTime? updatedAt;
+  final String? bookingId;
+  final String? cityName;
+  final num? pricePerDay;
+  final String? stage;
+
+  factory ConversationSummary.fromJson(Map<String, dynamic> j) {
+    final booking = j['booking'] as Map<String, dynamic>?;
+    final property = j['property'] as Map<String, dynamic>?;
+    final last = j['lastMessage'] as Map<String, dynamic>?;
+    return ConversationSummary(
+      id: _str(j['id']),
+      kind: _str(j['kind'], 'BOOKING'),
+      title: property is Map<String, dynamic>
+          ? _str((property)['name'], 'محادثة')
+          : booking?['property'] is Map<String, dynamic>
+          ? _str((booking!['property'] as Map<String, dynamic>)['name'], 'محادثة حجز')
+          : (j['kind'] == 'SUPPORT' ? 'دعم VIBEES' : 'محادثة'),
+      lastMessage: last?['kind'] == 'IMAGE' && _str(last?['body']).isEmpty
+          ? 'صورة'
+          : last?['body'] as String?,
+      unread: _num(j['unread']).toInt(),
+      updatedAt: _date(j['updatedAt']),
+      bookingId: booking?['id'] as String?,
+      cityName: property?['city'] is Map<String, dynamic>
+          ? (property!['city'] as Map<String, dynamic>)['nameAr'] as String?
+          : null,
+      pricePerDay: property?['pricePerDay'] != null ? _num(property!['pricePerDay']) : null,
+      stage: booking != null
+          ? 'حجز قائم'
+          : property != null
+          ? 'يسأل قبل الحجز'
+          : null,
+    );
+  }
+}
+
+class ChatMessage {
+  const ChatMessage({
+    required this.id,
+    this.body = '',
+    this.kind = 'TEXT',
+    this.imageUrl,
+    this.senderId,
+    this.senderName,
+    this.createdAt,
+  });
+
+  final String id;
+  final String body;
+  final String kind;
+  final String? imageUrl;
+  final String? senderId;
+  final String? senderName;
+  final DateTime? createdAt;
+
+  bool get isSystem => kind == 'SYSTEM';
+
+  factory ChatMessage.fromJson(Map<String, dynamic> j) {
+    final sender = j['sender'] as Map<String, dynamic>?;
+    return ChatMessage(
+      id: _str(j['id']),
+      body: _str(j['body']),
+      kind: _str(j['kind'], 'TEXT'),
+      imageUrl: j['imageUrl'] as String?,
+      senderId: j['senderId'] as String? ?? sender?['id'] as String?,
+      senderName: sender?['name'] as String? ?? sender?['phone'] as String?,
+      createdAt: _date(j['createdAt']),
+    );
+  }
+}
+
+class PriceOfferItem {
+  const PriceOfferItem({
+    required this.id,
+    required this.amount,
+    this.status = 'PENDING',
+    this.propertyName,
+    this.message = '',
+    this.startDate,
+    this.endDate,
+    this.bookingId,
+  });
+
+  final String id;
+  final num amount;
+  final String status;
+  final String? propertyName;
+  final String message;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final String? bookingId;
+
+  factory PriceOfferItem.fromJson(Map<String, dynamic> j) => PriceOfferItem(
+        id: _str(j['id']),
+        amount: _num(j['amount']),
+        status: _str(j['status'], 'PENDING'),
+        propertyName: j['property'] is Map<String, dynamic>
+            ? (j['property'] as Map<String, dynamic>)['name'] as String?
+            : null,
+        message: _str(j['message']),
+        startDate: _date(j['startDate']),
+        endDate: _date(j['endDate']),
+        bookingId: j['bookingId'] as String? ??
+            (j['booking'] is Map<String, dynamic>
+                ? (j['booking'] as Map<String, dynamic>)['id'] as String?
+                : null),
+      );
+}
+
+class SocialExperience {
+  const SocialExperience({
+    required this.id,
+    required this.caption,
+    this.mediaUrls = const [],
+    this.propertyName,
+    this.propertyId,
+    this.authorName,
+    this.likesCount = 0,
+    this.commentsCount = 0,
+    this.liked = false,
+  });
+
+  final String id;
+  final String caption;
+  final List<String> mediaUrls;
+  final String? propertyName;
+  final String? propertyId;
+  final String? authorName;
+  final int likesCount;
+  final int commentsCount;
+  final bool liked;
+
+  factory SocialExperience.fromJson(Map<String, dynamic> j) => SocialExperience(
+        id: _str(j['id']),
+        caption: _str(j['caption']),
+        mediaUrls: (j['mediaUrls'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            const [],
+        propertyName: j['property'] is Map<String, dynamic>
+            ? (j['property'] as Map<String, dynamic>)['name'] as String?
+            : null,
+        propertyId: j['property'] is Map<String, dynamic>
+            ? (j['property'] as Map<String, dynamic>)['id'] as String?
+            : j['propertyId'] as String?,
+        authorName: j['user'] is Map<String, dynamic>
+            ? (j['user'] as Map<String, dynamic>)['name'] as String?
+            : null,
+        likesCount: _num(j['likesCount']).toInt(),
+        commentsCount: _num(j['commentsCount']).toInt(),
+        liked: j['liked'] == true,
+      );
+}
+
+class SavedCollection {
+  const SavedCollection({
+    required this.id,
+    required this.name,
+    this.itemCount = 0,
+    this.coverUrl,
+    this.isDefault = false,
+    this.ownerName,
+  });
+
+  final String id;
+  final String name;
+  final int itemCount;
+  final String? coverUrl;
+  final bool isDefault;
+  final String? ownerName;
+
+  factory SavedCollection.fromJson(Map<String, dynamic> j) => SavedCollection(
+        id: _str(j['id']),
+        name: _str(j['name']),
+        itemCount: j['_count'] is Map<String, dynamic>
+            ? _num((j['_count'] as Map<String, dynamic>)['items']).toInt()
+            : (j['items'] is List ? (j['items'] as List).length : 0),
+        coverUrl: j['coverUrl'] as String?,
+        isDefault: j['isDefault'] == true,
+        ownerName: j['user'] is Map<String, dynamic>
+            ? (j['user'] as Map<String, dynamic>)['name'] as String?
+            : null,
+      );
+}
+
+class PublicCoupon {
+  const PublicCoupon({
+    required this.code,
+    required this.description,
+    required this.discountType,
+    required this.discountValue,
+    this.minBookingTotal,
+    this.expiresAt,
+    this.appliesToTypes = const [],
+    this.propertyId,
+    this.propertyName,
+  });
+
+  final String code;
+  final String description;
+  final String discountType;
+  final num discountValue;
+  final num? minBookingTotal;
+  final DateTime? expiresAt;
+  final List<String> appliesToTypes;
+  final String? propertyId;
+  final String? propertyName;
+
+  String get discountLabel => discountType == 'PERCENT'
+      ? '${discountValue.toInt()}%'
+      : '${discountValue.toInt()} د.ع';
+
+  bool matchesProperty({required String id, required String type}) {
+    if (propertyId != null && propertyId != id) return false;
+    if (appliesToTypes.isEmpty) return true;
+    return appliesToTypes.contains(type);
+  }
+
+  factory PublicCoupon.fromJson(Map<String, dynamic> j) {
+    final property = j['property'] is Map<String, dynamic>
+        ? j['property'] as Map<String, dynamic>
+        : null;
+    return PublicCoupon(
+      code: _str(j['code']),
+      description: _str(j['description']),
+      discountType: _str(j['discountType'], 'PERCENT'),
+      discountValue: _num(j['discountValue']),
+      minBookingTotal: j['minBookingTotal'] == null
+          ? null
+          : _num(j['minBookingTotal']),
+      expiresAt: _date(j['expiresAt']),
+      appliesToTypes: (j['appliesToTypes'] as List<dynamic>?)
+              ?.map((v) => v.toString())
+              .toList() ??
+          const [],
+      propertyId: property?['id'] as String?,
+      propertyName: property?['name'] as String?,
+    );
+  }
+}
+
+class FollowedProvider {
+  const FollowedProvider({
+    required this.id,
+    this.businessName,
+    this.userName,
+    this.avatar,
+    this.verified = false,
+    this.followers = 0,
+    this.propertiesCount = 0,
+  });
+
+  final String id;
+  final String? businessName;
+  final String? userName;
+  final String? avatar;
+  final bool verified;
+  final int followers;
+  final int propertiesCount;
+
+  String get displayName =>
+      (businessName != null && businessName!.trim().isNotEmpty)
+          ? businessName!.trim()
+          : (userName ?? 'مزود');
+
+  factory FollowedProvider.fromJson(Map<String, dynamic> j) {
+    final user = j['user'] is Map<String, dynamic>
+        ? j['user'] as Map<String, dynamic>
+        : null;
+    return FollowedProvider(
+      id: _str(j['id']),
+      businessName: j['businessName'] as String?,
+      userName: user?['name'] as String?,
+      avatar: user?['avatar'] as String?,
+      verified: j['verified'] == true,
+      followers: _num(j['followers']).toInt(),
+      propertiesCount: _num(j['propertiesCount']).toInt(),
+    );
+  }
 }

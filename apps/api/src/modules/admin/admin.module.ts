@@ -11,6 +11,7 @@ import { AdminActivitiesService } from './admin-activities.service';
 import { AdminAmenitiesService } from './admin-amenities.service';
 import { AdminAvailabilityService } from './admin-availability.service';
 import { AdminBannersService } from './admin-banners.service';
+import { AdminSpotlightsService } from './admin-spotlights.service';
 import { AdminBookingNotesService } from './admin-booking-notes.service';
 import { AdminBookingsService } from './admin-bookings.service';
 import { AdminCouponsService } from './admin-coupons.service';
@@ -29,12 +30,15 @@ import { AdminReviewsService } from './admin-reviews.service';
 import { AdminSearchService } from './admin-search.service';
 import { AdminSettingsService } from './admin-settings.service';
 import { AdminUsersService } from './admin-users.service';
+import { AdminOpsService } from './admin-ops.service';
+import { AdminOpsController } from './admin-ops.controller';
 import { ProvidersModule } from '../providers/providers.module';
+import { MarketplaceModule } from '../marketplace/marketplace.module';
 import { PublicSettingsController } from './public-settings.controller';
 
 @Module({
-  imports: [ProvidersModule, JobsModule],
-  controllers: [AdminController, PublicSettingsController],
+  imports: [ProvidersModule, JobsModule, MarketplaceModule],
+  controllers: [AdminController, PublicSettingsController, AdminOpsController],
   providers: [
     AdminPropertiesService,
     AdminPricingService,
@@ -52,6 +56,7 @@ import { PublicSettingsController } from './public-settings.controller';
     AdminPaymentsService,
     AdminActivitiesService,
     AdminBannersService,
+    AdminSpotlightsService,
     AdminNotificationsService,
     AdminReportsService,
     AdminLocationsService,
@@ -59,6 +64,7 @@ import { PublicSettingsController } from './public-settings.controller';
     AdminCalendarService,
     AdminSearchService,
     AdminSettingsService,
+    AdminOpsService,
     ActivityLogService,
     NotificationService, SmsService,
     RatingService,

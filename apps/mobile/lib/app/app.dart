@@ -14,7 +14,7 @@ class VibesApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(
-      title: 'VIBES',
+      title: 'VIBEES',
       debugShowCheckedModeBanner: false,
       theme: VibesTheme.light(),
       darkTheme: VibesTheme.dark(),

@@ -106,6 +106,7 @@ export class AdminPropertiesService {
         phone: dto.phone,
         whatsapp: dto.whatsapp,
         featured: dto.featured ?? false,
+        isNew: dto.isNew ?? false,
         amenities: dto.amenities ?? [],
         tags: dto.tags ?? [],
         rules: dto.rules ?? '',
@@ -184,6 +185,7 @@ export class AdminPropertiesService {
         phone: dto.phone,
         whatsapp: dto.whatsapp,
         featured: dto.featured,
+        isNew: dto.isNew,
         amenities: dto.amenities,
         tags: dto.tags,
         rules: dto.rules,
@@ -369,6 +371,7 @@ export class AdminPropertiesService {
         internalNotes: source.internalNotes,
         status: PropertyStatus.DRAFT,
         featured: false,
+        isNew: false,
       },
       include: propertyInclude,
     });

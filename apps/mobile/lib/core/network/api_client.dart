@@ -165,23 +165,72 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? queryParameters,
   }) async {
-    final res = await dio.get(path, queryParameters: queryParameters);
-    return _unwrap(res);
+    try {
+      final res = await dio.get(path, queryParameters: queryParameters);
+      return _unwrap(res);
+    } on DioException catch (e) {
+      throw _surface(e);
+    }
   }
 
   Future<dynamic> post(String path, {Object? body}) async {
-    final res = await dio.post(path, data: body);
-    return _unwrap(res);
+    try {
+      final res = await dio.post(path, data: body);
+      return _unwrap(res);
+    } on DioException catch (e) {
+      throw _surface(e);
+    }
   }
 
   Future<dynamic> patch(String path, {Object? body}) async {
-    final res = await dio.patch(path, data: body);
-    return _unwrap(res);
+    try {
+      final res = await dio.patch(path, data: body);
+      return _unwrap(res);
+    } on DioException catch (e) {
+      throw _surface(e);
+    }
   }
 
   Future<dynamic> delete(String path) async {
-    final res = await dio.delete(path);
-    return _unwrap(res);
+    try {
+      final res = await dio.delete(path);
+      return _unwrap(res);
+    } on DioException catch (e) {
+      throw _surface(e);
+    }
+  }
+
+  Future<String> getText(String path) async {
+    try {
+      final res = await dio.get<String>(
+        path,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: const {'Accept': 'text/html, text/plain;q=0.9, */*;q=0.8'},
+        ),
+      );
+      if (res.statusCode != null && res.statusCode! >= 400) {
+        throw ApiException(_extractMessage(res), statusCode: res.statusCode);
+      }
+      return res.data ?? '';
+    } on DioException catch (e) {
+      throw _surface(e);
+    }
+  }
+
+  /// يرفع الاستثناء الداخلي (ApiException برسالة عربية) إن وُجد
+  Object _surface(DioException e) {
+    final inner = e.error;
+    if (inner is ApiException) return inner;
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        e.type == DioExceptionType.connectionError) {
+      return const ApiException(
+        'تعذّر الاتصال بالخادم — تحقق من الشبكة وحاول مجدداً',
+      );
+    }
+    return ApiException(e.message ?? 'حدث خطأ غير متوقع');
   }
 
   /// رفع ملف متعدد الأجزاء (صور/فيديو/إثباتات)

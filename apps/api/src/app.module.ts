@@ -17,6 +17,7 @@ import { BookingsModule } from './modules/bookings/bookings.module';
 import { HealthModule } from './modules/health/health.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
+import { MarketplaceModule } from './modules/marketplace/marketplace.module';
 import { MediaModule } from './modules/media/media.module';
 import { ReelsModule } from './modules/reels/reels.module';
 import { PaymentsModule } from './modules/payments/payments.module';
@@ -70,6 +71,7 @@ import { RedisModule } from './redis/redis.module';
     PaymentsModule,
     MediaModule,
     FavoritesModule,
+    MarketplaceModule,
     ReelsModule,
     ReviewsModule,
     SearchModule,

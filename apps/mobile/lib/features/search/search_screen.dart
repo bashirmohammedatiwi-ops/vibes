@@ -3,14 +3,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/data/property_providers.dart';
 import '../../shared/models/models.dart';
+import '../../shared/widgets/maison_chrome.dart';
+import '../../shared/widgets/maison_shapes.dart';
 import '../../shared/widgets/property_card.dart';
-import '../compare/compare_feature.dart';
 import '../../shared/widgets/vibes_widgets.dart';
+import '../compare/compare_feature.dart';
 
 /// ═══════════════════════════════════════════════════════════
 /// البحث — فلاتر حقيقية (نوع/سعة/سعر/فرز) بورقة سفلية أنيقة
@@ -19,6 +22,8 @@ import '../../shared/widgets/vibes_widgets.dart';
 class SearchFilters {
   SearchFilters({
     this.type,
+    this.cityId,
+    this.province,
     this.capacity = 0,
     this.minPrice = 0,
     this.maxPrice = 0,
@@ -26,6 +31,8 @@ class SearchFilters {
   });
 
   String? type;
+  String? cityId;
+  String? province;
   int capacity;
   num minPrice;
   num maxPrice;
@@ -33,25 +40,29 @@ class SearchFilters {
 
   bool get isEmpty =>
       type == null &&
+      cityId == null &&
+      province == null &&
       capacity == 0 &&
       minPrice == 0 &&
       maxPrice == 0 &&
       sort == null;
 
-  int get count =>
-      [
-        type != null,
-        capacity > 0,
-        minPrice > 0,
-        maxPrice > 0,
-        sort != null,
-      ].where((b) => b).length;
+  int get count => [
+    type != null,
+    cityId != null,
+    province != null,
+    capacity > 0,
+    minPrice > 0,
+    maxPrice > 0,
+    sort != null,
+  ].where((b) => b).length;
 }
 
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key, this.initialType});
+  const SearchScreen({super.key, this.initialType, this.initialProvince});
 
   final String? initialType;
+  final String? initialProvince;
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -70,7 +81,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void initState() {
     super.initState();
     _query = TextEditingController();
-    _filters = SearchFilters(type: widget.initialType);
+    _filters = SearchFilters(
+      type: widget.initialType,
+      province: widget.initialProvince,
+    );
     if (widget.initialType != null) {
       _filters.type = widget.initialType;
     }
@@ -97,13 +111,41 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
     try {
       final client = ref.read(apiClientProvider);
-      final results = await fetchProperties(
-        client,
-        q: _query.text.trim().isNotEmpty ? _query.text.trim() : null,
-        type: _filters.type,
-        sort: _filters.sort,
-        pageSize: 40,
-      );
+      final q = _query.text.trim();
+      var results = <Property>[];
+
+      if (q.isNotEmpty &&
+          _filters.cityId == null &&
+          _filters.province == null) {
+        try {
+          final data = await client.get(
+            '/api/search',
+            queryParameters: {
+              'q': q,
+              if (_filters.type != null) 'type': _filters.type,
+            },
+          );
+          final list = data is List ? data : const [];
+          results = list
+              .whereType<Map<String, dynamic>>()
+              .map(Property.fromJson)
+              .toList();
+        } catch (_) {
+          results = const [];
+        }
+      }
+
+      if (results.isEmpty) {
+        results = await fetchProperties(
+          client,
+          q: q.isNotEmpty ? q : null,
+          type: _filters.type,
+          cityId: _filters.cityId,
+          province: _filters.province,
+          sort: _filters.sort,
+          pageSize: 40,
+        );
+      }
 
       // فلاتر محلية دقيقة (سعة/سعر) — القائمة العامة تدعم الأساسيات
       final filtered = results.where((p) {
@@ -140,25 +182,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = maisonError(e);
         _loading = false;
       });
     }
-  }
-
-  void _openFilters() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => _FiltersSheet(
-        filters: _filters,
-        onApply: (filters) {
-          Navigator.pop(context);
-          setState(() => _filters = filters);
-          _search();
-        },
-      ),
-    );
   }
 
   @override
@@ -167,65 +194,190 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
     return Scaffold(
       bottomNavigationBar: const CompareBar(),
-      appBar: AppBar(
-        titleSpacing: 0,
-        title: Padding(
-          padding: const EdgeInsetsDirectional.only(end: 16),
-          child: TextField(
-            controller: _query,
-            onChanged: _onQueryChanged,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _search(),
-            style: Theme.of(context).textTheme.bodyMedium,
-            decoration: InputDecoration(
-              hintText: 'ابحث بالاسم أو المدينة…',
-              prefixIcon: const Icon(Icons.search_rounded),
-              isDense: true,
-              contentPadding: EdgeInsets.zero,
-              filled: false,
-              fillColor: Colors.transparent,
-              enabledBorder: const OutlineInputBorder(
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: const OutlineInputBorder(
-                borderSide: BorderSide.none,
-              ),
+      body: MaisonWash(
+        child: Column(
+          children: [
+            MaisonPageHeader(
+              title: 'بحث',
+              kicker: 'مكان أو محافظة',
+              onBack: () => context.pop(),
+              trailing: _results == null
+                  ? null
+                  : Text(
+                      '${_results!.length} نتيجة',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: Vibes.teal,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
             ),
-          ),
-        ),
-        actions: [
-          Stack(
-            alignment: AlignmentDirectional.topStart,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.tune_rounded),
-                onPressed: _openFilters,
-              ),
-              if (_filters.count > 0)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      gradient: GoldColors.gradient,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      '${_filters.count}',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: GoldColors.onGold,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              child: FolioPanel(
+                radius: Folio.chrome,
+                borderColor: VibesTheme.hairlineOf(context),
+                railColor: Vibes.teal,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.search_rounded,
+                        size: 18,
+                        color: Vibes.teal,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: _query,
+                          onChanged: _onQueryChanged,
+                          textInputAction: TextInputAction.search,
+                          onSubmitted: (_) => _search(),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: VibesTheme.textPrimaryOf(context),
+                              ),
+                          decoration: const InputDecoration(
+                            hintText: 'اسم المكان',
+                            isDense: true,
+                            filled: false,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(vertical: 14),
                           ),
-                    ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-            ],
-          ),
-        ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: _provinceMenu()),
+                      const SizedBox(width: 8),
+                      Expanded(child: _typeMenu()),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(child: _sortMenu()),
+                      const SizedBox(width: 8),
+                      Expanded(child: _capacityMenu()),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(child: _buildResults(context, hasQuery)),
+          ],
+        ),
       ),
-      body: _buildResults(context, hasQuery),
+    );
+  }
+
+  Widget _provinceMenu() {
+    final cities = ref.watch(locationsProvider).valueOrNull ?? const [];
+    final provinces = <String, String>{};
+    for (final city in cities) {
+      final slug = city.provinceSlug;
+      if (slug != null && slug.isNotEmpty && city.provinceName.isNotEmpty) {
+        provinces[slug] = city.provinceName;
+      }
+    }
+    final entries = provinces.entries.toList()
+      ..sort((a, b) => a.value.compareTo(b.value));
+    final selected = entries
+        .where((e) => e.key == _filters.province)
+        .map((e) => e.value)
+        .firstOrNull;
+    return _MenuField(
+      label: 'المحافظة',
+      value: selected ?? 'كل المحافظات',
+      options: [
+        (null, 'كل المحافظات'),
+        for (final entry in entries) (entry.key, entry.value),
+      ],
+      onSelected: (value) {
+        setState(() {
+          _filters.province = value;
+          _filters.cityId = null;
+        });
+        _search();
+      },
+    );
+  }
+
+  Widget _typeMenu() {
+    const options = [
+      (null, 'كل الأنواع'),
+      ('FARM', 'مزارع'),
+      ('HALL', 'قاعات'),
+      ('DECORATION', 'تزيين'),
+    ];
+    final label = options
+        .where((o) => o.$1 == _filters.type)
+        .map((o) => o.$2)
+        .firstOrNull;
+    return _MenuField(
+      label: 'النوع',
+      value: label ?? 'كل الأنواع',
+      options: options,
+      onSelected: (value) {
+        setState(() => _filters.type = value);
+        _search();
+      },
+    );
+  }
+
+  Widget _sortMenu() {
+    const options = [
+      (null, 'الأحدث'),
+      ('price_asc', 'الأقل سعراً'),
+      ('price_desc', 'الأعلى سعراً'),
+      ('rating', 'الأعلى تقييماً'),
+    ];
+    final label = options
+        .where((o) => o.$1 == _filters.sort)
+        .map((o) => o.$2)
+        .firstOrNull;
+    return _MenuField(
+      label: 'الترتيب',
+      value: label ?? 'الأحدث',
+      options: options,
+      onSelected: (value) {
+        setState(() => _filters.sort = value);
+        _search();
+      },
+    );
+  }
+
+  Widget _capacityMenu() {
+    const options = [
+      (0, 'أي سعة'),
+      (50, '٥٠ ضيفاً فأكثر'),
+      (100, '١٠٠ ضيف فأكثر'),
+      (200, '٢٠٠ ضيف فأكثر'),
+      (400, '٤٠٠ ضيف فأكثر'),
+    ];
+    final label = options
+        .where((o) => o.$1 == _filters.capacity)
+        .map((o) => o.$2)
+        .firstOrNull;
+    return _MenuField(
+      label: 'السعة',
+      value: label ?? 'أي سعة',
+      options: options.map((o) => ('${o.$1}', o.$2)).toList(),
+      onSelected: (value) {
+        setState(() => _filters.capacity = int.tryParse(value ?? '') ?? 0);
+        _search();
+      },
     );
   }
 
@@ -256,277 +408,140 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         icon: Icons.search_off_rounded,
         title: hasQuery ? 'لا نتائج مطابقة' : 'ابدأ البحث',
         subtitle: hasQuery
-            ? 'جرّب تعديل الفلاتر أو كلمات بحث مختلفة'
-            : 'اكتب في شريط البحث أو استخدم الفلاتر لإيجاد مكانك المثالي',
+            ? 'جرّب محافظة أخرى أو نوعاً مختلفاً'
+            : 'اختر محافظة أو اكتب اسم المكان',
       );
     }
 
-    return ListView.builder(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-      itemCount: results.length,
-      itemBuilder: (context, i) => Padding(
-        padding: const EdgeInsets.only(bottom: 14),
-        child: PropertyCard(
-          property: results[i],
-          showCompare: true,
-          onSelectCompare: (p) => ref
-              .read(compareSelectionProvider.notifier)
-              .toggle(p),
-        )
-            .animate(delay: Duration(milliseconds: i * 40))
-            .fadeIn(duration: VibesMotion.slow)
-            .slideY(
-              begin: .03,
-              end: 0,
-              duration: VibesMotion.slow,
-              curve: VibesMotion.curve,
-            ),
-      ),
-    );
-  }
-}
-
-
-/// ═════ ورقة الفلاتر ═════
-
-class _FiltersSheet extends StatefulWidget {
-  const _FiltersSheet({required this.filters, required this.onApply});
-
-  final SearchFilters filters;
-  final ValueChanged<SearchFilters> onApply;
-
-  @override
-  State<_FiltersSheet> createState() => _FiltersSheetState();
-}
-
-class _FiltersSheetState extends State<_FiltersSheet> {
-  late final SearchFilters _filters;
-
-  static const _types = [
-    (null, 'الكل'),
-    ('FARM', 'مزارع'),
-    ('HALL', 'قاعات'),
-    ('DECORATION', 'تزيين'),
-  ];
-
-  static const _sorts = [
-    (null, 'الأحدث'),
-    ('price_asc', 'الأقل سعراً'),
-    ('price_desc', 'الأعلى سعراً'),
-    ('rating', 'الأعلى تقييماً'),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _filters = SearchFilters(
-      type: widget.filters.type,
-      capacity: widget.filters.capacity,
-      minPrice: widget.filters.minPrice,
-      maxPrice: widget.filters.maxPrice,
-      sort: widget.filters.sort,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'الفلاتر',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
+    return RefreshIndicator(
+      color: Vibes.teal,
+      onRefresh: _search,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+        itemCount: results.length,
+        itemBuilder: (context, i) => Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child:
+              PropertyCard(
+                    property: results[i],
+                    heroNamespace: 'search',
+                    showCompare: true,
+                    isFavorite:
+                        ref
+                            .watch(favoritesProvider)
+                            .valueOrNull
+                            ?.any((p) => p.id == results[i].id) ??
+                        false,
+                    onFavorite: (_) =>
+                        ref.read(favoritesProvider.notifier).toggle(results[i]),
+                    onSelectCompare: (p) =>
+                        ref.read(compareSelectionProvider.notifier).toggle(p),
+                  )
+                  .animate(delay: Duration(milliseconds: i * 40))
+                  .fadeIn(duration: VibesMotion.slow)
+                  .slideY(
+                    begin: .03,
+                    end: 0,
+                    duration: VibesMotion.slow,
+                    curve: VibesMotion.curve,
                   ),
-            ),
-            const SizedBox(height: 22),
-
-            _label('النوع'),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _types.map((t) {
-                final active = _filters.type == t.$1;
-                return _FilterChipButton(
-                  label: t.$2,
-                  active: active,
-                  onTap: () => setState(() => _filters.type = t.$1),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 20),
-
-            _label('الترتيب'),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _sorts.map((s) {
-                final active = _filters.sort == s.$1;
-                return _FilterChipButton(
-                  label: s.$2,
-                  active: active,
-                  onTap: () => setState(() => _filters.sort = s.$1),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 20),
-
-            _label('الحد الأدنى للسعة'),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [0, 50, 100, 200, 400].map((c) {
-                final active = _filters.capacity == c;
-                return _FilterChipButton(
-                  label: c == 0 ? 'أي سعة' : '$c+ ضيف',
-                  active: active,
-                  onTap: () => setState(() => _filters.capacity = c),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 20),
-
-            _label('نطاق السعر (لليوم)'),
-            Row(
-              children: [
-                Expanded(
-                  child: _PriceField(
-                    hint: 'من',
-                    value: _filters.minPrice > 0
-                        ? _filters.minPrice.toString()
-                        : '',
-                    onChanged: (v) =>
-                        setState(() => _filters.minPrice = num.tryParse(v) ?? 0),
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 10),
-                  child: Icon(Icons.remove, size: 16),
-                ),
-                Expanded(
-                  child: _PriceField(
-                    hint: 'إلى',
-                    value: _filters.maxPrice > 0
-                        ? _filters.maxPrice.toString()
-                        : '',
-                    onChanged: (v) =>
-                        setState(() => _filters.maxPrice = num.tryParse(v) ?? 0),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 28),
-
-            Row(
-              children: [
-                Expanded(
-                  child: VibesButton(
-                    label: 'مسح الفلاتر',
-                    ghost: true,
-                    onPressed: () {
-                      setState(() {
-                        _filters
-                          ..type = null
-                          ..capacity = 0
-                          ..minPrice = 0
-                          ..maxPrice = 0
-                          ..sort = null;
-                      });
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: VibesButton(
-                    label: 'عرض النتائج',
-                    onPressed: () => widget.onApply(_filters),
-                  ),
-                ),
-              ],
-            ),
-          ],
         ),
       ),
     );
   }
-
-  Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Text(
-          text,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-        ),
-      );
 }
 
-class _FilterChipButton extends StatelessWidget {
-  const _FilterChipButton({
+class _MenuField extends StatelessWidget {
+  const _MenuField({
     required this.label,
-    required this.active,
-    required this.onTap,
+    required this.value,
+    required this.options,
+    required this.onSelected,
   });
 
   final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: VibesMotion.fast,
-        curve: VibesMotion.curve,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-        decoration: BoxDecoration(
-          gradient: active ? GoldColors.gradient : null,
-          color: active ? null : VibesTheme.surfaceHighOf(context),
-          borderRadius: BorderRadius.circular(VibesRadius.pill),
-          border: active
-              ? null
-              : Border.all(color: VibesTheme.hairlineOf(context)),
-        ),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: active ? GoldColors.onGold : VibesTheme.textSecondaryOf(context),
-              ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PriceField extends StatelessWidget {
-  const _PriceField({
-    required this.hint,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final String hint;
   final String value;
-  final ValueChanged<String> onChanged;
+  final List<(String?, String)> options;
+  final ValueChanged<String?> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      keyboardType: TextInputType.number,
-      onChanged: onChanged,
-      style: Theme.of(context).textTheme.bodyMedium,
-      decoration: InputDecoration(hintText: hint),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: VibesTheme.textTertiaryOf(context),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 6),
+        FolioPanel(
+          radius: Folio.chrome,
+          borderColor: VibesTheme.hairlineOf(context),
+          child: InkWell(
+            onTap: () => _open(context),
+            customBorder: Folio.chromeShape,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 18,
+                    color: Vibes.teal,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
+
+  Future<void> _open(BuildContext context) async {
+    final box = context.findRenderObject() as RenderBox?;
+    final overlay = Navigator.of(context).overlay?.context.findRenderObject() as RenderBox?;
+    if (box == null || overlay == null) return;
+    final origin = box.localToGlobal(Offset.zero, ancestor: overlay);
+    final picked = await showMenu<int>(
+      context: context,
+      position: RelativeRect.fromRect(
+        origin & box.size,
+        Offset.zero & overlay.size,
+      ),
+      color: VibesTheme.surfaceOf(context),
+      items: [
+        for (var i = 0; i < options.length; i++)
+          PopupMenuItem<int>(
+            value: i,
+            height: 42,
+            child: Text(
+              options[i].$2,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+      ],
+    );
+    if (picked == null) return;
+    onSelected(options[picked].$1);
+  }
 }
+

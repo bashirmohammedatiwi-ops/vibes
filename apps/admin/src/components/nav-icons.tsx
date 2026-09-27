@@ -7,6 +7,7 @@ import {
   Home,
   Image as ImageIcon,
   LayoutList,
+  Tag,
   Ticket,
   TrendingUp,
   LogOut,
@@ -21,6 +22,11 @@ import {
   UserCircle,
   Users,
   Wallet,
+  MessageCircle,
+  Receipt,
+  RotateCcw,
+  Bookmark,
+  Sparkles,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -54,13 +60,23 @@ export const IconBanner = wrap(Megaphone);
 export const IconAmenities = wrap(LayoutList);
 export const IconCoupon = wrap(Ticket);
 export const IconTrends = wrap(TrendingUp);
+export const IconChat = wrap(MessageCircle);
+export const IconInvoice = wrap(Receipt);
+export const IconRefund = wrap(RotateCcw);
+export const IconCollection = wrap(Bookmark);
+export const IconSocial = wrap(Sparkles);
+export const IconOffer = wrap(Tag);
 
 export const NAV_ICONS: Record<string, ComponentType<IconProps>> = {
   "/": IconHome,
   "/notifications": IconBell,
   "/bookings": IconCalendar,
   "/disputes": IconDispute,
+  "/conversations": IconChat,
+  "/refunds": IconRefund,
+  "/offers": IconOffer,
   "/payments": IconWallet,
+  "/invoices": IconInvoice,
   "/integrations": IconIntegration,
   "/profile": IconProfile,
   "/calendar": IconCalendar,
@@ -70,7 +86,10 @@ export const NAV_ICONS: Record<string, ComponentType<IconProps>> = {
   "/amenities": IconAmenities,
   "/coupons": IconCoupon,
   "/banners": IconBanner,
+  "/spotlights": IconBanner,
   "/reviews": IconStar,
+  "/collections": IconCollection,
+  "/social": IconSocial,
   "/users": IconUsers,
   "/locations": IconMap,
   "/reports": IconChart,
@@ -85,7 +104,11 @@ export const NAV_COLORS: Record<string, string> = {
   "/notifications": "rose",
   "/bookings": "sky",
   "/disputes": "amber",
+  "/conversations": "sky",
+  "/refunds": "rose",
+  "/offers": "amber",
   "/payments": "teal",
+  "/invoices": "violet",
   "/calendar": "violet",
   "/providers": "indigo",
   "/properties": "teal",
@@ -93,7 +116,10 @@ export const NAV_COLORS: Record<string, string> = {
   "/amenities": "amber",
   "/coupons": "teal",
   "/banners": "violet",
+  "/spotlights": "amber",
   "/reviews": "amber",
+  "/collections": "indigo",
+  "/social": "rose",
   "/users": "indigo",
   "/locations": "sky",
   "/reports": "violet",

@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -13,6 +14,7 @@ export class HealthController {
   ) {}
 
   @Public()
+  @SkipThrottle()
   @Get('health')
   async health() {
     let database = 'up';

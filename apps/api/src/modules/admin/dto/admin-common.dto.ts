@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BookingStatus, PaymentStatus, ShiftType, UserRole } from '@prisma/client';
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, IsArray, IsUUID, Min, MinLength } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, IsArray, IsUUID, Max, Min, MinLength } from 'class-validator';
 
 export class AdminCreateBookingDto {
   @ApiProperty()
@@ -452,6 +452,38 @@ export class AdminBannerDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  sortOrder?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
+
+export class AdminSpotlightDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiProperty()
+  @IsString()
+  imageUrl!: string;
+
+  @ApiProperty()
+  @IsUUID()
+  propertyId!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(140)
+  @Max(280)
+  height?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
   sortOrder?: number;
 
   @ApiPropertyOptional()

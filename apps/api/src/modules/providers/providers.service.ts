@@ -1,8 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { KycStatus, UserRole } from '@prisma/client';
 import { ActivityLogService } from '../../common/services/activity-log.service';
+import { CacheService } from '../../common/services/cache.service';
 import { NotificationService } from '../../common/services/notification.service';
 import { AuthUser } from '../../common/decorators/current-user.decorator';
+import { userCacheKey } from '../auth/jwt.strategy';
 import { PrismaService } from '../../prisma/prisma.service';
 
 const providerInclude = {
@@ -16,6 +18,7 @@ export class ProvidersService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationService,
     private readonly activity: ActivityLogService,
+    private readonly cache: CacheService,
   ) {}
 
   list() {
@@ -32,13 +35,24 @@ export class ProvidersService {
     });
   }
 
-  async becomeProvider(user: AuthUser, businessName?: string) {
+  async becomeProvider(
+    user: AuthUser,
+    dto: { businessName?: string; placeTypes?: string[]; note?: string } = {},
+  ) {
     const existing = await this.prisma.provider.findUnique({ where: { userId: user.id } });
+    const placeTypes = (dto.placeTypes ?? [])
+      .map((item) => item.trim().toUpperCase())
+      .filter((item) => ['FARM', 'HALL', 'DECORATION'].includes(item))
+      .join(',');
+    const requestNote = dto.note?.trim() ?? '';
 
     if (existing?.kycStatus === KycStatus.VERIFIED) {
       return this.prisma.provider.update({
         where: { id: existing.id },
-        data: { businessName: businessName ?? existing.businessName },
+        data: {
+          businessName: dto.businessName ?? existing.businessName,
+          placeTypes: placeTypes || existing.placeTypes,
+        },
         include: providerInclude,
       });
     }
@@ -46,15 +60,19 @@ export class ProvidersService {
     const provider = await this.prisma.provider.upsert({
       where: { userId: user.id },
       update: {
-        businessName: businessName ?? existing?.businessName,
+        businessName: dto.businessName ?? existing?.businessName,
         kycStatus: KycStatus.PENDING,
         verified: false,
         rejectionReason: null,
+        requestNote: requestNote || existing?.requestNote || '',
+        placeTypes: placeTypes || existing?.placeTypes || '',
       },
       create: {
         userId: user.id,
-        businessName,
+        businessName: dto.businessName,
         kycStatus: KycStatus.PENDING,
+        requestNote,
+        placeTypes,
       },
       include: providerInclude,
     });
@@ -93,6 +111,7 @@ export class ProvidersService {
       entityType: 'provider',
       entityId: id,
     });
+    await this.cache.del(userCacheKey(provider.userId));
 
     return updated;
   }
@@ -121,6 +140,7 @@ export class ProvidersService {
       entityId: id,
       metadata: { reason: reason.trim() },
     });
+    await this.cache.del(userCacheKey(provider.userId));
 
     return updated;
   }
@@ -146,6 +166,7 @@ export class ProvidersService {
       entityType: 'provider',
       entityId: id,
     });
+    await this.cache.del(userCacheKey(provider.userId));
 
     return updated;
   }

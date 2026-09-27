@@ -1,7 +1,10 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { BookingStatus, PaymentStatus } from '@prisma/client';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BookingOrigin, BookingStatus, OfferStatus, PaymentStatus, ShiftType } from '@prisma/client';
 import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { PaginationService } from '../../common/services/query-helpers';
+import { summarizeCoverage } from '../../common/utils/coverage.util';
+import { bookingDaysConflict, resolveBookingMode } from '../../common/utils/shift.util';
+import { resolveBookingShift } from '../../common/utils/pricing.util';
 import { PrismaService } from '../../prisma/prisma.service';
 
 const ACTIVE_STATUSES: BookingStatus[] = [
@@ -64,7 +67,8 @@ export class ProviderPortalService {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
-    const [propertyCount, activeBookings, pendingBookings, monthAgg, upcoming] = await Promise.all([
+    const [propertyCount, activeBookings, pendingBookings, monthAgg, upcoming, followersCount, pendingOffers, coverage] =
+      await Promise.all([
       this.prisma.property.count({ where: { providerId: provider.id } }),
       this.prisma.booking.count({
         where: { property: { providerId: provider.id }, status: { in: ACTIVE_STATUSES } },
@@ -87,6 +91,11 @@ export class ProviderPortalService {
         orderBy: { startDate: 'asc' },
         take: 6,
       }),
+      this.prisma.providerFollow.count({ where: { providerId: provider.id } }),
+      this.prisma.priceOffer.count({
+        where: { providerId: provider.id, status: OfferStatus.PENDING },
+      }),
+      this.coverage(provider.id),
     ]);
 
     return {
@@ -96,6 +105,9 @@ export class ProviderPortalService {
       monthRevenue: monthAgg._sum.totalPrice ?? 0,
       monthBookings: monthAgg._count,
       upcoming,
+      followersCount,
+      pendingOffers,
+      coverage,
     };
   }
 
@@ -106,6 +118,9 @@ export class ProviderPortalService {
       property: { providerId: provider.id },
       ...(query.status ? { status: query.status as BookingStatus } : {}),
       ...(query.propertyId ? { propertyId: query.propertyId } : {}),
+      ...(query.origin === 'EXTERNAL' || query.origin === 'PLATFORM'
+        ? { origin: query.origin as BookingOrigin }
+        : {}),
     };
 
     const [items, total] = await Promise.all([
@@ -183,5 +198,129 @@ export class ProviderPortalService {
       }
     }
     return Array.from(buckets.entries()).map(([month, value]) => ({ month, ...value }));
+  }
+
+  async createExternal(
+    user: AuthUser,
+    dto: {
+      propertyId: string;
+      startDate: string;
+      endDate?: string;
+      shift?: ShiftType;
+      guestName?: string;
+      guestPhone?: string;
+      guests?: number;
+      totalPrice?: number;
+      notes?: string;
+    },
+  ) {
+    const { property } = await this.assertOwnedProperty(user, dto.propertyId);
+    const start = new Date(`${dto.startDate}T00:00:00.000Z`);
+    const end = dto.endDate
+      ? new Date(`${dto.endDate}T00:00:00.000Z`)
+      : new Date(start.getTime() + 24 * 60 * 60 * 1000);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      throw new BadRequestException('تواريخ الحجز غير صالحة');
+    }
+
+    const mode = resolveBookingMode(property.type, property.bookingMode);
+    const shift = resolveBookingShift(mode, dto.shift);
+
+    const active = await this.prisma.booking.findMany({
+      where: {
+        propertyId: property.id,
+        status: { in: ACTIVE_STATUSES },
+        startDate: { lt: end },
+        endDate: { gt: start },
+      },
+    });
+    for (const existing of active) {
+      if (bookingDaysConflict(start, end, shift, existing.startDate, existing.endDate, existing.shift)) {
+        throw new BadRequestException('هذه التواريخ محجوزة مسبقاً');
+      }
+    }
+
+    return this.prisma.booking.create({
+      data: {
+        propertyId: property.id,
+        startDate: start,
+        endDate: end,
+        shift,
+        guests: dto.guests ?? 1,
+        status: BookingStatus.CONFIRMED,
+        origin: BookingOrigin.EXTERNAL,
+        guestName: dto.guestName?.trim() || 'ضيف خارجي',
+        guestPhone: dto.guestPhone?.trim() || null,
+        totalPrice: dto.totalPrice ?? 0,
+        notes: dto.notes?.trim() || 'حجز خارجي سجّله المالك',
+      },
+      include: {
+        property: { select: { id: true, name: true } },
+        user: { select: { name: true, phone: true } },
+      },
+    });
+  }
+
+  async cancelExternal(user: AuthUser, bookingId: string) {
+    const booking = await this.bookingDetail(user, bookingId);
+    if (booking.origin !== BookingOrigin.EXTERNAL) {
+      throw new BadRequestException('يمكن إلغاء الحجوزات الخارجية فقط من هنا');
+    }
+    if (booking.status === BookingStatus.CANCELLED) {
+      return booking;
+    }
+    return this.prisma.booking.update({
+      where: { id: bookingId },
+      data: { status: BookingStatus.CANCELLED },
+      include: {
+        property: { select: { id: true, name: true } },
+        user: { select: { name: true, phone: true } },
+      },
+    });
+  }
+
+  private async coverage(providerId: string) {
+    const horizon = 30;
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + horizon);
+
+    const properties = await this.prisma.property.findMany({
+      where: { providerId },
+      select: { id: true },
+    });
+    const propertyIds = properties.map((p) => p.id);
+
+    const [bookings, slots] = await Promise.all([
+      propertyIds.length
+        ? this.prisma.booking.findMany({
+            where: {
+              propertyId: { in: propertyIds },
+              status: { in: ACTIVE_STATUSES },
+              startDate: { lt: end },
+              endDate: { gt: start },
+            },
+            select: { propertyId: true, startDate: true, endDate: true, origin: true },
+          })
+        : Promise.resolve([]),
+      propertyIds.length
+        ? this.prisma.availabilitySlot.findMany({
+            where: {
+              propertyId: { in: propertyIds },
+              isAvailable: false,
+              date: { gte: start, lt: end },
+            },
+            select: { propertyId: true, date: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    return summarizeCoverage({
+      horizon,
+      propertyIds,
+      bookings,
+      closed: slots,
+    });
   }
 }

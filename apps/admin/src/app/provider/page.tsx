@@ -107,6 +107,26 @@ export default function ProviderPortalPage() {
 
       <section>
         <div className="section-header mb-3">
+          <h2>تشغيل السوق</h2>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Link href="/offers" className="rounded-xl border border-line bg-white p-4 text-sm font-semibold hover:shadow-md">
+            عروض الأسعار ←
+          </Link>
+          <Link href="/invoices" className="rounded-xl border border-line bg-white p-4 text-sm font-semibold hover:shadow-md">
+            الفواتير ←
+          </Link>
+          <Link href="/conversations" className="rounded-xl border border-line bg-white p-4 text-sm font-semibold hover:shadow-md">
+            المحادثات ←
+          </Link>
+          <Link href="/refunds" className="rounded-xl border border-line bg-white p-4 text-sm font-semibold hover:shadow-md">
+            الإلغاء والاسترداد ←
+          </Link>
+        </div>
+      </section>
+
+      <section>
+        <div className="section-header mb-3">
           <h2>ممتلكاتي</h2>
         </div>
         {!properties.length ? (

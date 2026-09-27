@@ -35,4 +35,23 @@ export class LocationsController {
       }),
     );
   }
+
+  @Public()
+  @Get('spotlights')
+  spotlights() {
+    return this.cache.getOrSet('cache:spotlights:active', LOCATIONS_TTL_SECONDS, () =>
+      this.prisma.homeSpotlight.findMany({
+        where: { isActive: true },
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
+        select: {
+          id: true,
+          title: true,
+          imageUrl: true,
+          height: true,
+          propertyId: true,
+          property: { select: { id: true, name: true, type: true } },
+        },
+      }),
+    );
+  }
 }

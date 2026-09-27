@@ -136,6 +136,11 @@ export class AdminCreatePropertyDto {
   @IsBoolean()
   featured?: boolean;
 
+  @ApiPropertyOptional({ description: 'يظهر المكان ضمن المزارع أو القاعات الجديدة' })
+  @IsOptional()
+  @IsBoolean()
+  isNew?: boolean;
+
   @ApiPropertyOptional({ enum: PropertyStatus })
   @IsOptional()
   @IsEnum(PropertyStatus)

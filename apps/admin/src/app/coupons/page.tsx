@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AdminOnly } from "@/components/admin-only";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { HelpTip } from "@/components/help-tip";
 import { LoadingBlock, PageHeader } from "@/components/page-header";
 import { PageShell } from "@/components/page-shell";
 import { Badge } from "@/components/ui/badge";
@@ -215,6 +216,7 @@ export default function CouponsPage() {
           eyebrow="VIBES Admin"
           action={<Button onClick={openCreate}>+ كوبون جديد</Button>}
         />
+        <HelpTip>اترك الوصف فارغاً ليبقى الكوبون سرياً — يظهر في التطبيق فقط إن كان نشطاً وله وصف.</HelpTip>
 
         <div className="grid gap-3 sm:grid-cols-3">
           <Card className="p-4"><div className="text-xs text-muted">نشطة (بالصفحة)</div><div className="text-xl font-bold">{summary.active}</div></Card>

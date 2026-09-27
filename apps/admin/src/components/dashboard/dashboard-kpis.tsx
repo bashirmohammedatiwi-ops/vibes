@@ -4,14 +4,13 @@ import { formatMoney } from "@/lib/dates";
 import {
   IconBuilding,
   IconCalendar,
-  IconChart,
+  IconOffer,
   IconUsers,
   IconWallet,
 } from "@/components/nav-icons";
 
 export function DashboardKpis({ stats }: { stats: DashboardStats }) {
   const published = stats.properties - stats.draftProperties;
-  const publishRate = stats.properties > 0 ? Math.round((published / stats.properties) * 100) : 0;
   const pendingPayments = stats.pendingPaymentProofs ?? 0;
 
   const items = [
@@ -63,13 +62,24 @@ export function DashboardKpis({ stats }: { stats: DashboardStats }) {
       alert: pendingPayments > 0,
     },
     {
-      key: "publish",
-      label: "نسبة النشر",
-      value: `${publishRate}%`,
-      hint: `${published} من ${stats.properties}`,
-      href: "/properties",
-      icon: IconChart,
+      key: "refunds",
+      label: "استرداد معلّق",
+      value: (stats.pendingRefunds ?? 0) + (stats.pendingCancellations ?? 0),
+      hint: stats.pendingRefunds ? "تحتاج مراجعتك" : "لا طلبات معلّقة",
+      href: "/refunds",
+      icon: IconWallet,
       color: "rose",
+      alert: (stats.pendingRefunds ?? 0) + (stats.pendingCancellations ?? 0) > 0,
+    },
+    {
+      key: "offers",
+      label: "عروض معلّقة",
+      value: stats.pendingOffers ?? 0,
+      hint: (stats.pendingOffers ?? 0) ? "بانتظار رد العميل" : "لا عروض معلّقة",
+      href: "/offers",
+      icon: IconOffer,
+      color: "amber",
+      alert: (stats.pendingOffers ?? 0) > 0,
     },
   ];
 

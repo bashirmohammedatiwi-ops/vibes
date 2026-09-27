@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
-import { IsOptional, IsString, MinLength } from 'class-validator';
+import { IsArray, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { AuthUser, CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ProvidersService } from './providers.service';
@@ -10,7 +10,20 @@ class BecomeProviderDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(80)
   businessName?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  placeTypes?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(400)
+  note?: string;
 }
 
 class RejectProviderDto {
@@ -38,7 +51,7 @@ export class ProvidersController {
 
   @Post('me')
   becomeProvider(@CurrentUser() user: AuthUser, @Body() dto: BecomeProviderDto) {
-    return this.providers.becomeProvider(user, dto.businessName);
+    return this.providers.becomeProvider(user, dto);
   }
 
   @Patch(':id/verify')

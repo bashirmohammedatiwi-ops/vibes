@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DetailCard } from "@/components/ui/detail-card";
@@ -32,6 +32,7 @@ type UserDetail = {
 
 export default function UserDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const { toast } = useToast();
   const [user, setUser] = useState<UserDetail | null>(null);
   const [name, setName] = useState("");
@@ -39,6 +40,7 @@ export default function UserDetailPage() {
   const [loading, setLoading] = useState(true);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
   const [pendingRole, setPendingRole] = useState<string | null>(null);
+  const [messaging, setMessaging] = useState(false);
 
   const load = useCallback(async () => {
     const data = await api<UserDetail>(`/api/admin/users/${params.id}`);
@@ -95,6 +97,23 @@ export default function UserDetailPage() {
     }
   }
 
+  async function openSupportChat() {
+    if (messaging) return;
+    setMessaging(true);
+    try {
+      const conv = await api<{ id: string }>("/api/admin/conversations/support", {
+        method: "POST",
+        body: JSON.stringify({ userId: params.id }),
+      });
+      toast("تم فتح محادثة الدعم");
+      router.push(`/conversations?open=${conv.id}`);
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "تعذر فتح المحادثة", "error");
+    } finally {
+      setMessaging(false);
+    }
+  }
+
   if (error) {
     return (
       <ErrorBanner
@@ -117,7 +136,12 @@ export default function UserDetailPage() {
         action={<Badge variant={user.isActive ? "success" : "danger"}>{user.isActive ? "نشط" : "معطّل"}</Badge>}
       />
 
-      <PhoneActions phone={user.phone} />
+      <div className="flex flex-wrap items-center gap-2">
+        <PhoneActions phone={user.phone} />
+        <Button variant="ghost" onClick={openSupportChat} disabled={messaging}>
+          {messaging ? "جاري الفتح..." : "راسل"}
+        </Button>
+      </div>
 
       <DetailCard title="معلومات الحساب">
         <div className="grid gap-4 sm:grid-cols-2">

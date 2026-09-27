@@ -23,31 +23,38 @@ const sections: Array<{ title: string; links: NavLink[] }> = [
       { href: "/notifications", label: "الإشعارات", badge: true },
     ],
   },
-  {
-    title: "الحجوزات",
-    links: [
-      { href: "/bookings", label: "الحجوزات" },
-      { href: "/calendar", label: "التقويم" },
-      { href: "/disputes", label: "النزاعات" },
-    ],
-  },
-  {
-    title: "المالية",
-    links: [
-      { href: "/payments", label: "المدفوعات" },
-      { href: "/coupons", label: "الكوبونات", adminOnly: true },
-    ],
-  },
-  {
-    title: "المحتوى",
-    links: [
-      { href: "/properties", label: "الأماكن" },
-      { href: "/amenities", label: "المزايا", adminOnly: true },
-      { href: "/map", label: "الخريطة" },
-      { href: "/banners", label: "البانرات" },
-      { href: "/reviews", label: "التقييمات" },
-    ],
-  },
+    {
+      title: "الحجوزات",
+      links: [
+        { href: "/bookings", label: "الحجوزات" },
+        { href: "/calendar", label: "التقويم" },
+        { href: "/disputes", label: "النزاعات" },
+        { href: "/conversations", label: "المحادثات" },
+        { href: "/refunds", label: "الإلغاء والاسترداد" },
+        { href: "/offers", label: "عروض الأسعار" },
+      ],
+    },
+    {
+      title: "المالية",
+      links: [
+        { href: "/payments", label: "المدفوعات" },
+        { href: "/invoices", label: "الفواتير" },
+        { href: "/coupons", label: "الكوبونات", adminOnly: true },
+      ],
+    },
+    {
+      title: "المحتوى",
+      links: [
+        { href: "/properties", label: "الأماكن" },
+        { href: "/amenities", label: "المزايا", adminOnly: true },
+        { href: "/map", label: "الخريطة" },
+        { href: "/banners", label: "البانرات" },
+        { href: "/spotlights", label: "أماكن مميزة" },
+        { href: "/reviews", label: "التقييمات" },
+        { href: "/collections", label: "القوائم" },
+        { href: "/social", label: "التجارب" },
+      ],
+    },
   {
     title: "الأشخاص",
     links: [
@@ -104,6 +111,11 @@ function pageTitle(pathname: string) {
   if (pathname.startsWith("/bookings/")) return "تفاصيل الحجز";
   if (pathname.startsWith("/providers/")) return "ملف المزود";
   if (pathname === "/disputes") return "النزاعات";
+  if (pathname === "/conversations") return "المحادثات";
+  if (pathname === "/invoices") return "الفواتير";
+  if (pathname === "/offers") return "عروض الأسعار";
+  if (pathname === "/collections") return "القوائم";
+  if (pathname === "/social") return "التجارب";
   if (pathname === "/profile") return "ملفي";
   if (pathname === "/integrations") return "التكاملات";
   if (pathname === "/map") return "الخريطة";

@@ -1,20 +1,17 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/auth/auth_controller.dart';
 import '../../features/compare/compare_feature.dart';
-
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/vibes_net_image.dart';
 import '../../shared/models/models.dart';
+import 'maison_shapes.dart';
 import 'vibes_widgets.dart';
 
-/// ═══════════════════════════════════════════════════════════
-/// بطاقة المكان الأنيقة — صورة بزاوية ناعمة + معلومات
-/// "بطاقة Hero" تنقل صورتها لصفحة التفاصيل
-/// ═══════════════════════════════════════════════════════════
-
+/// بطاقة مكان — لوحة 16:10 + شريط بيانات محكم
 class PropertyCard extends StatelessWidget {
   const PropertyCard({
     super.key,
@@ -25,6 +22,7 @@ class PropertyCard extends StatelessWidget {
     this.compact = false,
     this.showCompare = false,
     this.onSelectCompare,
+    this.heroNamespace = 'main',
   });
 
   final Property property;
@@ -32,282 +30,284 @@ class PropertyCard extends StatelessWidget {
   final ValueChanged<bool>? onFavorite;
   final bool isFavorite;
   final bool compact;
-
-  /// زر اختيار للمقارنة (شاشات الاكتشاف)
   final bool showCompare;
   final ValueChanged<Property>? onSelectCompare;
+  final String heroNamespace;
 
-  String get _heroTag => 'property-hero-${property.id}';
+  String get _heroTag => heroNamespace == 'main'
+      ? 'property-hero-${property.id}'
+      : 'property-hero-$heroNamespace-${property.id}';
 
   @override
   Widget build(BuildContext context) {
     final cover = property.coverUrl;
+    final kicker = switch (property.type) {
+      PropertyType.hall => 'قاعة أعراس',
+      PropertyType.decoration => 'تزيين',
+      PropertyType.farm => 'مزرعة',
+    };
+    final meta = [
+      property.cityName ?? property.provinceName ?? '',
+      if (property.capacity > 0) '${property.capacity} ضيف',
+      if (property.ratingCount > 0) property.ratingAvg.toStringAsFixed(1),
+    ].where((part) => part.isNotEmpty).join('  ·  ');
 
-    final image = Hero(
-      tag: heroEnabled ? _heroTag : 'no-hero-${property.id}',
-      child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(VibesRadius.lg),
-        ),
-        child: cover != null
-            ? CachedNetworkImage(
-                imageUrl: cover,
-                height: compact ? 140.0 : 190,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                fadeInDuration: VibesMotion.base,
-                errorWidget: (_, __, ___) => _placeholder(context),
-              )
-            : _placeholder(context),
-      ),
-    );
-
-    return VibesCard(
-      onTap: () => context.push('/property/${property.id}'),
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              image,
-              // تدرج سفلي خافت لعمق هادئ
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(VibesRadius.lg),
-                    ),
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: .22),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              // شارة النوع — شريحة زجاجية
-              Positioned(
-                top: 10,
-                right: 10,
-                child: _TypeBadge(label: property.typeLabelAr),
-              ),
-              // التقييم
-              if (property.ratingCount > 0)
-                Positioned(
-                  bottom: 10,
-                  left: 10,
-                  child: _GlassChip(
-                    child: GoldRatingBar(
-                      rating: property.ratingAvg.toDouble(),
-                      size: 12,
-                      showValue: true,
-                      reviewCount: property.ratingCount,
-                    ),
-                  ),
-                ),
-              // المفضلة إن فعّلها المستدعي
-              if (onFavorite != null)
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  child: FavoriteHeart(
-                    active: isFavorite,
-                    onToggle: onFavorite!,
-                    size: 18,
-                  ),
-                ),
-              // اختيار للمقارنة
-              if (showCompare && onSelectCompare != null)
-                Positioned(
-                  top: onFavorite != null ? 58 : 8,
-                  left: 8,
-                  child: _CompareToggle(
-                    property: property,
-                    onSelect: onSelectCompare!,
-                  ),
-                ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+    return Semantics(
+      button: true,
+      label:
+          '${property.name}، ${property.typeLabelAr} في ${property.cityName ?? ''}، السعر ${PriceText.format(property.pricePerDay)} دينار لليوم',
+      child: FolioPanel(
+        railColor: property.featured ? Vibes.teal : null,
+        shadows: VibesTheme.cardOf(context),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => context.push('/property/${property.id}'),
+            customBorder: Folio.shape,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  property.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  [
-                    property.cityName ?? '',
-                    if (property.capacity > 0) '${property.capacity} ضيف',
-                  ].where((s) => s.isNotEmpty).join(' · '),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: VibesTheme.textTertiaryOf(context),
-                      ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    PriceText(property.pricePerDay, compact: true),
-                    const Spacer(),
-                    if (property.supportsShifts)
-                      Text(
-                        'شفتات متاحة',
-                        style:
-                            Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: GoldColors.gold.withValues(alpha: .8),
-                                  fontWeight: FontWeight.w600,
+                AspectRatio(
+                  aspectRatio: compact ? 16 / 9 : Folio.listingPhoto,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      () {
+                        final image = cover != null
+                            ? VibesNetImage(url: cover, fit: BoxFit.cover)
+                            : ColoredBox(
+                                color: VibesTheme.surfaceHighOf(context),
+                                child: Icon(
+                                  Icons.home_work_outlined,
+                                  size: 36,
+                                  color: VibesTheme.textTertiaryOf(context),
                                 ),
+                              );
+                        if (!heroEnabled) return image;
+                        return Hero(tag: _heroTag, child: image);
+                      }(),
+                      const Positioned.fill(
+                        child: PlateCorners(inset: 8, arm: 11),
                       ),
-                  ],
+                      if (onFavorite != null)
+                        PositionedDirectional(
+                          top: 10,
+                          start: 10,
+                          child: _GuardedHeart(
+                            active: isFavorite,
+                            onToggle: onFavorite!,
+                          ),
+                        ),
+                      if (showCompare && onSelectCompare != null)
+                        PositionedDirectional(
+                          top: onFavorite != null ? 52 : 10,
+                          start: 10,
+                          child: _CompareToggle(
+                            property: property,
+                            onSelect: onSelectCompare!,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(
+                  height: 1.5,
+                  child: ColoredBox(color: Vibes.teal),
+                ),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    compact ? 8 : 10,
+                    16,
+                    compact ? 8 : 11,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        kicker,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Vibes.teal,
+                          fontWeight: FontWeight.w800,
+                          height: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        property.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              height: 1.15,
+                            ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              meta,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: VibesTheme.textTertiaryOf(context),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          PriceText(property.pricePerDay, compact: true),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _placeholder(BuildContext context) => Container(
-        height: compact ? 140.0 : 190,
-        color: VibesTheme.surfaceHighOf(context),
-        child: Icon(
-          Icons.home_work_outlined,
-          size: 42,
-          color: VibesTheme.textTertiaryOf(context),
         ),
-      );
-}
-
-class _TypeBadge extends StatelessWidget {
-  const _TypeBadge({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: .45),
-        borderRadius: BorderRadius.circular(VibesRadius.pill),
-        border: Border.all(color: Colors.white.withValues(alpha: .15)),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
       ),
     );
   }
 }
 
-class _GlassChip extends StatelessWidget {
-  const _GlassChip({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: .40),
-        borderRadius: BorderRadius.circular(VibesRadius.pill),
-      ),
-      child: child,
-    );
-  }
-}
-
-/// ═══════════════════════════════════════════════════════════
-/// البطاقة المميزة الأفقية — لقسم "مميز" بتمرير أفقي
-/// ═══════════════════════════════════════════════════════════
-
+/// مختارات أفقية — لوحة عمودية 3:4 بصورة كاملة وتعليق فوقها
 class FeaturedPropertyCard extends StatelessWidget {
   const FeaturedPropertyCard({
     super.key,
     required this.property,
-    this.width = 280,
+    this.width = plateWidth,
+    this.index,
     this.onFavorite,
     this.isFavorite = false,
+    this.heroNamespace = 'featured',
   });
+
+  static const double plateWidth = 220;
+  static const double photoAspect = 16 / 10;
+  static const double captionHeight = 64;
+  static double heightFor(double width) => width / photoAspect + captionHeight;
+  static double get plateHeight => heightFor(plateWidth);
 
   final Property property;
   final double width;
+  final int? index;
   final ValueChanged<bool>? onFavorite;
   final bool isFavorite;
+  final String heroNamespace;
 
   @override
   Widget build(BuildContext context) {
     final cover = property.coverUrl;
+    final place = [
+      property.cityName ?? property.provinceName ?? '',
+      if (property.capacity > 0) '${property.capacity} ضيف',
+    ].where((part) => part.isNotEmpty).join('  ·  ');
 
     return SizedBox(
       width: width,
-      child: VibesCard(
-        onTap: () => context.push('/property/${property.id}'),
-        padding: EdgeInsets.zero,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
+      height: heightFor(width),
+      child: FolioPanel(
+        shadows: VibesTheme.cardOf(context),
+        color: VibesTheme.surfaceOf(context),
+        borderColor: VibesTheme.hairlineOf(context),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => context.push('/property/${property.id}'),
+            customBorder: Folio.shape,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Hero(
-                  tag: 'property-hero-${property.id}',
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(VibesRadius.lg),
-                    ),
-                    child: cover != null
-                        ? CachedNetworkImage(
-                            imageUrl: cover,
-                            height: 150,
-                            width: width,
-                            fit: BoxFit.cover,
-                            fadeInDuration: VibesMotion.base,
-                          )
-                        : Container(
-                            height: 150,
-                            color: VibesTheme.surfaceHighOf(context),
+                Expanded(
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Hero(
+                        tag: 'property-hero-$heroNamespace-${property.id}',
+                        child: cover != null
+                            ? VibesNetImage(url: cover, fit: BoxFit.cover)
+                            : ColoredBox(
+                                color: VibesTheme.surfaceHighOf(context),
+                              ),
+                      ),
+                      const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            stops: [0, .72, 1],
+                            colors: [
+                              Color(0x14000000),
+                              Color(0x00000000),
+                              Color(0x330F2138),
+                            ],
                           ),
+                        ),
+                      ),
+                      const Positioned.fill(
+                        child: PlateCorners(inset: 8, arm: 11),
+                      ),
+                      if (onFavorite != null)
+                        PositionedDirectional(
+                          top: 10,
+                          start: 10,
+                          child: _GuardedHeart(
+                            active: isFavorite,
+                            onToggle: onFavorite!,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      gradient: GoldColors.gradient,
-                      borderRadius: BorderRadius.circular(VibesRadius.pill),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                const SizedBox(
+                  height: 1,
+                  child: ColoredBox(color: Vibes.teal),
+                ),
+                SizedBox(
+                  height: captionHeight - 1,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.star_rounded,
-                            size: 13, color: GoldColors.onGold),
-                        const SizedBox(width: 3),
                         Text(
-                          'مميز',
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: GoldColors.onGold,
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                          property.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                height: 1.1,
+                              ),
+                        ),
+                        const SizedBox(height: 5),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                place,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: VibesTheme.textTertiaryOf(context),
+                                      fontWeight: FontWeight.w600,
+                                      height: 1.1,
+                                    ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            PriceText(property.pricePerDay, compact: true),
+                          ],
                         ),
                       ],
                     ),
@@ -315,38 +315,154 @@ class FeaturedPropertyCard extends StatelessWidget {
                 ),
               ],
             ),
-            Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    property.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${property.cityName ?? ''} · ${property.provinceName ?? ''}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: VibesTheme.textTertiaryOf(context),
-                        ),
-                  ),
-                  const SizedBox(height: 10),
-                  PriceText(property.pricePerDay),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
+/// بطاقة قاعة — صورة عريضة كلوحة مناسبة، وتعليق بورقة دعوة
+class HallPropertyCard extends StatelessWidget {
+  const HallPropertyCard({
+    super.key,
+    required this.property,
+    this.width = 292,
+    this.heroNamespace = 'hall',
+  });
+
+  static const double photoAspect = 16 / 9;
+  static const double captionHeight = 84;
+  static const double ruleHeight = 5;
+
+  static double heightFor(double width) =>
+      width / photoAspect + ruleHeight + captionHeight;
+
+  final Property property;
+  final double width;
+  final String heroNamespace;
+
+  @override
+  Widget build(BuildContext context) {
+    final cover = property.coverUrl;
+    final place = [
+      property.cityName ?? property.provinceName ?? '',
+      if (property.capacity > 0) '${property.capacity} ضيف',
+    ].where((part) => part.isNotEmpty).join('  ·  ');
+
+    return SizedBox(
+      width: width,
+      height: heightFor(width),
+      child: FolioPanel(
+        shadows: VibesTheme.cardOf(context),
+        color: VibesTheme.surfaceOf(context),
+        borderColor: VibesTheme.hairlineOf(context),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => context.push('/property/${property.id}'),
+            customBorder: Folio.shape,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Hero(
+                        tag: 'property-hero-$heroNamespace-${property.id}',
+                        child: cover != null
+                            ? VibesNetImage(url: cover, fit: BoxFit.cover)
+                            : const ColoredBox(color: VibesDark.canvas),
+                      ),
+                      const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            stops: [0, .55, 1],
+                            colors: [
+                              Color(0x220F2138),
+                              Color(0x00000000),
+                              Color(0x590F2138),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const Positioned.fill(
+                        child: PlateCorners(inset: 10, arm: 16),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(
+                  height: 1.5,
+                  child: ColoredBox(color: Vibes.teal),
+                ),
+                const SizedBox(height: 3),
+                const SizedBox(
+                  height: 0.5,
+                  child: ColoredBox(color: Vibes.teal),
+                ),
+                SizedBox(
+                  height: captionHeight,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'قاعة أعراس',
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: Vibes.teal,
+                                fontWeight: FontWeight.w800,
+                                height: 1,
+                              ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          property.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                height: 1.15,
+                              ),
+                        ),
+                        const Spacer(),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                place,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: VibesTheme.textTertiaryOf(context),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            PriceText(property.pricePerDay, compact: true),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _CompareToggle extends ConsumerWidget {
   const _CompareToggle({required this.property, required this.onSelect});
@@ -364,21 +480,42 @@ class _CompareToggle extends ConsumerWidget {
         onSelect(property);
         HapticFeedback.selectionClick();
       },
-      child: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: selected ? GoldColors.gold : Colors.black45,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: selected ? GoldColors.goldLight : Colors.white24,
+      child: FolioPanel(
+        color: selected ? Vibes.coral : const Color(0xE6FFFFFF),
+        borderColor: selected ? Vibes.coral : Vibes.hairline,
+        radius: Folio.compact,
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Icon(
+            selected ? Icons.check_rounded : Icons.compare_arrows_rounded,
+            size: 15,
+            color: selected ? Colors.white : Vibes.ink,
           ),
         ),
-        child: Icon(
-          selected ? Icons.check_rounded : Icons.compare_arrows_rounded,
-          size: 15,
-          color: selected ? GoldColors.onGold : Colors.white,
-        ),
       ),
+    );
+  }
+}
+
+class _GuardedHeart extends ConsumerWidget {
+  const _GuardedHeart({required this.active, required this.onToggle});
+
+  final bool active;
+  final ValueChanged<bool> onToggle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FavoriteHeart(
+      active: active,
+      size: 17,
+      onToggle: (next) async {
+        if (!ref.read(authControllerProvider).loggedIn) {
+          final ok = await context.push<bool>('/login');
+          if (ok != true || !context.mounted) return;
+          if (!ref.read(authControllerProvider).loggedIn) return;
+        }
+        onToggle(next);
+      },
     );
   }
 }

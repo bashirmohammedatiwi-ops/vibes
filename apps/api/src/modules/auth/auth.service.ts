@@ -2,12 +2,14 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { UserRole } from '@prisma/client';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import ms from 'ms';
 import { ActivityLogService } from '../../common/services/activity-log.service';
 import { JobsService } from '../../jobs/jobs.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
+import { PinAuthDto } from './dto/pin-auth.dto';
+import { hashPin, verifyPin } from './pin-hash';
 import { SendOtpDto } from './dto/send-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
@@ -79,6 +81,68 @@ export class AuthService {
       entityType: 'user',
       entityId: user.id,
       metadata: { ip: meta.ip, userAgent: meta.userAgent },
+    });
+
+    return this.issueTokens(user.id, user.phone, user.role, user.name, meta);
+  }
+
+  /** هل لهذا الرقم رقم سري محفوظ؟ الحساب غير الموجود يُعامل كزائر جديد. */
+  async lookupPin(phone: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { phone },
+      select: { pinHash: true, isActive: true },
+    });
+    if (user && !user.isActive) {
+      throw new UnauthorizedException('الحساب معطّل');
+    }
+    return { hasPin: Boolean(user?.pinHash) };
+  }
+
+  /**
+   * دخول برقم سري من ستة أرقام.
+   * أول استخدام لحساب بلا رقم سري يثبّت الرقم، والمحاولات التالية تتحقق منه.
+   */
+  async loginWithPin(dto: PinAuthDto, meta: RequestMeta = {}) {
+    const failKey = `pin:fail:${dto.phone}`;
+    const fails = Number((await this.redis.get(failKey)) ?? 0);
+    if (fails >= 8) {
+      throw new UnauthorizedException('محاولات كثيرة — انتظر قليلاً ثم أعد المحاولة');
+    }
+
+    const existing = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
+    if (existing && !existing.isActive) {
+      throw new UnauthorizedException('الحساب معطّل');
+    }
+
+    let user = existing;
+    if (!existing?.pinHash) {
+      const pinHash = hashPin(dto.pin);
+      user = await this.prisma.user.upsert({
+        where: { phone: dto.phone },
+        update: { pinHash },
+        create: {
+          phone: dto.phone,
+          role: UserRole.CUSTOMER,
+          pinHash,
+        },
+      });
+    } else if (!verifyPin(dto.pin, existing.pinHash)) {
+      await this.redis.set(failKey, String(fails + 1), 'EX', 15 * 60);
+      throw new UnauthorizedException('الرقم السري غير صحيح');
+    } else {
+      await this.redis.del(failKey);
+    }
+
+    if (!user) {
+      throw new UnauthorizedException('تعذر الدخول');
+    }
+
+    await this.activity.log({
+      userId: user.id,
+      action: 'auth.login',
+      entityType: 'user',
+      entityId: user.id,
+      metadata: { ip: meta.ip, userAgent: meta.userAgent, method: 'pin' },
     });
 
     return this.issueTokens(user.id, user.phone, user.role, user.name, meta);
@@ -159,7 +223,7 @@ export class AuthService {
     name: string | null,
     meta: RequestMeta = {},
   ) {
-    const payload = { sub: id, phone, role };
+    const payload = { sub: id, phone, role, jti: randomUUID() };
     const refreshExpiresIn = this.config.get<string>('JWT_REFRESH_EXPIRES_IN', '30d');
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(payload, {
@@ -167,7 +231,7 @@ export class AuthService {
         expiresIn: this.config.get<string>('JWT_ACCESS_EXPIRES_IN', '15m'),
       }),
       this.jwt.signAsync(
-        { sub: id },
+        { sub: id, jti: randomUUID() },
         {
           secret: this.config.getOrThrow<string>('JWT_REFRESH_SECRET'),
           expiresIn: refreshExpiresIn,

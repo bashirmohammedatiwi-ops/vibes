@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { BookingStatus, KycStatus, Prisma } from '@prisma/client';
 import { PaginationService } from '../../common/services/query-helpers';
+import { summarizeCoverage } from '../../common/utils/coverage.util';
 import { PrismaService } from '../../prisma/prisma.service';
 
 const providerInclude = {
@@ -66,7 +67,16 @@ export class AdminProvidersService {
     });
     if (!provider) throw new NotFoundException('المزود غير موجود');
 
-    const [properties, revenueAgg, bookingCounts, recentBookings, recentActivities] = await Promise.all([
+    const propertyIds = await this.prisma.property.findMany({
+      where: { providerId: id },
+      select: { id: true },
+    }).then((rows) => rows.map((row) => row.id));
+    const coverageStart = new Date();
+    coverageStart.setHours(0, 0, 0, 0);
+    const coverageEnd = new Date(coverageStart);
+    coverageEnd.setDate(coverageEnd.getDate() + 30);
+
+    const [properties, revenueAgg, bookingCounts, recentBookings, recentActivities, coverageBookings, closedSlots] = await Promise.all([
       this.prisma.property.findMany({
         where: { providerId: id },
         include: {
@@ -105,6 +115,27 @@ export class AdminProvidersService {
         orderBy: { createdAt: 'desc' },
         include: { user: { select: { name: true } } },
       }),
+      propertyIds.length
+        ? this.prisma.booking.findMany({
+            where: {
+              propertyId: { in: propertyIds },
+              status: { in: [BookingStatus.PENDING, BookingStatus.AWAITING_PAYMENT, BookingStatus.CONFIRMED] },
+              startDate: { lt: coverageEnd },
+              endDate: { gt: coverageStart },
+            },
+            select: { propertyId: true, startDate: true, endDate: true, origin: true },
+          })
+        : Promise.resolve([]),
+      propertyIds.length
+        ? this.prisma.availabilitySlot.findMany({
+            where: {
+              propertyId: { in: propertyIds },
+              isAvailable: false,
+              date: { gte: coverageStart, lt: coverageEnd },
+            },
+            select: { propertyId: true, date: true },
+          })
+        : Promise.resolve([]),
     ]);
 
     return {
@@ -117,6 +148,11 @@ export class AdminProvidersService {
       },
       recentBookings,
       recentActivities,
+      coverage: summarizeCoverage({
+        propertyIds,
+        bookings: coverageBookings,
+        closed: closedSlots,
+      }),
     };
   }
 

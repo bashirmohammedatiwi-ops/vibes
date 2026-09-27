@@ -2,9 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/network/api_client.dart';
 import '../../shared/models/models.dart';
+import '../auth/auth_controller.dart';
 
 /// حجوزات المستخدم الحالي
 final myBookingsProvider = FutureProvider<List<Booking>>((ref) async {
+  if (!ref.watch(authControllerProvider).loggedIn) return const [];
   final client = ref.watch(apiClientProvider);
   final data = await client.get('/api/bookings');
   return (data as List<dynamic>)

@@ -24,12 +24,26 @@ export class PropertiesController {
     @Query('type') type?: string,
     @Query('status') status?: string,
     @Query('cityId') cityId?: string,
+    @Query('province') province?: string,
     @Query('featured') featured?: string,
+    @Query('isNew') isNew?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @Query('q') q?: string,
+    @Query('sort') sort?: string,
   ) {
-    return this.properties.list({ type, status, cityId, featured, page, pageSize, q });
+    return this.properties.list({
+      type,
+      status,
+      cityId,
+      province,
+      featured,
+      isNew,
+      page,
+      pageSize,
+      q,
+      sort,
+    });
   }
 
   @ApiBearerAuth()
@@ -49,6 +63,12 @@ export class PropertiesController {
   @Get('slug/:slug')
   findBySlug(@Param('slug') slug: string) {
     return this.properties.findBySlug(slug);
+  }
+
+  @Public()
+  @Get(':id/similar')
+  similar(@Param('id') id: string) {
+    return this.properties.similar(id);
   }
 
   @Public()

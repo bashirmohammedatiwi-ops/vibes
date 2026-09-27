@@ -23,7 +23,7 @@ import { Alert } from "@/components/ui/alert";
 import { StatStrip } from "@/components/ui/stat-strip";
 import { IconCalendar, IconChart, IconWallet } from "@/components/nav-icons";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { BOOKING_STATUS_LABELS, FARM_SHIFTS, PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS, SHIFT_TYPE_LABELS } from "@/lib/constants";
+import { BOOKING_ORIGIN_LABELS, BOOKING_STATUS_LABELS, FARM_SHIFTS, PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS, SHIFT_TYPE_LABELS } from "@/lib/constants";
 import { api, buildQuery } from "@/lib/api";
 import { useCsvExport } from "@/lib/use-csv-export";
 import { formatMoney, formatShortDayAr } from "@/lib/dates";
@@ -49,13 +49,21 @@ function formatRange(start: string, end: string) {
   return `${formatShortDayAr(start)} → ${formatShortDayAr(end)}`;
 }
 
+function bookingGuest(item: Booking) {
+  return item.user?.name ?? item.guestName ?? item.user?.phone ?? item.guestPhone ?? "ضيف";
+}
+
+function bookingPhone(item: Booking) {
+  return item.user?.phone ?? item.guestPhone ?? undefined;
+}
+
 export function BookingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const { exportCsv, exporting } = useCsvExport();
   const [data, setData] = useState<Paginated<Booking> | null>(null);
-  const [stats, setStats] = useState<{ pending: number; confirmed: number; revenue: number | string } | null>(null);
+  const [stats, setStats] = useState<{ pending: number; confirmed: number; revenue: number | string; external?: number } | null>(null);
   const [q, setQ] = useState(() => searchParams.get("q") ?? "");
   const qDebounced = useDebouncedValue(q);
   const [status, setStatus] = useState(() => searchParams.get("status") ?? "");
@@ -66,6 +74,7 @@ export function BookingsContent() {
   const [shift, setShift] = useState(() => searchParams.get("shift") ?? "");
   const [paymentStatus, setPaymentStatus] = useState(() => searchParams.get("paymentStatus") ?? "");
   const [paymentMethod, setPaymentMethod] = useState(() => searchParams.get("paymentMethod") ?? "");
+  const [origin, setOrigin] = useState(() => searchParams.get("origin") ?? "");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,8 +90,8 @@ export function BookingsContent() {
     setError(null);
     try {
       const [list, bookingStats] = await Promise.all([
-        api<Paginated<Booking>>(`/api/admin/bookings${buildQuery({ q: qDebounced, status, propertyId, from, to, shift, paymentStatus, paymentMethod, page, pageSize: 15 })}`),
-        api<{ pending: number; confirmed: number; revenue: number | string }>("/api/admin/bookings/stats"),
+        api<Paginated<Booking>>(`/api/admin/bookings${buildQuery({ q: qDebounced, status, propertyId, from, to, shift, paymentStatus, paymentMethod, origin, page, pageSize: 15 })}`),
+        api<{ pending: number; confirmed: number; revenue: number | string; external?: number }>("/api/admin/bookings/stats"),
       ]);
       setData(list);
       setStats(bookingStats);
@@ -91,7 +100,7 @@ export function BookingsContent() {
     } finally {
       setLoading(false);
     }
-  }, [qDebounced, status, propertyId, from, to, shift, paymentStatus, paymentMethod, page]);
+  }, [qDebounced, status, propertyId, from, to, shift, paymentStatus, paymentMethod, origin, page]);
 
   useEffect(() => {
     api<Paginated<{ id: string; name: string }>>("/api/admin/properties?pageSize=200")
@@ -112,14 +121,15 @@ export function BookingsContent() {
     if (shift) params.set("shift", shift);
     if (paymentStatus) params.set("paymentStatus", paymentStatus);
     if (paymentMethod) params.set("paymentMethod", paymentMethod);
+    if (origin) params.set("origin", origin);
     if (qDebounced) params.set("q", qDebounced);
     const qs = params.toString();
     router.replace(qs ? `/bookings?${qs}` : "/bookings", { scroll: false });
-  }, [status, propertyId, from, to, shift, paymentStatus, paymentMethod, qDebounced, router]);
+  }, [status, propertyId, from, to, shift, paymentStatus, paymentMethod, origin, qDebounced, router]);
 
   useEffect(() => {
     setSelected(new Set());
-  }, [qDebounced, status, propertyId, from, to, shift, paymentStatus, paymentMethod, page]);
+  }, [qDebounced, status, propertyId, from, to, shift, paymentStatus, paymentMethod, origin, page]);
 
   async function applyStatusChange(id: string, next: string, note?: string) {
     try {
@@ -254,7 +264,7 @@ export function BookingsContent() {
     <PageShell>
       <PageHeader
         title="الحجوزات"
-        description="تابع طلبات العملاء — أكّد أو ألغِ من هنا"
+        description="حجوزات التطبيق والحجوزات الخارجية التي يسجّلها المالك"
         eyebrow="VIBES Admin"
         onRefresh={load}
         refreshing={loading}
@@ -263,14 +273,14 @@ export function BookingsContent() {
             <Link href="/bookings/new">
               <Button size="sm">+ حجز يدوي</Button>
             </Link>
-            <Button variant="ghost" disabled={exporting} onClick={() => exportCsv(`/api/admin/reports/bookings/export${buildQuery({ status, propertyId, from, to, shift, paymentStatus, paymentMethod, q: qDebounced })}`, "bookings.csv")}>
+            <Button variant="ghost" disabled={exporting} onClick={() => exportCsv(`/api/admin/reports/bookings/export${buildQuery({ status, propertyId, from, to, shift, paymentStatus, paymentMethod, origin, q: qDebounced })}`, "bookings.csv")}>
               تصدير CSV
             </Button>
           </>
         }
       />
 
-      <HelpTip>اضغط على أي حجز لفتح التفاصيل. للتواصل مع العميل استخدم اتصال أو واتساب.</HelpTip>
+      <HelpTip>الحجز الخارجي يسجّله صاحب المزرعة أو القاعة من تطبيقه ليغلق اليوم عن الضيوف. اضغط أي صف للتفاصيل.</HelpTip>
 
       {stats && (
         <StatStrip
@@ -278,6 +288,7 @@ export function BookingsContent() {
             { label: "قيد الانتظار", value: stats.pending, icon: <IconCalendar className="h-5 w-5" /> },
             { label: "مؤكدة", value: stats.confirmed, accent: true, icon: <IconChart className="h-5 w-5" /> },
             { label: "إجمالي الإيرادات", value: formatMoney(stats.revenue), icon: <IconWallet className="h-5 w-5" /> },
+            { label: "حجوزات خارجية", value: stats.external ?? 0, icon: <IconCalendar className="h-5 w-5" /> },
           ]}
         />
       )}
@@ -297,6 +308,17 @@ export function BookingsContent() {
               { id: "cancelled", label: "ملغاة" },
             ]}
           />
+          <div className="mt-3">
+          <FilterChips
+            value={origin || "all"}
+            onChange={(id) => { setPage(1); setOrigin(id === "all" ? "" : id); }}
+            options={[
+              { id: "all", label: "كل المصادر" },
+              { id: "PLATFORM", label: "تطبيق VIBES" },
+              { id: "EXTERNAL", label: "خارجي" },
+            ]}
+          />
+          </div>
           <PageToolbar className="mb-0 mt-4">
             <Input className="max-w-sm flex-1" placeholder="بحث بالاسم أو الهاتف..." value={q} onChange={(e) => { setPage(1); setQ(e.target.value); }} />
             <Select value={propertyId} onChange={(e) => { setPage(1); setPropertyId(e.target.value); }} className="max-w-[200px]">
@@ -346,8 +368,13 @@ export function BookingsContent() {
               key={item.id}
               onClick={() => router.push(`/bookings/${item.id}`)}
               title={item.property?.name}
-              subtitle={`${item.user?.name ?? item.user?.phone} · ${item.guests} ضيف · ${formatRange(item.startDate, item.endDate)}${item.shift && item.shift !== "FULL" ? ` · ${SHIFT_TYPE_LABELS[item.shift]}` : ""}`}
-              badge={<Badge variant={STATUS_VARIANT[item.status] ?? "default"}>{BOOKING_STATUS_LABELS[item.status] ?? item.status}</Badge>}
+              subtitle={`${bookingGuest(item)} · ${item.guests} ضيف · ${formatRange(item.startDate, item.endDate)}${item.shift && item.shift !== "FULL" ? ` · ${SHIFT_TYPE_LABELS[item.shift]}` : ""}`}
+              badge={
+                <span className="flex flex-wrap gap-1">
+                  {item.origin === "EXTERNAL" && <Badge variant="muted">{BOOKING_ORIGIN_LABELS.EXTERNAL}</Badge>}
+                  <Badge variant={STATUS_VARIANT[item.status] ?? "default"}>{BOOKING_STATUS_LABELS[item.status] ?? item.status}</Badge>
+                </span>
+              }
               meta={
                 <>
                   <span className="text-sm font-bold text-ink">{formatMoney(item.totalPrice)}</span>
@@ -356,7 +383,7 @@ export function BookingsContent() {
                       {PAYMENT_STATUS_LABELS[item.payment.status] ?? item.payment.status}
                     </Badge>
                   )}
-                  <PhoneActions phone={item.user?.phone} compact />
+                  <PhoneActions phone={bookingPhone(item)} compact />
                 </>
               }
               footer={<BookingActions item={item} />}
@@ -402,8 +429,11 @@ export function BookingsContent() {
                 header: "العميل",
                 cell: (item) => (
                   <>
-                    <div>{item.user?.name ?? item.user?.phone}</div>
-                    <PhoneActions phone={item.user?.phone} compact />
+                    <div>{bookingGuest(item)}</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-1">
+                      {item.origin === "EXTERNAL" && <Badge variant="muted">{BOOKING_ORIGIN_LABELS.EXTERNAL}</Badge>}
+                      <PhoneActions phone={bookingPhone(item)} compact />
+                    </div>
                   </>
                 ),
               },

@@ -344,8 +344,8 @@ export class AdminReportsService {
       [
         b.id,
         `"${b.property.name.replace(/"/g, '""')}"`,
-        `"${(b.user.name ?? '').replace(/"/g, '""')}"`,
-        b.user.phone,
+        `"${(b.user?.name ?? b.guestName ?? '').replace(/"/g, '""')}"`,
+        b.user?.phone ?? b.guestPhone ?? '',
         b.startDate.toISOString().slice(0, 10),
         b.endDate.toISOString().slice(0, 10),
         b.guests,

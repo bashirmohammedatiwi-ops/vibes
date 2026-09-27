@@ -104,12 +104,74 @@ enum NotificationType {
   REVIEW_NEW
   PROPERTY_PENDING
   SYSTEM
+  MESSAGE
+  OFFER
+  INVOICE
+  REFUND_REQUEST
+  SOCIAL
+}
+
+enum BookingOrigin {
+  PLATFORM
+  EXTERNAL
+}
+
+enum ConversationKind {
+  BOOKING
+  SUPPORT
+}
+
+enum MessageKind {
+  TEXT
+  IMAGE
+  SYSTEM
+  CALL
+}
+
+enum CallStatus {
+  RINGING
+  ACTIVE
+  ENDED
+  MISSED
+}
+
+enum InvoiceStatus {
+  ISSUED
+  PAID
+  VOID
+  REFUNDED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum CollectionVisibility {
+  PRIVATE
+  PUBLIC
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum SocialPostStatus {
+  PUBLISHED
+  HIDDEN
+  REPORTED
 }
 
 model User {
   id        String   @id @default(uuid())
   phone     String   @unique
   name      String?
+  pinHash   String?  @map("pin_hash")
   role      UserRole @default(CUSTOMER)
   avatar    String?
   isActive  Boolean  @default(true) @map("is_active")
@@ -126,6 +188,24 @@ model User {
   refreshTokens    RefreshToken[]
   deviceTokens     DeviceToken[]
   favorites        Favorite[]
+  conversationParts ConversationParticipant[]
+  sentMessages     Message[]
+  cancellationRequests CancellationRequest[]
+  reviewedCancellations CancellationRequest[] @relation("CancellationReviewer")
+  refundRequests   RefundRequest[]
+  reviewedRefunds  RefundRequest[] @relation("RefundReviewer")
+  collections      Collection[]
+  follows          ProviderFollow[]
+  receivedOffers   PriceOffer[] @relation("OfferCustomer")
+  createdOffers    PriceOffer[] @relation("OfferCreatedBy")
+  socialPosts      SocialPost[]
+  postLikes        SocialPostLike[]
+  postComments     SocialPostComment[]
+  postReports      SocialPostReport[]
+  notifications    UserNotification[]
+  guestConversations Conversation[] @relation("ConversationGuest")
+  callsMade        CallSession[] @relation("CallCaller")
+  callsReceived    CallSession[] @relation("CallCallee")
 
   @@map("users")
 }
@@ -153,10 +233,14 @@ model Provider {
   verified        Boolean   @default(false)
   kycStatus       KycStatus @default(UNVERIFIED) @map("kyc_status")
   rejectionReason String?   @map("rejection_reason")
+  requestNote     String     @default("") @map("request_note")
+  placeTypes      String     @default("") @map("place_types")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   properties Property[]
+  followers  ProviderFollow[]
+  offers     PriceOffer[]
 
   @@map("providers")
 }
@@ -217,6 +301,7 @@ model Property {
   phone         String?
   whatsapp      String?
   featured      Boolean        @default(false)
+  isNew         Boolean        @default(false) @map("is_new")
   amenities     Json           @default("[]")
   tags          Json           @default("[]")
   rules         String         @default("")
@@ -238,10 +323,16 @@ model Property {
   coupons           Coupon[]
   bookings          Booking[]
   reviews           Review[]
+  collectionItems   CollectionItem[]
+  offers            PriceOffer[]
+  socialPosts       SocialPost[]
+  spotlights        HomeSpotlight[]
+  conversations     Conversation[]
 
   @@index([type, status])
   @@index([cityId])
   @@index([featured])
+  @@index([isNew])
   @@index([status, featured])
   @@index([providerId])
   @@index([createdAt])
@@ -320,8 +411,8 @@ model PriceRule {
 
 model Booking {
   id         String        @id @default(uuid())
-  userId     String        @map("user_id")
-  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String?       @map("user_id")
+  user       User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   propertyId String        @map("property_id")
   property   Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   startDate  DateTime      @map("start_date") @db.Date
@@ -329,6 +420,9 @@ model Booking {
   shift      ShiftType     @default(FULL)
   guests     Int           @default(1)
   status     BookingStatus @default(PENDING)
+  origin     BookingOrigin @default(PLATFORM)
+  guestName  String?       @map("guest_name")
+  guestPhone String?      @map("guest_phone")
   totalPrice Decimal       @map("total_price") @db.Decimal(12, 2)
   discountAmount Decimal   @default(0) @map("discount_amount") @db.Decimal(12, 2)
   couponId   String?       @map("coupon_id")
@@ -342,11 +436,18 @@ model Booking {
   payment Payment?
   couponRedemption CouponRedemption?
   bookingNotes BookingNote[]
+  conversation Conversation?
+  invoice Invoice?
+  cancellationRequests CancellationRequest[]
+  refundRequests RefundRequest[]
+  offer PriceOffer?
+  socialPost SocialPost?
 
   @@index([userId])
   @@index([propertyId, startDate, endDate])
   @@index([status])
   @@index([createdAt])
+  @@index([origin])
   @@map("bookings")
 }
 
@@ -364,6 +465,8 @@ model Payment {
   reviewedById String?    @map("reviewed_by_id")
   createdAt DateTime      @default(now()) @map("created_at")
   updatedAt DateTime      @updatedAt @map("updated_at")
+
+  refundRequests RefundRequest[]
 
   @@index([status])
   @@index([createdAt])
@@ -488,6 +591,24 @@ model Banner {
   @@map("banners")
 }
 
+/// أماكن مميزة في الرئيسية — صورة متحركة بحجم بانر، مربوطة بمكان، وارتفاعها من لوحة التحكم
+model HomeSpotlight {
+  id         String   @id @default(uuid())
+  title      String   @default("")
+  imageUrl   String   @map("image_url")
+  propertyId String   @map("property_id")
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  height     Int      @default(176)
+  sortOrder  Int      @default(0) @map("sort_order")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive, sortOrder])
+  @@index([propertyId])
+  @@map("home_spotlights")
+}
+
 model TeamNotification {
   id         String           @id @default(uuid())
   type       NotificationType
@@ -548,4 +669,290 @@ model PlatformSetting {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("platform_settings")
+}
+
+model Conversation {
+  id          String           @id @default(uuid())
+  bookingId   String?          @unique @map("booking_id")
+  booking     Booking?         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  propertyId  String?          @map("property_id")
+  property    Property?        @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  guestUserId String?          @map("guest_user_id")
+  guest       User?            @relation("ConversationGuest", fields: [guestUserId], references: [id], onDelete: SetNull)
+  kind        ConversationKind @default(BOOKING)
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  participants ConversationParticipant[]
+  messages     Message[]
+  calls        CallSession[]
+
+  @@unique([guestUserId, propertyId])
+  @@index([kind, updatedAt])
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversationId String       @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String       @map("user_id")
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadAt     DateTime?    @map("last_read_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String       @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String?      @map("sender_id")
+  sender         User?        @relation(fields: [senderId], references: [id], onDelete: SetNull)
+  kind           MessageKind  @default(TEXT)
+  body           String       @default("")
+  imageUrl       String?      @map("image_url")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model CallSession {
+  id             String     @id @default(uuid())
+  conversationId String     @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  callerId       String     @map("caller_id")
+  caller         User       @relation("CallCaller", fields: [callerId], references: [id], onDelete: Cascade)
+  calleeId       String     @map("callee_id")
+  callee         User       @relation("CallCallee", fields: [calleeId], references: [id], onDelete: Cascade)
+  status         CallStatus @default(RINGING)
+  roomName       String     @map("room_name")
+  startedAt      DateTime?  @map("started_at")
+  endedAt        DateTime?  @map("ended_at")
+  createdAt      DateTime   @default(now()) @map("created_at")
+
+  @@index([conversationId, createdAt])
+  @@index([calleeId, status])
+  @@map("call_sessions")
+}
+
+model Invoice {
+  id         String        @id @default(uuid())
+  bookingId  String        @unique @map("booking_id")
+  booking    Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  number     String        @unique
+  status     InvoiceStatus @default(ISSUED)
+  subtotal   Decimal       @db.Decimal(12, 2)
+  discount   Decimal       @default(0) @db.Decimal(12, 2)
+  total      Decimal       @db.Decimal(12, 2)
+  currency   String        @default("IQD")
+  items      Json          @default("[]")
+  notes      String        @default("")
+  issuedAt   DateTime      @default(now()) @map("issued_at")
+  paidAt     DateTime?     @map("paid_at")
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+
+  @@index([status, issuedAt])
+  @@map("invoices")
+}
+
+model CancellationRequest {
+  id              String        @id @default(uuid())
+  bookingId       String        @map("booking_id")
+  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  userId          String        @map("user_id")
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason          String        @default("")
+  status          RequestStatus @default(PENDING)
+  expectedRefund  Decimal       @map("expected_refund") @db.Decimal(12, 2)
+  adminNote       String?       @map("admin_note")
+  reviewedById    String?       @map("reviewed_by_id")
+  reviewedBy      User?         @relation("CancellationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt      DateTime?     @map("reviewed_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@index([bookingId])
+  @@map("cancellation_requests")
+}
+
+model RefundRequest {
+  id           String        @id @default(uuid())
+  bookingId    String        @map("booking_id")
+  booking      Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  paymentId    String?       @map("payment_id")
+  payment      Payment?      @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  userId       String        @map("user_id")
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason       String        @default("")
+  amount       Decimal       @db.Decimal(12, 2)
+  status       RequestStatus @default(PENDING)
+  adminNote    String?       @map("admin_note")
+  reviewedById String?       @map("reviewed_by_id")
+  reviewedBy   User?         @relation("RefundReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt   DateTime?     @map("reviewed_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@index([bookingId])
+  @@map("refund_requests")
+}
+
+model PriceOffer {
+  id          String      @id @default(uuid())
+  providerId  String      @map("provider_id")
+  provider    Provider    @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  propertyId  String      @map("property_id")
+  property    Property    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  customerId  String      @map("customer_id")
+  customer    User        @relation("OfferCustomer", fields: [customerId], references: [id], onDelete: Cascade)
+  createdById String      @map("created_by_id")
+  createdBy   User        @relation("OfferCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  startDate   DateTime    @map("start_date") @db.Date
+  endDate     DateTime    @map("end_date") @db.Date
+  shift       ShiftType   @default(FULL)
+  amount      Decimal     @db.Decimal(12, 2)
+  message     String      @default("")
+  status      OfferStatus @default(PENDING)
+  expiresAt   DateTime?   @map("expires_at")
+  bookingId   String?     @unique @map("booking_id")
+  booking     Booking?    @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  @@index([customerId, status])
+  @@index([providerId, status])
+  @@map("price_offers")
+}
+
+model Collection {
+  id          String               @id @default(uuid())
+  userId      String               @map("user_id")
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String               @default("")
+  coverUrl    String?              @map("cover_url")
+  isDefault   Boolean              @default(false) @map("is_default")
+  visibility  CollectionVisibility @default(PRIVATE)
+  createdAt   DateTime             @default(now()) @map("created_at")
+  updatedAt   DateTime             @updatedAt @map("updated_at")
+
+  items CollectionItem[]
+
+  @@index([userId, isDefault])
+  @@map("collections")
+}
+
+model CollectionItem {
+  id           String     @id @default(uuid())
+  collectionId String     @map("collection_id")
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  propertyId   String     @map("property_id")
+  property     Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  note         String     @default("")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  @@unique([collectionId, propertyId])
+  @@index([propertyId])
+  @@map("collection_items")
+}
+
+model ProviderFollow {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  providerId String   @map("provider_id")
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, providerId])
+  @@index([providerId])
+  @@map("provider_follows")
+}
+
+model SocialPost {
+  id            String           @id @default(uuid())
+  userId        String           @map("user_id")
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookingId     String?          @unique @map("booking_id")
+  booking       Booking?         @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  propertyId    String           @map("property_id")
+  property      Property         @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  caption       String           @default("")
+  mediaUrls     Json             @default("[]") @map("media_urls")
+  status        SocialPostStatus @default(PUBLISHED)
+  likesCount    Int              @default(0) @map("likes_count")
+  commentsCount Int              @default(0) @map("comments_count")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  likes    SocialPostLike[]
+  comments SocialPostComment[]
+  reports  SocialPostReport[]
+
+  @@index([status, createdAt])
+  @@index([propertyId])
+  @@map("social_posts")
+}
+
+model SocialPostLike {
+  id        String     @id @default(uuid())
+  postId    String     @map("post_id")
+  post      SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String     @map("user_id")
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  @@unique([postId, userId])
+  @@map("social_post_likes")
+}
+
+model SocialPostComment {
+  id        String     @id @default(uuid())
+  postId    String     @map("post_id")
+  post      SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String     @map("user_id")
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  @@index([postId, createdAt])
+  @@map("social_post_comments")
+}
+
+model SocialPostReport {
+  id        String     @id @default(uuid())
+  postId    String     @map("post_id")
+  post      SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String     @map("user_id")
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason    String     @default("")
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  @@unique([postId, userId])
+  @@map("social_post_reports")
+}
+
+model UserNotification {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       String
+  title      String
+  body       String   @default("")
+  linkUrl    String?  @map("link_url")
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  isRead     Boolean  @default(false) @map("is_read")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId, isRead, createdAt])
+  @@map("user_notifications")
 }

@@ -23,11 +23,11 @@ export function BrandLogo({
         className="brand-logo-mark relative shrink-0 overflow-hidden bg-paper"
         style={{ width: sizes.icon, height: sizes.icon }}
       >
-        <Image src="/vibes-logo.png" alt="VIBES" fill className="object-cover" priority />
+        <Image src="/vibees-mark.png" alt="VIBEES" fill className="object-contain p-0.5" priority />
       </div>
       {showWordmark && (
         <div className="min-w-0">
-          <div className={`brand-wordmark ${sizes.word}`}>VIBES</div>
+          <div className={`brand-wordmark ${sizes.word}`}>VIBEES</div>
           <p className="brand-tagline text-[11px] font-medium">لوحة التشغيل</p>
         </div>
       )}

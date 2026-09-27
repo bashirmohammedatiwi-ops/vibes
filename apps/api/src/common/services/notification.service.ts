@@ -42,7 +42,7 @@ export class NotificationService {
     status?: string;
     propertyId: string;
     property?: { name?: string; provider?: { user?: { phone: string } | null } | null };
-    user?: { name?: string | null; phone: string };
+    user?: { name?: string | null; phone: string } | null;
   }, event: 'created' | 'status') {
     const title =
       event === 'created'
@@ -86,7 +86,7 @@ export class NotificationService {
     }
   }
 
-  bookingCreated(booking: { id: string; property?: { name: string }; user?: { name?: string | null; phone: string } }) {
+  bookingCreated(booking: { id: string; property?: { name: string }; user?: { name?: string | null; phone: string } | null }) {
     return this.notify({
       type: NotificationType.BOOKING_NEW,
       title: `حجز جديد — ${booking.property?.name ?? 'مكان'}`,

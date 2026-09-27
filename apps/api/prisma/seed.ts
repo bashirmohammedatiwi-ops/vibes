@@ -487,6 +487,149 @@ async function main() {
     }
   }
 
+  const freshPlaces: Array<{
+    name: string;
+    slug: string;
+    type: PropertyType;
+    cityId: string;
+    lat: number;
+    lng: number;
+    price: string;
+    capacity: number;
+    description: string;
+    cover: string;
+    banner: string;
+    spotlightTitle: string;
+    height: number;
+  }> = [
+    {
+      name: 'مزرعة الرافدين',
+      slug: 'mzr-alrafdyn',
+      type: PropertyType.FARM,
+      cityId: baghdad.id,
+      lat: 33.289,
+      lng: 44.412,
+      price: '210000',
+      capacity: 60,
+      description: 'مزرعة جديدة على ضفاف دجلة، جلسات ونخيل ومسبح عائلي.',
+      cover: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&h=1600&q=80',
+      banner: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1600&h=700&q=80',
+      spotlightTitle: 'مزرعة الرافدين',
+      height: 176,
+    },
+    {
+      name: 'مزرعة السدير',
+      slug: 'mzr-alsdyr',
+      type: PropertyType.FARM,
+      cityId: baghdad.id,
+      lat: 33.41,
+      lng: 44.36,
+      price: '165000',
+      capacity: 45,
+      description: 'مزرعة حديثة بحديقة واسعة ومنطقة شواء للعائلات.',
+      cover: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=1200&h=1600&q=80',
+      banner: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=1600&h=700&q=80',
+      spotlightTitle: 'مزرعة السدير',
+      height: 168,
+    },
+    {
+      name: 'قاعة القصر',
+      slug: 'qa-alqsr',
+      type: PropertyType.HALL,
+      cityId: baghdad.id,
+      lat: 33.352,
+      lng: 44.42,
+      price: '1800000',
+      capacity: 500,
+      description: 'قاعة جديدة للمناسبات الكبرى، منصة وإضاءة ومواقف واسعة.',
+      cover: 'https://images.unsplash.com/photo-1519167758481-83f29da8c2b0?auto=format&fit=crop&w=1200&h=1600&q=80',
+      banner: 'https://images.unsplash.com/photo-1519167758481-83f29da8c2b0?auto=format&fit=crop&w=1600&h=700&q=80',
+      spotlightTitle: 'قاعة القصر',
+      height: 200,
+    },
+    {
+      name: 'قاعة النور',
+      slug: 'qa-alnr',
+      type: PropertyType.HALL,
+      cityId: basra.id,
+      lat: 30.52,
+      lng: 47.79,
+      price: '1100000',
+      capacity: 280,
+      description: 'قاعة جديدة في البصرة لأعراس المساء والولائم.',
+      cover: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=1200&h=1600&q=80',
+      banner: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=1600&h=700&q=80',
+      spotlightTitle: 'قاعة النور',
+      height: 184,
+    },
+  ];
+
+  for (const [index, place] of freshPlaces.entries()) {
+    const property = await prisma.property.upsert({
+      where: { slug: place.slug },
+      update: {
+        name: place.name,
+        type: place.type,
+        isNew: true,
+        status: PropertyStatus.APPROVED,
+        publishedAt: new Date(),
+        description: place.description,
+      },
+      create: {
+        createdById: admin.id,
+        type: place.type,
+        slug: place.slug,
+        name: place.name,
+        description: place.description,
+        cityId: place.cityId,
+        address: 'عنوان تجريبي',
+        latitude: place.lat,
+        longitude: place.lng,
+        capacity: place.capacity,
+        pricePerDay: place.price,
+        status: PropertyStatus.APPROVED,
+        isNew: true,
+        featured: false,
+        publishedAt: new Date(),
+        phone: '9647700000000',
+      },
+    });
+
+    const cover = await prisma.media.findFirst({
+      where: { propertyId: property.id, isPrimary: true },
+    });
+    if (!cover) {
+      await prisma.media.create({
+        data: {
+          propertyId: property.id,
+          url: place.cover,
+          type: 'IMAGE',
+          status: 'READY',
+          isPrimary: true,
+          width: 1200,
+          height: 1600,
+          altText: place.name,
+        },
+      });
+    }
+
+    const spotlight = await prisma.homeSpotlight.findFirst({
+      where: { propertyId: property.id },
+    });
+    if (!spotlight) {
+      await prisma.homeSpotlight.create({
+        data: {
+          title: place.spotlightTitle,
+          imageUrl: place.banner,
+          propertyId: property.id,
+          height: place.height,
+          sortOrder: index,
+          isActive: true,
+        },
+      });
+    }
+  }
+
   const bannerCount = await prisma.banner.count();
   if (bannerCount === 0) {
     await prisma.banner.createMany({
@@ -494,14 +637,14 @@ async function main() {
         {
           title: 'اكتشف أجمل المزارع',
           subtitle: 'حجز فوري — أسعار شفافة',
-          imageUrl: 'https://images.unsplash.com/photo-1500382017468-9049fed747aa?w=1200',
+          imageUrl: 'https://picsum.photos/seed/vibes-farm/1200/600',
           linkUrl: '/search?type=FARM',
           sortOrder: 0,
         },
         {
           title: 'قاعات أفراح فاخرة',
           subtitle: 'بغداد · البصرة · أربيل',
-          imageUrl: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b8?w=1200',
+          imageUrl: 'https://picsum.photos/seed/vibes-hall/1200/600',
           sortOrder: 1,
         },
       ],
@@ -521,6 +664,131 @@ async function main() {
       isActive: true,
     },
   });
+
+  const demoBooking = await prisma.booking.findFirst({
+    where: { userId: customer.id },
+    include: { payment: true, property: true },
+  });
+  if (demoBooking) {
+    await prisma.conversation.upsert({
+      where: { bookingId: demoBooking.id },
+      update: {},
+      create: {
+        bookingId: demoBooking.id,
+        kind: 'BOOKING',
+        participants: {
+          create: [{ userId: customer.id }, { userId: providerUser.id }],
+        },
+        messages: {
+          create: [
+            { kind: 'SYSTEM', body: `بدأت محادثة حجز ${demoBooking.property.name}` },
+            {
+              kind: 'TEXT',
+              senderId: customer.id,
+              body: 'مرحباً، هل المسبح جاهز في ذلك اليوم؟',
+            },
+          ],
+        },
+      },
+    });
+
+    await prisma.invoice.upsert({
+      where: { bookingId: demoBooking.id },
+      update: {},
+      create: {
+        bookingId: demoBooking.id,
+        number: `VIB-${new Date().getFullYear()}-00001`,
+        status: 'ISSUED',
+        subtotal: demoBooking.totalPrice,
+        discount: 0,
+        total: demoBooking.totalPrice,
+        items: [
+          { label: `إقامة — ${demoBooking.property.name}`, amount: Number(demoBooking.totalPrice) },
+        ],
+      },
+    });
+
+    await prisma.userNotification.createMany({
+      data: [
+        {
+          userId: customer.id,
+          type: 'BOOKING',
+          title: 'تم استلام حجزك',
+          body: `${demoBooking.property.name} — بانتظار التأكيد`,
+          linkUrl: `/booking/${demoBooking.id}`,
+          entityType: 'booking',
+          entityId: demoBooking.id,
+        },
+        {
+          userId: providerUser.id,
+          type: 'MESSAGE',
+          title: 'رسالة جديدة',
+          body: 'مرحباً، هل المسبح جاهز في ذلك اليوم؟',
+          linkUrl: `/conversations`,
+          entityType: 'booking',
+          entityId: demoBooking.id,
+        },
+      ],
+    });
+  }
+
+  const defaultCollection = await prisma.collection.findFirst({
+    where: { userId: customer.id, isDefault: true },
+  });
+  if (!defaultCollection) {
+    await prisma.collection.create({
+      data: { userId: customer.id, name: 'محفوظاتي', isDefault: true },
+    });
+  }
+
+  await prisma.providerFollow.upsert({
+    where: { userId_providerId: { userId: customer.id, providerId: provider.id } },
+    update: {},
+    create: { userId: customer.id, providerId: provider.id },
+  });
+
+  let completedBooking = await prisma.booking.findFirst({
+    where: { userId: customer.id, status: 'COMPLETED' },
+  });
+  if (!completedBooking && farm) {
+    const pastStart = new Date();
+    pastStart.setDate(pastStart.getDate() - 14);
+    const pastEnd = new Date(pastStart);
+    pastEnd.setDate(pastEnd.getDate() + 2);
+    completedBooking = await prisma.booking.create({
+      data: {
+        userId: customer.id,
+        propertyId: farm.id,
+        startDate: pastStart,
+        endDate: pastEnd,
+        guests: 12,
+        status: 'COMPLETED',
+        totalPrice: Number(farm.pricePerDay) * 2,
+        notes: 'حجز مكتمل لتجربة اجتماعية',
+        payment: {
+          create: {
+            method: 'MANUAL',
+            amount: Number(farm.pricePerDay) * 2,
+            status: 'PAID',
+          },
+        },
+      },
+    });
+  }
+  if (completedBooking) {
+    await prisma.socialPost.upsert({
+      where: { bookingId: completedBooking.id },
+      update: {},
+      create: {
+        userId: customer.id,
+        bookingId: completedBooking.id,
+        propertyId: completedBooking.propertyId,
+        caption: 'يوم عائلي رائع — أنصح بالمكان بشدة',
+        mediaUrls: ['https://picsum.photos/seed/vibes-exp/900/1200'],
+        status: 'PUBLISHED',
+      },
+    });
+  }
 
   await syncPropertyAmenityRows();
 

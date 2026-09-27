@@ -1,3 +1,10 @@
+# منافذ المضيف لهذا المشروع فقط، حتى لا تتعارض مع تطبيقات أخرى على الخادم:
+# 6001/tcp  الموقع ولوحة التحكم وواجهة البرمجة عبر nginx
+# 6002/tcp  إشارة مكالمات LiveKit
+# 6003/tcp  احتياط صوت LiveKit
+# 6004-6033/udp وسائط الصوت
+# Postgres و Redis يبقيان داخل شبكة Docker ولا يُنشران على المضيف.
+
 services:
   postgres:
     image: postgis/postgis:16-3.4
@@ -53,6 +60,9 @@ services:
       NODE_ENV: production
       APP_PORT: 3000
       MEDIA_ROOT: /app/uploads
+      LIVEKIT_URL: ${LIVEKIT_URL}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
     volumes:
       - media_uploads:/app/uploads
     depends_on:
@@ -60,6 +70,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      livekit:
+        condition: service_started
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 20s
@@ -93,13 +105,30 @@ services:
     networks:
       - vibes
 
+  livekit:
+    image: livekit/livekit-server:v1.8.4
+    container_name: vibes-livekit
+    restart: always
+    command: --config /etc/livekit.yaml
+    ports:
+      - "6002:6002"
+      - "6003:6003"
+      - "6004-6033:6004-6033/udp"
+    volumes:
+      - ./docker/livekit.prod.yaml:/etc/livekit.yaml:ro
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - vibes
+
   nginx:
     image: nginx:alpine
     container_name: vibes-nginx
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
+      - "6001:80"
     volumes:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./docker/nginx/certs:/etc/nginx/certs:ro

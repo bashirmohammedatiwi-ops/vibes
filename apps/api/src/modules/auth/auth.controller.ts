@@ -5,6 +5,7 @@ import { AuthUser, CurrentUser } from '../../common/decorators/current-user.deco
 import { Public } from '../../common/decorators/public.decorator';
 import { AuthService } from './auth.service';
 import { LogoutDto, RefreshTokenDto } from './dto/refresh-token.dto';
+import { PinAuthDto, PinLookupDto } from './dto/pin-auth.dto';
 import { SendOtpDto } from './dto/send-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 
@@ -12,6 +13,24 @@ import { VerifyOtpDto } from './dto/verify-otp.dto';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('pin/lookup')
+  lookupPin(@Body() dto: PinLookupDto) {
+    return this.auth.lookupPin(dto.phone);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 8, ttl: 300_000 } })
+  @Post('pin')
+  loginWithPin(
+    @Body() dto: PinAuthDto,
+    @Ip() ip: string,
+    @Headers('user-agent') userAgent?: string,
+  ) {
+    return this.auth.loginWithPin(dto, { ip, userAgent });
+  }
 
   @Public()
   @Throttle({ default: { limit: 5, ttl: 300_000 } })

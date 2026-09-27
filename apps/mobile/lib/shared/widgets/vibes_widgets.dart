@@ -1,11 +1,10 @@
-import 'dart:ui' show FontFeature;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_theme.dart';
+import 'maison_shapes.dart';
 
 /// ═══════════════════════════════════════════════════════════
-/// VIBES Élégance — مكتبة الويدجت الأساسية
+/// VIBES — أزرار معمارية، بطاقات مجلة، حالات واضحة
 /// ═══════════════════════════════════════════════════════════
 
 /// الزر الذهبي — تدرج شامبانيا بلمعة حريرية تعبر عند التحويم
@@ -35,13 +34,12 @@ class VibesButton extends StatefulWidget {
 
 class _VibesButtonState extends State<VibesButton> {
   bool _hovering = false;
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
-    final height = widget.small ? 40.0 : 52.0;
-    final radius = BorderRadius.circular(
-      widget.small ? VibesRadius.sm : VibesRadius.md,
-    );
+    final height = widget.small ? 42.0 : 56.0;
+    const shape = Folio.shape;
 
     final child = Row(
       mainAxisSize: widget.expanded ? MainAxisSize.max : MainAxisSize.min,
@@ -54,7 +52,9 @@ class _VibesButtonState extends State<VibesButton> {
             child: CircularProgressIndicator(
               strokeWidth: 2,
               valueColor: AlwaysStoppedAnimation(
-                widget.ghost ? GoldColors.gold : GoldColors.onGold,
+                widget.ghost
+                    ? VibesTheme.brandOf(context)
+                    : VibesTheme.onActionOf(context),
               ),
             ),
           )
@@ -67,80 +67,120 @@ class _VibesButtonState extends State<VibesButton> {
             widget.label,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: widget.small ? 13 : null,
-                  color: widget.ghost ? null : GoldColors.onGold,
-                ),
+              fontWeight: FontWeight.w700,
+              fontSize: widget.small ? 13 : null,
+              color: widget.ghost ? null : VibesTheme.onActionOf(context),
+            ),
           ),
         ),
       ],
     );
 
     if (widget.ghost) {
-      // نسخة شبحية — حد شعري ونص ذهبي
-      return MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: AnimatedContainer(
-          duration: VibesMotion.fast,
-          curve: VibesMotion.curve,
-          height: height,
-          padding: EdgeInsets.symmetric(horizontal: widget.small ? 14 : 20),
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            border: Border.all(
-              color: _hovering ? GoldColors.gold : GoldColors.goldSoft,
-              width: 1,
+      return GestureDetector(
+        onTap: widget.loading ? null : widget.onPressed,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovering = true),
+          onExit: (_) => setState(() => _hovering = false),
+          child: AnimatedOpacity(
+            opacity: widget.onPressed == null ? 0.45 : 1,
+            duration: VibesMotion.fast,
+            child: AnimatedContainer(
+              duration: VibesMotion.fast,
+              curve: VibesMotion.curve,
+              height: height,
+              padding: EdgeInsets.symmetric(horizontal: widget.small ? 14 : 20),
+              decoration: ShapeDecoration(
+                color: _hovering
+                    ? VibesTheme.surfaceHighOf(context)
+                    : Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: Folio.chrome,
+                  side: BorderSide(
+                    color: _hovering
+                        ? Vibes.teal
+                        : VibesTheme.hairlineStrongOf(context),
+                  ),
+                ),
+              ),
+              child: child,
             ),
-            color: _hovering ? GoldColors.goldSoft : Colors.transparent,
           ),
-          child: child,
         ),
       );
     }
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovering = true),
-      onExit: (_) => setState(() => _hovering = false),
-      child: AnimatedScale(
-        scale: _hovering ? 1.015 : 1,
-        duration: VibesMotion.fast,
-        curve: VibesMotion.curve,
-        child: AnimatedOpacity(
-          opacity: widget.onPressed == null ? 0.5 : 1,
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovering = true),
+        onExit: (_) => setState(() => _hovering = false),
+        child: AnimatedScale(
+          scale: _pressed ? 0.97 : (_hovering ? 1.02 : 1),
           duration: VibesMotion.fast,
-          child: Material(
-            color: Colors.transparent,
-            child: Ink(
-              decoration: BoxDecoration(
-                gradient: GoldColors.gradient,
-                borderRadius: radius,
-                boxShadow: _hovering
-                    ? [
-                        const BoxShadow(
-                          color: Color(0x40C9A96A),
-                          blurRadius: 18,
-                          offset: Offset(0, 6),
+          curve: VibesMotion.curve,
+          child: AnimatedOpacity(
+            opacity: widget.onPressed == null ? 0.5 : 1,
+            duration: VibesMotion.fast,
+            child: Material(
+              color: Colors.transparent,
+              child: Ink(
+                decoration: ShapeDecoration(
+                  gradient: VibesTheme.buttonOf(context),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: Folio.chrome,
+                    side: const BorderSide(
+                      color: Color(0x99C89844),
+                      width: 1.1,
+                    ),
+                  ),
+                  shadows: _pressed || _hovering
+                      ? const [
+                          BoxShadow(
+                            color: Color(0x661B3857),
+                            blurRadius: 28,
+                            offset: Offset(0, 12),
+                          ),
+                          BoxShadow(
+                            color: Color(0x33C89844),
+                            blurRadius: 10,
+                            offset: Offset(0, 2),
+                          ),
+                        ]
+                      : const [
+                          BoxShadow(
+                            color: Color(0x3D1B3857),
+                            blurRadius: 20,
+                            offset: Offset(0, 8),
+                          ),
+                        ],
+                ),
+                child: InkWell(
+                  onTap: widget.loading ? null : widget.onPressed,
+                  customBorder: shape,
+                  child: SizedBox(
+                    height: height,
+                    child: Column(
+                      children: [
+                        const ColoredBox(
+                          color: Vibes.tealBright,
+                          child: SizedBox(height: 1.5, width: double.infinity),
                         ),
-                      ]
-                    : [
-                        const BoxShadow(
-                          color: Color(0x26C9A96A),
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: widget.small ? 14 : 20,
+                            ),
+                            child: Center(child: child),
+                          ),
                         ),
                       ],
-              ),
-              child: InkWell(
-                onTap: widget.loading ? null : widget.onPressed,
-                borderRadius: radius,
-                child: Container(
-                  height: height,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: widget.small ? 14 : 20,
+                    ),
                   ),
-                  alignment: Alignment.center,
-                  child: child,
                 ),
               ),
             ),
@@ -159,39 +199,29 @@ class VibesCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(VibesSpacing.lg),
     this.onTap,
     this.glass = false,
+    this.featured = false,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
   final bool glass;
+  final bool featured;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: VibesMotion.base,
-      curve: VibesMotion.curve,
-      decoration: BoxDecoration(
-        color: glass
-            ? VibesTheme.surfaceOf(context).withValues(alpha: 0.7)
-            : VibesTheme.surfaceOf(context),
-        borderRadius: BorderRadius.circular(VibesRadius.lg),
-        border: Border.all(color: VibesTheme.hairlineOf(context)),
-        boxShadow: [
-          BoxShadow(
-            color: VibesTheme.isDark(context)
-                ? Colors.black.withValues(alpha: 0.28)
-                : const Color(0x0D101114),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+    return FolioPanel(
+      color: VibesTheme.surfaceOf(context),
+      borderColor: featured
+          ? Vibes.teal.withValues(alpha: .45)
+          : VibesTheme.hairlineOf(context),
+      shadows: Vibes.card,
+      railColor: featured ? Vibes.teal : null,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(VibesRadius.lg),
+          customBorder: Folio.shape,
           child: Padding(padding: padding, child: child),
         ),
       ),
@@ -210,43 +240,40 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: VibesSpacing.md),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    height: 1.15,
+                  ),
+                ),
+                const SizedBox(height: 6),
                 Row(
                   children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.3,
-                          ),
-                    ),
-                    const SizedBox(width: VibesSpacing.sm),
-                    // الخط الذهبي القصير — توقيع الهوية
-                    Container(
-                      width: 22,
-                      height: 2.5,
-                      decoration: BoxDecoration(
-                        gradient: GoldColors.gradient,
-                        borderRadius: BorderRadius.circular(2),
+                    const ArcFlourish(width: 28),
+                    if (subtitle != null) ...[
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          subtitle!,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: VibesTheme.textTertiaryOf(context),
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle!,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: VibesTheme.textTertiaryOf(context),
-                        ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -277,27 +304,29 @@ class StatusPill extends StatelessWidget {
         horizontal: compact ? 8.0 : 12,
         vertical: compact ? 3.0 : 5,
       ),
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(VibesRadius.pill),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
+        shape: RoundedRectangleBorder(
+          borderRadius: Folio.compact,
+          side: BorderSide(color: color.withValues(alpha: 0.25)),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            width: compact ? 6 : 7,
+            height: compact ? 6 : 7,
+            color: color,
           ),
           const SizedBox(width: 6),
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                  fontSize: compact ? 10 : null,
-                ),
+              color: color,
+              fontWeight: FontWeight.w700,
+              fontSize: compact ? 10 : null,
+            ),
           ),
         ],
       ),
@@ -332,10 +361,10 @@ class GoldRatingBar extends StatelessWidget {
       final icon = filled
           ? Icons.star_rounded
           : half
-              ? Icons.star_half_rounded
-              : Icons.star_outline_rounded;
+          ? Icons.star_half_rounded
+          : Icons.star_outline_rounded;
 
-      final star = Icon(icon, size: size, color: GoldColors.gold);
+      final star = Icon(icon, size: size, color: Vibes.teal);
 
       if (onChanged == null) return star;
       return GestureDetector(
@@ -356,16 +385,16 @@ class GoldRatingBar extends StatelessWidget {
           Text(
             rating.toStringAsFixed(1),
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: VibesTheme.textPrimaryOf(context),
-                ),
+              fontWeight: FontWeight.w800,
+              color: VibesTheme.textPrimaryOf(context),
+            ),
           ),
           if (reviewCount != null)
             Text(
               ' ($reviewCount)',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: VibesTheme.textTertiaryOf(context),
-                  ),
+                color: VibesTheme.textTertiaryOf(context),
+              ),
             ),
         ],
       ],
@@ -373,43 +402,56 @@ class GoldRatingBar extends StatelessWidget {
   }
 }
 
-/// صندوق Shimmer ذهبي خافت — هيكل تحميل أنيق
-class ShimmerBox extends StatelessWidget {
-  const ShimmerBox({
-    super.key,
-    this.width,
-    this.height = 16,
-    this.radius = 8,
-  });
+/// هيكل تحميل متحرك حقيقي — مسح ضوئي ناعم بألوان حبرية
+class ShimmerBox extends StatefulWidget {
+  const ShimmerBox({super.key, this.width, this.height = 16, this.radius = 8});
 
   final double? width;
   final double height;
   final double radius;
 
   @override
+  State<ShimmerBox> createState() => _ShimmerBoxState();
+}
+
+class _ShimmerBoxState extends State<ShimmerBox>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final dark = VibesTheme.isDark(context);
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
-        gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: dark
-              ? [
-                  InkColors.surfaceHigh,
-                  const Color(0xFF2E2A20), // لمسة ذهبية خافتة
-                  InkColors.surfaceHigh,
-                ]
-              : [
-                  PorcelainColors.surfaceHigh,
-                  const Color(0xFFF2EBDD), // لمسة ذهبية خافتة
-                  PorcelainColors.surfaceHigh,
-                ],
-        ),
-      ),
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final t = _controller.value;
+        return Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: ShapeDecoration(
+            shape: RoundedRectangleBorder(
+              borderRadius: widget.radius < 10 ? Folio.compact : Folio.radius,
+            ),
+            gradient: LinearGradient(
+              begin: Alignment(-1 - 2 + 4 * t, 0),
+              end: Alignment(1 - 2 + 4 * t, 0),
+              colors: [
+                VibesTheme.surfaceHighOf(context),
+                Vibes.coralMint,
+                VibesTheme.surfaceHighOf(context),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -432,48 +474,69 @@ class EmptyCanvas extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(VibesSpacing.xxl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 84,
-              height: 84,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: GoldColors.goldSoft,
-                border: Border.all(color: GoldColors.gold.withValues(alpha: 0.3)),
-              ),
-              child: Icon(icon, size: 34, color: GoldColors.gold),
-            ),
-            const SizedBox(height: VibesSpacing.xl),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          child: Padding(
+            padding: const EdgeInsets.all(VibesSpacing.xxl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FolioPanel(
+                  color: VibesTheme.surfaceOf(context),
+                  borderColor: VibesTheme.hairlineOf(context),
+                  child: SizedBox(
+                    width: 88,
+                    height: 88,
+                    child: Column(
+                      children: [
+                        const ColoredBox(
+                          color: Vibes.teal,
+                          child: SizedBox(height: 1.5, width: double.infinity),
+                        ),
+                        Expanded(
+                          child: Center(
+                            child: Icon(
+                              icon,
+                              size: 34,
+                              color: VibesTheme.brandOf(context),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: VibesSpacing.xl),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
-            ),
-            if (subtitle != null) ...[
-              const SizedBox(height: VibesSpacing.sm),
-              Text(
-                subtitle!,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: VibesSpacing.sm),
+                  Text(
+                    subtitle!,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: VibesTheme.textTertiaryOf(context),
                       height: 1.6,
                     ),
-              ),
-            ],
-            if (action != null) ...[
-              const SizedBox(height: VibesSpacing.lg),
-              action!,
-            ],
-          ],
-        ),
-      ),
-    ).animate().fadeIn(duration: VibesMotion.slow).slideY(
+                  ),
+                ],
+                if (action != null) ...[
+                  const SizedBox(height: VibesSpacing.lg),
+                  action!,
+                ],
+              ],
+            ),
+          ),
+        )
+        .animate(
+          // إمكانية وصول: بلا حركة عند تفعيل تقليلها بالنظام
+          autoPlay: !MediaQuery.maybeDisableAnimationsOf(context)!,
+        )
+        .fadeIn(duration: VibesMotion.slow)
+        .slideY(
           begin: 0.04,
           end: 0,
           duration: VibesMotion.slow,
@@ -503,7 +566,7 @@ class _FavoriteHeartState extends State<FavoriteHeart>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulse = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 450),
+    duration: const Duration(milliseconds: 280),
   );
 
   @override
@@ -522,37 +585,40 @@ class _FavoriteHeartState extends State<FavoriteHeart>
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: _handle,
-      child: ScaleTransition(
+        child: ScaleTransition(
         scale: TweenSequence<double>([
           TweenSequenceItem(
-            tween: Tween(begin: 1.0, end: 1.35)
-                .chain(CurveTween(curve: Curves.easeOut)),
-            weight: 40,
+            tween: Tween(
+              begin: 1.0,
+              end: 1.08,
+            ).chain(CurveTween(curve: Curves.easeOut)),
+            weight: 45,
           ),
           TweenSequenceItem(
-            tween: Tween(begin: 1.35, end: 0.92)
-                .chain(CurveTween(curve: Curves.easeInOut)),
-            weight: 30,
-          ),
-          TweenSequenceItem(
-            tween: Tween(begin: 0.92, end: 1.0)
-                .chain(CurveTween(curve: Curves.elasticOut)),
-            weight: 30,
+            tween: Tween(
+              begin: 1.08,
+              end: 1.0,
+            ).chain(CurveTween(curve: Curves.easeInOut)),
+            weight: 55,
           ),
         ]).animate(_pulse),
-        child: Container(
-          padding: const EdgeInsets.all(6),
+        child: DecoratedBox(
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: VibesTheme.surfaceOf(context).withValues(alpha: 0.75),
+            color: VibesTheme.surfaceOf(context).withValues(alpha: 0.92),
+            borderRadius: Folio.radius,
             border: Border.all(color: VibesTheme.hairlineOf(context)),
           ),
-          child: Icon(
-            widget.active
-                ? Icons.favorite_rounded
-                : Icons.favorite_outline_rounded,
-            size: widget.size,
-            color: widget.active ? GoldColors.gold : VibesTheme.textSecondaryOf(context),
+          child: Padding(
+            padding: const EdgeInsets.all(6),
+            child: Icon(
+              widget.active
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_outline_rounded,
+              size: widget.size,
+              color: widget.active
+                  ? Vibes.coral
+                  : VibesTheme.textSecondaryOf(context),
+            ),
           ),
         ),
       ),
@@ -562,10 +628,16 @@ class _FavoriteHeartState extends State<FavoriteHeart>
 
 /// تنسيق السعر بأناقة — أرقام كبيرة ذهبية + وحدة صغيرة
 class PriceText extends StatelessWidget {
-  const PriceText(this.amount, {super.key, this.compact = false});
+  const PriceText(
+    this.amount, {
+    super.key,
+    this.compact = false,
+    this.onDark = false,
+  });
 
   final num amount;
   final bool compact;
+  final bool onDark;
 
   static String format(num value) {
     final fixed = value.round();
@@ -594,16 +666,22 @@ class PriceText extends StatelessWidget {
           style: style?.copyWith(
             fontWeight: FontWeight.w800,
             fontFeatures: const [FontFeature.tabularFigures()],
-            color: GoldColors.gold,
+            color: amount == 0
+                ? (onDark
+                      ? Colors.white54
+                      : VibesTheme.textTertiaryOf(context))
+                : (onDark || VibesTheme.isDark(context)
+                      ? Vibes.tealBright
+                      : Vibes.coral),
           ),
         ),
         const SizedBox(width: 3),
         Text(
           'د.ع',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: VibesTheme.textTertiaryOf(context),
-                fontWeight: FontWeight.w600,
-              ),
+            color: onDark ? Colors.white70 : VibesTheme.textTertiaryOf(context),
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );
@@ -612,11 +690,7 @@ class PriceText extends StatelessWidget {
 
 /// خطأ شبكة أنيق مع إعادة محاولة
 class ErrorCanvas extends StatelessWidget {
-  const ErrorCanvas({
-    super.key,
-    required this.message,
-    this.onRetry,
-  });
+  const ErrorCanvas({super.key, required this.message, this.onRetry});
 
   final String message;
   final VoidCallback? onRetry;

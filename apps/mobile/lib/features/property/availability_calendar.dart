@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/models.dart';
-import '../../shared/widgets/vibes_widgets.dart';
+import '../../shared/widgets/maison_chrome.dart';
+import '../../shared/widgets/maison_shapes.dart';
 
 /// ═══════════════════════════════════════════════════════════
 /// تقويم التوفر الشهري — متاح/محجوز/مغلق بأسعار يومية ملونة
@@ -20,7 +21,7 @@ class AvailabilityCalendar extends StatelessWidget {
   final ShiftType selectedShift;
   final ValueChanged<DayPricing>? onDayTap;
 
-  static const _weekdayLabels = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
+  static const _weekdayLabels = ['أحد', 'إثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت'];
 
   @override
   Widget build(BuildContext context) {
@@ -46,12 +47,19 @@ class AvailabilityCalendar extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  MaisonKicker(title),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${first.year}',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
+                  ),
+                ],
               ),
             ),
             Row(
@@ -127,28 +135,31 @@ class _DayCell extends StatelessWidget {
     final disabled = day.isPast || day.isBlocked || day.isBooked;
     final price = day.priceFor(shift);
 
-    Color? border;
-    Color textGold = GoldColors.gold;
-    if (!disabled) {
-      if (price > day.priceFor(ShiftType.full) * .0 + _minOf(context)) {
-        // السعر أعلى من المعتاد — لمسة ذهبية أوضح
-        border = GoldColors.gold.withValues(alpha: .5);
-      }
-    }
+    final weekend =
+        day.date.weekday == DateTime.friday ||
+        day.date.weekday == DateTime.saturday;
 
     return GestureDetector(
       onTap: disabled ? null : onTap,
       child: AnimatedContainer(
         duration: VibesMotion.fast,
-        decoration: BoxDecoration(
+        decoration: ShapeDecoration(
           color: disabled
               ? VibesTheme.surfaceHighOf(context).withValues(alpha: .55)
+              : weekend
+              ? Vibes.tealMint
               : VibesTheme.surfaceOf(context),
-          borderRadius: BorderRadius.circular(VibesRadius.sm),
-          border: Border.all(
-            color: disabled
-                ? VibesTheme.hairlineOf(context)
-                : border ?? VibesTheme.hairlineOf(context),
+          shape: RoundedRectangleBorder(
+            borderRadius: Folio.compact,
+            side: BorderSide(
+              color: day.isBooked
+                  ? Vibes.danger.withValues(alpha: .35)
+                  : disabled
+                  ? VibesTheme.hairlineOf(context)
+                  : weekend
+                  ? Vibes.teal.withValues(alpha: .45)
+                  : VibesTheme.hairlineOf(context),
+            ),
           ),
         ),
         child: Opacity(
@@ -174,10 +185,10 @@ class _DayCell extends StatelessWidget {
                 Text(
                   _shortPrice(price),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: textGold,
-                        fontWeight: FontWeight.w700,
-                        height: 1.1,
-                      ),
+                    color: Vibes.teal,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -193,6 +204,4 @@ class _DayCell extends StatelessWidget {
     if (v >= 1000) return '${(v / 1000).round()}k';
     return '$v';
   }
-
-  num _minOf(BuildContext context) => 0;
 }

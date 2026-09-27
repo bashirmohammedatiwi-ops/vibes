@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/models.dart';
+import '../../shared/widgets/maison_shapes.dart';
 import '../../shared/widgets/vibes_widgets.dart';
 
 /// ═══════════════════════════════════════════════════════════
@@ -37,20 +38,21 @@ class DayPriceStrip extends StatelessWidget {
           final weekend = day.date.weekday == DateTime.friday ||
               day.date.weekday == DateTime.saturday;
 
-          return Container(
+          return FolioPanel(
+            radius: Folio.compact,
+            color: disabled
+                ? VibesTheme.surfaceOf(context)
+                : weekend
+                    ? Vibes.tealMint
+                    : VibesTheme.surfaceOf(context),
+            borderColor: disabled
+                ? VibesTheme.hairlineOf(context)
+                : weekend
+                    ? Vibes.teal.withValues(alpha: .45)
+                    : VibesTheme.hairlineOf(context),
+            child: Container(
             width: 62,
             padding: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(
-              color: VibesTheme.surfaceOf(context),
-              borderRadius: BorderRadius.circular(VibesRadius.md),
-              border: Border.all(
-                color: disabled
-                    ? VibesTheme.hairlineOf(context)
-                    : weekend
-                        ? GoldColors.gold.withValues(alpha: .45)
-                        : VibesTheme.hairlineOf(context),
-              ),
-            ),
             child: Opacity(
               opacity: disabled ? .45 : 1,
               child: Column(
@@ -77,13 +79,14 @@ class DayPriceStrip extends StatelessWidget {
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: disabled
                               ? VibesTheme.textTertiaryOf(context)
-                              : GoldColors.gold,
+                              : Vibes.teal,
                           fontWeight: FontWeight.w700,
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                   ),
                 ],
               ),
+            ),
             ),
           );
         },

@@ -18,7 +18,7 @@ import { PhoneActions } from "@/components/phone-actions";
 import { PaymentInstructions } from "@/components/payment-instructions";
 import { SimpleUpload } from "@/components/simple-upload";
 import { useToast } from "@/components/ui/toast";
-import { BOOKING_STATUS_LABELS, PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS, SHIFT_TYPE_LABELS } from "@/lib/constants";
+import { BOOKING_ORIGIN_LABELS, BOOKING_STATUS_LABELS, PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS, SHIFT_TYPE_LABELS } from "@/lib/constants";
 import { api, uploadFiles } from "@/lib/api";
 import { formatDayAr } from "@/lib/dates";
 import type { Booking, BookingNote } from "@/lib/types";
@@ -221,7 +221,12 @@ export default function BookingDetailPage() {
         description={`${formatDayAr(booking.startDate)} → ${formatDayAr(booking.endDate)} · ${booking.guests} ضيف${booking.shift && booking.shift !== "FULL" ? ` · ${SHIFT_TYPE_LABELS[booking.shift]}` : ""}`}
         eyebrow="VIBES Admin"
         back={{ href: "/bookings", label: "العودة للحجوزات" }}
-        action={<Badge variant={statusVariant}>{BOOKING_STATUS_LABELS[booking.status] ?? booking.status}</Badge>}
+        action={
+          <span className="flex flex-wrap items-center gap-2">
+            {booking.origin === "EXTERNAL" && <Badge variant="muted">{BOOKING_ORIGIN_LABELS.EXTERNAL}</Badge>}
+            <Badge variant={statusVariant}>{BOOKING_STATUS_LABELS[booking.status] ?? booking.status}</Badge>
+          </span>
+        }
       />
 
       {booking.status === "DISPUTED" && (booking.disputeReason || booking.disputeNote) && (
@@ -242,13 +247,18 @@ export default function BookingDetailPage() {
       )}
 
       <DetailCard title="تفاصيل الحجز">
+        <InfoRow label="المصدر" value={BOOKING_ORIGIN_LABELS[booking.origin ?? "PLATFORM"] ?? booking.origin ?? "تطبيق VIBES"} />
         <InfoRow label="العميل">
-          <Link href={`/users/${booking.user?.id}`} className="text-accent underline">{booking.user?.name ?? booking.user?.phone}</Link>
+          {booking.user?.id ? (
+            <Link href={`/users/${booking.user.id}`} className="text-accent underline">{booking.user?.name ?? booking.user?.phone ?? booking.guestName}</Link>
+          ) : (
+            <span>{booking.guestName ?? booking.user?.name ?? "ضيف خارجي"}</span>
+          )}
         </InfoRow>
         <InfoRow label="الهاتف">
           <span className="flex items-center gap-2">
-            <span dir="ltr">{booking.user?.phone}</span>
-            <PhoneActions phone={booking.user?.phone} />
+            <span dir="ltr">{booking.user?.phone ?? booking.guestPhone}</span>
+            <PhoneActions phone={booking.user?.phone ?? booking.guestPhone} />
           </span>
         </InfoRow>
         <InfoRow label="التواريخ" value={`${formatDayAr(booking.startDate)} → ${formatDayAr(booking.endDate)}${booking.shift && booking.shift !== "FULL" ? ` · ${SHIFT_TYPE_LABELS[booking.shift]}` : ""}`} />
@@ -272,6 +282,14 @@ export default function BookingDetailPage() {
             <Link href={`/payments?q=${booking.user?.phone ?? ""}`} className="text-accent underline">مراجعة في المدفوعات</Link>
           </InfoRow>
         )}
+        <InfoRow label="التشغيل">
+          <span className="flex flex-wrap gap-3">
+            <Link href={`/conversations?q=${encodeURIComponent(booking.user?.phone ?? "")}`} className="text-accent underline">المحادثات</Link>
+            <Link href={`/invoices?q=${encodeURIComponent(booking.user?.phone ?? "")}`} className="text-accent underline">الفواتير</Link>
+            <Link href={`/refunds?q=${encodeURIComponent(booking.user?.phone ?? "")}`} className="text-accent underline">الاسترداد</Link>
+            <Link href="/offers" className="text-accent underline">العروض</Link>
+          </span>
+        </InfoRow>
         {booking.notes && (
           <div className="pt-3">
             <div className="text-sm text-muted">ملاحظات العميل</div>

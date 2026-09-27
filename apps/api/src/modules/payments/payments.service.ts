@@ -10,6 +10,7 @@ import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { NotificationService } from '../../common/services/notification.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GatewayProvider, PaymentGatewayService } from './payment-gateway.service';
+import { MarketplaceLifecycleService } from '../marketplace/marketplace-lifecycle.service';
 
 @Injectable()
 export class PaymentsService {
@@ -17,6 +18,7 @@ export class PaymentsService {
     private readonly prisma: PrismaService,
     private readonly gateway: PaymentGatewayService,
     private readonly notifications: NotificationService,
+    private readonly lifecycle: MarketplaceLifecycleService,
   ) {}
 
   async initiateGateway(user: AuthUser, bookingId: string, method: PaymentMethod) {
@@ -109,6 +111,7 @@ export class PaymentsService {
         entityType: 'payment',
         entityId: payment.id,
       });
+      await this.lifecycle.afterPaymentConfirmed(payment.bookingId);
     } else {
       await this.notifications.notify({
         type: NotificationType.SYSTEM,

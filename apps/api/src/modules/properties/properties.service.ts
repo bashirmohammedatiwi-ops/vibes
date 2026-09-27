@@ -17,7 +17,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePropertyDto, UpdatePropertyDto } from './dto/create-property.dto';
 
 const CACHE_NAMESPACE = 'properties';
-const LIST_TTL_SECONDS = 30;
+const LIST_TTL_SECONDS = 45;
 const DETAIL_TTL_SECONDS = 60;
 
 const include = {
@@ -27,9 +27,74 @@ const include = {
     include: { amenity: { select: { id: true, nameAr: true, nameEn: true, icon: true, category: true } } },
     orderBy: { sortOrder: 'asc' as const },
   },
-  provider: { include: { user: { select: { name: true, phone: true } } } },
+  provider: {
+    include: {
+      user: { select: { name: true, phone: true } },
+      _count: { select: { followers: true } },
+    },
+  },
   _count: { select: { reviews: true } },
 };
+
+/** بطاقة اكتشاف — غلاف واحد بدون مزايا أو وصف طويل */
+const listCardSelect = {
+  id: true,
+  name: true,
+  slug: true,
+  type: true,
+  status: true,
+  featured: true,
+  isNew: true,
+  capacity: true,
+  pricePerDay: true,
+  ratingAvg: true,
+  ratingCount: true,
+  latitude: true,
+  longitude: true,
+  bookingMode: true,
+  createdAt: true,
+  city: {
+    select: {
+      id: true,
+      nameAr: true,
+      province: { select: { id: true, nameAr: true, slug: true } },
+    },
+  },
+  media: {
+    where: { status: 'READY' as const },
+    orderBy: [{ isPrimary: 'desc' as const }, { sortOrder: 'asc' as const }],
+    take: 2,
+    select: {
+      id: true,
+      url: true,
+      type: true,
+      posterUrl: true,
+      thumbnailUrl: true,
+      isPrimary: true,
+    },
+  },
+  provider: {
+    select: {
+      id: true,
+      businessName: true,
+      user: { select: { name: true } },
+    },
+  },
+  _count: { select: { reviews: true } },
+};
+
+function listOrder(sort?: string): Prisma.PropertyOrderByWithRelationInput[] {
+  switch (sort) {
+    case 'rating':
+      return [{ ratingAvg: 'desc' }, { createdAt: 'desc' }];
+    case 'price':
+      return [{ pricePerDay: 'asc' }];
+    case 'newest':
+      return [{ createdAt: 'desc' }];
+    default:
+      return [{ featured: 'desc' }, { ratingAvg: 'desc' }, { createdAt: 'desc' }];
+  }
+}
 
 function isStaff(user: AuthUser) {
   return user.role === UserRole.ADMIN || user.role === UserRole.STAFF;
@@ -80,12 +145,15 @@ export class PropertiesService {
     type?: string;
     status?: string;
     cityId?: string;
+    province?: string;
     featured?: string;
+    isNew?: string;
     page?: string;
     pageSize?: string;
     q?: string;
+    sort?: string;
   }) {
-    const cacheKey = CacheService.keyFrom(`${CACHE_NAMESPACE}:list`, params);
+    const cacheKey = CacheService.keyFrom(`${CACHE_NAMESPACE}:list:card`, params);
     return this.cache.getOrSet(cacheKey, LIST_TTL_SECONDS, async () => {
       const where = this.queryBuilder.buildFilters({
         ...params,
@@ -96,8 +164,8 @@ export class PropertiesService {
       const [items, total] = await Promise.all([
         this.prisma.property.findMany({
           where,
-          include,
-          orderBy: [{ featured: 'desc' }, { ratingAvg: 'desc' }, { createdAt: 'desc' }],
+          select: listCardSelect,
+          orderBy: listOrder(params.sort),
           skip,
           take,
         }),
@@ -149,6 +217,41 @@ export class PropertiesService {
     await this.cache.set(cacheKey, property, DETAIL_TTL_SECONDS);
 
     return property;
+  }
+
+  async similar(id: string) {
+    const source = await this.prisma.property.findUnique({
+      where: { id },
+      select: { id: true, type: true, cityId: true, status: true },
+    });
+    if (!source || source.status !== PropertyStatus.APPROVED) {
+      throw new NotFoundException('المكان غير موجود');
+    }
+
+    const peers = await this.prisma.property.findMany({
+      where: {
+        status: PropertyStatus.APPROVED,
+        id: { not: id },
+        type: source.type,
+        cityId: source.cityId,
+      },
+      select: listCardSelect,
+      orderBy: [{ featured: 'desc' }, { ratingAvg: 'desc' }, { createdAt: 'desc' }],
+      take: 8,
+    });
+    if (peers.length >= 8) return peers;
+
+    const extra = await this.prisma.property.findMany({
+      where: {
+        status: PropertyStatus.APPROVED,
+        id: { notIn: [id, ...peers.map((p) => p.id)] },
+        featured: true,
+      },
+      select: listCardSelect,
+      orderBy: [{ ratingAvg: 'desc' }, { createdAt: 'desc' }],
+      take: 8 - peers.length,
+    });
+    return [...peers, ...extra];
   }
 
   async metaBySlug(slug: string) {

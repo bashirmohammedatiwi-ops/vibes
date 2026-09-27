@@ -1,12 +1,15 @@
-import { BadRequestException, Body, Controller, Get, NotFoundException, Param, Patch, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, NotFoundException, Param, Patch, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiProperty, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
 import { BookingStatus, ShiftType, UserRole } from '@prisma/client';
 import { IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AuthUser, CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CouponService } from '../../common/services/coupon.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { proofStorageOptions } from '../admin/admin-media.service';
 import { BookingsService } from './bookings.service';
 
 class CreateBookingBody {
@@ -40,6 +43,35 @@ class CreateBookingBody {
   @IsOptional()
   @IsEnum(ShiftType)
   shift?: ShiftType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  couponCode?: string;
+}
+
+class QuoteBookingBody {
+  @ApiProperty()
+  @IsUUID()
+  propertyId!: string;
+
+  @ApiProperty()
+  @IsDateString()
+  startDate!: string;
+
+  @ApiProperty()
+  @IsDateString()
+  endDate!: string;
+
+  @ApiPropertyOptional({ enum: ShiftType })
+  @IsOptional()
+  @IsEnum(ShiftType)
+  shift?: ShiftType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  couponCode?: string;
 }
 
 class UpdateBookingStatusDto {
@@ -86,6 +118,12 @@ export class BookingsController {
     return booking;
   }
 
+  @Public()
+  @Post('quote')
+  quote(@CurrentUser() user: AuthUser | undefined, @Body() dto: QuoteBookingBody) {
+    return this.bookings.quote(user ?? null, dto);
+  }
+
   /** تحقق فوري من كوبون للعرض الحي أثناء الحجز */
   @Post('quote-coupon')
   async validateCoupon(@CurrentUser() user: AuthUser, @Body() dto: ValidateCouponDto) {
@@ -122,6 +160,25 @@ export class BookingsController {
   @Get()
   list(@CurrentUser() user: AuthUser) {
     return this.bookings.list(user);
+  }
+
+  @Post(':id/cancel')
+  cancel(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.bookings.cancelByCustomer(user, id);
+  }
+
+  @Post(':id/payment-proof')
+  @UseInterceptors(FileInterceptor('file', { storage: proofStorageOptions() }))
+  attachProof(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @UploadedFile() file?: Express.Multer.File,
+    @Body() body?: { proofUrl?: string },
+  ) {
+    const base = (process.env.MEDIA_PUBLIC_URL ?? 'http://localhost:3000/media').replace(/\/$/, '');
+    const proofUrl = file ? `${base}/proofs/${file.filename}` : body?.proofUrl;
+    if (!proofUrl) throw new BadRequestException('ارفع صورة الإيصال');
+    return this.bookings.attachPaymentProof(user, id, proofUrl);
   }
 
   @Patch(':id/status')

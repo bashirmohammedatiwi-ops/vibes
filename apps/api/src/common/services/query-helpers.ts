@@ -40,6 +40,7 @@ export class PropertyQueryBuilder {
     cityId?: string;
     province?: string;
     featured?: string;
+    isNew?: string;
     source?: string;
     providerId?: string;
   }): PropertyWhere {
@@ -50,6 +51,7 @@ export class PropertyQueryBuilder {
     if (query.cityId) where.cityId = query.cityId;
     if (query.province) where.city = { province: { slug: query.province } };
     if (query.featured === 'true') where.featured = true;
+    if (query.isNew === 'true') where.isNew = true;
     if (query.providerId) where.providerId = query.providerId;
     if (query.source === 'provider') where.providerId = { not: null };
     if (query.source === 'team') where.providerId = null;

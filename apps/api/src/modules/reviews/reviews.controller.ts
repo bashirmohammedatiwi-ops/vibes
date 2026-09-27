@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { IsInt, IsString, IsUUID, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import { AuthUser, CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { ReviewsService } from './reviews.service';
@@ -14,8 +14,9 @@ class CreateReviewDto {
   @Max(5)
   rating!: number;
 
+  @IsOptional()
   @IsString()
-  comment!: string;
+  comment?: string;
 }
 
 @ApiTags('reviews')
@@ -26,7 +27,7 @@ export class ReviewsController {
   @ApiBearerAuth()
   @Post('reviews')
   create(@CurrentUser() user: AuthUser, @Body() body: CreateReviewDto) {
-    return this.reviews.upsert(user.id, body.propertyId, body.rating, body.comment);
+    return this.reviews.upsert(user.id, body.propertyId, body.rating, body.comment ?? '');
   }
 
   @Public()

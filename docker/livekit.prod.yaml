@@ -1,0 +1,8 @@
+port: 6002
+rtc:
+  tcp_port: 6003
+  port_range_start: 6004
+  port_range_end: 6033
+  use_external_ip: true
+keys:
+  devkey: devsecret_vibes_livekit_32chars

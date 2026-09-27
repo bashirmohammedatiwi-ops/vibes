@@ -23,6 +23,7 @@ import { AdminActivitiesService } from './admin-activities.service';
 import { AdminAmenitiesService } from './admin-amenities.service';
 import { AdminAvailabilityService } from './admin-availability.service';
 import { AdminBannersService } from './admin-banners.service';
+import { AdminSpotlightsService } from './admin-spotlights.service';
 import { AdminCouponsService } from './admin-coupons.service';
 import { AdminBookingNotesService } from './admin-booking-notes.service';
 import { AdminCalendarService } from './admin-calendar.service';
@@ -44,6 +45,7 @@ import { AdminAmenityDto } from './dto/admin-amenity.dto';
 import { AdminCouponDto, AdminValidateCouponDto } from './dto/admin-coupon.dto';
 import {
   AdminBannerDto,
+  AdminSpotlightDto,
   AdminBookingNoteDto,
   BulkPropertiesDto,
   AdminCityDto,
@@ -99,6 +101,7 @@ export class AdminController {
     private readonly payments: AdminPaymentsService,
     private readonly activities: AdminActivitiesService,
     private readonly banners: AdminBannersService,
+    private readonly spotlights: AdminSpotlightsService,
     private readonly notifications: AdminNotificationsService,
     private readonly reports: AdminReportsService,
     private readonly locations: AdminLocationsService,
@@ -605,6 +608,30 @@ export class AdminController {
   @Delete('banners/:id')
   deleteBanner(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.banners.remove(user, id);
+  }
+
+  @Get('spotlights')
+  listSpotlights() {
+    return this.spotlights.list();
+  }
+
+  @Post('spotlights')
+  createSpotlight(@CurrentUser() user: AuthUser, @Body() dto: AdminSpotlightDto) {
+    return this.spotlights.create(user, dto);
+  }
+
+  @Patch('spotlights/:id')
+  updateSpotlight(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: Partial<AdminSpotlightDto>,
+  ) {
+    return this.spotlights.update(user, id, dto);
+  }
+
+  @Delete('spotlights/:id')
+  deleteSpotlight(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.spotlights.remove(user, id);
   }
 
   @Post('properties/bulk')
