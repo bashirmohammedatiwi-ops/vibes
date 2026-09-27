@@ -40,9 +40,9 @@ Thumbs.db
 # Docker
 docker/data/
 
-# Uploads / media (local)
+# Uploads / media (local). Root folder only — source lives in apps/api/src/media.
 apps/api/uploads/
-media/
+/media/
 
 # Flutter
 apps/mobile/.dart_tool/
