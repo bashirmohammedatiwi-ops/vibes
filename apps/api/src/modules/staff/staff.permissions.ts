@@ -25,6 +25,15 @@ export const STAFF_PERMISSIONS = [
   'coupons.write',
   'invoices.read',
   'reports.read',
+  'content.write',
+  'reviews.moderate',
+  'locations.write',
+  'amenities.write',
+  'users.write',
+  'payments.refund',
+  'disputes.review',
+  'settings.write',
+  'activity.read',
 ] as const;
 
 export type StaffPermission = (typeof STAFF_PERMISSIONS)[number];
@@ -56,6 +65,15 @@ export const STAFF_PERMISSION_LABELS: Record<StaffPermission, string> = {
   'coupons.write': 'تعديل الكوبونات',
   'invoices.read': 'عرض الفواتير',
   'reports.read': 'التقارير والإحصاءات',
+  'content.write': 'إضافة وتعديل البانرات والمميزة',
+  'reviews.moderate': 'إدارة التقييمات والمنشورات',
+  'locations.write': 'المحافظات والمدن',
+  'amenities.write': 'المرافق والخدمات',
+  'users.write': 'تعديل وإيقاف حسابات الزبائن',
+  'payments.refund': 'استرداد المبالغ',
+  'disputes.review': 'النزاعات',
+  'settings.write': 'إعدادات المنصة',
+  'activity.read': 'سجل النشاط والتنبيهات',
 };
 
 export const STAFF_TEMPLATES: Record<string, StaffPermission[]> = {
@@ -125,9 +143,81 @@ export const STAFF_TEMPLATES: Record<string, StaffPermission[]> = {
     'coupons.write',
     'invoices.read',
     'reports.read',
+    'content.write',
+    'reviews.moderate',
+    'disputes.review',
+    'activity.read',
   ],
+  content: [
+    'inbox.read',
+    'properties.read',
+    'properties.write',
+    'content.moderate',
+    'content.write',
+    'reviews.moderate',
+    'coupons.read',
+    'coupons.write',
+    'amenities.write',
+    'locations.write',
+  ],
+  full: [...STAFF_PERMISSIONS],
 };
+
+/** Grouping for permission editors (dashboard + staff app). */
+export const STAFF_PERMISSION_GROUPS: { key: string; label: string; codes: StaffPermission[] }[] = [
+  { key: 'calls', label: 'المكالمات', codes: ['calls.answer', 'calls.outbound', 'calls.monitor'] },
+  { key: 'inbox', label: 'المحادثات', codes: ['inbox.read', 'inbox.reply', 'inbox.assign', 'inbox.note'] },
+  {
+    key: 'bookings',
+    label: 'الحجوزات',
+    codes: ['bookings.read', 'bookings.confirm', 'bookings.cancel', 'bookings.write', 'disputes.review'],
+  },
+  {
+    key: 'money',
+    label: 'المال',
+    codes: ['payments.read', 'payments.verify', 'payments.refund', 'refunds.review', 'cancellations.review', 'invoices.read'],
+  },
+  {
+    key: 'places',
+    label: 'الأماكن',
+    codes: ['properties.read', 'properties.write', 'properties.moderate', 'amenities.write', 'locations.write'],
+  },
+  { key: 'people', label: 'الزبائن والمزودون', codes: ['users.read', 'users.write', 'providers.read', 'providers.link'] },
+  {
+    key: 'content',
+    label: 'المحتوى والتسويق',
+    codes: ['content.moderate', 'content.write', 'reviews.moderate', 'coupons.read', 'coupons.write'],
+  },
+  { key: 'admin', label: 'الإدارة', codes: ['reports.read', 'activity.read', 'settings.write'] },
+];
 
 export function isStaffPermission(value: string): value is StaffPermission {
   return (STAFF_PERMISSIONS as readonly string[]).includes(value);
+}
+
+/** A write/act permission implies being able to read what it acts on. */
+const IMPLIES: Partial<Record<StaffPermission, StaffPermission[]>> = {
+  'inbox.reply': ['inbox.read'],
+  'inbox.assign': ['inbox.read'],
+  'inbox.note': ['inbox.read'],
+  'bookings.confirm': ['bookings.read'],
+  'bookings.cancel': ['bookings.read'],
+  'bookings.write': ['bookings.read'],
+  'disputes.review': ['bookings.read'],
+  'payments.verify': ['payments.read'],
+  'payments.refund': ['payments.read'],
+  'properties.write': ['properties.read'],
+  'properties.moderate': ['properties.read'],
+  'providers.link': ['providers.read'],
+  'users.write': ['users.read'],
+  'coupons.write': ['coupons.read'],
+  'content.write': ['content.moderate'],
+};
+
+export function expandStaffPermissions(codes: readonly string[]): string[] {
+  const out = new Set(codes);
+  for (const code of codes) {
+    for (const implied of IMPLIES[code as StaffPermission] ?? []) out.add(implied);
+  }
+  return [...out];
 }

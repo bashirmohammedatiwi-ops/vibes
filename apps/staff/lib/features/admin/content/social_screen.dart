@@ -1,0 +1,708 @@
+import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../../core/api.dart';
+import '../../../core/session.dart';
+import '../../../core/theme.dart';
+import '../../../widgets/form_kit.dart';
+import '../../../widgets/ui.dart';
+import 'content_common.dart';
+
+String socialStatusLabel(String? s) => switch (s) {
+      'PUBLISHED' => 'منشور',
+      'HIDDEN' => 'مخفي',
+      'REPORTED' => 'مُبلَّغ عنه',
+      _ => s ?? '—',
+    };
+
+Color socialStatusColor(String? s) => switch (s) {
+      'PUBLISHED' => placeSuccess,
+      'HIDDEN' => placeInk2,
+      'REPORTED' => placeDanger,
+      _ => placeInk2,
+    };
+
+IconData socialStatusIcon(String? s) => switch (s) {
+      'PUBLISHED' => Icons.public_rounded,
+      'HIDDEN' => Icons.visibility_off_outlined,
+      'REPORTED' => Icons.flag_outlined,
+      _ => Icons.help_outline_rounded,
+    };
+
+bool _isVideo(String url) {
+  final u = url.toLowerCase().split('?').first;
+  return u.endsWith('.mp4') || u.endsWith('.mov') || u.endsWith('.m3u8') || u.endsWith('.webm');
+}
+
+List<String> _mediaOf(Map<String, dynamic> post) {
+  final raw = post['mediaUrls'];
+  if (raw is! List) return const [];
+  return raw.map((e) => e is Map ? '${e['url'] ?? ''}' : '$e').where((e) => e.isNotEmpty).toList();
+}
+
+/// إشراف منشورات التجارب (Social): فلترة بالحالة، بحث، نشر/إخفاء.
+/// تتطلب `reviews.moderate`.
+class AdminSocialScreen extends StatefulWidget {
+  const AdminSocialScreen({super.key});
+
+  @override
+  State<AdminSocialScreen> createState() => _AdminSocialScreenState();
+}
+
+class _AdminSocialScreenState extends State<AdminSocialScreen> {
+  static const _pageSize = 20;
+
+  List<Map<String, dynamic>> _rows = [];
+  bool _loading = true;
+  bool _loadingMore = false;
+  String? _error;
+  int _page = 1;
+  int _totalPages = 1;
+  int _total = 0;
+  String _status = 'ALL';
+  String _q = '';
+  int _seq = 0;
+  final Set<String> _busy = {};
+
+  bool get _canModerate => Session.can('reviews.moderate');
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  String _path(int page) {
+    final params = <String>[
+      'page=$page',
+      'pageSize=$_pageSize',
+      if (_status != 'ALL') 'status=$_status',
+      if (_q.isNotEmpty) 'q=${Uri.encodeQueryComponent(_q)}',
+    ];
+    return '/api/admin/social?${params.join('&')}';
+  }
+
+  Future<void> _load({bool silent = false}) async {
+    final seq = ++_seq;
+    if (!silent) setState(() => _loading = true);
+    try {
+      final data = await Api.map(_path(1));
+      if (seq != _seq) return;
+      _rows = asMapList(data['items']);
+      _page = 1;
+      _totalPages = asInt(data['totalPages'], 1);
+      _total = asInt(data['total']);
+      _error = null;
+    } catch (e) {
+      if (seq != _seq) return;
+      if (silent && _rows.isNotEmpty) {
+        if (mounted) showToast(context, '$e', error: true);
+      } else {
+        _rows = [];
+        _error = '$e';
+      }
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || _page >= _totalPages) return;
+    setState(() => _loadingMore = true);
+    final seq = _seq;
+    try {
+      final data = await Api.map(_path(_page + 1));
+      if (seq == _seq) {
+        _rows.addAll(asMapList(data['items']));
+        _page += 1;
+        _totalPages = asInt(data['totalPages'], _totalPages);
+      }
+    } catch (e) {
+      if (mounted) showToast(context, '$e', error: true);
+    }
+    if (mounted) setState(() => _loadingMore = false);
+  }
+
+  Future<void> _moderate(Map<String, dynamic> row, String status) async {
+    final id = '${row['id']}';
+    final prev = row['status'];
+    setState(() {
+      row['status'] = status;
+      _busy.add(id);
+    });
+    try {
+      await Api.send('/api/admin/social/$id', method: 'PATCH', body: {'status': status});
+      if (mounted) {
+        showToast(context, status == 'PUBLISHED' ? 'تم نشر المنشور' : status == 'HIDDEN' ? 'تم إخفاء المنشور' : 'تم وضعه كمُبلَّغ عنه');
+        if (_status != 'ALL' && _status != status) setState(() => _rows.remove(row));
+      }
+    } catch (e) {
+      row['status'] = prev;
+      if (mounted) showToast(context, '$e', error: true);
+    }
+    if (mounted) setState(() => _busy.remove(id));
+  }
+
+  Future<void> _open(Map<String, dynamic> row) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SocialPostDetailScreen(
+          postId: '${row['id']}',
+          onStatusChanged: (s) {
+            if (mounted) setState(() => row['status'] = s);
+          },
+        ),
+      ),
+    );
+    if (mounted && _status != 'ALL' && row['status'] != _status) {
+      setState(() => _rows.remove(row));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasMore = _page < _totalPages;
+    return Scaffold(
+      appBar: AppBar(title: const Text('منشورات التجارب')),
+      body: Column(
+        children: [
+          if (!_canModerate)
+            const ReadOnlyNotice(message: 'تحتاج صلاحية «إدارة التقييمات والمنشورات» لإدارة المنشورات.'),
+          ContentSearchField(
+            hint: 'بحث في الوصف، الزبون أو المكان',
+            onChanged: (v) {
+              _q = v;
+              _load(silent: _rows.isNotEmpty);
+            },
+          ),
+          FilterChipsRow(
+            options: const ['ALL', 'REPORTED', 'PUBLISHED', 'HIDDEN'],
+            selected: _status,
+            labelBuilder: (s) => s == 'ALL' ? 'الكل' : socialStatusLabel(s),
+            onSelected: (v) {
+              setState(() => _status = v);
+              _load();
+            },
+          ),
+          Expanded(
+            child: ContentListBody(
+              loading: _loading,
+              error: _error,
+              isEmpty: _rows.isEmpty,
+              onRefresh: () => _load(silent: true),
+              emptyTitle: _status == 'REPORTED' ? 'لا بلاغات — كل شيء نظيف' : 'لا منشورات في هذا الفلتر',
+              child: ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                itemCount: _rows.length + 1,
+                itemBuilder: (context, i) {
+                  if (i == _rows.length) {
+                    return LoadMoreFooter(hasMore: hasMore, loading: _loadingMore, onLoadMore: _loadMore, total: _total);
+                  }
+                  final row = _rows[i];
+                  return _PostCard(
+                    key: ValueKey(row['id']),
+                    row: row,
+                    canModerate: _canModerate,
+                    busy: _busy.contains('${row['id']}'),
+                    onOpen: () => _open(row),
+                    onModerate: (s) => _moderate(row, s),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PostCard extends StatelessWidget {
+  const _PostCard({
+    super.key,
+    required this.row,
+    required this.canModerate,
+    required this.busy,
+    required this.onOpen,
+    required this.onModerate,
+  });
+
+  final Map<String, dynamic> row;
+  final bool canModerate;
+  final bool busy;
+  final VoidCallback onOpen;
+  final ValueChanged<String> onModerate;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = row['status']?.toString();
+    final media = _mediaOf(row);
+    final caption = row['caption']?.toString() ?? '';
+    final counts = asMap(row['_count']);
+    final reports = asInt(counts['reports']);
+    final likes = asInt(row['likesCount'], asInt(counts['likes']));
+    final comments = asInt(row['commentsCount'], asInt(counts['comments']));
+    final property = asMap(row['property']);
+    final cover = media.isEmpty ? null : media.first;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: status == 'REPORTED' ? placeDanger.withValues(alpha: 0.4) : placeLine),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 84,
+                    height: 84,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (cover != null && _isVideo(cover))
+                          Container(
+                            decoration: BoxDecoration(color: placeInk, borderRadius: BorderRadius.circular(14)),
+                            child: const Icon(Icons.play_circle_outline_rounded, color: Colors.white, size: 34),
+                          )
+                        else
+                          NetImage(url: resolveMediaUrl(cover), radius: 14, icon: Icons.photo_outlined),
+                        if (media.length > 1)
+                          PositionedDirectional(
+                            top: 5,
+                            end: 5,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
+                              child: Text('+${media.length - 1}',
+                                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white)),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          property['name']?.toString() ?? '—',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 15, color: placeInk),
+                        ),
+                        Text(
+                          '${personLabel(row['user'])} · ${relativeAr(row['createdAt'])}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, color: placeInk2),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          caption.isEmpty ? 'بدون وصف' : caption,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 12.5,
+                            height: 1.4,
+                            color: caption.isEmpty ? placeInk2 : placeInk,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  StatusPill(label: socialStatusLabel(status), color: socialStatusColor(status), icon: socialStatusIcon(status)),
+                  const SizedBox(width: 10),
+                  _Count(icon: Icons.favorite_border_rounded, value: likes),
+                  _Count(icon: Icons.mode_comment_outlined, value: comments),
+                  if (reports > 0) _Count(icon: Icons.flag_outlined, value: reports, color: placeDanger),
+                  const Spacer(),
+                  if (canModerate)
+                    busy
+                        ? const Padding(
+                            padding: EdgeInsets.all(8),
+                            child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: placeBrass)),
+                          )
+                        : status == 'PUBLISHED'
+                            ? TextButton.icon(
+                                onPressed: () => onModerate('HIDDEN'),
+                                icon: const Icon(Icons.visibility_off_outlined, size: 18),
+                                label: const Text('إخفاء'),
+                              )
+                            : TextButton.icon(
+                                onPressed: () => onModerate('PUBLISHED'),
+                                icon: const Icon(Icons.public_rounded, size: 18),
+                                label: const Text('نشر'),
+                              ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Count extends StatelessWidget {
+  const _Count({required this.icon, required this.value, this.color = placeInk2});
+
+  final IconData icon;
+  final int value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(end: 10),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: color),
+          const SizedBox(width: 3),
+          Text('$value', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w800, color: color)),
+        ],
+      ),
+    );
+  }
+}
+
+/// تفاصيل منشور: الوسائط، الوصف، التعليقات والبلاغات، وأزرار الإشراف.
+class SocialPostDetailScreen extends StatefulWidget {
+  const SocialPostDetailScreen({super.key, required this.postId, this.onStatusChanged});
+
+  final String postId;
+  final ValueChanged<String>? onStatusChanged;
+
+  @override
+  State<SocialPostDetailScreen> createState() => _SocialPostDetailScreenState();
+}
+
+class _SocialPostDetailScreenState extends State<SocialPostDetailScreen> {
+  Map<String, dynamic>? _post;
+  bool _loading = true;
+  String? _error;
+  bool _busy = false;
+  int _mediaIndex = 0;
+
+  bool get _canModerate => Session.can('reviews.moderate');
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final data = await Api.map('/api/admin/social/${widget.postId}');
+      _post = data;
+      _error = null;
+    } catch (e) {
+      _error = '$e';
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _moderate(String status) async {
+    final post = _post;
+    if (post == null) return;
+    if (status == 'HIDDEN') {
+      final ok = await confirmDialog(
+        context,
+        title: 'إخفاء المنشور؟',
+        message: 'لن يظهر المنشور للزبائن حتى يُعاد نشره.',
+        confirmLabel: 'إخفاء',
+        danger: true,
+      );
+      if (!ok || !mounted) return;
+    }
+    final prev = post['status'];
+    setState(() {
+      post['status'] = status;
+      _busy = true;
+    });
+    try {
+      await Api.send('/api/admin/social/${widget.postId}', method: 'PATCH', body: {'status': status});
+      widget.onStatusChanged?.call(status);
+      if (mounted) {
+        showToast(context, status == 'PUBLISHED' ? 'تم نشر المنشور' : status == 'HIDDEN' ? 'تم إخفاء المنشور' : 'تم وضعه كمُبلَّغ عنه');
+      }
+    } catch (e) {
+      post['status'] = prev;
+      if (mounted) showToast(context, '$e', error: true);
+    }
+    if (mounted) setState(() => _busy = false);
+  }
+
+  Future<void> _openMedia(String url) async {
+    final resolved = resolveMediaUrl(url);
+    if (resolved == null) return;
+    if (_isVideo(resolved)) {
+      final ok = await launchUrl(Uri.parse(resolved), mode: LaunchMode.externalApplication);
+      if (!ok && mounted) showToast(context, 'تعذّر فتح الفيديو', error: true);
+      return;
+    }
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white),
+          body: Center(
+            child: InteractiveViewer(
+              maxScale: 5,
+              child: Image.network(resolved, fit: BoxFit.contain),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final post = _post;
+    return Scaffold(
+      appBar: AppBar(title: Text(asMap(post?['property'])['name']?.toString() ?? 'المنشور')),
+      bottomNavigationBar: post != null && _canModerate ? _actions(post['status']?.toString()) : null,
+      body: _loading
+          ? const Center(child: CircularProgressIndicator(color: placeBrass))
+          : _error != null || post == null
+              ? ListView(children: [
+                  const SizedBox(height: 80),
+                  EmptyState(title: 'تعذّر التحميل', subtitle: _error),
+                  Center(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        setState(() => _loading = true);
+                        _load();
+                      },
+                      child: const Text('إعادة المحاولة'),
+                    ),
+                  ),
+                ])
+              : RefreshIndicator(
+                  color: placeBrass,
+                  onRefresh: _load,
+                  child: ListView(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    children: [
+                      _mediaGallery(_mediaOf(post)),
+                      _header(post),
+                      _commentsSection(asMapList(post['comments']), asInt(asMap(post['_count'])['comments'])),
+                      _reportsSection(asMapList(post['reports']), asInt(asMap(post['_count'])['reports'])),
+                    ],
+                  ),
+                ),
+    );
+  }
+
+  Widget _mediaGallery(List<String> media) {
+    if (media.isEmpty) {
+      return Container(
+        height: 120,
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: placeLine)),
+        alignment: Alignment.center,
+        child: const Text('منشور بدون وسائط', style: TextStyle(fontFamily: 'Cairo', color: placeInk2)),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+      child: Column(
+        children: [
+          AspectRatio(
+            aspectRatio: 1,
+            child: PageView.builder(
+              itemCount: media.length,
+              onPageChanged: (i) => setState(() => _mediaIndex = i),
+              itemBuilder: (context, i) {
+                final url = media[i];
+                return GestureDetector(
+                  onTap: () => _openMedia(url),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: _isVideo(url)
+                        ? Container(
+                            decoration: BoxDecoration(color: placeInk, borderRadius: BorderRadius.circular(20)),
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.play_circle_outline_rounded, color: Colors.white, size: 56),
+                                SizedBox(height: 6),
+                                Text('فيديو — اضغط للتشغيل', style: TextStyle(fontFamily: 'Cairo', color: Colors.white70)),
+                              ],
+                            ),
+                          )
+                        : NetImage(url: resolveMediaUrl(url), radius: 20),
+                  ),
+                );
+              },
+            ),
+          ),
+          if (media.length > 1)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (var i = 0; i < media.length; i++)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      width: i == _mediaIndex ? 18 : 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: i == _mediaIndex ? placeBrass : placeLine,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _header(Map<String, dynamic> post) {
+    final status = post['status']?.toString();
+    final caption = post['caption']?.toString() ?? '';
+    final user = asMap(post['user']);
+    final counts = asMap(post['_count']);
+    return FormSection(
+      title: personLabel(user),
+      subtitle: [
+        if ((user['phone']?.toString() ?? '').isNotEmpty && user['phone'] != personLabel(user)) user['phone'].toString(),
+        formatStamp(post['createdAt']),
+      ].join(' · '),
+      icon: Icons.person_outline_rounded,
+      children: [
+        Text(
+          caption.isEmpty ? 'بدون وصف' : caption,
+          style: TextStyle(fontFamily: 'Cairo', fontSize: 14, height: 1.6, color: caption.isEmpty ? placeInk2 : placeInk),
+        ),
+        Row(
+          children: [
+            StatusPill(label: socialStatusLabel(status), color: socialStatusColor(status), icon: socialStatusIcon(status)),
+            const SizedBox(width: 10),
+            _Count(icon: Icons.favorite_border_rounded, value: asInt(post['likesCount'], asInt(counts['likes']))),
+            _Count(icon: Icons.mode_comment_outlined, value: asInt(post['commentsCount'], asInt(counts['comments']))),
+            _Count(icon: Icons.flag_outlined, value: asInt(counts['reports']), color: asInt(counts['reports']) > 0 ? placeDanger : placeInk2),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _commentsSection(List<Map<String, dynamic>> comments, int total) {
+    return FormSection(
+      title: 'التعليقات',
+      subtitle: total > comments.length ? 'آخر ${comments.length} من $total' : null,
+      icon: Icons.mode_comment_outlined,
+      children: comments.isEmpty
+          ? [const Text('لا تعليقات', style: TextStyle(fontFamily: 'Cairo', color: placeInk2))]
+          : [for (final c in comments) _line(personLabel(c['user']), c['body']?.toString() ?? '', c['createdAt'])],
+    );
+  }
+
+  Widget _reportsSection(List<Map<String, dynamic>> reports, int total) {
+    return FormSection(
+      title: 'البلاغات',
+      subtitle: total > reports.length ? 'آخر ${reports.length} من $total' : null,
+      icon: Icons.flag_outlined,
+      children: reports.isEmpty
+          ? [const Text('لا بلاغات', style: TextStyle(fontFamily: 'Cairo', color: placeInk2))]
+          : [
+              for (final r in reports)
+                _line(personLabel(r['user']), (r['reason']?.toString() ?? '').isEmpty ? 'بدون سبب' : r['reason'].toString(), r['createdAt'],
+                    danger: true),
+            ],
+    );
+  }
+
+  Widget _line(String who, String text, dynamic at, {bool danger = false}) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: danger ? placeDanger.withValues(alpha: 0.05) : placePaper,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(who, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, fontSize: 12.5, color: placeInk)),
+              ),
+              Text(relativeAr(at), style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: placeInk2)),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(text, style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, height: 1.45, color: placeInk)),
+        ],
+      ),
+    );
+  }
+
+  Widget _actions(String? status) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + MediaQuery.of(context).padding.bottom),
+      decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: placeLine))),
+      child: _busy
+          ? const SizedBox(height: 48, child: Center(child: CircularProgressIndicator(color: placeBrass)))
+          : Row(
+              children: [
+                if (status != 'REPORTED') ...[
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _moderate('REPORTED'),
+                      icon: const Icon(Icons.flag_outlined, size: 18),
+                      label: const Text('للمراجعة'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                if (status != 'HIDDEN') ...[
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(foregroundColor: placeDanger),
+                      onPressed: () => _moderate('HIDDEN'),
+                      icon: const Icon(Icons.visibility_off_outlined, size: 18),
+                      label: const Text('إخفاء'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                if (status != 'PUBLISHED')
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () => _moderate('PUBLISHED'),
+                      icon: const Icon(Icons.public_rounded, size: 18),
+                      label: const Text('نشر'),
+                    ),
+                  ),
+              ],
+            ),
+    );
+  }
+}

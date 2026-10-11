@@ -28,7 +28,26 @@ const staffPermissionLabels = <String, String>{
   'coupons.write': 'تعديل الكوبونات',
   'invoices.read': 'عرض الفواتير',
   'reports.read': 'التقارير',
+  'content.write': 'إضافة وتعديل البانرات والمميزة',
+  'reviews.moderate': 'إدارة التقييمات والمنشورات',
+  'locations.write': 'المحافظات والمدن',
+  'amenities.write': 'المرافق والخدمات',
+  'users.write': 'تعديل وإيقاف حسابات الزبائن',
+  'payments.refund': 'استرداد المبالغ',
+  'disputes.review': 'النزاعات',
+  'settings.write': 'إعدادات المنصة',
+  'activity.read': 'سجل النشاط والتنبيهات',
 };
+
+/// تسمية صلاحية — من كتالوج الخادم إن وُجد (يُحدَّث دون إصدار جديد)، وإلا المحلي.
+String staffPermissionLabel(String code) {
+  final catalog = Session.me['catalog'];
+  if (catalog is Map && catalog['labels'] is Map) {
+    final label = (catalog['labels'] as Map)[code];
+    if (label != null) return label.toString();
+  }
+  return staffPermissionLabels[code] ?? code;
+}
 
 class OpsModule {
   const OpsModule({
@@ -49,72 +68,73 @@ class OpsModule {
 }
 
 /// وحدات لوحة العمليات — تظهر حسب صلاحيات الموظف فقط.
+/// الأقسام الكبرى (section: true) تُعرض كبطاقات رئيسية، والباقي أدوات سريعة.
 List<OpsModule> visibleOpsModules() {
-  const all = <OpsModule>[
-    OpsModule(
-      id: 'dashboard',
-      title: 'لوحة اليوم',
-      subtitle: 'أرقام لحظية للعمل',
-      icon: 'dashboard',
-      anyOf: ['reports.read', 'bookings.read', 'calls.answer'],
+  final everyone = staffPermissionLabels.keys.toList();
+  final all = <OpsModule>[
+    const OpsModule(
+      id: 'desk',
+      title: 'مكتب الحجوزات',
+      subtitle: 'حجز جديد، تقويم، كل الحجوزات، العروض',
+      icon: 'event',
+      anyOf: ['bookings.read', 'bookings.write'],
     ),
-    OpsModule(
+    const OpsModule(
+      id: 'people',
+      title: 'الزبائن والمال',
+      subtitle: 'زبائن، مزودون، مدفوعات، استرداد، نزاعات',
+      icon: 'people',
+      anyOf: [
+        'users.read',
+        'providers.read',
+        'providers.link',
+        'payments.read',
+        'refunds.review',
+        'disputes.review',
+      ],
+    ),
+    const OpsModule(
       id: 'properties',
       title: 'الأماكن',
-      subtitle: 'إضافة وتعديل ووسائط واعتماد',
+      subtitle: 'إضافة وتعديل، وسائط، أسعار، توفر، اعتماد',
       icon: 'home_work',
       anyOf: ['properties.read', 'properties.write'],
     ),
-    OpsModule(
-      id: 'bookings',
-      title: 'الحجوزات',
-      subtitle: 'تفاصيل وتأكيد وإلغاء',
-      icon: 'event',
-      anyOf: ['bookings.read'],
+    const OpsModule(
+      id: 'content',
+      title: 'المحتوى والتسويق',
+      subtitle: 'بانرات، مميزة، كوبونات، تقييمات، منشورات',
+      icon: 'collections',
+      anyOf: [
+        'content.moderate',
+        'content.write',
+        'coupons.read',
+        'coupons.write',
+        'reviews.moderate',
+      ],
     ),
     OpsModule(
-      id: 'payments',
-      title: 'المدفوعات',
-      subtitle: 'مراجعة الإثباتات',
-      icon: 'payments',
-      anyOf: ['payments.read', 'payments.verify'],
+      id: 'catalog',
+      title: 'الإعدادات والتقارير',
+      subtitle: 'محافظات، مرافق، إعدادات، تقارير، سجل النشاط',
+      icon: 'tune',
+      anyOf: everyone,
     ),
-    OpsModule(
-      id: 'providers',
-      title: 'المزودون',
-      subtitle: 'التحقق من الحسابات',
-      icon: 'storefront',
-      anyOf: ['providers.read', 'providers.link'],
+    const OpsModule(
+      id: 'dashboard',
+      title: 'لوحة اليوم',
+      subtitle: 'أرقام لحظية',
+      icon: 'dashboard',
+      anyOf: ['reports.read', 'bookings.read', 'calls.answer'],
     ),
-    OpsModule(
-      id: 'customers',
-      title: 'الزبائن',
-      subtitle: 'بحث بالهاتف أو الاسم',
-      icon: 'people',
-      anyOf: ['users.read'],
-    ),
-    OpsModule(
+    const OpsModule(
       id: 'requests',
       title: 'الطلبات',
       subtitle: 'إلغاء واسترداد',
       icon: 'rule',
       anyOf: ['cancellations.review', 'refunds.review'],
     ),
-    OpsModule(
-      id: 'content',
-      title: 'المحتوى',
-      subtitle: 'بانرات وتقييمات ومميزة',
-      icon: 'collections',
-      anyOf: ['content.moderate'],
-    ),
-    OpsModule(
-      id: 'coupons',
-      title: 'الكوبونات',
-      subtitle: 'عرض وتفعيل الأكواد',
-      icon: 'local_offer',
-      anyOf: ['coupons.read', 'coupons.write'],
-    ),
-    OpsModule(
+    const OpsModule(
       id: 'invoices',
       title: 'الفواتير',
       subtitle: 'فواتير الحجوزات',
@@ -124,5 +144,8 @@ List<OpsModule> visibleOpsModules() {
   ];
   return all.where((m) => m.visible).toList();
 }
+
+/// الأقسام الكبرى في مركز العمليات.
+const opsSectionIds = {'desk', 'people', 'properties', 'content', 'catalog'};
 
 bool get hasOpsAccess => visibleOpsModules().isNotEmpty;

@@ -20,10 +20,12 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CallQueueService } from '../marketplace/call-queue.service';
 import { ConversationsService } from '../marketplace/conversations.service';
 import {
+  expandStaffPermissions,
   isStaffPermission,
   STAFF_PERMISSION_LABELS,
   STAFF_PERMISSIONS,
   STAFF_TEMPLATES,
+  STAFF_PERMISSION_GROUPS,
   StaffPermission,
 } from './staff.permissions';
 
@@ -40,6 +42,7 @@ export class StaffService {
       permissions: STAFF_PERMISSIONS,
       labels: STAFF_PERMISSION_LABELS,
       templates: STAFF_TEMPLATES,
+      groups: STAFF_PERMISSION_GROUPS,
     };
   }
 
@@ -160,6 +163,7 @@ export class StaffService {
         displayName: 'مدير',
         isActive: true,
         presenceState: StaffPresenceState.AVAILABLE,
+        catalog: { labels: STAFF_PERMISSION_LABELS, groups: STAFF_PERMISSION_GROUPS },
       };
     }
     const profile = await this.prisma.staffProfile.findUnique({
@@ -171,11 +175,12 @@ export class StaffService {
     return {
       id: user.id,
       role: user.role,
-      permissions: profile.permissions,
+      permissions: expandStaffPermissions(profile.permissions),
       displayName: profile.displayName,
       phone: profile.user.phone,
       isActive: profile.isActive,
       presenceState: presence?.state ?? StaffPresenceState.OFFLINE,
+      catalog: { labels: STAFF_PERMISSION_LABELS, groups: STAFF_PERMISSION_GROUPS },
     };
   }
 
@@ -1379,7 +1384,7 @@ export class StaffService {
     this.assertOffice(user);
     if (user.role === UserRole.ADMIN) return true;
     const profile = await this.prisma.staffProfile.findUnique({ where: { userId: user.id } });
-    return Boolean(profile?.isActive && profile.permissions.includes(permission));
+    return Boolean(profile?.isActive && expandStaffPermissions(profile.permissions).includes(permission));
   }
 
   private async require(user: AuthUser, permission: StaffPermission) {

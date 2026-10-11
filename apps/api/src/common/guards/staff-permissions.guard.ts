@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { STAFF_PERMISSIONS_KEY } from '../decorators/staff-permissions.decorator';
+import { expandStaffPermissions } from '../../modules/staff/staff.permissions';
 
 @Injectable()
 export class StaffPermissionsGuard implements CanActivate {
@@ -28,7 +29,8 @@ export class StaffPermissionsGuard implements CanActivate {
       select: { permissions: true, isActive: true },
     });
     if (!profile?.isActive) throw new ForbiddenException('الحساب موقوف');
-    const has = required.every((code) => profile.permissions.includes(code));
+    const granted = expandStaffPermissions(profile.permissions);
+    const has = required.every((code) => granted.includes(code));
     if (!has) throw new ForbiddenException('ليست لديك صلاحية هذا الإجراء');
     return true;
   }

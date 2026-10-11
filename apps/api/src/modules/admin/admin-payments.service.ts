@@ -1,11 +1,12 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { BookingStatus, PaymentMethod, PaymentStatus, Prisma, NotificationType } from '@prisma/client';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BookingStatus, PaymentMethod, PaymentStatus, Prisma, NotificationType, UserRole } from '@prisma/client';
 import { ActivityLogService } from '../../common/services/activity-log.service';
 import { NotificationService } from '../../common/services/notification.service';
 import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { PaginationService } from '../../common/services/query-helpers';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MarketplaceLifecycleService } from '../marketplace/marketplace-lifecycle.service';
+import { expandStaffPermissions } from '../staff/staff.permissions';
 
 function proofPublicUrl(filename: string) {
   const base = (process.env.MEDIA_PUBLIC_URL ?? 'http://localhost:3000/media').replace(/\/$/, '');
@@ -75,6 +76,16 @@ export class AdminPaymentsService {
     id: string,
     data: { status: PaymentStatus; adminNote?: string; transactionRef?: string },
   ) {
+    if (data.status === PaymentStatus.REFUNDED && user.role !== UserRole.ADMIN) {
+      // «مسترد» يحتاج صلاحية الاسترداد — اعتماد الدفع وحده لا يكفي
+      const profile = await this.prisma.staffProfile.findUnique({
+        where: { userId: user.id },
+        select: { permissions: true, isActive: true },
+      });
+      if (!profile?.isActive || !expandStaffPermissions(profile.permissions).includes('payments.refund')) {
+        throw new ForbiddenException('الاسترداد يحتاج صلاحية «استرداد المبالغ»');
+      }
+    }
     const payment = await this.prisma.payment.findUnique({
       where: { id },
       include: { booking: { include: { property: true } } },

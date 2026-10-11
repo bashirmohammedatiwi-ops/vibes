@@ -18,8 +18,6 @@ class AccountScreen extends StatefulWidget {
 }
 
 class _AccountScreenState extends State<AccountScreen> {
-  static const _permissionLabels = staffPermissionLabels;
-
   bool _refreshing = false;
   bool _loggingOut = false;
   Future<void> _refreshMe() async {
@@ -100,18 +98,7 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final code in Session.permissions)
-                  Chip(
-                    label: Text(_permissionLabels[code] ?? code),
-                    backgroundColor: placePaper,
-                    side: const BorderSide(color: placeLine),
-                  ),
-              ],
-            ),
+            child: _PermissionGroups(permissions: Session.permissions),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
@@ -172,6 +159,104 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// صلاحيات الموظف مجمّعة كما يعرّفها الخادم (المكالمات، الحجوزات، المال…).
+class _PermissionGroups extends StatelessWidget {
+  const _PermissionGroups({required this.permissions});
+
+  final List<String> permissions;
+
+  List<(String, List<String>)> _groups() {
+    final catalog = Session.me['catalog'];
+    final raw = catalog is Map ? catalog['groups'] : null;
+    if (raw is! List || raw.isEmpty) return [('صلاحياتك', permissions)];
+    final out = <(String, List<String>)>[];
+    final seen = <String>{};
+    for (final g in raw.whereType<Map>()) {
+      final codes = (g['codes'] as List? ?? const []).map((e) => e.toString()).toList();
+      final mine = codes.where(permissions.contains).toList();
+      seen.addAll(codes);
+      if (mine.isNotEmpty) out.add((g['label']?.toString() ?? '', mine));
+    }
+    final rest = permissions.where((c) => !seen.contains(c)).toList();
+    if (rest.isNotEmpty) out.add(('أخرى', rest));
+    return out;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final groups = _groups();
+    if (permissions.isEmpty) {
+      return const Text('لا صلاحيات بعد — تواصل مع المدير', style: TextStyle(color: placeInk2));
+    }
+    return Column(
+      children: [
+        for (final (label, codes) in groups)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: placeLine),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 14, color: placeInk),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: placeBrass.withValues(alpha: .12),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '${codes.length}',
+                        style: const TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w800, fontSize: 12, color: placeBrass),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final code in codes)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: placePaper,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.check_rounded, size: 14, color: placeBrass),
+                            const SizedBox(width: 4),
+                            Text(
+                              staffPermissionLabel(code),
+                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w700, color: placeInk),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

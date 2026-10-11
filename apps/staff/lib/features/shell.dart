@@ -30,6 +30,7 @@ class _OfficeShellState extends State<OfficeShell> with WidgetsBindingObserver {
   Timer? _heartbeat;
   Timer? _ring;
   Timer? _metrics;
+  Timer? _session;
   Map<String, dynamic>? _incoming;
   String? _banner;
   Map<String, int> _badges = {};
@@ -69,6 +70,8 @@ class _OfficeShellState extends State<OfficeShell> with WidgetsBindingObserver {
     _heartbeat = Timer.periodic(const Duration(seconds: 15), (_) => _beat());
     _ring = Timer.periodic(const Duration(seconds: 2), (_) => _look());
     _metrics = Timer.periodic(const Duration(seconds: 25), (_) => _loadBadges());
+    // الصلاحيات تُعدَّل من لوحة التحكم — نلتقطها خلال دقيقة دون إعادة دخول
+    _session = Timer.periodic(const Duration(seconds: 60), (_) => _refreshSession());
     _beat();
     _loadBadges();
   }
@@ -119,8 +122,21 @@ class _OfficeShellState extends State<OfficeShell> with WidgetsBindingObserver {
 
   Future<void> _refreshSession() async {
     try {
+      final before = Session.permissions.toSet();
       Session.applyMe(await Api.map('/api/staff/me'));
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      final after = Session.permissions.toSet();
+      final changed = before.length != after.length || !before.containsAll(after);
+      setState(() {
+        // الأقسام الظاهرة قد تتغير مع الصلاحيات — لا نتجاوز آخر تبويب
+        final count = visibleStaffTabs().length;
+        if (_index >= count) _index = count - 1;
+      });
+      if (changed && before.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('حدّث المدير صلاحياتك — الأقسام محدّثة الآن')),
+        );
+      }
     } catch (_) {}
   }
 
@@ -176,6 +192,7 @@ class _OfficeShellState extends State<OfficeShell> with WidgetsBindingObserver {
     _heartbeat?.cancel();
     _ring?.cancel();
     _metrics?.cancel();
+    _session?.cancel();
     super.dispose();
   }
 

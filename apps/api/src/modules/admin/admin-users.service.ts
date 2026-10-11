@@ -108,6 +108,16 @@ export class AdminUsersService {
     if (data.role === UserRole.ADMIN && user.role !== UserRole.ADMIN) {
       throw new BadRequestException('فقط المدير يمكنه تعيين مدير');
     }
+    if (user.role !== UserRole.ADMIN) {
+      // الموظف (بصلاحية users.write) يعدّل الاسم والتفعيل لحسابات الزبائن
+      // والمزودين فقط — لا تغيير أدوار ولا مساس بحسابات الإدارة والموظفين.
+      if (data.role !== undefined && data.role !== target.role) {
+        throw new BadRequestException('تغيير الدور للمدير فقط');
+      }
+      if (target.role === UserRole.ADMIN || target.role === UserRole.STAFF) {
+        throw new BadRequestException('حسابات الإدارة والموظفين يعدّلها المدير فقط');
+      }
+    }
     if (target.id === user.id && data.isActive === false) {
       throw new BadRequestException('لا يمكنك تعطيل حسابك');
     }
