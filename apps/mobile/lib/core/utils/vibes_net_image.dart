@@ -20,27 +20,37 @@ class VibesImageCacheManager extends CacheManager with ImageCacheManager {
       );
 }
 
-/// يحوّل رابط الصورة إلى نسخة تناسب العرض: 480 أو 960 بكسل.
-/// صور الخادم تُخدم من /media/w480 و /media/w960، وصور Unsplash تُطلب بعرض أصغر.
-String sizedImageUrl(String url, int bucket) {
+/// المقاسات التي يولّدها الخادم (nginx image_filter) — أي عرض آخر يُرفض.
+const kImageBuckets = [360, 480, 640, 800, 960, 1080, 1440];
+
+/// أصغر مقاس يغطي [px] بكسل.
+int imageBucketFor(int px) {
+  for (final b in kImageBuckets) {
+    if (b >= px) return b;
+  }
+  return kImageBuckets.last;
+}
+
+/// يحوّل رابط صورة الخادم إلى نسخة مصغّرة: /media/w/<عرض>/<ملف>.
+/// النسخ تُولَّد مرة واحدة وتُحفظ على الخادم، وصور Unsplash تُطلب بعرض أصغر.
+String sizedImageUrl(String url, int width) {
   final uri = Uri.tryParse(url);
   if (uri == null || !uri.hasScheme) return url;
-  final safeBucket = bucket <= 480 ? 480 : 960;
+  final bucket = imageBucketFor(width);
   final host = uri.host;
 
   if (host.contains('unsplash.com')) {
     final query = Map<String, String>.from(uri.queryParameters);
-    query['w'] = '$safeBucket';
-    query['q'] = '60';
+    query['w'] = '$bucket';
+    query['q'] = '65';
+    query['auto'] = 'format';
     query.remove('h');
     return uri.replace(queryParameters: query).toString();
   }
 
   final segments = uri.pathSegments;
-  if (segments.length < 2) return url;
-  final parent = segments[segments.length - 2];
-  if (parent.startsWith('w') && parent.length <= 5) return url;
-  if (parent != 'media') return url;
+  // /media/<ملف> فقط — لا نلمس روابط مصغّرة أصلاً أو مجلدات فرعية
+  if (segments.length != 2 || segments.first != 'media') return url;
   final file = segments.last;
   final lower = file.toLowerCase();
   if (!lower.endsWith('.jpg') &&
@@ -49,12 +59,7 @@ String sizedImageUrl(String url, int bucket) {
       !lower.endsWith('.webp')) {
     return url;
   }
-  final next = [
-    ...segments.sublist(0, segments.length - 1),
-    'w$safeBucket',
-    file,
-  ];
-  return uri.replace(pathSegments: next).toString();
+  return uri.replace(pathSegments: ['media', 'w', '$bucket', file]).toString();
 }
 
 /// صورة شبكة تُطلب بمقاس العرض، وتُفكّ بنفس المقاس لا بدقة المصدر.
@@ -82,16 +87,17 @@ class VibesNetImage extends StatefulWidget {
 
   static final VibesImageCacheManager cache = VibesImageCacheManager();
 
+  /// عرض الصورة بالبكسل (عرض منطقي × كثافة الشاشة حتى 2× — حادّة للعين
+  /// وأخف بكثير من 3×، ومقاسات متطابقة تعني إصابات أكثر في الكاش).
   static int bucketFor(BuildContext context, {double? logicalWidth}) {
-    if (DataSaver.slow) return 480;
     final dpr = MediaQuery.devicePixelRatioOf(context).clamp(1.0, 2.0);
     final screen = MediaQuery.sizeOf(context).width;
     final logical =
         (logicalWidth != null && logicalWidth.isFinite && logicalWidth > 0)
         ? logicalWidth
         : screen;
-    final px = (logical * dpr).round();
-    return px <= 700 ? 480 : 960;
+    final px = (logical * (DataSaver.slow ? 1.0 : dpr)).round();
+    return imageBucketFor(px);
   }
 
   static int decodeWidth(BuildContext context, {double? logicalWidth}) {

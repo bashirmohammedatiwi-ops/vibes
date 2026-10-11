@@ -133,14 +133,15 @@ class _GlassDock extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
+      // بلا BackdropFilter: الضبابية فوق محتوى يتحرك تُعاد كل إطار وتثقل
+      // التمرير، والخلفية شبه المعتمة تعطي المظهر نفسه تقريباً.
       child: ClipRRect(
         borderRadius: BorderRadius.circular(26),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: RepaintBoundary(
           child: Container(
             height: 66,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.88),
+              color: Colors.white.withValues(alpha: 0.97),
               borderRadius: BorderRadius.circular(26),
               border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
               boxShadow: [

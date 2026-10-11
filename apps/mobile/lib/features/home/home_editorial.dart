@@ -549,12 +549,11 @@ class _DeckRankMark extends StatelessWidget {
     final label = rank.toString().padLeft(2, '0');
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+      child: SizedBox(
         child: Container(
           padding: const EdgeInsets.fromLTRB(9, 6, 11, 7),
           decoration: BoxDecoration(
-            color: const Color(0x33101824),
+            color: const Color(0x80101824),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
           ),

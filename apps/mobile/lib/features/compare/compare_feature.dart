@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../core/utils/vibes_net_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -266,12 +268,12 @@ class _CompareHeaderCard extends StatelessWidget {
           children: [
             Expanded(
               child: property.coverUrl != null
-                  ? Image.network(
-                      property.coverUrl!,
-                      fit: BoxFit.cover,
+                  ? VibesNetImage(
+                      url: property.coverUrl!,
                       width: double.infinity,
-                      errorBuilder: (_, __, ___) =>
-                          Container(color: VibesTheme.surfaceHighOf(context)),
+                      fallback: Container(
+                        color: VibesTheme.surfaceHighOf(context),
+                      ),
                     )
                   : Container(
                       color: VibesTheme.surfaceHighOf(context),

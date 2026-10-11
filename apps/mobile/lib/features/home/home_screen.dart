@@ -128,38 +128,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 slivers: [
                   const SliverToBoxAdapter(child: _HeroHeader()),
-                  SliverToBoxAdapter(
-                    child: ColoredBox(
-                      color: p.canvas,
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _ContinueBookingSection(),
-                          _Reveal(order: 3, child: EditorsPicks()),
-                          _OccasionsSection(),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: ColoredBox(
-                      color: p.canvas,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _WorldFade(builder: (s) => _NewArrivals(section: s)),
-                          const _CouponTicket(),
-                          const _Band(child: TopRatedEditorial()),
-                          const _SpotlightStrip(),
-                          const Padding(
-                            padding: EdgeInsets.only(top: 18),
-                            child: MapPreviewCard(),
-                          ),
-                          const _RecentlyViewedSection(),
-                          const _FollowingProvidersStrip(),
-                          const _TrustStrip(),
-                        ],
-                      ),
+                  // الأقسام تُبنى بكسل — فقط ما يقترب من الشاشة يُبنى ويُرسم
+                  DecoratedSliver(
+                    decoration: BoxDecoration(color: p.canvas),
+                    sliver: SliverList.list(
+                      children: [
+                        const _ContinueBookingSection(),
+                        const _Reveal(order: 3, child: EditorsPicks()),
+                        const _OccasionsSection(),
+                        _WorldFade(builder: (s) => _NewArrivals(section: s)),
+                        const _CouponTicket(),
+                        const _Band(child: TopRatedEditorial()),
+                        const _SpotlightStrip(),
+                        const Padding(
+                          padding: EdgeInsets.only(top: 18),
+                          child: MapPreviewCard(),
+                        ),
+                        const _RecentlyViewedSection(),
+                        const _FollowingProvidersStrip(),
+                        const _TrustStrip(),
+                      ],
                     ),
                   ),
                   SliverMainAxisGroup(

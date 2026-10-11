@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1585,11 +1584,7 @@ class _PaymentCard extends ConsumerWidget {
             const SizedBox(height: 12),
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: CachedNetworkImage(
-                imageUrl: payment.proofUrl!,
-                height: 170,
-                fit: BoxFit.cover,
-              ),
+              child: VibesNetImage(url: payment.proofUrl!, height: 170),
             ),
             if (!payment.isPaid) ...[
               const SizedBox(height: 10),

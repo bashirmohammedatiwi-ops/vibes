@@ -1,5 +1,6 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+
+import '../../core/utils/vibes_net_image.dart';
 
 import '../../core/theme/app_theme.dart';
 
@@ -39,12 +40,10 @@ class _MiniGalleryState extends State<MiniGallery> {
           controller: _controller,
           itemCount: widget.images.length,
           onPageChanged: (i) => setState(() => _index = i),
-          itemBuilder: (context, i) => CachedNetworkImage(
-            imageUrl: widget.images[i],
-            fit: BoxFit.cover,
-            memCacheWidth: 750,
-            fadeInDuration: const Duration(milliseconds: 220),
-            errorWidget: (_, __, ___) =>
+          itemBuilder: (context, i) => VibesNetImage(
+            url: widget.images[i],
+            fade: const Duration(milliseconds: 160),
+            fallback:
                 widget.placeholder?.call(context) ??
                 Container(color: Vibes.surfaceMuted),
           ),

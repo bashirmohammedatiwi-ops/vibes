@@ -330,7 +330,10 @@ class _GalleryFullscreen extends StatelessWidget {
               if (media.kind == MediaKind.panorama) {
                 // بانوراما: ابدأ مغطية الشاشة ودور بحرية
                 return PhotoView(
-                  imageProvider: CachedNetworkImageProvider(media.url),
+                  imageProvider: CachedNetworkImageProvider(
+                    media.url,
+                    cacheManager: VibesNetImage.cache,
+                  ),
                   backgroundDecoration: const BoxDecoration(
                     color: Colors.black,
                   ),
@@ -342,7 +345,11 @@ class _GalleryFullscreen extends StatelessWidget {
                 );
               }
               return PhotoView(
-                imageProvider: CachedNetworkImageProvider(media.url),
+                // 1440 يكفي للتكبير بوضوح، وأخف بكثير من الأصل
+                imageProvider: CachedNetworkImageProvider(
+                  sizedImageUrl(media.url, 1440),
+                  cacheManager: VibesNetImage.cache,
+                ),
                 backgroundDecoration: const BoxDecoration(color: Colors.black),
                 minScale: PhotoViewComputedScale.contained,
                 maxScale: PhotoViewComputedScale.covered * 2.4,

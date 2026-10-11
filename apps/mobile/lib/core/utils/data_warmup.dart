@@ -25,14 +25,24 @@ class DataWarmup {
     // لمس فقط — Riverpod يبدأ الجلب فوراً ويبقيه في الكاش.
     touch(
       ref.read(propertiesProvider(null).future).then((list) {
-        for (final property in list.take(16)) {
+        // بطاقات القائمة بعرض الشاشة (~360 منطقي × 2) → مقاس 800 نفسه الذي
+        // ستطلبه البطاقة، فتظهر الصورة فوراً من الكاش.
+        for (final property in list.take(10)) {
           final url = property.coverUrl;
           if (url == null || url.isEmpty) continue;
-          VibesNetImage.cache.downloadFile(sizedImageUrl(url, 480)).ignore();
+          VibesNetImage.cache.downloadFile(sizedImageUrl(url, 800)).ignore();
         }
       }),
     );
-    touch(ref.read(bannersProvider.future));
+    touch(
+      ref.read(bannersProvider.future).then((list) {
+        for (final banner in list.take(4)) {
+          final url = banner.imageUrl;
+          if (url.isEmpty) continue;
+          VibesNetImage.cache.downloadFile(sizedImageUrl(url, 800)).ignore();
+        }
+      }),
+    );
     touch(ref.read(featuredPropertiesProvider.future));
     touch(ref.read(newPropertiesProvider('FARM').future));
     touch(ref.read(newPropertiesProvider('HALL').future));
