@@ -99,7 +99,6 @@
 				B637206F2B2D71FA9752007C /* Pods-RunnerTests.release.xcconfig */,
 				9D98CA425A72BA7FCA4D966D /* Pods-RunnerTests.profile.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -478,6 +477,8 @@
 				DEVELOPMENT_TEAM = 629ARMBUX8;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = VIBES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -661,6 +662,8 @@
 				DEVELOPMENT_TEAM = 629ARMBUX8;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = VIBES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -684,6 +687,8 @@
 				DEVELOPMENT_TEAM = 629ARMBUX8;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = VIBES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
