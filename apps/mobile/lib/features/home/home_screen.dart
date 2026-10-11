@@ -1435,18 +1435,20 @@ class _WorldTiles extends ConsumerWidget {
                     ),
                   ),
                 ),
-                Row(
-                  children: [
-                    for (final s in HomeSection.values)
-                      Expanded(
-                        child: _WorldSegment(
-                          section: s,
-                          active: s == current,
-                          count: all.where((x) => _inWorld(x, s)).length,
-                          onTap: () => _selectWorld(ref, s),
+                Positioned.fill(
+                  child: Row(
+                    children: [
+                      for (final s in HomeSection.values)
+                        Expanded(
+                          child: _WorldSegment(
+                            section: s,
+                            active: s == current,
+                            count: all.where((x) => _inWorld(x, s)).length,
+                            onTap: () => _selectWorld(ref, s),
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             );
@@ -1501,39 +1503,17 @@ class _WorldSegment extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // الأيقونة في دائرة بلون عالمها — هوية حتى غير المختار
-                    Container(
-                      width: 38,
-                      height: 38,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color.lerp(
-                          Colors.white,
-                          Colors.white.withValues(alpha: .16),
-                          t,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(
-                              alpha: .05 * (1 - t),
-                            ),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Transform.scale(
-                        scale: 1 + .06 * t,
-                        child: WorldGlyph(
-                          section: section,
-                          size: 28,
-                          primary: primary,
-                          secondary: secondary,
-                        ),
+                    // الأيقونة مرسومة بلا إطار — بلون عالمها، وبيضاء عند الاختيار
+                    Transform.scale(
+                      scale: 1 + .06 * t,
+                      child: WorldGlyph(
+                        section: section,
+                        size: 32,
+                        primary: primary,
+                        secondary: secondary,
                       ),
                     ),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 8),
                     Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3939,4 +3919,3 @@ class _RailSnapPhysics extends ScrollPhysics {
   @override
   bool get allowImplicitScrolling => false;
 }
-
