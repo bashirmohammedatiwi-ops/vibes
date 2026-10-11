@@ -7,6 +7,7 @@ import '../../core/format.dart';
 import '../../core/session.dart';
 import '../../core/theme.dart';
 import '../../widgets/form_kit.dart';
+import '../../widgets/kit.dart';
 import '../../widgets/ui.dart';
 import 'property_detail.dart';
 import 'property_editor.dart';
@@ -80,11 +81,7 @@ class _OpsPropertiesScreenState extends State<OpsPropertiesScreen> {
       if (reason == null) return;
     }
     try {
-      await Api.send(
-        '/api/staff/properties/$id/status',
-        method: 'POST',
-        body: {'status': status, if (reason != null) 'reason': reason},
-      );
+      await Api.send('/api/staff/properties/$id/status', method: 'POST', body: {'status': status, if (reason != null) 'reason': reason});
       await _load(silent: true);
     } catch (e) {
       if (mounted) showToast(context, '$e', error: true);
@@ -101,45 +98,67 @@ class _OpsPropertiesScreenState extends State<OpsPropertiesScreen> {
     if (mounted) _load(silent: true);
   }
 
-  List<dynamic> get _filtered =>
-      _type == 'ALL' ? _rows : _rows.where((r) => r is Map && r['type'] == _type).toList();
+  List<dynamic> get _filtered => _type == 'ALL' ? _rows : _rows.where((r) => r is Map && r['type'] == _type).toList();
+
+  static const _types = ['ALL', 'FARM', 'HALL', 'DECORATION'];
 
   @override
   Widget build(BuildContext context) {
     final rows = _filtered;
-    return Scaffold(
-      appBar: AppBar(title: const Text('الأماكن')),
+    return StaffPage(
+      title: 'الأماكن',
+      subtitle: _loading ? 'جارٍ التحميل…' : '${rows.length} مكان${_status == 'ALL' ? '' : ' · ${placeStatusLabel(_status)}'}',
+      onRefresh: () => _load(silent: true),
       floatingActionButton: _canWrite
           ? FloatingActionButton.extended(
               onPressed: _create,
               backgroundColor: placeInk,
               foregroundColor: Colors.white,
-              icon: const Icon(Icons.add_home_work_outlined),
-              label: const Text('مكان جديد', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800)),
+              icon: const Icon(Icons.add_home_work_rounded),
+              label: const Text(
+                'مكان جديد',
+                style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800),
+              ),
             )
           : null,
-      body: Column(
-        children: [
-          if (!_canWrite && !_canModerate)
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Text(
-                'صلاحية «عرض الأماكن» فقط — لإضافة أو تعديل مكان اطلب «إضافة وتعديل الأماكن» من المشرف.',
-                style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, height: 1.35),
+      slivers: [
+        if (!_canWrite && !_canModerate)
+          SliverToBoxAdapter(
+            child: Pad(
+              top: 4,
+              child: StaffCard(
+                color: placeGoldSoft,
+                borderColor: placeGold.withValues(alpha: .35),
+                child: const Row(
+                  children: [
+                    Icon(Icons.visibility_rounded, color: placeBrass, size: 20),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'صلاحية «عرض الأماكن» فقط — لإضافة أو تعديل مكان اطلب «إضافة وتعديل الأماكن» من المشرف.',
+                        style: TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.w600, color: placeInk, height: 1.45),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+          ),
+        SliverToBoxAdapter(
+          child: Pad(
+            top: 4,
+            bottom: 0,
             child: TextField(
               controller: _search,
               onChanged: _onSearchChanged,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
                 hintText: 'ابحث بالاسم أو الهاتف',
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: const Icon(Icons.search_rounded, color: placeInk2),
                 suffixIcon: _search.text.isEmpty
                     ? null
                     : IconButton(
+                        tooltip: 'مسح',
                         icon: const Icon(Icons.close_rounded),
                         onPressed: () {
                           _search.clear();
@@ -151,75 +170,128 @@ class _OpsPropertiesScreenState extends State<OpsPropertiesScreen> {
               ),
             ),
           ),
-          FilterChipsRow(
+        ),
+        SliverToBoxAdapter(
+          child: FilterChipsRow(
             options: const ['ALL', 'PENDING', 'APPROVED', 'DRAFT', 'SUSPENDED', 'REJECTED'],
             selected: _status,
-            labelBuilder: (s) => s == 'ALL' ? 'الكل' : placeStatusLabel(s),
+            labelBuilder: (s) => s == 'ALL' ? 'كل الحالات' : placeStatusLabel(s),
             onSelected: (v) {
               setState(() => _status = v);
               _load();
             },
           ),
-          SizedBox(
-            height: 44,
-            child: ListView(
+        ),
+        SliverToBoxAdapter(
+          child: SizedBox(
+            height: 48,
+            child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                for (final t in const ['ALL', 'FARM', 'HALL', 'DECORATION'])
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 8),
-                    child: ChoiceChip(
-                      label: Text(t == 'ALL' ? 'كل الأنواع' : placeTypeLabel(t)),
-                      selected: _type == t,
-                      onSelected: (_) => setState(() => _type = t),
-                      selectedColor: placeBrass.withValues(alpha: 0.2),
-                      side: BorderSide(color: _type == t ? placeBrass : placeLine),
-                      labelStyle: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, fontSize: 12.5),
-                      showCheckmark: false,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ),
-              ],
+              padding: const EdgeInsets.symmetric(horizontal: StaffSpace.page, vertical: 4),
+              itemCount: _types.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (_, i) {
+                final t = _types[i];
+                return _TypeChip(
+                  label: t == 'ALL' ? 'كل الأنواع' : placeTypeLabel(t),
+                  icon: t == 'ALL' ? Icons.apps_rounded : placeTypeIcon(t),
+                  selected: _type == t,
+                  onTap: () => setState(() => _type = t),
+                );
+              },
             ),
           ),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () => _load(silent: true),
-              child: _loading
-                  ? ListView(children: const [SizedBox(height: 120), Center(child: CircularProgressIndicator(color: placeBrass))])
-                  : _error != null
-                      ? ListView(children: [
-                          const SizedBox(height: 80),
-                          EmptyState(title: 'تعذّر التحميل', subtitle: _error),
-                        ])
-                      : rows.isEmpty
-                          ? ListView(children: const [SizedBox(height: 60), EmptyState(title: 'لا أماكن في هذا الفلتر')])
-                          : ListView.builder(
-                              padding: EdgeInsets.fromLTRB(16, 4, 16, _canWrite ? 100 : 24),
-                              itemCount: rows.length,
-                              itemBuilder: (context, i) => _PropertyCard(
-                                row: Map<String, dynamic>.from(rows[i] as Map),
-                                canModerate: _canModerate,
-                                onOpen: _open,
-                                onStatus: _setStatus,
-                              ),
-                            ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 8)),
+        if (_loading)
+          const SkeletonSliver(count: 4, height: 250)
+        else if (_error != null)
+          SliverToBoxAdapter(
+            child: EmptyView(
+              icon: Icons.cloud_off_rounded,
+              title: 'تعذّر التحميل',
+              subtitle: _error,
+              actionLabel: 'إعادة المحاولة',
+              onAction: _load,
+            ),
+          )
+        else if (rows.isEmpty)
+          SliverToBoxAdapter(
+            child: EmptyView(
+              icon: Icons.villa_outlined,
+              title: 'لا أماكن في هذا الفلتر',
+              subtitle: 'جرّب حالة أو نوعاً آخر، أو امسح البحث.',
+              actionLabel: _canWrite ? 'إضافة مكان' : null,
+              onAction: _canWrite ? _create : null,
+            ),
+          )
+        else
+          SliverList.separated(
+            itemCount: rows.length,
+            separatorBuilder: (_, _) => const SizedBox(height: StaffSpace.gap),
+            itemBuilder: (context, i) => Pad(
+              bottom: 0,
+              child: _PropertyCard(
+                row: Map<String, dynamic>.from(rows[i] as Map),
+                canModerate: _canModerate,
+                onOpen: _open,
+                onStatus: _setStatus,
+              ),
             ),
           ),
-        ],
+        if (_canWrite) const SliverToBoxAdapter(child: SizedBox(height: 72)),
+      ],
+    );
+  }
+}
+
+class _TypeChip extends StatelessWidget {
+  const _TypeChip({required this.label, required this.icon, required this.selected, required this.onTap});
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = BorderRadius.circular(999);
+    return Material(
+      color: selected ? placeGoldSoft : Colors.white,
+      borderRadius: r,
+      child: InkWell(
+        borderRadius: r,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            borderRadius: r,
+            border: Border.all(color: selected ? placeGold : placeLine),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: selected ? placeBrass : placeInk3),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: selected ? placeBrass : placeInk2,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
 class _PropertyCard extends StatelessWidget {
-  const _PropertyCard({
-    required this.row,
-    required this.canModerate,
-    required this.onOpen,
-    required this.onStatus,
-  });
+  const _PropertyCard({required this.row, required this.canModerate, required this.onOpen, required this.onStatus});
 
   final Map<String, dynamic> row;
   final bool canModerate;
@@ -230,120 +302,236 @@ class _PropertyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final id = row['id']?.toString() ?? '';
     final status = row['status']?.toString();
+    final type = row['type']?.toString();
     final media = row['media'];
     String? cover;
     if (media is List && media.isNotEmpty && media.first is Map) {
       final m = media.first as Map;
       cover = (m['thumbnailUrl'] ?? m['url'])?.toString();
     }
+    final mediaCount = media is List ? media.length : 0;
     final city = row['city'] is Map ? (row['city'] as Map)['nameAr']?.toString() ?? '' : '';
     final rating = double.tryParse('${row['ratingAvg'] ?? 0}') ?? 0;
     final provider = row['provider'] is Map ? (row['provider'] as Map)['businessName']?.toString() ?? '' : '';
+    final showActions = canModerate && (status == 'PENDING' || status == 'DRAFT' || status == 'SUSPENDED' || status == 'APPROVED');
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(StaffRadius.lg),
         border: Border.all(color: placeLine),
+        boxShadow: staffCardShadow,
       ),
-      child: InkWell(
-        onTap: () => onOpen(id),
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.white,
+        child: InkWell(
+          onTap: () => onOpen(id),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  SizedBox(width: 88, height: 88, child: NetImage(url: cover, radius: 14, icon: placeTypeIcon(row['type']?.toString()))),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+              // ── الغلاف + الحالة ──
+              SizedBox(
+                height: 150,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    NetImage(url: cover, radius: 0, icon: placeTypeIcon(type)),
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0x330F1B2D), Color(0x000F1B2D), Color(0x660F1B2D)],
+                          stops: [0, .45, 1],
+                        ),
+                      ),
+                    ),
+                    PositionedDirectional(
+                      top: 10,
+                      start: 10,
+                      child: _Glass(
+                        child: StatusPill(label: placeStatusLabel(status), color: placeStatusColor(status)),
+                      ),
+                    ),
+                    if (row['featured'] == true)
+                      const PositionedDirectional(
+                        top: 10,
+                        end: 10,
+                        child: _Glass(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.workspace_premium_rounded, size: 15, color: placeBrass),
+                                SizedBox(width: 4),
+                                Text(
+                                  'مميّز',
+                                  style: TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.w800, color: placeBrass),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    PositionedDirectional(
+                      bottom: 10,
+                      start: 12,
+                      child: Row(
+                        children: [
+                          Icon(placeTypeIcon(type), size: 15, color: Colors.white),
+                          const SizedBox(width: 5),
+                          Text(
+                            [placeTypeLabel(type), city].where((e) => e.isNotEmpty && e != '—').join(' · '),
+                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.w800, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (mediaCount > 1)
+                      PositionedDirectional(
+                        bottom: 10,
+                        end: 12,
+                        child: Row(
                           children: [
-                            Expanded(
-                              child: Text(
-                                row['name']?.toString() ?? '',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 16, color: placeInk),
+                            const Icon(Icons.photo_library_rounded, size: 14, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$mediaCount',
+                              style: const TextStyle(
+                                fontFamily: 'Montserrat',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
                               ),
                             ),
-                            if (row['featured'] == true) const Icon(Icons.workspace_premium_rounded, size: 18, color: placeBrass),
                           ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          [placeTypeLabel(row['type']?.toString()), city].where((e) => e.isNotEmpty).join(' · '),
-                          style: const TextStyle(color: placeInk2, fontSize: 12.5, fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          formatIqd(row['pricePerDay']),
-                          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, fontSize: 13.5, color: placeInk),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            StatusPill(label: placeStatusLabel(status), color: placeStatusColor(status)),
-                            const SizedBox(width: 8),
-                            if (rating > 0) ...[
-                              const Icon(Icons.star_rounded, size: 15, color: placeBrass),
-                              Text(' ${rating.toStringAsFixed(1)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
-                            ],
-                          ],
-                        ),
+                      ),
+                  ],
+                ),
+              ),
+              // ── الاسم والأرقام ──
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      row['name']?.toString() ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 16, color: placeInk),
+                    ),
+                    if (provider.isNotEmpty)
+                      Text(
+                        'المزوّد: $provider',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w600),
+                      ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _Stat(icon: Icons.sell_rounded, text: '${formatIqd(row['pricePerDay'])} / يوم'),
+                        const SizedBox(width: 14),
+                        if (rating > 0) _Stat(icon: Icons.star_rounded, text: rating.toStringAsFixed(1), color: placeBrass),
+                        const Spacer(),
+                        const Icon(Icons.chevron_left_rounded, color: placeInk3),
                       ],
                     ),
-                  ),
-                ],
-              ),
-              if (provider.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text('المزوّد: $provider', style: const TextStyle(fontSize: 12, color: placeInk2, fontWeight: FontWeight.w600)),
+                  ],
                 ),
-              if (canModerate && (status == 'PENDING' || status == 'DRAFT' || status == 'SUSPENDED' || status == 'APPROVED'))
+              ),
+              if (showActions) ...[
+                const Divider(height: 1, color: placeLineSoft),
                 Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+                  child: Row(
                     children: [
                       if (status == 'PENDING' || status == 'DRAFT')
-                        FilledButton(
-                          style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
-                          onPressed: () => onStatus(id, 'APPROVED'),
-                          child: const Text('اعتماد'),
+                        Expanded(
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(backgroundColor: placeSuccess),
+                            onPressed: () => onStatus(id, 'APPROVED'),
+                            icon: const Icon(Icons.check_rounded, size: 18),
+                            label: const Text('اعتماد'),
+                          ),
                         ),
                       if (status == 'SUSPENDED')
-                        FilledButton(
-                          style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
-                          onPressed: () => onStatus(id, 'APPROVED'),
-                          child: const Text('إعادة نشر'),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: () => onStatus(id, 'APPROVED'),
+                            icon: const Icon(Icons.publish_rounded, size: 18),
+                            label: const Text('إعادة نشر'),
+                          ),
                         ),
-                      if (status != 'SUSPENDED')
-                        OutlinedButton(
-                          style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
-                          onPressed: () => onStatus(id, 'SUSPENDED'),
-                          child: const Text('تعليق'),
+                      if (status != 'SUSPENDED') ...[
+                        if (status != 'APPROVED') const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => onStatus(id, 'SUSPENDED'),
+                            icon: const Icon(Icons.pause_circle_outline_rounded, size: 18),
+                            label: const Text('تعليق'),
+                          ),
                         ),
-                      if (status == 'PENDING')
+                      ],
+                      if (status == 'PENDING') ...[
+                        const SizedBox(width: 4),
                         TextButton(
+                          style: TextButton.styleFrom(foregroundColor: placeDanger),
                           onPressed: () => onStatus(id, 'REJECTED'),
                           child: const Text('رفض'),
                         ),
+                      ],
                     ],
                   ),
                 ),
+              ],
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _Stat extends StatelessWidget {
+  const _Stat({required this.icon, required this.text, this.color = placeInk2});
+
+  final IconData icon;
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 15, color: color),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.w800, color: placeInk),
+        ),
+      ],
+    );
+  }
+}
+
+/// خلفية بيضاء شبه شفافة للشارات فوق الصور.
+class _Glass extends StatelessWidget {
+  const _Glass({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: .92), borderRadius: BorderRadius.circular(999)),
+      child: child,
     );
   }
 }

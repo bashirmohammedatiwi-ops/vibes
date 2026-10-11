@@ -10,6 +10,7 @@ import '../../core/api.dart';
 import '../../core/session.dart';
 import '../../core/theme.dart';
 import '../../widgets/form_kit.dart';
+import '../../widgets/kit.dart';
 import '../../widgets/ui.dart';
 import '../../core/net_image.dart';
 
@@ -46,6 +47,7 @@ class _PropertyMediaScreenState extends State<PropertyMediaScreen> {
   List<Map<String, dynamic>> _items = [];
   final List<_Upload> _uploads = [];
   String _filter = 'ALL';
+  bool _reorderMode = false;
   bool _loading = true;
   String? _error;
   bool _pumping = false;
@@ -106,7 +108,14 @@ class _PropertyMediaScreenState extends State<PropertyMediaScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('إضافة وسائط', style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900)),
+              const Text(
+                'إضافة وسائط',
+                style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900, color: placeInk),
+              ),
+              const Text(
+                'يُرفع كل ملف بالتتابع مع شريط تقدّم — يمكنك متابعة العمل.',
+                style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2),
+              ),
               const SizedBox(height: 12),
               GridView.count(
                 crossAxisCount: 2,
@@ -114,7 +123,7 @@ class _PropertyMediaScreenState extends State<PropertyMediaScreen> {
                 physics: const NeverScrollableScrollPhysics(),
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
-                childAspectRatio: 1.55,
+                childAspectRatio: 1.35,
                 children: [
                   _AddTile(Icons.photo_library_outlined, 'صور من المعرض', 'عدة صور دفعة واحدة', () => Navigator.pop(context, 'images')),
                   _AddTile(Icons.photo_camera_outlined, 'التقاط صورة', 'من الكاميرا مباشرة', () => Navigator.pop(context, 'camera')),
@@ -145,9 +154,7 @@ class _PropertyMediaScreenState extends State<PropertyMediaScreen> {
         case 'video':
         case 'videocam':
           {
-            final f = await _picker.pickVideo(
-              source: action == 'video' ? ImageSource.gallery : ImageSource.camera,
-            );
+            final f = await _picker.pickVideo(source: action == 'video' ? ImageSource.gallery : ImageSource.camera);
             if (f != null) await _enqueueVideo(f, reel: false);
           }
         case 'reel':
@@ -196,21 +203,22 @@ class _PropertyMediaScreenState extends State<PropertyMediaScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('نسبة عرض الفيديو', style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900)),
+                const Text(
+                  'نسبة عرض الفيديو',
+                  style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900),
+                ),
                 const SizedBox(height: 4),
                 const Text(
                   'يُجهَّز الفيديو تلقائياً (نسخة 720p وملصق) ويُقصّ على النسبة المختارة.',
                   style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2),
                 ),
                 const SizedBox(height: 14),
-                ChoicePills<String>(
-                  options: options,
-                  value: selected,
-                  labelOf: label,
-                  onChanged: (v) => setLocal(() => selected = v),
-                ),
+                ChoicePills<String>(options: options, value: selected, labelOf: label, onChanged: (v) => setLocal(() => selected = v)),
                 const SizedBox(height: 18),
-                FilledButton(onPressed: () => Navigator.pop(context, selected), child: const Text('رفع الفيديو')),
+                SizedBox(
+                  height: 50,
+                  child: FilledButton(onPressed: () => Navigator.pop(context, selected), child: const Text('رفع الفيديو')),
+                ),
               ],
             ),
           ),
@@ -283,7 +291,9 @@ class _PropertyMediaScreenState extends State<PropertyMediaScreen> {
       await Api.send(
         '$_base/media/reorder',
         method: 'PATCH',
-        body: {'mediaIds': [for (final m in visible) m['id']]},
+        body: {
+          'mediaIds': [for (final m in visible) m['id']],
+        },
       );
     } catch (e) {
       if (mounted) {
@@ -309,8 +319,12 @@ class _PropertyMediaScreenState extends State<PropertyMediaScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('وصف الملف', style: TextStyle(fontWeight: FontWeight.w900)),
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(StaffRadius.xl)),
+        title: const Text(
+          'وصف الملف',
+          style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeInk),
+        ),
         content: TextField(
           controller: controller,
           maxLines: 3,
@@ -373,69 +387,97 @@ class _PropertyMediaScreenState extends State<PropertyMediaScreen> {
       return;
     }
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => _ImagePreview(url: m['url']?.toString(), is360: type == 'PANORAMA')),
+      MaterialPageRoute(
+        builder: (_) => _ImagePreview(url: m['url']?.toString(), is360: type == 'PANORAMA'),
+      ),
     );
   }
 
   // ───────── البناء ─────────
 
-  int _count(String type) =>
-      type == 'ALL' ? _items.length : _items.where((m) => m['type'] == type).length;
+  int _count(String type) => type == 'ALL' ? _items.length : _items.where((m) => m['type'] == type).length;
 
-  List<Map<String, dynamic>> get _visible =>
-      _filter == 'ALL' ? [..._items] : _items.where((m) => m['type'] == _filter).toList();
+  List<Map<String, dynamic>> get _visible => _filter == 'ALL' ? [..._items] : _items.where((m) => m['type'] == _filter).toList();
 
   @override
   Widget build(BuildContext context) {
     final visible = _visible;
+    final canReorder = _canWrite && _filter == 'ALL' && _items.length > 1;
     return Scaffold(
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('الوسائط'),
+            Text(_reorderMode ? 'ترتيب الوسائط' : 'الوسائط'),
             Text(
-              widget.propertyName,
+              _reorderMode ? 'اسحب المقبض لتغيير الترتيب' : widget.propertyName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w600, color: placeInk2),
             ),
           ],
         ),
+        actions: [
+          if (canReorder)
+            _reorderMode
+                ? Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 8),
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(minimumSize: const Size(64, 40)),
+                      onPressed: () => setState(() => _reorderMode = false),
+                      child: const Text('تم'),
+                    ),
+                  )
+                : IconButton(
+                    tooltip: 'إعادة الترتيب',
+                    icon: const Icon(Icons.swap_vert_rounded),
+                    onPressed: () => setState(() => _reorderMode = true),
+                  ),
+        ],
       ),
-      floatingActionButton: _canWrite
+      floatingActionButton: _canWrite && !_reorderMode
           ? FloatingActionButton.extended(
               onPressed: _showAddSheet,
               backgroundColor: placeInk,
               foregroundColor: Colors.white,
-              icon: const Icon(Icons.add_photo_alternate_outlined),
-              label: const Text('إضافة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800)),
+              icon: const Icon(Icons.add_photo_alternate_rounded),
+              label: const Text(
+                'إضافة',
+                style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800),
+              ),
             )
           : null,
       body: Column(
         children: [
-          FilterChipsRow(
-            options: const ['ALL', 'IMAGE', 'VIDEO', 'REEL', 'PANORAMA'],
-            selected: _filter,
-            labelBuilder: (t) => '${_filterLabel(t)} (${_count(t)})',
-            onSelected: (v) => setState(() => _filter = v),
-          ),
+          if (!_reorderMode)
+            FilterChipsRow(
+              options: const ['ALL', 'IMAGE', 'VIDEO', 'REEL', 'PANORAMA'],
+              selected: _filter,
+              labelBuilder: (t) => '${_filterLabel(t)} · ${_count(t)}',
+              onSelected: (v) => setState(() => _filter = v),
+            ),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: placeBrass))
+                ? GridView.count(
+                    padding: const EdgeInsets.fromLTRB(StaffSpace.page, 4, StaffSpace.page, StaffSpace.page),
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: .82,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: List.generate(6, (_) => const SkeletonBox(height: double.infinity)),
+                  )
                 : _error != null
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(_error!, style: const TextStyle(color: placeInk2)),
-                            const SizedBox(height: 12),
-                            FilledButton(onPressed: _load, child: const Text('إعادة المحاولة')),
-                          ],
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: () => _load(silent: true),
-                        child: _buildList(visible),
-                      ),
+                ? Center(
+                    child: EmptyView(
+                      icon: Icons.cloud_off_rounded,
+                      title: 'تعذّر تحميل الوسائط',
+                      subtitle: _error,
+                      actionLabel: 'إعادة المحاولة',
+                      onAction: _load,
+                    ),
+                  )
+                : RefreshIndicator(color: placeGold, onRefresh: () => _load(silent: true), child: _buildList(visible)),
           ),
         ],
       ),
@@ -443,31 +485,33 @@ class _PropertyMediaScreenState extends State<PropertyMediaScreen> {
   }
 
   String _filterLabel(String t) => switch (t) {
-        'ALL' => 'الكل',
-        'IMAGE' => 'صور',
-        'VIDEO' => 'فيديو',
-        'REEL' => 'ريلز',
-        'PANORAMA' => '360°',
-        _ => t,
-      };
+    'ALL' => 'الكل',
+    'IMAGE' => 'صور',
+    'VIDEO' => 'فيديو',
+    'REEL' => 'ريلز',
+    'PANORAMA' => '360°',
+    _ => t,
+  };
 
   Widget _buildList(List<Map<String, dynamic>> visible) {
     final panel = _uploadsPanel();
     if (visible.isEmpty && _uploads.isEmpty) {
       return ListView(
         children: [
-          const SizedBox(height: 60),
-          EmptyState(
+          EmptyView(
+            icon: Icons.perm_media_outlined,
             title: _filter == 'ALL' ? 'لا وسائط بعد' : 'لا عناصر في هذا القسم',
-            subtitle: _canWrite ? 'اضغط «إضافة» لرفع الصور والفيديو والريلز وصور 360°' : null,
+            subtitle: _canWrite ? 'ارفع الصور والفيديو والريلز وصور 360° — أول صورة تصبح الغلاف.' : null,
+            actionLabel: _canWrite ? 'إضافة وسائط' : null,
+            onAction: _canWrite ? _showAddSheet : null,
           ),
         ],
       );
     }
-    // السحب لإعادة الترتيب متاح في عرض «الكل» فقط
-    if (_filter == 'ALL' && _canWrite) {
+    // وضع الترتيب: قائمة قابلة للسحب (عرض «الكل» فقط)
+    if (_reorderMode && _filter == 'ALL' && _canWrite) {
       return ReorderableListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+        padding: const EdgeInsets.fromLTRB(StaffSpace.page, 8, StaffSpace.page, 32),
         buildDefaultDragHandles: false,
         header: panel,
         itemCount: visible.length,
@@ -477,6 +521,7 @@ class _PropertyMediaScreenState extends State<PropertyMediaScreen> {
           item: visible[i],
           canWrite: _canWrite,
           dragIndex: i,
+          position: i + 1,
           onTap: () => _openPreview(visible[i]),
           onSetPrimary: () => _setPrimary(visible[i]),
           onCaption: () => _editCaption(visible[i]),
@@ -485,21 +530,38 @@ class _PropertyMediaScreenState extends State<PropertyMediaScreen> {
         ),
       );
     }
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-      children: [
-        panel,
-        for (final m in visible)
-          _MediaCard(
-            key: ValueKey(m['id']),
-            item: m,
-            canWrite: _canWrite,
-            onTap: () => _openPreview(m),
-            onSetPrimary: () => _setPrimary(m),
-            onCaption: () => _editCaption(m),
-            onReprocess: () => _reprocess(m),
-            onDelete: () => _delete(m),
+    // العرض العادي: شبكة بطاقات
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(StaffSpace.page, 4, StaffSpace.page, 0),
+          sliver: SliverToBoxAdapter(child: panel),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(StaffSpace.page, 0, StaffSpace.page, 100),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: .82,
+            ),
+            delegate: SliverChildBuilderDelegate(childCount: visible.length, (context, i) {
+              final m = visible[i];
+              return _MediaTile(
+                key: ValueKey(m['id']),
+                item: m,
+                canWrite: _canWrite,
+                onTap: () => _openPreview(m),
+                onSetPrimary: () => _setPrimary(m),
+                onCaption: () => _editCaption(m),
+                onReprocess: () => _reprocess(m),
+                onDelete: () => _delete(m),
+              );
+            }),
           ),
+        ),
       ],
     );
   }
@@ -507,19 +569,28 @@ class _PropertyMediaScreenState extends State<PropertyMediaScreen> {
   Widget _uploadsPanel() {
     if (_uploads.isEmpty) return const SizedBox.shrink();
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: placeBrass.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: placeBrass.withValues(alpha: 0.3)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(StaffRadius.lg),
+        border: Border.all(color: placeGold.withValues(alpha: 0.45)),
+        boxShadow: staffCardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'جارٍ الرفع (${_uploads.length})',
-            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeInk),
+          Row(
+            children: [
+              const IconBox(icon: Icons.cloud_upload_rounded, color: placeBrass, size: 34),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'جارٍ الرفع (${_uploads.length})',
+                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 14.5, fontWeight: FontWeight.w900, color: placeInk),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           for (final u in _uploads)
@@ -533,7 +604,12 @@ class _PropertyMediaScreenState extends State<PropertyMediaScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(u.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+                        Text(
+                          u.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.w700, color: placeInk),
+                        ),
                         const SizedBox(height: 4),
                         if (u.state == _UpState.failed)
                           Text(u.error ?? 'فشل الرفع', maxLines: 2, style: const TextStyle(fontSize: 11.5, color: placeDanger))
@@ -543,8 +619,8 @@ class _PropertyMediaScreenState extends State<PropertyMediaScreen> {
                             child: LinearProgressIndicator(
                               value: u.state == _UpState.queued ? null : (u.progress >= 1 ? null : u.progress),
                               minHeight: 6,
-                              color: placeBrass,
-                              backgroundColor: placeLine,
+                              color: placeGold,
+                              backgroundColor: placeLineSoft,
                             ),
                           ),
                       ],
@@ -553,12 +629,12 @@ class _PropertyMediaScreenState extends State<PropertyMediaScreen> {
                   const SizedBox(width: 6),
                   if (u.state == _UpState.failed) ...[
                     IconButton(
-                      visualDensity: VisualDensity.compact,
+                      tooltip: 'إعادة المحاولة',
                       onPressed: () => _retry(u),
                       icon: const Icon(Icons.refresh_rounded, color: placeInk),
                     ),
                     IconButton(
-                      visualDensity: VisualDensity.compact,
+                      tooltip: 'إلغاء',
                       onPressed: () => setState(() => _uploads.remove(u)),
                       icon: const Icon(Icons.close_rounded, color: placeInk2),
                     ),
@@ -577,10 +653,10 @@ class _PropertyMediaScreenState extends State<PropertyMediaScreen> {
 }
 
 IconData _kindIcon(String kind) => switch (kind) {
-      'reel' => Icons.smart_display_outlined,
-      'panorama' => Icons.threesixty_rounded,
-      _ => Icons.perm_media_outlined,
-    };
+  'reel' => Icons.smart_display_outlined,
+  'panorama' => Icons.threesixty_rounded,
+  _ => Icons.perm_media_outlined,
+};
 
 class _AddTile extends StatelessWidget {
   const _AddTile(this.icon, this.title, this.subtitle, this.onTap);
@@ -592,25 +668,27 @@ class _AddTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: placePaper,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: placeBrass, size: 26),
-              const SizedBox(height: 6),
-              Text(title, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 14, color: placeInk)),
-              Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: placeInk2)),
-            ],
+    return StaffCard(
+      onTap: onTap,
+      radius: StaffRadius.md,
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconBox(icon: icon, color: placeBrass, size: 36),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 14, color: placeInk),
           ),
-        ),
+          Text(
+            subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: placeInk2),
+          ),
+        ],
       ),
     );
   }
@@ -627,11 +705,13 @@ class _MediaCard extends StatelessWidget {
     required this.onReprocess,
     required this.onDelete,
     this.dragIndex,
+    this.position,
   });
 
   final Map<String, dynamic> item;
   final bool canWrite;
   final int? dragIndex;
+  final int? position;
   final VoidCallback onTap;
   final VoidCallback onSetPrimary;
   final VoidCallback onCaption;
@@ -657,11 +737,11 @@ class _MediaCard extends StatelessWidget {
   }
 
   (String, IconData, Color) get _badge => switch (_type) {
-        'VIDEO' => ('فيديو', Icons.videocam_rounded, placeShiftEvening),
-        'REEL' => ('ريل', Icons.smart_display_rounded, const Color(0xFFDB2777)),
-        'PANORAMA' => ('360°', Icons.threesixty_rounded, placeSuccess),
-        _ => ('صورة', Icons.image_rounded, placeInk2),
-      };
+    'VIDEO' => ('فيديو', Icons.videocam_rounded, placeShiftEvening),
+    'REEL' => ('ريل', Icons.smart_display_rounded, const Color(0xFFDB2777)),
+    'PANORAMA' => ('360°', Icons.threesixty_rounded, placeSuccess),
+    _ => ('صورة', Icons.image_rounded, placeInk2),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -677,19 +757,28 @@ class _MediaCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 5),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: primary ? placeBrass : placeLine, width: primary ? 1.5 : 1),
+        borderRadius: BorderRadius.circular(StaffRadius.lg),
+        border: Border.all(color: primary ? placeGold : placeLine, width: primary ? 1.5 : 1),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(StaffRadius.lg),
         child: Padding(
           padding: const EdgeInsets.all(10),
           child: Row(
             children: [
+              if (position != null)
+                SizedBox(
+                  width: 26,
+                  child: Text(
+                    '$position',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontFamily: 'Montserrat', fontSize: 13, fontWeight: FontWeight.w800, color: placeInk3),
+                  ),
+                ),
               SizedBox(
-                width: 92,
-                height: 92,
+                width: 72,
+                height: 72,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -727,10 +816,7 @@ class _MediaCard extends StatelessWidget {
                         StatusPill(label: label, color: color, icon: icon),
                         if (primary) const StatusPill(label: 'الغلاف', color: placeBrass, icon: Icons.star_rounded),
                         if (processing)
-                          StatusPill(
-                            label: progress != null ? 'معالجة ${progress.round()}%' : 'قيد المعالجة',
-                            color: placeShiftMorning,
-                          ),
+                          StatusPill(label: progress != null ? 'معالجة ${progress.round()}%' : 'قيد المعالجة', color: placeShiftMorning),
                         if (failed) const StatusPill(label: 'فشلت المعالجة', color: placeDanger, icon: Icons.error_outline),
                       ],
                     ),
@@ -757,43 +843,216 @@ class _MediaCard extends StatelessWidget {
                 ),
               ),
               if (canWrite) ...[
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert_rounded, color: placeInk2),
-                  color: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  onSelected: (v) {
-                    switch (v) {
-                      case 'primary':
-                        onSetPrimary();
-                      case 'caption':
-                        onCaption();
-                      case 'reprocess':
-                        onReprocess();
-                      case 'delete':
-                        onDelete();
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    if (_type == 'IMAGE' && !primary)
-                      const PopupMenuItem(value: 'primary', child: _MenuRow(Icons.star_outline_rounded, 'تعيين كغلاف')),
-                    const PopupMenuItem(value: 'caption', child: _MenuRow(Icons.edit_outlined, 'تعديل الوصف')),
-                    if (isVideo) const PopupMenuItem(value: 'reprocess', child: _MenuRow(Icons.refresh_rounded, 'إعادة المعالجة')),
-                    const PopupMenuItem(value: 'delete', child: _MenuRow(Icons.delete_outline_rounded, 'حذف', danger: true)),
-                  ],
+                _mediaMenu(
+                  type: _type,
+                  primary: primary,
+                  isVideo: isVideo,
+                  onSetPrimary: onSetPrimary,
+                  onCaption: onCaption,
+                  onReprocess: onReprocess,
+                  onDelete: onDelete,
                 ),
                 if (dragIndex != null)
                   ReorderableDragStartListener(
                     index: dragIndex!,
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                      child: Icon(Icons.drag_indicator_rounded, color: placeInk2),
-                    ),
+                    child: const SizedBox(width: 44, height: 48, child: Icon(Icons.drag_indicator_rounded, color: placeInk2)),
                   ),
               ],
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+Widget _mediaMenu({
+  required String type,
+  required bool primary,
+  required bool isVideo,
+  required VoidCallback onSetPrimary,
+  required VoidCallback onCaption,
+  required VoidCallback onReprocess,
+  required VoidCallback onDelete,
+  Color iconColor = placeInk2,
+}) {
+  return PopupMenuButton<String>(
+    tooltip: 'خيارات',
+    icon: Icon(Icons.more_vert_rounded, color: iconColor),
+    color: Colors.white,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(StaffRadius.md)),
+    onSelected: (v) {
+      switch (v) {
+        case 'primary':
+          onSetPrimary();
+        case 'caption':
+          onCaption();
+        case 'reprocess':
+          onReprocess();
+        case 'delete':
+          onDelete();
+      }
+    },
+    itemBuilder: (context) => [
+      if (type == 'IMAGE' && !primary) const PopupMenuItem(value: 'primary', child: _MenuRow(Icons.star_outline_rounded, 'تعيين كغلاف')),
+      const PopupMenuItem(value: 'caption', child: _MenuRow(Icons.edit_outlined, 'تعديل الوصف')),
+      if (isVideo) const PopupMenuItem(value: 'reprocess', child: _MenuRow(Icons.refresh_rounded, 'إعادة المعالجة')),
+      const PopupMenuItem(value: 'delete', child: _MenuRow(Icons.delete_outline_rounded, 'حذف', danger: true)),
+    ],
+  );
+}
+
+/// بطاقة وسائط في الشبكة: صورة مربعة مع شارات، ووصف وقائمة خيارات.
+class _MediaTile extends _MediaCard {
+  const _MediaTile({
+    super.key,
+    required super.item,
+    required super.canWrite,
+    required super.onTap,
+    required super.onSetPrimary,
+    required super.onCaption,
+    required super.onReprocess,
+    required super.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, icon, color) = _badge;
+    final processing = _status == 'PROCESSING' || _status == 'UPLOADING';
+    final failed = _status == 'FAILED' || _status == 'REJECTED';
+    final progress = (item['processingProgress'] as num?)?.toDouble();
+    final caption = item['caption']?.toString() ?? '';
+    final isVideo = _type == 'VIDEO' || _type == 'REEL';
+    final primary = item['isPrimary'] == true;
+    final r = BorderRadius.circular(StaffRadius.lg);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: r,
+        border: Border.all(color: primary ? placeGold : placeLine, width: primary ? 1.5 : 1),
+        boxShadow: staffCardShadow,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.white,
+        child: InkWell(
+          onTap: onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    NetImage(url: _thumb, radius: 0, icon: isVideo ? Icons.movie_outlined : Icons.image_outlined),
+                    if (isVideo && !processing && !failed)
+                      const Center(
+                        child: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: Color(0x8C0F1B2D),
+                          child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 24),
+                        ),
+                      ),
+                    if (processing)
+                      Container(
+                        color: const Color(0x8C0F1B2D),
+                        alignment: Alignment.center,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white)),
+                            const SizedBox(height: 6),
+                            Text(
+                              progress != null ? 'معالجة ${progress.round()}%' : 'قيد المعالجة',
+                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.w800, color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (failed)
+                      Container(
+                        color: placeDanger.withValues(alpha: .55),
+                        alignment: Alignment.center,
+                        child: const Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.error_outline_rounded, color: Colors.white),
+                            Text(
+                              'فشلت المعالجة',
+                              style: TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.w800, color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+                    PositionedDirectional(
+                      top: 8,
+                      start: 8,
+                      child: _OnImage(
+                        child: StatusPill(label: label, color: color, icon: icon),
+                      ),
+                    ),
+                    if (primary)
+                      const PositionedDirectional(
+                        top: 8,
+                        end: 8,
+                        child: _OnImage(
+                          child: StatusPill(label: 'الغلاف', color: placeBrass, icon: Icons.star_rounded),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 48,
+                child: Row(
+                  children: [
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        caption.isEmpty ? 'بدون وصف' : caption,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: caption.isEmpty ? placeInk3 : placeInk,
+                        ),
+                      ),
+                    ),
+                    if (canWrite)
+                      _mediaMenu(
+                        type: _type,
+                        primary: primary,
+                        isVideo: isVideo,
+                        onSetPrimary: onSetPrimary,
+                        onCaption: onCaption,
+                        onReprocess: onReprocess,
+                        onDelete: onDelete,
+                      )
+                    else
+                      const SizedBox(width: 12),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OnImage extends StatelessWidget {
+  const _OnImage({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: .94), borderRadius: BorderRadius.circular(999)),
+      child: child,
     );
   }
 }
@@ -812,7 +1071,10 @@ class _MenuRow extends StatelessWidget {
       children: [
         Icon(icon, size: 19, color: color),
         const SizedBox(width: 10),
-        Text(label, style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: color)),
+        Text(
+          label,
+          style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: color),
+        ),
       ],
     );
   }
@@ -828,11 +1090,7 @@ class _ImagePreview extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: Text(is360 ? 'صورة 360°' : 'معاينة'),
-      ),
+      appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white, title: Text(is360 ? 'صورة 360°' : 'معاينة')),
       body: url == null
           ? const SizedBox.shrink()
           : InteractiveViewer(
@@ -842,8 +1100,7 @@ class _ImagePreview extends StatelessWidget {
                 child: staffNetworkImage(
                   url!,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) =>
-                      const Icon(Icons.broken_image_outlined, color: Colors.white54, size: 48),
+                  errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white54, size: 48),
                 ),
               ),
             ),

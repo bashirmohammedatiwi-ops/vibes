@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart' show DateFormat;
 
 import '../../../core/api.dart';
 import '../../../core/format.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
-import '../../../widgets/ui.dart';
+import '../../../widgets/kit.dart';
 import 'booking_kit.dart';
 import 'booking_manage.dart';
 import 'booking_wizard.dart';
@@ -13,12 +14,16 @@ import 'bookings_calendar.dart';
 import 'bookings_list.dart';
 import 'offers_collections.dart';
 
-/// مكتب الحجوزات — نقطة الدخول لإدارة الحجوزات من الهاتف (بديل لوحة الويب).
+/// ═══════════════════════════════════════════════════════════
+/// «الحجوزات» — تبويب رئيسي: أرقام سريعة، حجز جديد، بحث فوري،
+/// شرائح الحالات، الخط الزمني لليوم والأيام القادمة، ومداخل
+/// التقويم وكل الحجوزات وعروض الأسعار وقوائم الزبائن.
 ///
-/// كل بطاقة تظهر حسب الصلاحية:
+/// الصلاحيات:
 /// - حجز جديد: `bookings.write`
-/// - كل الحجوزات + الإحصاءات + التقويم + عروض الأسعار + البحث السريع: `bookings.read`
+/// - الأرقام + البحث + الخط الزمني + التقويم + القوائم + العروض: `bookings.read`
 /// - قوائم الزبائن: بدون صلاحية خاصة
+/// ═══════════════════════════════════════════════════════════
 class BookingsDeskScreen extends StatefulWidget {
   const BookingsDeskScreen({super.key});
 
@@ -29,15 +34,29 @@ class BookingsDeskScreen extends StatefulWidget {
   State<BookingsDeskScreen> createState() => _BookingsDeskScreenState();
 }
 
+/// شرائح الحالة في الصفحة الرئيسية.
+const _segUpcoming = 'UPCOMING';
+const _segments = [_segUpcoming, 'PENDING', 'AWAITING_PAYMENT', 'CONFIRMED'];
+
 class _BookingsDeskScreenState extends State<BookingsDeskScreen> {
   Map<String, dynamic>? _stats;
   String? _statsError;
-  bool _loading = true;
+  bool _statsLoading = true;
+
+  String _segment = _segUpcoming;
+  final Map<String, List<Map<String, dynamic>>> _lists = {};
+  final Map<String, int> _totals = {};
+  final Map<String, String?> _listErrors = {};
+  bool _listLoading = true;
+  int _listSeq = 0;
 
   final _search = TextEditingController();
   final _debounce = Debouncer();
   List<Map<String, dynamic>> _hits = [];
   bool _searching = false;
+  int _searchSeq = 0;
+
+  bool get _searchMode => _search.text.trim().length >= 2;
 
   @override
   void initState() {
@@ -54,35 +73,96 @@ class _BookingsDeskScreenState extends State<BookingsDeskScreen> {
 
   Future<void> _load() async {
     if (!canReadBookings) {
-      setState(() => _loading = false);
+      setState(() {
+        _statsLoading = false;
+        _listLoading = false;
+      });
       return;
     }
+    await Future.wait([_loadStats(), _loadSegment(_segment)]);
+  }
+
+  Future<void> _loadStats() async {
     try {
-      _stats = await Api.map('/api/admin/bookings/stats');
+      final s = await Api.map('/api/admin/bookings/stats');
+      _stats = s;
       _statsError = null;
     } catch (e) {
       _statsError = errorText(e);
     }
-    if (mounted) setState(() => _loading = false);
+    if (mounted) setState(() => _statsLoading = false);
+  }
+
+  String _segmentQuery(String seg) {
+    if (seg == _segUpcoming) {
+      final today = dayOnly(DateTime.now());
+      return buildQuery({
+        'from': isoDay(today),
+        'to': isoDay(today.add(const Duration(days: 6))),
+        'pageSize': '100',
+      });
+    }
+    return buildQuery({'status': seg, 'pageSize': '15'});
+  }
+
+  Future<void> _loadSegment(String seg) async {
+    final seq = ++_listSeq;
+    setState(() => _listLoading = !_lists.containsKey(seg));
+    try {
+      final data = await Api.send('/api/admin/bookings${_segmentQuery(seg)}');
+      if (!mounted || seq != _listSeq) return;
+      var rows = pagedItems(data);
+      if (seg == _segUpcoming) {
+        rows = rows.where((r) => r['status'] != 'CANCELLED').toList()
+          ..sort((a, b) {
+            final da = parseDay(a['startDate']) ?? DateTime(2100);
+            final db = parseDay(b['startDate']) ?? DateTime(2100);
+            final c = da.compareTo(db);
+            return c != 0 ? c : _shiftOrder(a['shift']).compareTo(_shiftOrder(b['shift']));
+          });
+        _totals[seg] = rows.length;
+      } else {
+        _totals[seg] = pagedTotal(data);
+      }
+      _lists[seg] = rows;
+      _listErrors[seg] = null;
+    } catch (e) {
+      if (!mounted || seq != _listSeq) return;
+      _listErrors[seg] = errorText(e);
+    }
+    if (mounted && seq == _listSeq) setState(() => _listLoading = false);
+  }
+
+  static int _shiftOrder(dynamic s) => switch ('$s') {
+        'MORNING' => 0,
+        'FULL' => 1,
+        _ => 2,
+      };
+
+  void _selectSegment(String seg) {
+    setState(() => _segment = seg);
+    _loadSegment(seg);
   }
 
   Future<void> _runSearch(String q) async {
-    if (q.trim().length < 2) {
+    final term = q.trim();
+    if (term.length < 2) {
       setState(() {
         _hits = [];
         _searching = false;
       });
       return;
     }
+    final seq = ++_searchSeq;
     setState(() => _searching = true);
     try {
-      final data = await Api.map('/api/admin/search${buildQuery({'q': q})}');
-      if (!mounted || _search.text.trim() != q.trim()) return;
-      _hits = [for (final b in (data['bookings'] as List? ?? const [])) if (b is Map) Map<String, dynamic>.from(b)];
+      final data = await Api.send('/api/admin/bookings${buildQuery({'q': term, 'pageSize': '10'})}');
+      if (!mounted || seq != _searchSeq) return;
+      _hits = pagedItems(data);
     } catch (e) {
-      if (mounted) showToast(context, errorText(e), error: true);
+      if (mounted && seq == _searchSeq) showToast(context, errorText(e), error: true);
     }
-    if (mounted) setState(() => _searching = false);
+    if (mounted && seq == _searchSeq) setState(() => _searching = false);
   }
 
   Future<void> _push(Widget page) async {
@@ -91,296 +171,352 @@ class _BookingsDeskScreenState extends State<BookingsDeskScreen> {
     if (mounted) _load();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final tiles = <_DeskTile>[
-      if (canWriteBookings)
-        _DeskTile(
-          icon: Icons.add_circle_outline_rounded,
-          title: 'حجز جديد',
-          subtitle: 'نيابةً عن زبون مع سعر فوري',
-          highlight: true,
-          onTap: () => _push(const NewBookingWizardScreen()),
-        ),
-      if (canReadBookings) ...[
-        _DeskTile(
-          icon: Icons.view_list_rounded,
-          title: 'كل الحجوزات',
-          subtitle: 'فلاتر متقدّمة وإجراءات جماعية',
-          onTap: () => _push(const AdminBookingsListScreen()),
-        ),
-        _DeskTile(
-          icon: Icons.calendar_month_outlined,
-          title: 'التقويم',
-          subtitle: 'الإشغال اليومي حسب الشفت',
-          onTap: () => _push(const BookingsCalendarScreen()),
-        ),
-        _DeskTile(
-          icon: Icons.hourglass_top_rounded,
-          title: 'بانتظار التأكيد',
-          subtitle: 'حجوزات تحتاج إجراء',
-          badge: (asNum(_stats?['pending']) ?? 0).toInt(),
-          onTap: () => _push(const AdminBookingsListScreen(initialStatus: 'PENDING')),
-        ),
-        _DeskTile(
-          icon: Icons.local_offer_outlined,
-          title: 'عروض الأسعار',
-          subtitle: 'عروض المزوّدين للزبائن',
-          onTap: () => _push(const PriceOffersScreen()),
-        ),
-      ],
-      _DeskTile(
-        icon: Icons.collections_bookmark_outlined,
-        title: 'قوائم الزبائن',
-        subtitle: 'المفضلة والقوائم المحفوظة',
-        onTap: () => _push(const CollectionsScreen()),
-      ),
-    ];
+  void _openBooking(Map<String, dynamic> b) => _push(BookingManageScreen(bookingId: '${b['id']}'));
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('مكتب الحجوزات')),
-      body: RefreshIndicator(
-        color: placeBrass,
-        onRefresh: _load,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(bottom: 32),
-          children: [
-            const MaisonHeader(title: 'الحجوزات', subtitle: 'إنشاء، متابعة، جدولة، وملاحظات الفريق'),
-            if (canReadBookings) ...[
-              const SizedBox(height: 8),
-              if (_loading)
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(child: CircularProgressIndicator(color: placeBrass)),
-                )
-              else if (_statsError != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Text(_statsError!, style: const TextStyle(fontFamily: 'Cairo', color: placeDanger)),
-                )
-              else
-                _statsBlock(),
-              _searchBlock(),
-            ],
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 1.02,
-                children: tiles,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  int _stat(String k) => (asNum(_stats?[k]) ?? 0).toInt();
 
-  Widget _statsBlock() {
-    final s = _stats ?? const {};
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-          child: Row(
-            children: [
-              StatTile(label: 'بانتظار التأكيد', value: '${s['pending'] ?? 0}', accent: placeShiftMorning),
-              const SizedBox(width: 8),
-              StatTile(label: 'مؤكدة', value: '${s['confirmed'] ?? 0}', accent: placeSuccess),
-              const SizedBox(width: 8),
-              StatTile(label: 'الإجمالي', value: '${s['total'] ?? 0}'),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: placeInk,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.account_balance_wallet_outlined, color: placeBrass),
-                const SizedBox(width: 10),
-                const Expanded(
-                  child: Text(
-                    'إيراد الحجوزات المؤكدة والمكتملة',
-                    style: TextStyle(fontFamily: 'Cairo', color: Colors.white70, fontWeight: FontWeight.w700),
-                  ),
-                ),
-                Text(
-                  formatIqd(s['revenue']),
-                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 16, color: Colors.white, fontWeight: FontWeight.w900),
-                ),
-              ],
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-          child: Row(
-            children: [
-              StatusPill(label: 'مكتملة ${s['completed'] ?? 0}', color: const Color(0xFF2563EB)),
-              const SizedBox(width: 6),
-              StatusPill(label: 'خارجية ${s['external'] ?? 0}', color: placeShiftEvening),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _searchBlock() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: TextField(
-            controller: _search,
-            onChanged: (v) {
-              setState(() {});
-              _debounce.run(() => _runSearch(v));
-            },
-            decoration: InputDecoration(
-              hintText: 'بحث سريع عن حجز: هاتف، اسم، مكان',
-              prefixIcon: const Icon(Icons.manage_search_rounded),
-              suffixIcon: _searching
-                  ? const Padding(
-                      padding: EdgeInsets.all(14),
-                      child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                    )
-                  : _search.text.isEmpty
-                      ? null
-                      : IconButton(
-                          onPressed: () => setState(() {
-                            _search.clear();
-                            _hits = [];
-                          }),
-                          icon: const Icon(Icons.close_rounded, size: 18),
-                        ),
-            ),
-          ),
-        ),
-        if (_search.text.trim().length >= 2 && !_searching && _hits.isEmpty)
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
-            child: Text('لا حجوزات مطابقة', style: TextStyle(fontFamily: 'Cairo', color: placeInk2)),
-          ),
-        for (final b in _hits)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-            child: Material(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              child: ListTile(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: const BorderSide(color: placeLine)),
-                onTap: () => _push(BookingManageScreen(bookingId: '${b['id']}')),
-                title: Text(
-                  '${asMap(b['property'])?['name'] ?? 'حجز'}',
-                  style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900),
-                ),
-                subtitle: Text(
-                  [
-                    guestName(b),
-                    ?guestPhone(b),
-                    if (parseDay(b['startDate']) != null) fmtShortDay(parseDay(b['startDate'])!),
-                  ].join(' · '),
-                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
-                ),
-                trailing: BookingStatusPill(status: b['status']?.toString()),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _DeskTile extends StatelessWidget {
-  const _DeskTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-    this.badge = 0,
-    this.highlight = false,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-  final int badge;
-  final bool highlight;
+  // ─────────── الواجهة ───────────
 
   @override
   Widget build(BuildContext context) {
-    final fg = highlight ? Colors.white : placeInk;
-    return Material(
-      color: highlight ? placeInk : Colors.white,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: highlight ? placeInk : placeLine),
+    final date = DateFormat('EEEE d MMMM', 'ar').format(DateTime.now());
+    return StaffPage(
+      title: 'الحجوزات',
+      subtitle: date,
+      onRefresh: _load,
+      actions: [
+        if (canReadBookings)
+          IconButton(
+            tooltip: 'التقويم',
+            icon: const Icon(Icons.calendar_month_rounded),
+            onPressed: () => _push(const BookingsCalendarScreen()),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: highlight ? placeBrass.withValues(alpha: 0.25) : placeInk.withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(icon, color: highlight ? placeBrass : placeInk, size: 22),
-                  ),
-                  const Spacer(),
-                  if (badge > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(color: placeBrass, borderRadius: BorderRadius.circular(999)),
+      ],
+      floatingActionButton: canWriteBookings
+          ? FloatingActionButton.extended(
+              heroTag: 'desk-new-booking',
+              onPressed: () => _push(const NewBookingWizardScreen()),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('حجز جديد'),
+            )
+          : null,
+      slivers: [
+        if (canReadBookings) ...[
+          SliverToBoxAdapter(child: Pad(top: 4, child: _statsHero())),
+          SliverToBoxAdapter(
+            child: Pad(
+              child: BookingSearchField(
+                controller: _search,
+                hint: 'بحث فوري: هاتف، اسم الزبون، أو المكان',
+                busy: _searching,
+                onChanged: (v) {
+                  setState(() {});
+                  _debounce.run(() => _runSearch(v));
+                },
+                onClear: () => setState(() => _hits = []),
+              ),
+            ),
+          ),
+          if (_searchMode) ..._searchSlivers() else ..._segmentSlivers(),
+        ] else
+          SliverToBoxAdapter(
+            child: Pad(
+              top: 4,
+              child: StaffCard(
+                child: Row(
+                  children: const [
+                    IconBox(icon: Icons.info_outline_rounded, color: placeInfo),
+                    SizedBox(width: 12),
+                    Expanded(
                       child: Text(
-                        '$badge',
-                        style: const TextStyle(fontFamily: 'Montserrat', fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white),
+                        'يمكنك إنشاء حجوزات جديدة. عرض الحجوزات يتطلب صلاحية القراءة.',
+                        style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: placeInk2, height: 1.5),
                       ),
                     ),
-                ],
-              ),
-              const Spacer(),
-              Text(title, style: TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.w900, color: fg)),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: highlight ? Colors.white70 : placeInk2,
-                  height: 1.3,
+                  ],
                 ),
               ),
+            ),
+          ),
+        // ── أدوات ──
+        const SliverToBoxAdapter(child: SectionHeader('أدوات الحجوزات')),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: StaffSpace.page),
+          sliver: SliverGrid.count(
+            crossAxisCount: 4,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: .74,
+            children: [
+              if (canWriteBookings)
+                QuickAction(icon: Icons.add_card_rounded, label: 'حجز جديد', color: placeBrass, onTap: () => _push(const NewBookingWizardScreen())),
+              if (canReadBookings) ...[
+                QuickAction(icon: Icons.calendar_month_rounded, label: 'التقويم', color: placeInk, onTap: () => _push(const BookingsCalendarScreen())),
+                QuickAction(icon: Icons.view_list_rounded, label: 'كل الحجوزات', color: placeInfo, onTap: () => _push(const AdminBookingsListScreen())),
+                QuickAction(icon: Icons.local_offer_rounded, label: 'عروض الأسعار', color: placeShiftEvening, onTap: () => _push(const PriceOffersScreen())),
+              ],
+              QuickAction(icon: Icons.collections_bookmark_rounded, label: 'قوائم الزبائن', color: placeSuccess, onTap: () => _push(const CollectionsScreen())),
+              if (canReadBookings)
+                QuickAction(
+                  icon: Icons.public_rounded,
+                  label: 'الخارجية',
+                  color: placeWarning,
+                  onTap: () => _push(const AdminBookingsListScreen(initialOrigin: 'EXTERNAL')),
+                ),
             ],
           ),
         ),
+        const SliverToBoxAdapter(child: SizedBox(height: 72)),
+      ],
+    );
+  }
+
+  /// بطاقة الأرقام الكحلية.
+  Widget _statsHero() {
+    if (_statsLoading) return const SkeletonBox(height: 168);
+    if (_statsError != null) {
+      return StaffCard(
+        onTap: () {
+          setState(() => _statsLoading = true);
+          _loadStats();
+        },
+        child: Row(
+          children: [
+            const IconBox(icon: Icons.cloud_off_rounded, color: placeDanger),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(_statsError!, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: placeInk2)),
+            ),
+            const Icon(Icons.refresh_rounded, color: placeInk3),
+          ],
+        ),
+      );
+    }
+    final pending = _stat('pending');
+    Widget cell(String label, int value, Color dot, VoidCallback onTap) => Expanded(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(StaffRadius.md),
+            onTap: () {
+              HapticFeedback.selectionClick();
+              onTap();
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('$value', style: const TextStyle(fontFamily: 'Montserrat', fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white, height: 1.1)),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(width: 7, height: 7, decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: .72)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 12, 10),
+      decoration: BoxDecoration(gradient: placeNavyFill, borderRadius: BorderRadius.circular(StaffRadius.lg)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'إيراد المؤكدة والمكتملة',
+                      style: TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: .7)),
+                    ),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
+                        formatIqd(_stats?['revenue']),
+                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, height: 1.35),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (pending > 0)
+                Material(
+                  color: placeGold,
+                  borderRadius: BorderRadius.circular(999),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(999),
+                    onTap: () => _selectSegment('PENDING'),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      child: Text(
+                        '$pending تحتاج تأكيد',
+                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w900, color: placeInk),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Divider(height: 1, color: Colors.white.withValues(alpha: .12)),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              cell('بانتظار التأكيد', pending, const Color(0xFFFBBF24), () => _selectSegment('PENDING')),
+              cell('مؤكدة', _stat('confirmed'), const Color(0xFF34D399), () => _selectSegment('CONFIRMED')),
+              cell('مكتملة', _stat('completed'), const Color(0xFF93C5FD), () => _push(const AdminBookingsListScreen(initialStatus: 'COMPLETED'))),
+              cell('الإجمالي', _stat('total'), Colors.white54, () => _push(const AdminBookingsListScreen())),
+            ],
+          ),
+        ],
       ),
     );
+  }
+
+  List<Widget> _searchSlivers() {
+    return [
+      SliverToBoxAdapter(
+        child: SectionHeader(
+          'نتائج البحث',
+          count: _hits.length,
+          actionLabel: 'بحث متقدّم',
+          onAction: () => _push(const AdminBookingsListScreen()),
+        ),
+      ),
+      if (_searching && _hits.isEmpty)
+        const SkeletonSliver(count: 3, height: 140)
+      else if (_hits.isEmpty)
+        const SliverToBoxAdapter(
+          child: EmptyView(icon: Icons.search_off_rounded, title: 'لا حجوزات مطابقة', subtitle: 'جرّب رقماً آخر أو جزءاً من الاسم'),
+        )
+      else
+        SliverList.builder(
+          itemCount: _hits.length,
+          itemBuilder: (_, i) => BookingRowCard(row: _hits[i], onTap: () => _openBooking(_hits[i])),
+        ),
+    ];
+  }
+
+  String _segmentLabel(String s) => switch (s) {
+        _segUpcoming => 'اليوم والقادمة',
+        'PENDING' => 'بانتظار التأكيد',
+        'AWAITING_PAYMENT' => 'بانتظار الدفع',
+        'CONFIRMED' => 'مؤكدة',
+        _ => s,
+      };
+
+  List<Widget> _segmentSlivers() {
+    final rows = _lists[_segment] ?? const <Map<String, dynamic>>[];
+    final error = _listErrors[_segment];
+    final upcoming = _segment == _segUpcoming;
+    return [
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: SegmentFilter<String>(
+            options: _segments,
+            value: _segment,
+            labelOf: _segmentLabel,
+            colorOf: (s) => s == _segUpcoming ? null : statusColor(s),
+            countOf: (s) => s == 'PENDING' && _stats != null ? _stat('pending') : _totals[s],
+            onChanged: _selectSegment,
+          ),
+        ),
+      ),
+      SliverToBoxAdapter(
+        child: SectionHeader(
+          upcoming ? 'الخط الزمني' : _segmentLabel(_segment),
+          subtitle: upcoming ? 'حجوزات تبدأ خلال ٧ أيام' : 'الأحدث أولاً',
+          count: upcoming ? null : _totals[_segment],
+          actionLabel: 'عرض الكل',
+          onAction: () => _push(upcoming
+              ? const AdminBookingsListScreen()
+              : AdminBookingsListScreen(initialStatus: _segment)),
+        ),
+      ),
+      ...asyncSlivers(
+        loading: _listLoading && rows.isEmpty,
+        error: rows.isEmpty ? error : null,
+        isEmpty: rows.isEmpty,
+        onRetry: () => _loadSegment(_segment),
+        skeletonCount: 3,
+        skeletonHeight: 140,
+        emptyIcon: upcoming ? Icons.event_available_rounded : statusIcon(_segment),
+        emptyTitle: upcoming ? 'لا حجوزات خلال الأيام القادمة' : 'لا حجوزات ${_segmentLabel(_segment)}',
+        emptySubtitle: upcoming ? 'الأيام السبعة القادمة فارغة حتى الآن' : 'كل شيء تحت السيطرة',
+        emptyActionLabel: canWriteBookings ? 'حجز جديد' : null,
+        onEmptyAction: canWriteBookings ? () => _push(const NewBookingWizardScreen()) : null,
+        slivers: upcoming ? _timeline(rows) : [
+          SliverList.builder(
+            itemCount: rows.length,
+            itemBuilder: (_, i) => BookingRowCard(row: rows[i], onTap: () => _openBooking(rows[i])),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  /// مجموعات حسب يوم البداية مع عنوان لكل يوم.
+  List<Widget> _timeline(List<Map<String, dynamic>> rows) {
+    final groups = <String, List<Map<String, dynamic>>>{};
+    for (final r in rows) {
+      final d = parseDay(r['startDate']);
+      groups.putIfAbsent(d == null ? '' : isoDay(d), () => []).add(r);
+    }
+    final out = <Widget>[];
+    for (final e in groups.entries) {
+      final d = DateTime.tryParse(e.key);
+      final isToday = d != null && dayOnly(d) == dayOnly(DateTime.now());
+      out.add(SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(StaffSpace.page, 4, StaffSpace.page, 8),
+          child: Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: isToday ? placeGold : Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: isToday ? placeGold : placeInk3, width: 2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                d == null ? 'بدون تاريخ' : relativeDayLabel(d),
+                style: TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.w900, color: isToday ? placeBrass : placeInk),
+              ),
+              if (d != null && relativeDayLabel(d) != fmtDay(d)) ...[
+                const SizedBox(width: 6),
+                Text(fmtShortDay(d), style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w700, color: placeInk3)),
+              ],
+              const SizedBox(width: 8),
+              const Expanded(child: Divider(height: 1)),
+              const SizedBox(width: 8),
+              Text('${e.value.length} حجز', style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w800, color: placeInk2)),
+            ],
+          ),
+        ),
+      ));
+      out.add(SliverList.builder(
+        itemCount: e.value.length,
+        itemBuilder: (_, i) => BookingRowCard(row: e.value[i], onTap: () => _openBooking(e.value[i])),
+      ));
+    }
+    return out;
   }
 }

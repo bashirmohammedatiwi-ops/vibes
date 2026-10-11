@@ -5,7 +5,8 @@ import '../../../core/api.dart';
 import '../../../core/session.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
-import '../../../widgets/ui.dart';
+import '../../../widgets/kit.dart';
+import '../../../widgets/ui.dart' show FilterChipsRow, lightTap;
 import 'catalog_common.dart';
 
 /// المحافظات والمدن — عرض للجميع، وإضافة/تعديل/حذف/صورة بصلاحية locations.write.
@@ -25,6 +26,7 @@ class _LocationsScreenState extends State<LocationsScreen> {
   bool _loading = true;
   String? _error;
   String _q = '';
+  String _filter = 'ALL';
   String? _uploadingId;
   double _uploadProgress = 0;
   bool _busy = false;
@@ -70,15 +72,24 @@ class _LocationsScreenState extends State<LocationsScreen> {
   int _cityCount(Map<String, dynamic> p) =>
       (p['_count'] is Map ? asNum(p['_count']['cities']).toInt() : null) ?? _citiesOf(p).length;
 
+  bool _hasImage(Map<String, dynamic> p) => '${p['imageUrl'] ?? ''}'.isNotEmpty;
+
   bool _matches(Map<String, dynamic> m) {
     final q = _q.toLowerCase();
     return '${m['nameAr'] ?? ''}'.toLowerCase().contains(q) || '${m['nameEn'] ?? ''}'.toLowerCase().contains(q);
   }
 
+  bool _passesFilter(Map<String, dynamic> p) => switch (_filter) {
+        'NO_IMAGE' => !_hasImage(p),
+        'NO_CITIES' => _cityCount(p) == 0,
+        _ => true,
+      };
+
   /// يعيد المحافظات المطابقة مع المدن المطابقة (أو كل المدن إن طابقت المحافظة نفسها).
   List<(Map<String, dynamic>, List<Map<String, dynamic>>, bool)> get _visible {
     final out = <(Map<String, dynamic>, List<Map<String, dynamic>>, bool)>[];
     for (final p in _provinces) {
+      if (!_passesFilter(p)) continue;
       final cities = _citiesOf(p);
       if (_q.isEmpty || _matches(p)) {
         out.add((p, cities, false));
@@ -215,6 +226,37 @@ class _LocationsScreenState extends State<LocationsScreen> {
     );
   }
 
+  Future<void> _provinceActions(Map<String, dynamic> p) async {
+    if (!_canWrite) return;
+    lightTap();
+    final hasImage = _hasImage(p);
+    final uploading = _uploadingId == '${p['id']}';
+    final action = await showActionSheet(
+      context,
+      title: '${p['nameAr'] ?? 'المحافظة'}',
+      actions: [
+        const SheetAction('city', 'إضافة مدينة', Icons.add_location_alt_outlined),
+        const SheetAction('rename', 'تعديل الاسم', Icons.edit_outlined),
+        SheetAction('image', hasImage ? 'تغيير الصورة' : 'رفع صورة', Icons.image_outlined, enabled: !uploading),
+        if (hasImage) const SheetAction('noimage', 'إزالة الصورة', Icons.hide_image_outlined, danger: true),
+        const SheetAction('delete', 'حذف المحافظة', Icons.delete_outline_rounded, danger: true),
+      ],
+    );
+    if (!mounted) return;
+    switch (action) {
+      case 'city':
+        await _addCity(p);
+      case 'rename':
+        await _renameProvince(p);
+      case 'image':
+        await _pickImage(p);
+      case 'noimage':
+        await _removeImage(p);
+      case 'delete':
+        await _deleteProvince(p);
+    }
+  }
+
   // ───────── المدن ─────────
 
   Future<void> _addCity(Map<String, dynamic> p) async {
@@ -272,51 +314,32 @@ class _LocationsScreenState extends State<LocationsScreen> {
   Future<void> _cityActions(Map<String, dynamic> c) async {
     if (!_canWrite) return;
     lightTap();
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
-              child: Text(
-                '${c['nameAr']}',
-                style: const TextStyle(fontFamily: 'Cairo', fontSize: 17, fontWeight: FontWeight.w900),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('تعديل الاسم'),
-              onTap: () => Navigator.pop(context, 'rename'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete_outline, color: placeDanger),
-              title: const Text('حذف المدينة', style: TextStyle(color: placeDanger)),
-              onTap: () => Navigator.pop(context, 'delete'),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+    final action = await showActionSheet(
+      context,
+      title: '${c['nameAr']}',
+      actions: const [
+        SheetAction('rename', 'تعديل الاسم', Icons.edit_outlined),
+        SheetAction('delete', 'حذف المدينة', Icons.delete_outline_rounded, danger: true),
+      ],
     );
+    if (!mounted) return;
     if (action == 'rename') await _renameCity(c);
     if (action == 'delete') await _deleteCity(c);
   }
+
+  // ───────── الواجهة ─────────
 
   @override
   Widget build(BuildContext context) {
     final visible = _visible;
     final totalCities = _provinces.fold<int>(0, (s, p) => s + _cityCount(p));
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('المحافظات والمدن'),
-        bottom: _busy
-            ? const PreferredSize(preferredSize: Size.fromHeight(2), child: LinearProgressIndicator(minHeight: 2))
-            : null,
-      ),
+    final noImage = _provinces.where((p) => !_hasImage(p)).length;
+    final noCities = _provinces.where((p) => _cityCount(p) == 0).length;
+    return StaffPage(
+      title: 'المحافظات والمدن',
+      subtitle: _loading ? null : '${fmtCount(_provinces.length)} محافظة · ${fmtCount(totalCities)} مدينة',
+      bottom: catalogBusyBar(_busy),
+      onRefresh: _load,
       floatingActionButton: _canWrite
           ? FloatingActionButton.extended(
               onPressed: _busy ? null : _addProvince,
@@ -326,42 +349,107 @@ class _LocationsScreenState extends State<LocationsScreen> {
               label: const Text('محافظة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800)),
             )
           : null,
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: _loading
-            ? const CatalogLoadingView()
-            : _error != null && _provinces.isEmpty
-                ? CatalogErrorView(message: _error!, onRetry: _load)
-                : ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.only(bottom: 100),
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                        child: Row(
-                          children: [
-                            StatTile(label: 'محافظات', value: fmtCount(_provinces.length)),
-                            const SizedBox(width: 10),
-                            StatTile(label: 'مدن', value: fmtCount(totalCities), accent: placeBrass),
-                          ],
-                        ),
-                      ),
-                      if (!_canWrite) const ReadOnlyBanner(),
-                      CatalogSearchField(
-                        controller: _search,
-                        hint: 'ابحث عن محافظة أو مدينة…',
-                        onChanged: (v) => setState(() => _q = v.trim()),
-                      ),
-                      const SizedBox(height: 6),
-                      if (_provinces.isEmpty)
-                        const EmptyState(title: 'لا توجد محافظات بعد', subtitle: 'أضف أول محافظة لتظهر في نماذج الأماكن')
-                      else if (visible.isEmpty)
-                        const EmptyState(title: 'لا نتائج مطابقة', subtitle: 'جرّب اسماً آخر')
-                      else
-                        for (final (p, cities, cityHit) in visible) _provinceCard(p, cities, cityHit),
-                    ],
+      slivers: [
+        if (_loading) ...[
+          SliverToBoxAdapter(
+            child: Pad(
+              top: 4,
+              child: Row(children: [
+                for (var i = 0; i < 3; i++) ...[
+                  if (i > 0) const SizedBox(width: 10),
+                  const Expanded(child: SkeletonBox(height: 104)),
+                ],
+              ]),
+            ),
+          ),
+          const SkeletonSliver(count: 6, height: 82),
+        ] else if (_error != null && _provinces.isEmpty)
+          SliverFillRemaining(hasScrollBody: false, child: CatalogErrorView(message: _error!, onRetry: _load))
+        else ...[
+          SliverToBoxAdapter(
+            child: Pad(
+              top: 4,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: KpiTile(
+                      label: 'محافظات',
+                      value: fmtCount(_provinces.length),
+                      icon: Icons.map_outlined,
+                      color: placeShiftEvening,
+                      onTap: () => setState(() => _filter = 'ALL'),
+                    ),
                   ),
-      ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: KpiTile(
+                      label: 'مدن',
+                      value: fmtCount(totalCities),
+                      icon: Icons.location_city_outlined,
+                      color: placeBrass,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: KpiTile(
+                      label: 'بلا صورة',
+                      value: fmtCount(noImage),
+                      icon: Icons.hide_image_outlined,
+                      color: placeWarning,
+                      alert: noImage > 0,
+                      onTap: () => setState(() => _filter = 'NO_IMAGE'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (!_canWrite) const SliverToBoxAdapter(child: ReadOnlyBanner()),
+          SliverToBoxAdapter(
+            child: CatalogSearchField(
+              controller: _search,
+              hint: 'ابحث عن محافظة أو مدينة…',
+              onChanged: (v) => setState(() => _q = v.trim()),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: FilterChipsRow(
+              options: const ['ALL', 'NO_IMAGE', 'NO_CITIES'],
+              selected: _filter,
+              onSelected: (v) => setState(() => _filter = v),
+              labelBuilder: (v) => switch (v) {
+                'NO_IMAGE' => 'بلا صورة ($noImage)',
+                'NO_CITIES' => 'بلا مدن ($noCities)',
+                _ => 'كل المحافظات',
+              },
+            ),
+          ),
+          if (_provinces.isEmpty)
+            SliverToBoxAdapter(
+              child: EmptyView(
+                icon: Icons.map_outlined,
+                title: 'لا توجد محافظات بعد',
+                subtitle: 'أضف أول محافظة لتظهر في نماذج الأماكن',
+                actionLabel: _canWrite ? 'إضافة محافظة' : null,
+                onAction: _canWrite ? _addProvince : null,
+              ),
+            )
+          else if (visible.isEmpty)
+            const SliverToBoxAdapter(
+              child: EmptyView(icon: Icons.search_off_rounded, title: 'لا نتائج مطابقة', subtitle: 'جرّب اسماً آخر أو غيّر الفلتر'),
+            )
+          else
+            SliverList.separated(
+              itemCount: visible.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (_, i) {
+                final (p, cities, cityHit) = visible[i];
+                return Pad(bottom: 0, child: _provinceCard(p, cities, cityHit));
+              },
+            ),
+          const SliverToBoxAdapter(child: SizedBox(height: 72)),
+        ],
+      ],
     );
   }
 
@@ -371,164 +459,154 @@ class _LocationsScreenState extends State<LocationsScreen> {
     final count = _cityCount(p);
     final image = p['imageUrl']?.toString();
     final uploading = _uploadingId == id;
-    return CatalogCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(18),
-            onTap: () {
-              lightTap();
-              setState(() => open ? _expanded.remove(id) : _expanded.add(id));
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 58,
-                    height: 58,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        NetImage(url: image, radius: 14, icon: Icons.landscape_outlined),
-                        if (uploading)
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.45),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            alignment: Alignment.center,
-                            child: SizedBox(
-                              width: 26,
-                              height: 26,
-                              child: CircularProgressIndicator(
-                                value: _uploadProgress > 0 && _uploadProgress < 1 ? _uploadProgress : null,
-                                strokeWidth: 2.4,
-                                color: Colors.white,
+    final r = BorderRadius.circular(StaffRadius.lg);
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: r,
+        border: Border.all(color: open ? placeGold.withValues(alpha: .45) : placeLine),
+      ),
+      child: Material(
+        color: Colors.white,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            InkWell(
+              onTap: () {
+                lightTap();
+                setState(() => open ? _expanded.remove(id) : _expanded.add(id));
+              },
+              onLongPress: _canWrite ? () => _provinceActions(p) : null,
+              child: Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(12, 12, 4, 12),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 58,
+                      height: 58,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          NetImage(url: image, radius: StaffRadius.md, icon: Icons.landscape_outlined),
+                          if (uploading)
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.45),
+                                borderRadius: BorderRadius.circular(StaffRadius.md),
+                              ),
+                              alignment: Alignment.center,
+                              child: SizedBox(
+                                width: 26,
+                                height: 26,
+                                child: CircularProgressIndicator(
+                                  value: _uploadProgress > 0 && _uploadProgress < 1 ? _uploadProgress : null,
+                                  strokeWidth: 2.4,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('${p['nameAr'] ?? '—'}', style: catalogTitleStyle.copyWith(fontSize: 15)),
+                          if ('${p['nameEn'] ?? ''}'.isNotEmpty && p['nameEn'] != p['nameAr'])
+                            Text('${p['nameEn']}', textDirection: TextDirection.ltr, style: catalogSubtitleStyle),
+                          const SizedBox(height: 5),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              StatusChip(
+                                count == 0 ? 'بلا مدن' : '$count مدينة',
+                                color: count == 0 ? placeInk3 : placeSuccess,
+                                dense: true,
+                              ),
+                              if (image == null || image.isEmpty)
+                                const StatusChip('بلا صورة', color: placeWarning, dense: true),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_canWrite)
+                      IconButton(
+                        tooltip: 'إجراءات',
+                        onPressed: () => _provinceActions(p),
+                        icon: const Icon(Icons.more_horiz_rounded, color: placeInk2),
+                      ),
+                    AnimatedRotation(
+                      turns: open ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 180),
+                      child: const Padding(
+                        padding: EdgeInsetsDirectional.only(end: 8),
+                        child: Icon(Icons.expand_more_rounded, color: placeInk3),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 180),
+              crossFadeState: open ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+              firstChild: const SizedBox(width: double.infinity),
+              secondChild: Container(
+                width: double.infinity,
+                color: placePaper.withValues(alpha: .6),
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      cityHit ? 'مدن مطابقة للبحث' : 'المدن',
+                      style: catalogMetaStyle,
+                    ),
+                    const SizedBox(height: 8),
+                    if (cities.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 8),
+                        child: Text('لا مدن في هذه المحافظة بعد', style: catalogSubtitleStyle),
+                      ),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
-                        Text(
-                          '${p['nameAr'] ?? '—'}',
-                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 15.5, fontWeight: FontWeight.w900, color: placeInk),
-                        ),
-                        if ('${p['nameEn'] ?? ''}'.isNotEmpty && p['nameEn'] != p['nameAr'])
-                          Text(
-                            '${p['nameEn']}',
-                            textDirection: TextDirection.ltr,
-                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2),
+                        for (final c in cities)
+                          InputChip(
+                            label: Text('${c['nameAr']}'),
+                            labelStyle: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: placeInk),
+                            backgroundColor: Colors.white,
+                            side: const BorderSide(color: placeLine),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(StaffRadius.sm)),
+                            onPressed: _canWrite ? () => _cityActions(c) : null,
+                            onDeleted: _canWrite ? () => _deleteCity(c) : null,
+                            deleteIcon: const Icon(Icons.close_rounded, size: 16),
+                            deleteButtonTooltipMessage: 'حذف',
                           ),
-                        const SizedBox(height: 4),
-                        StatusPill(
-                          label: count == 0 ? 'بلا مدن' : '$count مدينة',
-                          color: count == 0 ? placeInk2 : placeSuccess,
-                          icon: Icons.location_city_outlined,
-                        ),
+                        if (_canWrite && !cityHit)
+                          ActionChip(
+                            avatar: const Icon(Icons.add_rounded, size: 18, color: placeBrass),
+                            label: const Text('مدينة'),
+                            labelStyle: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, color: placeBrass),
+                            backgroundColor: placeGoldSoft,
+                            side: BorderSide(color: placeBrass.withValues(alpha: 0.3)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(StaffRadius.sm)),
+                            onPressed: () => _addCity(p),
+                          ),
                       ],
                     ),
-                  ),
-                  if (_canWrite)
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert_rounded, color: placeInk2),
-                      onSelected: (v) {
-                        switch (v) {
-                          case 'city':
-                            _addCity(p);
-                          case 'rename':
-                            _renameProvince(p);
-                          case 'image':
-                            _pickImage(p);
-                          case 'noimage':
-                            _removeImage(p);
-                          case 'delete':
-                            _deleteProvince(p);
-                        }
-                      },
-                      itemBuilder: (_) => [
-                        const PopupMenuItem(value: 'city', child: Text('إضافة مدينة')),
-                        const PopupMenuItem(value: 'rename', child: Text('تعديل الاسم')),
-                        PopupMenuItem(
-                          value: 'image',
-                          enabled: !uploading,
-                          child: Text(image == null || image.isEmpty ? 'رفع صورة' : 'تغيير الصورة'),
-                        ),
-                        if (image != null && image.isNotEmpty)
-                          const PopupMenuItem(value: 'noimage', child: Text('إزالة الصورة')),
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Text('حذف المحافظة', style: TextStyle(color: placeDanger)),
-                        ),
-                      ],
-                    ),
-                  AnimatedRotation(
-                    turns: open ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 180),
-                    child: const Icon(Icons.expand_more_rounded, color: placeInk2),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          AnimatedCrossFade(
-            duration: const Duration(milliseconds: 180),
-            crossFadeState: open ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-            firstChild: const SizedBox(width: double.infinity),
-            secondChild: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Divider(height: 1),
-                  const SizedBox(height: 12),
-                  if (cities.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 8),
-                      child: Text('لا مدن في هذه المحافظة بعد', style: TextStyle(fontFamily: 'Cairo', color: placeInk2)),
-                    ),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final c in cities)
-                        InputChip(
-                          label: Text('${c['nameAr']}'),
-                          labelStyle: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: placeInk),
-                          backgroundColor: placePaper,
-                          side: const BorderSide(color: placeLine),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          onPressed: _canWrite ? () => _cityActions(c) : null,
-                          onDeleted: _canWrite ? () => _deleteCity(c) : null,
-                          deleteIcon: const Icon(Icons.close_rounded, size: 16),
-                          deleteButtonTooltipMessage: 'حذف',
-                        ),
-                      if (_canWrite && !cityHit)
-                        ActionChip(
-                          avatar: const Icon(Icons.add_rounded, size: 18, color: placeBrass),
-                          label: const Text('مدينة'),
-                          labelStyle: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, color: placeBrass),
-                          backgroundColor: placeBrass.withValues(alpha: 0.08),
-                          side: BorderSide(color: placeBrass.withValues(alpha: 0.3)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          onPressed: () => _addCity(p),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

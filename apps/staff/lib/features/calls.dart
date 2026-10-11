@@ -10,6 +10,7 @@ import '../core/api.dart';
 import '../core/session.dart';
 import '../core/shift.dart';
 import '../core/theme.dart';
+import '../widgets/kit.dart';
 import '../widgets/ui.dart';
 
 class IncomingCallOverlay extends StatefulWidget {
@@ -70,56 +71,94 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     final name = widget.call['callerName']?.toString() ?? 'زبون';
     final place = widget.call['place']?.toString() ?? 'دعم';
     final phone = widget.call['callerPhone']?.toString();
+    final booking = widget.call['bookingStatus']?.toString();
     return Material(
-      color: placeInk,
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('مكالمة واردة', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: placeBrass, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 24),
-              const AudioWaveBars(active: true),
-              const SizedBox(height: 24),
-              Text(name, style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
-                child: Text(place, style: const TextStyle(color: Colors.white70)),
-              ),
-              if (phone != null) ...[
-                const SizedBox(height: 8),
-                Text(phone, textDirection: TextDirection.ltr, style: const TextStyle(color: Colors.white54)),
-              ],
-              if (widget.call['bookingStatus'] != null) ...[
-                const SizedBox(height: 12),
-                Text('حجز: ${bookingStatusAr(widget.call['bookingStatus']?.toString())}', style: const TextStyle(color: placeBrass)),
-              ],
-              const Spacer(),
-              if (widget.onOpenChat != null && widget.call['conversationId'] != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: OutlinedButton.icon(
-                    onPressed: widget.onOpenChat,
-                    style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Colors.white30)),
-                    icon: const Icon(Icons.chat_bubble_outline),
-                    label: const Text('فتح المحادثة'),
-                  ),
+      color: placeNavy,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(gradient: placeNavyFill),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _LiveDot(color: placeGold),
+                    SizedBox(width: 8),
+                    Text('مكالمة واردة', style: TextStyle(fontFamily: 'Cairo', color: placeGold, fontSize: 15, fontWeight: FontWeight.w900)),
+                  ],
                 ),
-              FilledButton(
-                onPressed: () => _accept(context),
-                style: FilledButton.styleFrom(backgroundColor: placeSuccess, padding: const EdgeInsets.symmetric(vertical: 16)),
-                child: const Text('رد على المكالمة'),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton(
-                onPressed: _decline,
-                style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Colors.white30)),
-                child: const Text('رفض'),
-              ),
-            ],
+                const Spacer(flex: 2),
+                Center(child: _CallAvatar(name: name, ringing: true)),
+                const SizedBox(height: 20),
+                Text(
+                  name,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontFamily: 'Cairo', color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, height: 1.3),
+                ),
+                if (phone != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    phone,
+                    textAlign: TextAlign.center,
+                    textDirection: TextDirection.ltr,
+                    style: const TextStyle(fontFamily: 'Montserrat', color: Colors.white60, fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
+                ],
+                const SizedBox(height: 14),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _DarkChip(icon: Icons.home_work_outlined, label: place),
+                    if (booking != null) _DarkChip(icon: Icons.event_note_outlined, label: 'حجز: ${bookingStatusAr(booking)}', color: placeGold),
+                  ],
+                ),
+                const SizedBox(height: 28),
+                const AudioWaveBars(active: true),
+                const Spacer(flex: 3),
+                if (widget.onOpenChat != null && widget.call['conversationId'] != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: Center(
+                      child: TextButton.icon(
+                        onPressed: widget.onOpenChat,
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.white.withValues(alpha: .08),
+                          minimumSize: const Size(0, 48),
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                          shape: const StadiumBorder(),
+                        ),
+                        icon: const Icon(Icons.chat_bubble_outline_rounded, size: 19),
+                        label: const Text('فتح المحادثة'),
+                      ),
+                    ),
+                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _RoundButton(
+                      icon: Icons.call_end_rounded,
+                      label: 'رفض',
+                      color: placeDanger,
+                      onTap: _decline,
+                    ),
+                    _RoundButton(
+                      icon: Icons.call_rounded,
+                      label: 'رد',
+                      color: placeSuccess,
+                      onTap: () => _accept(context),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -307,24 +346,35 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
       await Api.send('/api/calls/$callId/end', method: 'POST');
     } catch (_) {}
     if (!mounted) return;
-    final tag = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => SafeArea(
-        child: Column(
+    final tag = await showStaffSheet<String>(
+      context,
+      title: 'تغليف المكالمة',
+      child: Builder(
+        builder: (sheet) => Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text('تغليف المكالمة', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+            const Text('كيف انتهت المكالمة؟ تُحفظ كملاحظة على المحادثة.', style: TextStyle(fontFamily: 'Cairo', fontSize: 13, color: placeInk2)),
+            const SizedBox(height: 12),
+            TileGroup(
+              children: [
+                for (final item in const [
+                  ('تم الحل', Icons.check_circle_outline_rounded, placeSuccess),
+                  ('يحتاج متابعة', Icons.update_rounded, placeWarning),
+                  ('حجز', Icons.event_available_rounded, placeInfo),
+                  ('دفع', Icons.payments_outlined, placeBrass),
+                ])
+                  TaskTile(
+                    icon: item.$2,
+                    color: item.$3,
+                    title: item.$1,
+                    trailing: const SizedBox.shrink(),
+                    onTap: () => Navigator.pop(sheet, item.$1),
+                  ),
+              ],
             ),
-            for (final item in ['تم الحل', 'يحتاج متابعة', 'حجز', 'دفع'])
-              ListTile(
-                title: Text(item, style: const TextStyle(fontWeight: FontWeight.w600)),
-                onTap: () => Navigator.pop(context, item),
-              ),
-            ListTile(title: const Text('تخطي'), onTap: () => Navigator.pop(context)),
+            const SizedBox(height: 10),
+            TextButton(onPressed: () => Navigator.pop(sheet), child: const Text('تخطي')),
           ],
         ),
       ),
@@ -355,6 +405,7 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
   Widget build(BuildContext context) {
     final name = widget.caller['callerName']?.toString() ?? 'زبون';
     final phone = widget.caller['callerPhone']?.toString();
+    final place = widget.caller['place']?.toString() ?? '';
     final poor = _cq == ConnectionQuality.poor || _cq == ConnectionQuality.lost;
     final ringing = _phase != _StaffCallPhase.active;
     final statusLine = _error ??
@@ -363,73 +414,102 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
           _StaffCallPhase.ringing => 'يرنّ الآن…',
           _StaffCallPhase.active => _formatDuration(_elapsed),
         };
+    final chipColor = _error != null || poor ? placeDanger : (ringing ? placeGold : placeSuccess);
     return Scaffold(
-      backgroundColor: placeInk,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: poor ? placeDanger.withValues(alpha: 0.2) : (ringing ? placeBrass.withValues(alpha: 0.25) : placeSuccess.withValues(alpha: 0.2)),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      ringing ? 'رنين' : (_error ?? _quality),
-                      style: TextStyle(color: ringing ? placeBrass : (poor ? placeDanger : placeSuccess), fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                  const Spacer(),
-                  if (!ringing)
-                    Text(_formatDuration(_elapsed), style: const TextStyle(color: Colors.white54, fontFeatures: [FontFeature.tabularFigures()])),
-                ],
-              ),
-              const SizedBox(height: 32),
-              Text(name, textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 8),
-              Text(widget.caller['place']?.toString() ?? '', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60)),
-              const SizedBox(height: 12),
-              Text(
-                statusLine,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: ringing ? placeBrass : Colors.white70,
-                  fontSize: ringing ? 22 : 16,
-                  fontWeight: FontWeight.w800,
-                  fontFeatures: ringing ? null : const [FontFeature.tabularFigures()],
-                ),
-              ),
-              const SizedBox(height: 24),
-              AudioWaveBars(active: ringing || !_muted, color: placeBrass),
-              const Spacer(),
-              if (Session.can('users.read') && phone != null)
+      backgroundColor: placeNavy,
+      body: DecoratedBox(
+        decoration: const BoxDecoration(gradient: placeNavyFill),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _RoundAction(icon: Icons.phone_outlined, label: 'اتصال', onTap: () => _openPhone(phone)),
-                    const SizedBox(width: 12),
-                    _RoundAction(icon: Icons.chat_outlined, label: 'واتساب', onTap: () => _openWhatsApp(phone)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(color: chipColor.withValues(alpha: .18), borderRadius: BorderRadius.circular(999)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _LiveDot(color: chipColor),
+                          const SizedBox(width: 6),
+                          Text(
+                            ringing ? 'رنين' : (_error ?? 'الاتصال: $_quality'),
+                            style: TextStyle(fontFamily: 'Cairo', color: chipColor, fontWeight: FontWeight.w800, fontSize: 12.5),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    if (!ringing)
+                      Text(
+                        _formatDuration(_elapsed),
+                        style: const TextStyle(fontFamily: 'Montserrat', color: Colors.white60, fontWeight: FontWeight.w700, fontFeatures: [FontFeature.tabularFigures()]),
+                      ),
                   ],
                 ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(child: _CallControl(icon: _muted ? Icons.mic_off : Icons.mic, label: _muted ? 'كتم' : 'ميك', onTap: _toggleMute)),
-                  Expanded(child: _CallControl(icon: _speaker ? Icons.volume_up : Icons.hearing, label: _speaker ? 'سماعة' : 'أذن', onTap: _toggleSpeaker)),
+                const Spacer(flex: 2),
+                Center(child: _CallAvatar(name: name, ringing: ringing)),
+                const SizedBox(height: 20),
+                Text(
+                  name,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontFamily: 'Cairo', color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900, height: 1.3),
+                ),
+                if (place.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Center(child: _DarkChip(icon: Icons.home_work_outlined, label: place)),
                 ],
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _end,
-                style: FilledButton.styleFrom(backgroundColor: placeDanger, padding: const EdgeInsets.symmetric(vertical: 16)),
-                child: const Text('إنهاء المكالمة'),
-              ),
-            ],
+                const SizedBox(height: 14),
+                Text(
+                  statusLine,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: ringing ? 'Cairo' : 'Montserrat',
+                    color: _error != null ? placeDanger : (ringing ? placeGold : Colors.white),
+                    fontSize: ringing ? 20 : 30,
+                    fontWeight: FontWeight.w800,
+                    fontFeatures: ringing ? null : const [FontFeature.tabularFigures()],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                AudioWaveBars(active: ringing || !_muted, color: placeGold),
+                const Spacer(flex: 3),
+                if (Session.can('users.read') && phone != null) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _PillAction(icon: Icons.phone_outlined, label: 'اتصال هاتفي', onTap: () => _openPhone(phone)),
+                      const SizedBox(width: 10),
+                      _PillAction(icon: Icons.chat_outlined, label: 'واتساب', onTap: () => _openWhatsApp(phone)),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+                ],
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _ToggleControl(
+                      icon: _muted ? Icons.mic_off_rounded : Icons.mic_rounded,
+                      label: _muted ? 'مكتوم' : 'كتم',
+                      active: _muted,
+                      onTap: _toggleMute,
+                    ),
+                    _RoundButton(icon: Icons.call_end_rounded, label: 'إنهاء', color: placeDanger, onTap: _end),
+                    _ToggleControl(
+                      icon: _speaker ? Icons.volume_up_rounded : Icons.hearing_rounded,
+                      label: _speaker ? 'السماعة' : 'الأذن',
+                      active: _speaker,
+                      onTap: _toggleSpeaker,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -437,36 +517,217 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
   }
 }
 
-class _RoundAction extends StatelessWidget {
-  const _RoundAction({required this.icon, required this.label, required this.onTap});
+/// صورة المتصل بالأحرف الأولى مع حلقة ذهبية نابضة أثناء الرنين.
+class _CallAvatar extends StatefulWidget {
+  const _CallAvatar({required this.name, this.ringing = false});
 
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
+  final String name;
+  final bool ringing;
+
+  @override
+  State<_CallAvatar> createState() => _CallAvatarState();
+}
+
+class _CallAvatarState extends State<_CallAvatar> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.ringing) _c.repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant _CallAvatar old) {
+    super.didUpdateWidget(old);
+    if (widget.ringing && !_c.isAnimating) {
+      _c.repeat();
+    } else if (!widget.ringing && _c.isAnimating) {
+      _c.stop();
+      _c.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  String get _initials {
+    final parts = widget.name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return '؟';
+    if (parts.length == 1) return parts.first.characters.first;
+    return '${parts.first.characters.first}${parts.last.characters.first}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(16)),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: Colors.white, size: 20),
-            const SizedBox(width: 8),
-            Text(label, style: const TextStyle(color: Colors.white)),
-          ],
+    const size = 112.0;
+    return SizedBox(
+      width: size + 48,
+      height: size + 48,
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (context, child) {
+          final t = _c.value;
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              if (widget.ringing)
+                Container(
+                  width: size + 48 * t,
+                  height: size + 48 * t,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: placeGold.withValues(alpha: (1 - t) * .55), width: 2),
+                  ),
+                ),
+              child!,
+            ],
+          );
+        },
+        child: Container(
+          width: size,
+          height: size,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: .08),
+            border: Border.all(color: placeGold.withValues(alpha: .7), width: 2),
+          ),
+          child: Text(
+            _initials,
+            style: const TextStyle(fontFamily: 'Cairo', color: Colors.white, fontSize: 38, fontWeight: FontWeight.w900, height: 1.2),
+          ),
         ),
       ),
     );
   }
 }
 
-class _CallControl extends StatelessWidget {
-  const _CallControl({required this.icon, required this.label, required this.onTap});
+/// نقطة حالة صغيرة.
+class _LiveDot extends StatelessWidget {
+  const _LiveDot({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle));
+  }
+}
+
+/// شارة على الخلفية الداكنة.
+class _DarkChip extends StatelessWidget {
+  const _DarkChip({required this.icon, required this.label, this.color = Colors.white70});
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: .1)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: color),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontFamily: 'Cairo', color: color, fontSize: 13, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// زر دائري كبير (رد / رفض / إنهاء).
+class _RoundButton extends StatelessWidget {
+  const _RoundButton({required this.icon, required this.label, required this.color, required this.onTap});
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          color: color,
+          shape: const CircleBorder(),
+          elevation: 6,
+          shadowColor: color.withValues(alpha: .5),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
+            child: SizedBox(width: 72, height: 72, child: Icon(icon, color: Colors.white, size: 32)),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(label, style: const TextStyle(fontFamily: 'Cairo', color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w800)),
+      ],
+    );
+  }
+}
+
+/// زر تبديل دائري (كتم / سماعة).
+class _ToggleControl extends StatelessWidget {
+  const _ToggleControl({required this.icon, required this.label, required this.onTap, this.active = false});
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 96,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Material(
+            color: active ? Colors.white : Colors.white.withValues(alpha: .1),
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onTap,
+              child: SizedBox(width: 60, height: 60, child: Icon(icon, color: active ? placeNavy : Colors.white, size: 26)),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontFamily: 'Cairo', color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// زر كبسولة على الخلفية الداكنة (اتصال هاتفي / واتساب).
+class _PillAction extends StatelessWidget {
+  const _PillAction({required this.icon, required this.label, required this.onTap});
 
   final IconData icon;
   final String label;
@@ -474,23 +735,21 @@ class _CallControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Material(
-        color: Colors.white.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Column(
-              children: [
-                Icon(icon, color: Colors.white),
-                const SizedBox(height: 6),
-                Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-              ],
-            ),
+    return Material(
+      color: Colors.white.withValues(alpha: .08),
+      shape: StadiumBorder(side: BorderSide(color: Colors.white.withValues(alpha: .12))),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: Colors.white, size: 19),
+              const SizedBox(width: 8),
+              Text(label, style: const TextStyle(fontFamily: 'Cairo', color: Colors.white, fontWeight: FontWeight.w700)),
+            ],
           ),
         ),
       ),

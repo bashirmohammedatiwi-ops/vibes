@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/theme.dart';
+import '../../../widgets/kit.dart';
 import 'catalog_common.dart';
 
 /// رسوم بيانية خفيفة بلا حزم خارجية (CustomPainter + عناصر بسيطة).
@@ -305,7 +306,7 @@ class HBarList extends StatelessWidget {
                     ),
                     Text(
                       fmt(items[i].value),
-                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.w900, color: placeInk),
+                      style: const TextStyle(fontFamily: 'Montserrat', fontSize: 12.5, fontWeight: FontWeight.w800, color: placeInk),
                     ),
                   ],
                 ),
@@ -314,7 +315,7 @@ class HBarList extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                   child: Stack(
                     children: [
-                      Container(height: 8, color: placeLine.withValues(alpha: 0.6)),
+                      Container(height: 8, color: placeLineSoft),
                       FractionallySizedBox(
                         alignment: AlignmentDirectional.centerStart,
                         widthFactor: maxV <= 0 ? 0 : (items[i].value / maxV).clamp(0.0, 1.0),
@@ -366,7 +367,7 @@ class DonutChart extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(fmtCount(total),
-                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900, color: placeInk)),
+                      style: const TextStyle(fontFamily: 'Montserrat', fontSize: 18, fontWeight: FontWeight.w800, color: placeInk)),
                   Text(centerLabel, style: const TextStyle(fontFamily: 'Cairo', fontSize: 10.5, color: placeInk2)),
                 ],
               ),
@@ -443,7 +444,7 @@ class _DonutPainter extends CustomPainter {
   bool shouldRepaint(covariant _DonutPainter old) => old.items != items || old.total != total;
 }
 
-/// بطاقة مؤشر رئيسي مع تغيّر اختياري.
+/// بطاقة مؤشر رئيسي بطابع KpiTile: أيقونة، رقم كبير، عنوان، وتغيّر/وصف اختياري.
 class KpiCard extends StatelessWidget {
   const KpiCard({
     super.key,
@@ -466,68 +467,57 @@ class KpiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final change = changePct;
     final up = (change ?? 0) >= 0;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: placeLine),
-      ),
+    final changeColor = up ? placeSuccess : placeDanger;
+    return StaffCard(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
-              if (icon != null) ...[
-                Icon(icon, size: 16, color: accent),
-                const SizedBox(width: 6),
-              ],
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w700, color: placeInk2),
+              IconBox(icon: icon ?? Icons.insights_rounded, color: accent, size: 32),
+              const Spacer(),
+              if (change != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(color: changeColor.withValues(alpha: .1), borderRadius: BorderRadius.circular(999)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(up ? Icons.trending_up_rounded : Icons.trending_down_rounded, size: 13, color: changeColor),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${up ? '+' : ''}$change%',
+                        textDirection: TextDirection.ltr,
+                        style: TextStyle(fontFamily: 'Montserrat', fontSize: 10.5, fontWeight: FontWeight.w800, color: changeColor),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
+          const Spacer(),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: AlignmentDirectional.centerStart,
             child: Text(
               value,
-              style: const TextStyle(fontFamily: 'Cairo', fontSize: 20, fontWeight: FontWeight.w900, color: placeInk),
+              style: const TextStyle(fontFamily: 'Montserrat', fontSize: 20, fontWeight: FontWeight.w800, color: placeInk, height: 1.15),
             ),
           ),
-          if (change != null)
-            Row(
-              children: [
-                Icon(up ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-                    size: 15, color: up ? placeSuccess : placeDanger),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    '${up ? '+' : ''}$change% عن الفترة السابقة',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                      color: up ? placeSuccess : placeDanger,
-                    ),
-                  ),
-                ),
-              ],
-            )
-          else if (caption != null)
+          const SizedBox(height: 2),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w700, color: placeInk2),
+          ),
+          if (change != null || caption != null)
             Text(
-              caption!,
+              change != null ? 'عن الفترة السابقة' : caption!,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: 'Cairo', fontSize: 10.5, fontWeight: FontWeight.w700, color: placeInk2),
+              style: const TextStyle(fontFamily: 'Cairo', fontSize: 10.5, fontWeight: FontWeight.w700, color: placeInk3),
             ),
         ],
       ),

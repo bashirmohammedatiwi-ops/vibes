@@ -5,10 +5,11 @@ import '../../../core/api.dart';
 import '../../../core/format.dart';
 import '../../../core/session.dart';
 import '../../../core/theme.dart';
+import '../../../core/net_image.dart';
 import '../../../widgets/form_kit.dart';
+import '../../../widgets/kit.dart';
 import '../../ops/ops_booking_detail.dart';
 import 'people_common.dart';
-import '../../../core/net_image.dart';
 
 /// تفاصيل دفعة: الإثبات (تكبير)، الاعتماد/الرفض، تغيير الحالة، الاسترداد، رفع إثبات.
 class AdminPaymentDetailScreen extends StatefulWidget {
@@ -105,6 +106,14 @@ class _AdminPaymentDetailScreenState extends State<AdminPaymentDetailScreen> {
       danger: true,
     );
     if (note == null || !mounted) return;
+    final ok = await confirmDialog(
+      context,
+      title: 'تأكيد الرفض',
+      message: 'رفض دفعة بقيمة $_amount؟ ستُعلَّم «فشل» ويُحفظ السبب معها.',
+      confirmLabel: 'رفض الدفعة',
+      danger: true,
+    );
+    if (!ok || !mounted) return;
     await _send('/api/admin/payments/${widget.paymentId}/review', 'PATCH', {'status': 'FAILED', 'adminNote': note}, 'تم رفض الدفعة');
   }
 
@@ -114,7 +123,7 @@ class _AdminPaymentDetailScreenState extends State<AdminPaymentDetailScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(StaffRadius.xl))),
       builder: (_) => _StatusSheet(current: current, transactionRef: _p?['transactionRef']?.toString() ?? ''),
     );
     if (res == null || !mounted) return;
@@ -145,7 +154,7 @@ class _AdminPaymentDetailScreenState extends State<AdminPaymentDetailScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(StaffRadius.xl))),
       builder: (_) => _RefundSheet(amount: _amount),
     );
     if (reason == null || !mounted) return;
@@ -166,21 +175,23 @@ class _AdminPaymentDetailScreenState extends State<AdminPaymentDetailScreen> {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(StaffRadius.xl))),
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 12),
             const SheetHandle(),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('من المعرض'),
+            TaskTile(
+              icon: Icons.photo_library_rounded,
+              color: placeShiftEvening,
+              title: 'من المعرض',
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('التقاط صورة'),
+            TaskTile(
+              icon: Icons.photo_camera_rounded,
+              color: placeInfo,
+              title: 'التقاط صورة',
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             const SizedBox(height: 8),
@@ -216,25 +227,27 @@ class _AdminPaymentDetailScreenState extends State<AdminPaymentDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final p = _p;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) Navigator.of(context).pop(_changed);
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('تفاصيل الدفعة'),
+        bottomNavigationBar: p == null ? null : _actions(),
+        body: StaffPage(
+          title: 'تفاصيل الدفعة',
+          onRefresh: p == null ? null : _load,
           actions: [
-            if (_p != null && _canVerify && _p?['status'] != 'REFUNDED')
+            if (p != null && _canVerify && p['status'] != 'REFUNDED')
               IconButton(tooltip: 'تغيير الحالة', icon: const Icon(Icons.swap_horiz_rounded), onPressed: _changeStatus),
           ],
+          slivers: _loading
+              ? const [SliverToBoxAdapter(child: SizedBox(height: 4)), SkeletonSliver(count: 4, height: 130)]
+              : _error != null && p == null
+                  ? [SliverToBoxAdapter(child: ErrorRetry(message: _error!, onRetry: _load))]
+                  : _body(p!),
         ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator(color: placeBrass))
-            : _error != null && _p == null
-                ? Center(child: ErrorRetry(message: _error!, onRetry: _load))
-                : RefreshIndicator(color: placeBrass, onRefresh: _load, child: _body()),
-        bottomNavigationBar: _p == null ? null : _actions(),
       ),
     );
   }
@@ -242,25 +255,36 @@ class _AdminPaymentDetailScreenState extends State<AdminPaymentDetailScreen> {
   Widget? _actions() {
     final status = _p?['status']?.toString();
     if (status == 'PENDING' && _canVerify) {
-      return BottomActionBar(label: 'اعتماد الدفعة', onPressed: _approve, secondaryLabel: 'رفض', onSecondary: _reject);
+      return ActionBarShell(
+        child: Row(
+          children: [
+            Expanded(
+              child: BarButton(label: 'رفض', icon: Icons.close_rounded, color: placeDanger, outlined: true, onPressed: _reject),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: BarButton(label: 'اعتماد الدفعة', icon: Icons.check_circle_rounded, color: placeSuccess, onPressed: _approve),
+            ),
+          ],
+        ),
+      );
     }
     if (status == 'PAID' && _canRefund) {
-      return Container(
-        padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + MediaQuery.of(context).padding.bottom),
-        decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: placeLine))),
-        child: OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(foregroundColor: placeDanger, side: const BorderSide(color: placeDanger)),
+      return ActionBarShell(
+        child: BarButton(
+          label: 'استرداد المبلغ',
+          icon: Icons.currency_exchange_rounded,
+          color: placeDanger,
+          outlined: true,
           onPressed: _refund,
-          icon: const Icon(Icons.currency_exchange_rounded, size: 19),
-          label: const Text('استرداد المبلغ'),
         ),
       );
     }
     return null;
   }
 
-  Widget _body() {
-    final p = _p!;
+  List<Widget> _body(Map<String, dynamic> p) {
     final status = p['status']?.toString();
     final booking = asMap(p['booking']);
     final user = asMap(booking['user']);
@@ -269,87 +293,122 @@ class _AdminPaymentDetailScreenState extends State<AdminPaymentDetailScreen> {
     final reviewer = asMap(p['reviewedBy']);
     final color = paymentStatusColor(status);
     final phone = user['phone']?.toString() ?? booking['guestPhone']?.toString();
+    final ref = p['transactionRef']?.toString() ?? '';
 
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.only(bottom: 24),
-      children: [
-        Container(
-          margin: const EdgeInsets.fromLTRB(16, 8, 16, 6),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: AlignmentDirectional.topStart,
-              end: AlignmentDirectional.bottomEnd,
-              colors: [color.withValues(alpha: 0.12), Colors.white],
-            ),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: color.withValues(alpha: 0.3)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  StatusPill(label: paymentStatusAr(status), color: color),
-                  const SizedBox(width: 6),
-                  StatusPill(label: methodLabel(p['method']?.toString()), color: placeInk2, icon: methodIcon(p['method']?.toString())),
-                ],
+    return [
+      const SliverToBoxAdapter(child: SizedBox(height: 4)),
+      // ── المبلغ والحالة ──
+      SliverToBoxAdapter(
+        child: Pad(
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: AlignmentDirectional.topStart,
+                end: AlignmentDirectional.bottomEnd,
+                colors: [color.withValues(alpha: 0.12), Colors.white],
               ),
-              const SizedBox(height: 12),
-              Text(_amount, style: const TextStyle(fontFamily: 'Cairo', fontSize: 30, fontWeight: FontWeight.w900, color: placeInk)),
-              Text('أُنشئت ${fmtDateTime(p['createdAt'])}',
-                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w600)),
-            ],
+              borderRadius: BorderRadius.circular(StaffRadius.lg),
+              border: Border.all(color: color.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          StatusChip(paymentStatusAr(status), color: color),
+                          StatusChip(methodLabel(p['method']?.toString()), color: placeInk2),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(_amount, style: const TextStyle(fontFamily: 'Cairo', fontSize: 30, fontWeight: FontWeight.w900, color: placeInk, height: 1.2)),
+                      Text('أُنشئت ${fmtDateTime(p['createdAt'])}',
+                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+                IconBox(icon: methodIcon(p['method']?.toString()), color: color, size: 52),
+              ],
+            ),
           ),
         ),
-        FormSection(
+      ),
+      if (status == 'REFUNDED')
+        const SliverToBoxAdapter(
+          child: NoticeBanner(
+            text: 'تم استرداد هذه الدفعة ولا يمكن تعديل حالتها.',
+            color: placeInk2,
+            icon: Icons.lock_outline_rounded,
+          ),
+        ),
+      // ── الإثبات ──
+      SliverToBoxAdapter(
+        child: DetailCard(
           title: 'إثبات الدفع',
-          icon: Icons.receipt_long_outlined,
+          icon: Icons.receipt_long_rounded,
+          color: placeShiftEvening,
           subtitle: proof == null ? 'لم يُرفع إثبات بعد' : 'اضغط على الصورة للتكبير',
           children: [
-            if (proof != null)
+            if (proof != null) ...[
               GestureDetector(
                 onTap: () => _openProof(proof),
                 child: Hero(
                   tag: proof,
-                  child: SizedBox(height: 240, child: NetImage(url: proof, radius: 14, fit: BoxFit.cover, icon: Icons.receipt_long_outlined)),
+                  child: SizedBox(height: 240, child: NetImage(url: proof, radius: StaffRadius.md, fit: BoxFit.cover, icon: Icons.receipt_long_outlined)),
                 ),
               ),
+              const SizedBox(height: 10),
+            ],
             if (_uploadProgress != null)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  LinearProgressIndicator(value: _uploadProgress, color: placeBrass, backgroundColor: placeLine, minHeight: 6, borderRadius: BorderRadius.circular(4)),
-                  const SizedBox(height: 4),
-                  Text('جارٍ الرفع ${((_uploadProgress ?? 0) * 100).round()}٪',
-                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2)),
-                ],
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    LinearProgressIndicator(value: _uploadProgress, color: placeGold, backgroundColor: placeLine, minHeight: 6, borderRadius: BorderRadius.circular(4)),
+                    const SizedBox(height: 4),
+                    Text('جارٍ الرفع ${((_uploadProgress ?? 0) * 100).round()}٪',
+                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2)),
+                  ],
+                ),
               )
             else if (_canVerify && status != 'REFUNDED')
-              OutlinedButton.icon(
-                onPressed: _uploadProof,
-                icon: const Icon(Icons.upload_file_rounded, size: 19),
-                label: Text(proof == null ? 'رفع إثبات نيابة عن الزبون' : 'استبدال الإثبات'),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: OutlinedButton.icon(
+                  onPressed: _uploadProof,
+                  icon: const Icon(Icons.upload_file_rounded, size: 19),
+                  label: Text(proof == null ? 'رفع إثبات نيابة عن الزبون' : 'استبدال الإثبات'),
+                ),
               ),
           ],
         ),
-        FormSection(
+      ),
+      // ── الحجز ──
+      SliverToBoxAdapter(
+        child: DetailCard(
           title: 'الحجز',
-          icon: Icons.event_note_outlined,
+          icon: Icons.event_note_rounded,
+          color: placeInfo,
           children: [
-            InfoRow(label: 'المكان', value: nonEmpty(property['name'])),
-            InfoRow(label: 'الزبون', value: nonEmpty(user['name'] ?? booking['guestName'])),
+            DetailRow(label: 'المكان', value: nonEmpty(property['name'])),
+            DetailRow(label: 'الزبون', value: nonEmpty(user['name'] ?? booking['guestName'])),
             if (phone != null && phone.isNotEmpty)
-              InfoRow(label: 'الهاتف', value: phone, ltr: true, trailing: PhoneButtons(phone: phone, compact: true)),
-            InfoRow(label: 'التاريخ', value: '${fmtDay(booking['startDate'])}${booking['endDate'] != null ? ' ← ${fmtDay(booking['endDate'])}' : ''}'),
-            InfoRow(
+              DetailRow(label: 'الهاتف', value: phone, ltr: true, trailing: PhoneButtons(phone: phone, compact: true)),
+            DetailRow(label: 'التاريخ', value: '${fmtDay(booking['startDate'])}${booking['endDate'] != null ? ' ← ${fmtDay(booking['endDate'])}' : ''}'),
+            DetailRow(
               label: 'حالة الحجز',
               value: bookingStatusLabel(booking['status']?.toString()),
               valueColor: bookingStatusColor(booking['status']?.toString()),
             ),
-            InfoRow(label: 'إجمالي الحجز', value: formatIqd(booking['totalPrice'])),
-            if (Session.can('bookings.read') && booking['id'] != null)
+            DetailRow(label: 'إجمالي الحجز', value: formatIqd(booking['totalPrice'])),
+            if (Session.can('bookings.read') && booking['id'] != null) ...[
+              const SizedBox(height: 6),
               OutlinedButton.icon(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => OpsBookingDetailScreen(bookingId: '${booking['id']}')),
@@ -357,26 +416,26 @@ class _AdminPaymentDetailScreenState extends State<AdminPaymentDetailScreen> {
                 icon: const Icon(Icons.open_in_new_rounded, size: 18),
                 label: const Text('فتح الحجز'),
               ),
+              const SizedBox(height: 6),
+            ],
           ],
         ),
-        FormSection(
+      ),
+      // ── المراجعة ──
+      SliverToBoxAdapter(
+        child: DetailCard(
           title: 'المراجعة',
-          icon: Icons.fact_check_outlined,
+          icon: Icons.fact_check_rounded,
+          color: placeSuccess,
           children: [
-            InfoRow(label: 'رقم العملية', value: nonEmpty(p['transactionRef']), ltr: (p['transactionRef']?.toString() ?? '').isNotEmpty),
-            InfoRow(label: 'ملاحظة الإدارة', value: nonEmpty(p['adminNote'])),
-            InfoRow(label: 'راجعها', value: nonEmpty(reviewer['name'] ?? reviewer['phone'])),
-            InfoRow(label: 'وقت المراجعة', value: p['reviewedAt'] == null ? '—' : fmtDateTime(p['reviewedAt'])),
+            DetailRow(label: 'رقم العملية', value: nonEmpty(ref), ltr: ref.isNotEmpty),
+            DetailRow(label: 'ملاحظة الإدارة', value: nonEmpty(p['adminNote'])),
+            DetailRow(label: 'راجعها', value: nonEmpty(reviewer['name'] ?? reviewer['phone'])),
+            DetailRow(label: 'وقت المراجعة', value: p['reviewedAt'] == null ? '—' : fmtDateTime(p['reviewedAt'])),
           ],
         ),
-        if (status == 'REFUNDED')
-          const NoticeBanner(
-            text: 'تم استرداد هذه الدفعة ولا يمكن تعديل حالتها.',
-            color: placeInk2,
-            icon: Icons.lock_outline_rounded,
-          ),
-      ],
-    );
+      ),
+    ];
   }
 }
 
@@ -473,17 +532,14 @@ class _StatusSheetState extends State<_StatusSheet> {
   Widget build(BuildContext context) {
     // REFUNDED متاح فقط عبر «استرداد» (صلاحية payments.refund) لأنه يلغي الحجز.
     final options = ['PENDING', 'PAID', 'FAILED'].where((s) => s != widget.current).toList();
-    return Padding(
-      padding: EdgeInsets.only(left: 20, right: 20, top: 12, bottom: MediaQuery.of(context).viewInsets.bottom + 20),
+    return SheetBody(
       child: Form(
         key: _formKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SheetHandle(),
-            const Text('تغيير حالة الدفعة', style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900, color: placeInk)),
-            const SizedBox(height: 12),
+            const SheetTitle('تغيير حالة الدفعة', subtitle: 'اختر الحالة الجديدة'),
             ChoicePills<String>(
               options: options,
               value: _status,
@@ -503,6 +559,7 @@ class _StatusSheetState extends State<_StatusSheet> {
             ),
             const SizedBox(height: 14),
             FilledButton(
+              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
               onPressed: _status == null
                   ? null
                   : () {
@@ -538,20 +595,21 @@ class _RefundSheetState extends State<_RefundSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(left: 20, right: 20, top: 12, bottom: MediaQuery.of(context).viewInsets.bottom + 20),
+    return SheetBody(
       child: Form(
         key: _formKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SheetHandle(),
-            const Text('استرداد المبلغ', style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900, color: placeInk)),
-            const SizedBox(height: 12),
+            const SheetTitle('استرداد المبلغ'),
             Container(
               padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: placeDanger.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(14)),
+              decoration: BoxDecoration(
+                color: placeDanger.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(StaffRadius.md),
+                border: Border.all(color: placeDanger.withValues(alpha: 0.2)),
+              ),
               child: Row(
                 children: [
                   const Icon(Icons.currency_exchange_rounded, color: placeDanger),
@@ -583,7 +641,7 @@ class _RefundSheetState extends State<_RefundSheet> {
             ),
             const SizedBox(height: 14),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: placeDanger),
+              style: FilledButton.styleFrom(backgroundColor: placeDanger, minimumSize: const Size.fromHeight(50)),
               onPressed: () {
                 if (!_formKey.currentState!.validate()) return;
                 Navigator.pop(context, _reason.text.trim());

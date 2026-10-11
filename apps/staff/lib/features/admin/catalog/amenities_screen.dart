@@ -4,7 +4,8 @@ import '../../../core/api.dart';
 import '../../../core/session.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
-import '../../../widgets/ui.dart';
+import '../../../widgets/kit.dart';
+import '../../../widgets/ui.dart' show FilterChipsRow, lightTap;
 import 'catalog_common.dart';
 
 const _types = ['FARM', 'HALL', 'DECORATION'];
@@ -155,13 +156,13 @@ class _AmenitiesScreenState extends State<AmenitiesScreen> {
   Widget build(BuildContext context) {
     final grouped = _grouped;
     final active = _items.where((a) => a['isActive'] != false).length;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('مزايا الأماكن'),
-        bottom: _busy
-            ? const PreferredSize(preferredSize: Size.fromHeight(2), child: LinearProgressIndicator(minHeight: 2))
-            : null,
-      ),
+    final inactive = _items.length - active;
+    final shown = grouped.fold<int>(0, (s, g) => s + g.value.length);
+    return StaffPage(
+      title: 'مزايا الأماكن',
+      subtitle: _loading ? null : '${fmtCount(_items.length)} ميزة في ${fmtCount(_categories.length)} فئة',
+      bottom: catalogBusyBar(_busy),
+      onRefresh: _load,
       floatingActionButton: _canWrite
           ? FloatingActionButton.extended(
               onPressed: () => _openEditor(),
@@ -171,62 +172,118 @@ class _AmenitiesScreenState extends State<AmenitiesScreen> {
               label: const Text('ميزة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800)),
             )
           : null,
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: _loading
-            ? const CatalogLoadingView()
-            : _error != null && _items.isEmpty
-                ? CatalogErrorView(message: _error!, onRetry: _load)
-                : ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.only(bottom: 100),
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                        child: Row(
-                          children: [
-                            StatTile(label: 'كل المزايا', value: fmtCount(_items.length)),
-                            const SizedBox(width: 10),
-                            StatTile(label: 'مفعّلة', value: fmtCount(active), accent: placeSuccess),
-                            const SizedBox(width: 10),
-                            StatTile(label: 'فئات', value: fmtCount(_categories.length), accent: placeBrass),
-                          ],
-                        ),
-                      ),
-                      if (!_canWrite) const ReadOnlyBanner(),
-                      CatalogSearchField(
-                        controller: _search,
-                        hint: 'ابحث عن ميزة…',
-                        onChanged: (v) => setState(() => _q = v.trim()),
-                      ),
-                      FilterChipsRow(
-                        options: const ['ALL', ..._types],
-                        selected: _type,
-                        onSelected: (v) => setState(() => _type = v),
-                        labelBuilder: (v) => v == 'ALL' ? 'كل الأنواع' : placeTypeLabel(v),
-                      ),
-                      FilterChipsRow(
-                        options: const ['ALL', 'ACTIVE', 'INACTIVE'],
-                        selected: _status,
-                        onSelected: (v) => setState(() => _status = v),
-                        labelBuilder: (v) => switch (v) {
-                          'ACTIVE' => 'المفعّلة',
-                          'INACTIVE' => 'المعطّلة',
-                          _ => 'كل الحالات',
-                        },
-                      ),
-                      if (_items.isEmpty)
-                        const EmptyState(title: 'لا توجد مزايا بعد', subtitle: 'أضف أول ميزة لتظهر في نماذج الأماكن')
-                      else if (grouped.isEmpty)
-                        const EmptyState(title: 'لا نتائج مطابقة', subtitle: 'غيّر الفلتر أو كلمة البحث')
-                      else
-                        for (final g in grouped) ...[
-                          SectionLabel(g.key, trailing: '${g.value.length} ميزة'),
-                          for (final a in g.value) _tile(a),
-                        ],
-                    ],
+      slivers: [
+        if (_loading) ...[
+          SliverToBoxAdapter(
+            child: Pad(
+              top: 4,
+              child: Row(children: [
+                for (var i = 0; i < 3; i++) ...[
+                  if (i > 0) const SizedBox(width: 10),
+                  const Expanded(child: SkeletonBox(height: 104)),
+                ],
+              ]),
+            ),
+          ),
+          const SkeletonSliver(count: 7, height: 72),
+        ] else if (_error != null && _items.isEmpty)
+          SliverFillRemaining(hasScrollBody: false, child: CatalogErrorView(message: _error!, onRetry: _load))
+        else ...[
+          SliverToBoxAdapter(
+            child: Pad(
+              top: 4,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: KpiTile(
+                      label: 'كل المزايا',
+                      value: fmtCount(_items.length),
+                      icon: Icons.sell_outlined,
+                      color: placeBrass,
+                      onTap: () => setState(() => _status = 'ALL'),
+                    ),
                   ),
-      ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: KpiTile(
+                      label: 'مفعّلة',
+                      value: fmtCount(active),
+                      icon: Icons.check_circle_outline_rounded,
+                      color: placeSuccess,
+                      onTap: () => setState(() => _status = 'ACTIVE'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: KpiTile(
+                      label: 'معطّلة',
+                      value: fmtCount(inactive),
+                      icon: Icons.block_rounded,
+                      color: placeDanger,
+                      alert: inactive > 0,
+                      onTap: () => setState(() => _status = 'INACTIVE'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (!_canWrite) const SliverToBoxAdapter(child: ReadOnlyBanner()),
+          SliverToBoxAdapter(
+            child: CatalogSearchField(
+              controller: _search,
+              hint: 'ابحث عن ميزة…',
+              onChanged: (v) => setState(() => _q = v.trim()),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: FilterChipsRow(
+              options: const ['ALL', ..._types],
+              selected: _type,
+              onSelected: (v) => setState(() => _type = v),
+              labelBuilder: (v) => v == 'ALL' ? 'كل الأنواع' : placeTypeLabel(v),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Transform.translate(
+              offset: const Offset(0, -6),
+              child: FilterChipsRow(
+                options: const ['ALL', 'ACTIVE', 'INACTIVE'],
+                selected: _status,
+                onSelected: (v) => setState(() => _status = v),
+                labelBuilder: (v) => switch (v) {
+                  'ACTIVE' => 'المفعّلة',
+                  'INACTIVE' => 'المعطّلة',
+                  _ => 'كل الحالات',
+                },
+              ),
+            ),
+          ),
+          if (_items.isEmpty)
+            SliverToBoxAdapter(
+              child: EmptyView(
+                icon: Icons.sell_outlined,
+                title: 'لا توجد مزايا بعد',
+                subtitle: 'أضف أول ميزة لتظهر في نماذج الأماكن',
+                actionLabel: _canWrite ? 'إضافة ميزة' : null,
+                onAction: _canWrite ? () => _openEditor() : null,
+              ),
+            )
+          else if (grouped.isEmpty)
+            const SliverToBoxAdapter(
+              child: EmptyView(icon: Icons.search_off_rounded, title: 'لا نتائج مطابقة', subtitle: 'غيّر الفلتر أو كلمة البحث'),
+            )
+          else ...[
+            if (shown != _items.length)
+              SliverToBoxAdapter(child: CatalogResultsLine(text: '${fmtCount(shown)} من ${fmtCount(_items.length)} ميزة')),
+            for (final g in grouped) ...[
+              SliverToBoxAdapter(child: SectionHeader(g.key, subtitle: '${g.value.length} ميزة')),
+              SliverToBoxAdapter(child: Pad(bottom: 0, child: TileGroup(children: [for (final a in g.value) _tile(a)]))),
+            ],
+          ],
+          const SliverToBoxAdapter(child: SizedBox(height: 72)),
+        ],
+      ],
     );
   }
 
@@ -235,80 +292,119 @@ class _AmenitiesScreenState extends State<AmenitiesScreen> {
     final icon = '${a['icon'] ?? ''}'.trim();
     final used = a['_count'] is Map ? asNum(a['_count']['properties']).toInt() : 0;
     final types = _appliesTo(a);
-    return Opacity(
-      opacity: inactive ? 0.62 : 1,
-      child: CatalogCard(
-        onTap: _canWrite ? () => _openEditor(a) : null,
-        padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+    return InkWell(
+      onTap: _canWrite ? () => _openEditor(a) : null,
+      onLongPress: _canWrite ? () => _actions(a) : null,
+      child: Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(14, 12, 4, 12),
         child: Row(
           children: [
-            Container(
-              width: 46,
-              height: 46,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: placeBrass.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(14),
+            Opacity(
+              opacity: inactive ? .5 : 1,
+              child: Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: (inactive ? placeInk3 : placeBrass).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: icon.isEmpty
+                    ? Icon(Icons.sell_outlined, color: inactive ? placeInk3 : placeBrass)
+                    : Text(icon, style: const TextStyle(fontSize: 22)),
               ),
-              child: icon.isEmpty
-                  ? const Icon(Icons.sell_outlined, color: placeBrass)
-                  : Text(icon, style: const TextStyle(fontSize: 22)),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '${a['nameAr'] ?? '—'}',
-                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.w900, color: placeInk),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          '${a['nameAr'] ?? '—'}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: catalogTitleStyle.copyWith(color: inactive ? placeInk3 : placeInk),
+                        ),
+                      ),
+                      if ('${a['nameEn'] ?? ''}'.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            '${a['nameEn']}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textDirection: TextDirection.ltr,
+                            style: catalogMetaStyle,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                  if ('${a['nameEn'] ?? ''}'.isNotEmpty)
-                    Text(
-                      '${a['nameEn']}',
-                      textDirection: TextDirection.ltr,
-                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, color: placeInk2),
-                    ),
                   const SizedBox(height: 5),
                   Wrap(
                     spacing: 5,
                     runSpacing: 5,
                     children: [
-                      if (inactive) const StatusPill(label: 'معطّلة', color: placeDanger),
-                      if (a['isSystem'] == true) const StatusPill(label: 'نظامية', color: placeShiftEvening),
+                      if (inactive) const StatusChip('معطّلة', color: placeDanger, dense: true),
+                      if (a['isSystem'] == true) const StatusChip('نظامية', color: placeShiftEvening, dense: true),
                       if (types.isEmpty)
-                        const StatusPill(label: 'كل الأنواع', color: placeInk2)
+                        const StatusChip('كل الأنواع', color: placeInk2, dense: true)
                       else
                         for (final t in types) StatusPill(label: placeTypeLabel(t), color: placeInk, icon: placeTypeIcon(t)),
-                      StatusPill(label: 'في $used مكان', color: placeBrass),
                     ],
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(fmtCount(used),
+                    style: const TextStyle(fontFamily: 'Montserrat', fontSize: 14, fontWeight: FontWeight.w800, color: placeInk)),
+                const Text('مكان', style: catalogMetaStyle),
+              ],
+            ),
             if (_canWrite)
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert_rounded, color: placeInk2),
-                onSelected: (v) {
-                  switch (v) {
-                    case 'edit':
-                      _openEditor(a);
-                    case 'toggle':
-                      _toggleActive(a);
-                    case 'delete':
-                      _delete(a);
-                  }
-                },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'edit', child: Text('تعديل')),
-                  PopupMenuItem(value: 'toggle', child: Text(inactive ? 'تفعيل' : 'تعطيل')),
-                  const PopupMenuItem(value: 'delete', child: Text('حذف', style: TextStyle(color: placeDanger))),
-                ],
-              ),
+              IconButton(
+                tooltip: 'إجراءات',
+                onPressed: () => _actions(a),
+                icon: const Icon(Icons.more_vert_rounded, color: placeInk3),
+              )
+            else
+              const SizedBox(width: 10),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _actions(Map<String, dynamic> a) async {
+    if (!_canWrite) return;
+    lightTap();
+    final inactive = a['isActive'] == false;
+    final v = await showActionSheet(
+      context,
+      title: '${a['nameAr'] ?? 'الميزة'}',
+      actions: [
+        const SheetAction('edit', 'تعديل', Icons.edit_outlined),
+        SheetAction('toggle', inactive ? 'تفعيل' : 'تعطيل',
+            inactive ? Icons.check_circle_outline_rounded : Icons.block_rounded),
+        const SheetAction('delete', 'حذف', Icons.delete_outline_rounded, danger: true),
+      ],
+    );
+    if (!mounted) return;
+    switch (v) {
+      case 'edit':
+        await _openEditor(a);
+      case 'toggle':
+        await _toggleActive(a);
+      case 'delete':
+        await _delete(a);
+    }
   }
 }
 
@@ -375,7 +471,8 @@ class _AmenityEditorScreenState extends State<AmenityEditorScreen> {
   }
 
   void _touch() {
-    if (!_dirty && mounted) setState(() => _dirty = true);
+    // إعادة البناء في كل تغيير لتحديث المعاينة الحيّة.
+    if (mounted) setState(() => _dirty = true);
   }
 
   Map<String, dynamic> _payload() {
@@ -461,7 +558,6 @@ class _AmenityEditorScreenState extends State<AmenityEditorScreen> {
         if (await _confirmLeave()) nav.pop(false);
       },
       child: Scaffold(
-        appBar: AppBar(title: Text(_isEdit ? 'تعديل ميزة' : 'ميزة جديدة')),
         bottomNavigationBar: BottomActionBar(
           label: _isEdit ? 'حفظ التعديلات' : 'إضافة الميزة',
           busy: _saving,
@@ -469,160 +565,215 @@ class _AmenityEditorScreenState extends State<AmenityEditorScreen> {
         ),
         body: Form(
           key: _form,
-          child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            children: [
-              FormSection(
-                title: 'الاسم والأيقونة',
-                icon: Icons.sell_outlined,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          child: StaffPage(
+            title: _isEdit ? 'تعديل ميزة' : 'ميزة جديدة',
+            subtitle: _isEdit ? '${widget.amenity!['nameAr'] ?? ''}' : 'تظهر في نماذج الأماكن والتطبيق',
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(
-                        child: StaffField(
-                          controller: _nameAr,
-                          label: 'الاسم بالعربية',
-                          hint: 'مثال: مسبح',
-                          validator: (v) => requiredValidator(v, 'اسم الميزة مطلوب'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      SizedBox(
-                        width: 86,
-                        child: TextFormField(
-                          controller: _icon,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 22),
-                          decoration: const InputDecoration(labelText: 'أيقونة', hintText: '🏊'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  StaffField(controller: _nameEn, label: 'الاسم بالإنجليزية', hint: 'Swimming pool', ltr: true),
-                  SizedBox(
-                    height: 44,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _emojiSuggestions.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: 6),
-                      itemBuilder: (_, i) {
-                        final e = _emojiSuggestions[i];
-                        final sel = _icon.text.trim() == e;
-                        return GestureDetector(
-                          onTap: () {
-                            lightTap();
-                            _icon.text = e;
-                            setState(() {});
-                          },
-                          child: Container(
-                            width: 44,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: sel ? placeBrass.withValues(alpha: 0.18) : placePaper,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: sel ? placeBrass : placeLine),
+                      _preview(),
+                      FormSection(
+                        title: 'الاسم والأيقونة',
+                        icon: Icons.sell_outlined,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: StaffField(
+                                  controller: _nameAr,
+                                  label: 'الاسم بالعربية',
+                                  hint: 'مثال: مسبح',
+                                  validator: (v) => requiredValidator(v, 'اسم الميزة مطلوب'),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              SizedBox(
+                                width: 86,
+                                child: TextFormField(
+                                  controller: _icon,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontSize: 22),
+                                  decoration: const InputDecoration(labelText: 'أيقونة', hintText: '🏊'),
+                                ),
+                              ),
+                            ],
+                          ),
+                          StaffField(controller: _nameEn, label: 'الاسم بالإنجليزية', hint: 'Swimming pool', ltr: true),
+                          SizedBox(
+                            height: 48,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _emojiSuggestions.length,
+                              separatorBuilder: (_, _) => const SizedBox(width: 6),
+                              itemBuilder: (_, i) {
+                                final e = _emojiSuggestions[i];
+                                final sel = _icon.text.trim() == e;
+                                return GestureDetector(
+                                  onTap: () {
+                                    lightTap();
+                                    _icon.text = e;
+                                    setState(() {});
+                                  },
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 140),
+                                    width: 48,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: sel ? placeGoldSoft : placePaper,
+                                      borderRadius: BorderRadius.circular(StaffRadius.sm),
+                                      border: Border.all(color: sel ? placeGold : placeLine, width: sel ? 1.5 : 1),
+                                    ),
+                                    child: Text(e, style: const TextStyle(fontSize: 20)),
+                                  ),
+                                );
+                              },
                             ),
-                            child: Text(e, style: const TextStyle(fontSize: 20)),
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              FormSection(
-                title: 'التصنيف',
-                icon: Icons.category_outlined,
-                subtitle: 'الفئة تجمع المزايا في النماذج والتطبيق',
-                children: [
-                  StaffField(controller: _category, label: 'الفئة', hint: 'عام، تقنيات، خدمات…'),
-                  if (cats.length > 1)
-                    ChoicePills<String>(
-                      options: cats,
-                      value: _category.text.trim(),
-                      labelOf: (c) => c,
-                      onChanged: (c) {
-                        _category.text = c;
-                        setState(() {});
-                      },
-                    ),
-                  const Text(
-                    'تظهر لأنواع الأماكن (اتركها كلها غير محددة لتظهر للجميع)',
-                    style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w700, color: placeInk2),
-                  ),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final t in _types)
-                        FilterChip(
-                          avatar: Icon(placeTypeIcon(t), size: 17, color: _applies.contains(t) ? Colors.white : placeInk2),
-                          label: Text(placeTypeLabel(t)),
-                          selected: _applies.contains(t),
-                          showCheckmark: false,
-                          selectedColor: placeInk,
-                          backgroundColor: Colors.white,
-                          side: BorderSide(color: _applies.contains(t) ? placeInk : placeLine),
-                          labelStyle: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontWeight: FontWeight.w800,
-                            color: _applies.contains(t) ? Colors.white : placeInk,
+                        ],
+                      ),
+                      FormSection(
+                        title: 'التصنيف',
+                        icon: Icons.category_outlined,
+                        subtitle: 'الفئة تجمع المزايا في النماذج والتطبيق',
+                        children: [
+                          StaffField(controller: _category, label: 'الفئة', hint: 'عام، تقنيات، خدمات…'),
+                          if (cats.length > 1)
+                            ChoicePills<String>(
+                              options: cats,
+                              value: _category.text.trim(),
+                              labelOf: (c) => c,
+                              onChanged: (c) {
+                                _category.text = c;
+                                setState(() {});
+                              },
+                            ),
+                          const Text(
+                            'تظهر لأنواع الأماكن (اتركها كلها غير محددة لتظهر للجميع)',
+                            style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w700, color: placeInk2),
                           ),
-                          onSelected: (v) {
-                            lightTap();
-                            setState(() {
-                              v ? _applies.add(t) : _applies.remove(t);
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (final t in _types)
+                                FilterChip(
+                                  avatar: Icon(placeTypeIcon(t), size: 17, color: _applies.contains(t) ? placeGold : placeInk2),
+                                  label: Text(placeTypeLabel(t)),
+                                  selected: _applies.contains(t),
+                                  showCheckmark: false,
+                                  selectedColor: placeInk,
+                                  backgroundColor: Colors.white,
+                                  materialTapTargetSize: MaterialTapTargetSize.padded,
+                                  side: BorderSide(color: _applies.contains(t) ? placeInk : placeLine),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(StaffRadius.sm)),
+                                  labelStyle: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontWeight: FontWeight.w800,
+                                    color: _applies.contains(t) ? Colors.white : placeInk,
+                                  ),
+                                  onSelected: (v) {
+                                    lightTap();
+                                    setState(() {
+                                      v ? _applies.add(t) : _applies.remove(t);
+                                      _dirty = true;
+                                    });
+                                  },
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      FormSection(
+                        title: 'العرض',
+                        icon: Icons.tune_rounded,
+                        children: [
+                          StaffField(
+                            controller: _sort,
+                            label: 'الترتيب',
+                            helper: 'الأصغر يظهر أولاً داخل الفئة',
+                            keyboard: TextInputType.number,
+                            digitsOnly: true,
+                            validator: (v) {
+                              final n = parseNumber(v);
+                              if (n == null) return null;
+                              return n < 0 ? 'قيمة غير صالحة' : null;
+                            },
+                          ),
+                          ToggleRow(
+                            title: 'مفعّلة',
+                            subtitle: 'المعطّلة لا تظهر في نماذج الأماكن الجديدة',
+                            value: _active,
+                            onChanged: (v) => setState(() {
+                              _active = v;
                               _dirty = true;
-                            });
-                          },
-                        ),
+                            }),
+                          ),
+                          StaffField(
+                            controller: _slug,
+                            label: 'المعرّف (slug)',
+                            ltr: true,
+                            helper: _isEdit ? 'فريد — غيّره بحذر' : 'اختياري — يُولّد تلقائياً من الاسم',
+                            validator: (v) {
+                              final t = v?.trim() ?? '';
+                              if (_isEdit && t.isEmpty) return 'المعرّف مطلوب';
+                              if (t.contains(' ')) return 'بدون مسافات';
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                ],
+                ),
               ),
-              FormSection(
-                title: 'العرض',
-                icon: Icons.tune_rounded,
-                children: [
-                  StaffField(
-                    controller: _sort,
-                    label: 'الترتيب',
-                    helper: 'الأصغر يظهر أولاً داخل الفئة',
-                    keyboard: TextInputType.number,
-                    digitsOnly: true,
-                    validator: (v) {
-                      final n = parseNumber(v);
-                      if (n == null) return null;
-                      return n < 0 ? 'قيمة غير صالحة' : null;
-                    },
-                  ),
-                  ToggleRow(
-                    title: 'مفعّلة',
-                    subtitle: 'المعطّلة لا تظهر في نماذج الأماكن الجديدة',
-                    value: _active,
-                    onChanged: (v) => setState(() {
-                      _active = v;
-                      _dirty = true;
-                    }),
-                  ),
-                  StaffField(
-                    controller: _slug,
-                    label: 'المعرّف (slug)',
-                    ltr: true,
-                    helper: _isEdit ? 'فريد — غيّره بحذر' : 'اختياري — يُولّد تلقائياً من الاسم',
-                    validator: (v) {
-                      final t = v?.trim() ?? '';
-                      if (_isEdit && t.isEmpty) return 'المعرّف مطلوب';
-                      if (t.contains(' ')) return 'بدون مسافات';
-                      return null;
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// معاينة حيّة لشكل الميزة كما ستظهر.
+  Widget _preview() {
+    final icon = _icon.text.trim();
+    final name = _nameAr.text.trim();
+    return Pad(
+      child: StaffCard(
+        color: placeGoldSoft,
+        borderColor: placeGold.withValues(alpha: .35),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(StaffRadius.md)),
+              child: icon.isEmpty
+                  ? const Icon(Icons.sell_outlined, color: placeBrass)
+                  : Text(icon, style: const TextStyle(fontSize: 24)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name.isEmpty ? 'اسم الميزة' : name,
+                      style: catalogTitleStyle.copyWith(color: name.isEmpty ? placeInk3 : placeInk)),
+                  Text(
+                    '${_category.text.trim().isEmpty ? 'عام' : _category.text.trim()} · '
+                    '${_applies.isEmpty ? 'كل الأنواع' : _types.where(_applies.contains).map(placeTypeLabel).join('، ')}',
+                    style: catalogSubtitleStyle,
+                  ),
+                ],
+              ),
+            ),
+            StatusChip(_active ? 'مفعّلة' : 'معطّلة', color: _active ? placeSuccess : placeDanger, dense: true),
+          ],
         ),
       ),
     );

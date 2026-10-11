@@ -6,7 +6,8 @@ import '../../../core/format.dart';
 import '../../../core/shift.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
-import '../../../widgets/ui.dart';
+import '../../../widgets/kit.dart';
+import '../../../widgets/ui.dart' show FilterChipsRow;
 import 'catalog_common.dart';
 import 'report_charts.dart';
 
@@ -126,68 +127,103 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     final hasData = _summary.isNotEmpty || _analytics.isNotEmpty;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('التقارير'),
-        bottom: _loading && hasData
-            ? const PreferredSize(preferredSize: Size.fromHeight(2), child: LinearProgressIndicator(minHeight: 2))
-            : null,
-      ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: !hasData && _loading
-            ? const CatalogLoadingView()
-            : !hasData && _error != null
-                ? CatalogErrorView(message: _error!, onRetry: _load)
-                : ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.only(bottom: 32),
-                    children: [
-                      FilterChipsRow(
-                        options: _presets,
-                        selected: _preset,
-                        onSelected: _selectPreset,
-                        labelBuilder: _presetLabel,
-                      ),
-                      _rangeCaption(),
-                      if (_error != null)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                          child: Text('تعذّر التحديث: $_error',
-                              style: const TextStyle(fontFamily: 'Cairo', color: placeDanger, fontWeight: FontWeight.w700)),
-                        ),
-                      _kpis(),
-                      _revenueTrend(),
-                      _byStatus(),
-                      _byWorld(),
-                      _byProvince(),
-                      _topProperties(),
-                      _topProviders(),
-                      if (_stats.isNotEmpty) ..._overall(),
-                    ],
-                  ),
-      ),
+    return StaffPage(
+      title: 'التقارير',
+      subtitle: _rangeText(),
+      bottom: catalogBusyBar(_loading && hasData),
+      onRefresh: _load,
+      actions: [
+        IconButton(
+          tooltip: 'فترة مخصصة',
+          onPressed: () => _selectPreset('custom'),
+          icon: Icon(Icons.date_range_rounded, color: _preset == 'custom' ? placeBrass : placeInk),
+        ),
+      ],
+      slivers: [
+        SliverToBoxAdapter(
+          child: FilterChipsRow(
+            options: _presets,
+            selected: _preset,
+            onSelected: _selectPreset,
+            labelBuilder: _presetLabel,
+          ),
+        ),
+        if (!hasData && _loading) ...[
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(StaffSpace.page, 4, StaffSpace.page, 0),
+            sliver: SliverGrid(
+              gridDelegate: _kpiGrid,
+              delegate: SliverChildBuilderDelegate((_, _) => const SkeletonBox(height: 128), childCount: 6),
+            ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 16)),
+          const SkeletonSliver(count: 3, height: 200),
+        ] else if (!hasData && _error != null)
+          SliverFillRemaining(hasScrollBody: false, child: CatalogErrorView(message: _error!, onRetry: _load))
+        else ...[
+          if (_error != null)
+            SliverToBoxAdapter(
+              child: CatalogAlertBanner(
+                text: 'تعذّر التحديث: $_error',
+                icon: Icons.cloud_off_rounded,
+                onTap: _load,
+              ),
+            ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(StaffSpace.page, 4, StaffSpace.page, 0),
+            sliver: SliverGrid(
+              gridDelegate: _kpiGrid,
+              delegate: SliverChildListDelegate(_kpis()),
+            ),
+          ),
+          SliverList(
+            delegate: SliverChildListDelegate([
+              _revenueTrend(),
+              _byStatus(),
+              _byWorld(),
+              _byProvince(),
+              _topProperties(),
+              _topProviders(),
+              if (_stats.isNotEmpty) ..._overall(),
+            ]),
+          ),
+        ],
+      ],
     );
   }
 
-  Widget _rangeCaption() {
+  static const _kpiGrid = SliverGridDelegateWithFixedCrossAxisCount(
+    crossAxisCount: 2,
+    mainAxisSpacing: 10,
+    crossAxisSpacing: 10,
+    mainAxisExtent: 128,
+  );
+
+  String _rangeText() {
     final r = _range;
-    final f = DateFormat('d MMMM yyyy', 'ar');
+    final f = DateFormat('d MMM yyyy', 'ar');
     final days = r.end.difference(r.start).inDays + 1;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
-      child: Text(
-        days == 1 ? f.format(r.start) : '${f.format(r.start)} — ${f.format(r.end)} · $days يوماً',
-        style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.w700, color: placeInk2),
-      ),
+    return days == 1 ? f.format(r.start) : '${f.format(r.start)} — ${f.format(r.end)} · $days يوماً';
+  }
+
+  /// قسم موحّد: عنوان + بطاقة بيضاء تحتوي الرسم.
+  Widget _card(String title, Widget child, {String? trailing, IconData? icon}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionHeader(title, subtitle: trailing),
+        Pad(
+          bottom: 0,
+          child: StaffCard(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: child,
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _card(String title, Widget child, {String? trailing, IconData? icon}) {
-    return FormSection(title: title, subtitle: trailing, icon: icon, children: [child]);
-  }
-
-  Widget _kpis() {
+  List<Widget> _kpis() {
     final a = _analytics;
     final s = _summary;
     final change = a['revenueChangePct'];
@@ -246,18 +282,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         caption: 'من ${fmtCount(a['totalCustomers'])} عميل',
       ),
     ];
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
-      child: GridView.count(
-        crossAxisCount: 2,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 1.55,
-        children: cards,
-      ),
-    );
+    return cards;
   }
 
   Widget _revenueTrend() {
@@ -393,7 +418,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
             child: Text('$rank',
                 style: TextStyle(
-                    fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: rank <= 3 ? placeBrass : placeInk2)),
+                    fontFamily: 'Montserrat', fontWeight: FontWeight.w900, color: rank <= 3 ? placeBrass : placeInk2)),
           ),
           const SizedBox(width: 10),
           Container(width: 3, height: 30, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
@@ -441,28 +466,41 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ('مكالمات فائتة اليوم', 'missedCallsToday', placeDanger),
     ];
     return [
-      const SectionLabel('نظرة عامة على المنصة', trailing: 'كل الأوقات'),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-        child: Column(
+      const SectionHeader('نظرة عامة على المنصة', subtitle: 'كل الأوقات'),
+      Pad(
+        bottom: 0,
+        child: GridView(
+          shrinkWrap: true,
+          padding: EdgeInsets.zero,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            mainAxisExtent: 118,
+          ),
           children: [
-            Row(children: [
-              StatTile(label: 'المستخدمون', value: fmtCount(s['users'])),
-              const SizedBox(width: 10),
-              StatTile(label: 'الأماكن', value: fmtCount(s['properties']), accent: placeShiftEvening),
-            ]),
-            const SizedBox(height: 10),
-            Row(children: [
-              StatTile(label: 'حجوزات فعّالة', value: fmtCount(s['bookings'])),
-              const SizedBox(width: 10),
-              StatTile(label: 'حجوزات هذا الشهر', value: fmtCount(s['monthlyBookings']), accent: placeBrass),
-            ]),
-            const SizedBox(height: 10),
-            Row(children: [
-              StatTile(label: 'إجمالي الإيراد', value: fmtCompact(asNum(s['totalRevenue'])), accent: placeSuccess),
-              const SizedBox(width: 10),
-              StatTile(label: 'أماكن مميزة', value: fmtCount(s['featuredProperties'])),
-            ]),
+            KpiTile(label: 'المستخدمون', value: fmtCount(s['users']), icon: Icons.people_alt_outlined, color: placeInfo),
+            KpiTile(label: 'الأماكن', value: fmtCount(s['properties']), icon: Icons.home_work_outlined, color: placeShiftEvening),
+            KpiTile(label: 'حجوزات فعّالة', value: fmtCount(s['bookings']), icon: Icons.event_note_outlined, color: placeInk),
+            KpiTile(
+              label: 'حجوزات هذا الشهر',
+              value: fmtCount(s['monthlyBookings']),
+              icon: Icons.calendar_month_outlined,
+              color: placeBrass,
+            ),
+            KpiTile(
+              label: 'إجمالي الإيراد',
+              value: fmtCompact(asNum(s['totalRevenue'])),
+              icon: Icons.payments_outlined,
+              color: placeSuccess,
+            ),
+            KpiTile(
+              label: 'أماكن مميزة',
+              value: fmtCount(s['featuredProperties']),
+              icon: Icons.workspace_premium_outlined,
+              color: placeGold,
+            ),
           ],
         ),
       ),
@@ -493,7 +531,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     children: [
                       Text(fmtCount(s[key]),
                           style: TextStyle(
-                              fontFamily: 'Cairo',
+                              fontFamily: 'Montserrat',
                               fontWeight: FontWeight.w900,
                               color: asNum(s[key]) > 0 ? color : placeInk2)),
                       const SizedBox(width: 6),

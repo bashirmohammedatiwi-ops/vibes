@@ -8,6 +8,7 @@ import '../../../core/format.dart';
 import '../../../core/session.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
+import '../../../widgets/kit.dart';
 import '../../../widgets/ui.dart';
 import 'content_common.dart';
 
@@ -27,20 +28,20 @@ CouponState couponStateOf(Map<String, dynamic> c) {
 }
 
 String couponStateLabel(CouponState s) => switch (s) {
-      CouponState.active => 'فعّال',
-      CouponState.scheduled => 'لم يبدأ',
-      CouponState.expired => 'منتهي',
-      CouponState.exhausted => 'مستنفد',
-      CouponState.inactive => 'موقوف',
-    };
+  CouponState.active => 'فعّال',
+  CouponState.scheduled => 'لم يبدأ',
+  CouponState.expired => 'منتهي',
+  CouponState.exhausted => 'مستنفد',
+  CouponState.inactive => 'موقوف',
+};
 
 Color couponStateColor(CouponState s) => switch (s) {
-      CouponState.active => placeSuccess,
-      CouponState.scheduled => placeShiftMorning,
-      CouponState.expired => placeDanger,
-      CouponState.exhausted => const Color(0xFFB45309),
-      CouponState.inactive => placeInk2,
-    };
+  CouponState.active => placeSuccess,
+  CouponState.scheduled => placeShiftMorning,
+  CouponState.expired => placeDanger,
+  CouponState.exhausted => const Color(0xFFB45309),
+  CouponState.inactive => placeInk2,
+};
 
 String couponDiscountText(Map<String, dynamic> c) {
   final v = asDouble(c['discountValue']) ?? 0;
@@ -160,9 +161,7 @@ class _AdminCouponsScreenState extends State<AdminCouponsScreen> {
     final ok = await confirmDialog(
       context,
       title: 'حذف ${row['code']}؟',
-      message: used
-          ? 'هذا الكوبون مستخدم سابقاً، لذلك سيتم إيقافه بدلاً من حذفه للحفاظ على السجل.'
-          : 'سيُحذف الكوبون نهائياً.',
+      message: used ? 'هذا الكوبون مستخدم سابقاً، لذلك سيتم إيقافه بدلاً من حذفه للحفاظ على السجل.' : 'سيُحذف الكوبون نهائياً.',
       confirmLabel: used ? 'إيقاف' : 'حذف',
       danger: true,
     );
@@ -187,9 +186,7 @@ class _AdminCouponsScreenState extends State<AdminCouponsScreen> {
   }
 
   Future<void> _openEditor([Map<String, dynamic>? row]) async {
-    final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => CouponEditorScreen(coupon: row)),
-    );
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => CouponEditorScreen(coupon: row)));
     if (saved == true && mounted) _load(silent: true);
   }
 
@@ -197,83 +194,102 @@ class _AdminCouponsScreenState extends State<AdminCouponsScreen> {
   Widget build(BuildContext context) {
     final rows = _visible;
     final hasMore = _page < _totalPages;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('الكوبونات'),
+    final filtered = _q.isNotEmpty || _filter != 'ALL';
+    final state = contentStateSliver(
+      loading: _loading,
+      error: _error,
+      isEmpty: rows.isEmpty && !hasMore,
+      onRetry: _load,
+      emptyIcon: Icons.local_offer_outlined,
+      emptyTitle: filtered ? 'لا كوبونات مطابقة' : 'لا توجد كوبونات',
+      emptySubtitle: _canWrite && !filtered ? 'أنشئ أول كوبون خصم' : null,
+      emptyActionLabel: _canWrite && !filtered ? 'كوبون جديد' : null,
+      onEmptyAction: () => _openEditor(),
+      skeletonHeight: 132,
+    );
+    return ContentAutoLoad(
+      hasMore: hasMore && !_loading && _error == null,
+      loading: _loadingMore,
+      onLoadMore: _loadMore,
+      child: StaffPage(
+        title: 'الكوبونات',
+        subtitle: _loading ? 'جارٍ التحميل…' : '$_total كوبون',
+        onRefresh: () => _load(silent: true),
         actions: [
-          IconButton(
-            tooltip: 'تجربة كوبون',
-            icon: const Icon(Icons.fact_check_outlined),
-            onPressed: () => showCouponTester(context),
-          ),
+          IconButton(tooltip: 'تجربة كوبون', icon: const Icon(Icons.fact_check_outlined), onPressed: () => showCouponTester(context)),
         ],
-      ),
-      floatingActionButton: _canWrite
-          ? FloatingActionButton.extended(
-              onPressed: () => _openEditor(),
-              backgroundColor: placeInk,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('كوبون جديد', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800)),
-            )
-          : null,
-      body: Column(
-        children: [
+        floatingActionButton: _canWrite
+            ? FloatingActionButton.extended(
+                onPressed: () => _openEditor(),
+                backgroundColor: placeInk,
+                foregroundColor: Colors.white,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text(
+                  'كوبون جديد',
+                  style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800),
+                ),
+              )
+            : null,
+        bottom: ContentToolbar(
+          height: kContentToolbarHeight,
+          children: [
+            ContentSearchField(
+              hint: 'ابحث برمز الكوبون',
+              onChanged: (v) {
+                _q = v;
+                _load(silent: _rows.isNotEmpty);
+              },
+            ),
+            ContentChips<String>(
+              selected: _filter,
+              options: [
+                for (final f in _filters)
+                  ContentChip(f, f == 'ALL' ? 'الكل' : couponStateLabel(CouponState.values.byName(f)), count: f == 'ALL' ? _total : null),
+              ],
+              onSelected: (v) {
+                final serverChanged =
+                    (v == 'active' || v == 'scheduled' || v == 'exhausted') !=
+                    (_filter == 'active' || _filter == 'scheduled' || _filter == 'exhausted');
+                setState(() => _filter = v);
+                if (serverChanged) _load();
+              },
+            ),
+          ],
+        ),
+        slivers: [
           if (!_canWrite)
-            const ReadOnlyNotice(message: 'عرض فقط — لإنشاء أو تعديل الكوبونات اطلب صلاحية «تعديل الكوبونات».'),
-          ContentSearchField(
-            hint: 'ابحث برمز الكوبون',
-            onChanged: (v) {
-              _q = v;
-              _load(silent: _rows.isNotEmpty);
-            },
-          ),
-          FilterChipsRow(
-            options: _filters,
-            selected: _filter,
-            labelBuilder: (f) => f == 'ALL' ? 'الكل' : couponStateLabel(CouponState.values.byName(f)),
-            onSelected: (v) {
-              final serverChanged = (v == 'active' || v == 'scheduled' || v == 'exhausted') !=
-                  (_filter == 'active' || _filter == 'scheduled' || _filter == 'exhausted');
-              setState(() => _filter = v);
-              if (serverChanged) _load();
-            },
-          ),
-          Expanded(
-            child: ContentListBody(
-              loading: _loading,
-              error: _error,
-              isEmpty: rows.isEmpty && !hasMore,
-              onRefresh: () => _load(silent: true),
-              emptyTitle: _q.isNotEmpty || _filter != 'ALL' ? 'لا كوبونات مطابقة' : 'لا توجد كوبونات',
-              emptySubtitle: _canWrite && _q.isEmpty && _filter == 'ALL' ? 'أنشئ أول كوبون خصم' : null,
-              child: ListView.builder(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(16, 0, 16, _canWrite ? 100 : 24),
-                itemCount: rows.length + 1,
-                itemBuilder: (context, i) {
-                  if (i == rows.length) {
-                    return LoadMoreFooter(
-                      hasMore: hasMore,
-                      loading: _loadingMore,
-                      onLoadMore: _loadMore,
-                      total: _filter == 'ALL' ? _total : null,
-                    );
-                  }
-                  final row = rows[i];
-                  return _CouponCard(
-                    key: ValueKey(row['id']),
+            const SliverToBoxAdapter(child: ReadOnlyNotice(message: 'عرض فقط — لإنشاء أو تعديل الكوبونات اطلب صلاحية «تعديل الكوبونات».')),
+          if (state != null)
+            state
+          else ...[
+            SliverList.builder(
+              itemCount: rows.length,
+              itemBuilder: (context, i) {
+                final row = rows[i];
+                return Padding(
+                  key: ValueKey(row['id']),
+                  padding: const EdgeInsets.fromLTRB(StaffSpace.page, 0, StaffSpace.page, 10),
+                  child: _CouponCard(
                     row: row,
                     canWrite: _canWrite,
                     busy: _busy.contains('${row['id']}'),
                     onToggle: (v) => _toggle(row, v),
                     onEdit: () => _openEditor(row),
                     onDelete: () => _delete(row),
-                  );
-                },
+                  ),
+                );
+              },
+            ),
+            SliverToBoxAdapter(
+              child: LoadMoreFooter(
+                hasMore: hasMore,
+                loading: _loadingMore,
+                onLoadMore: _loadMore,
+                total: _filter == 'ALL' ? _total : null,
               ),
             ),
-          ),
+          ],
+          if (_canWrite) const SliverToBoxAdapter(child: SizedBox(height: 72)),
         ],
       ),
     );
@@ -282,7 +298,6 @@ class _AdminCouponsScreenState extends State<AdminCouponsScreen> {
 
 class _CouponCard extends StatelessWidget {
   const _CouponCard({
-    super.key,
     required this.row,
     required this.canWrite,
     required this.busy,
@@ -298,6 +313,12 @@ class _CouponCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
+  void _copy(BuildContext context, String code) {
+    Clipboard.setData(ClipboardData(text: code));
+    lightTap();
+    showToast(context, 'نُسخ الرمز $code');
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = couponStateOf(row);
@@ -312,7 +333,6 @@ class _CouponCard extends StatelessWidget {
     final expires = parseDate(row['expiresAt']);
     final types = (row['appliesToTypes'] as List? ?? []).map((e) => '$e').toList();
     final property = asMap(row['property']);
-    final mono = Theme.of(context).extension<StaffBrand>()?.montserrat ?? const TextStyle();
 
     final meta = <(IconData, String)>[
       (Icons.confirmation_number_outlined, maxUses == null ? 'استُخدم $used · بلا حد' : 'استُخدم $used من ${asInt(maxUses)}'),
@@ -323,98 +343,106 @@ class _CouponCard extends StatelessWidget {
       (Icons.category_outlined, types.isEmpty ? 'كل الأنواع' : types.map(placeTypeLabel).join('، ')),
       if (property.isNotEmpty) (Icons.place_outlined, property['name']?.toString() ?? ''),
     ];
+    final usage = maxUses == null || asInt(maxUses) <= 0 ? null : (used / asInt(maxUses)).clamp(0.0, 1.0);
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: placeLine),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: canWrite ? onEdit : null,
-        onLongPress: () {
-          Clipboard.setData(ClipboardData(text: code));
-          lightTap();
-          showToast(context, 'نُسخ الرمز $code');
-        },
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 10, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return ContentRowCard(
+      padding: const EdgeInsetsDirectional.fromSTEB(12, 12, 8, 8),
+      onTap: canWrite ? onEdit : null,
+      onLongPress: () => _copy(context, code),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: placeBrass.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: placeBrass.withValues(alpha: 0.4)),
+              IconBox(icon: Icons.local_offer_rounded, color: color, size: 40),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      couponDiscountText(row),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, fontSize: 14.5, color: placeInk),
                     ),
-                    child: Text(
-                      code,
-                      textDirection: TextDirection.ltr,
-                      style: mono.copyWith(fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 1.2, color: placeInk),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  StatusPill(label: couponStateLabel(state), color: color),
-                  const Spacer(),
-                  if (canWrite)
-                    busy
-                        ? const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 14),
-                            child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: placeBrass)),
-                          )
-                        : Switch.adaptive(value: row['isActive'] == true, activeTrackColor: placeBrass, onChanged: onToggle),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                couponDiscountText(row),
-                style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 17, color: placeInk),
-              ),
-              if (description.isNotEmpty)
-                Text(description, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, color: placeInk2, height: 1.4)),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 12,
-                runSpacing: 4,
-                children: [
-                  for (final m in meta)
+                    const SizedBox(height: 2),
                     Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(m.$1, size: 14, color: placeInk2),
-                        const SizedBox(width: 4),
-                        Text(m.$2, style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, color: placeInk2, fontWeight: FontWeight.w600)),
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: placeGoldSoft.withValues(alpha: 0.7),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: placeBrass.withValues(alpha: 0.35)),
+                            ),
+                            child: Text(
+                              code,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textDirection: TextDirection.ltr,
+                              style: const TextStyle(
+                                fontFamily: 'Montserrat',
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12.5,
+                                letterSpacing: 1.1,
+                                color: placeInk,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        StatusChip(couponStateLabel(state), color: color, dense: true),
                       ],
                     ),
-                ],
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  CardAction(
-                    icon: Icons.copy_rounded,
-                    tooltip: 'نسخ الرمز',
-                    onTap: () {
-                      Clipboard.setData(ClipboardData(text: code));
-                      lightTap();
-                      showToast(context, 'نُسخ الرمز $code');
-                    },
-                  ),
-                  if (canWrite) ...[
-                    CardAction(icon: Icons.edit_outlined, tooltip: 'تعديل', onTap: onEdit),
-                    CardAction(icon: Icons.delete_outline_rounded, tooltip: 'حذف', onTap: onDelete, color: placeDanger),
                   ],
-                ],
+                ),
               ),
+              if (canWrite)
+                busy
+                    ? const InlineBusy()
+                    : Switch.adaptive(value: row['isActive'] == true, activeTrackColor: placeGold, onChanged: onToggle),
             ],
           ),
-        ),
+          if (description.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              description,
+              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, height: 1.4, fontWeight: FontWeight.w600),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 4,
+            children: [for (final m in meta) ContentMeta(icon: m.$1, text: m.$2)],
+          ),
+          if (usage != null) ...[
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: usage,
+                minHeight: 5,
+                backgroundColor: placeLineSoft,
+                color: usage >= 1 ? placeDanger : placeGold,
+              ),
+            ),
+          ],
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              CardAction(icon: Icons.copy_rounded, tooltip: 'نسخ الرمز', onTap: () => _copy(context, code)),
+              if (canWrite) ...[
+                const SizedBox(width: 6),
+                CardAction(icon: Icons.edit_outlined, tooltip: 'تعديل', onTap: onEdit),
+                const SizedBox(width: 6),
+                CardAction(icon: Icons.delete_outline_rounded, tooltip: 'حذف', onTap: onDelete, color: placeDanger),
+              ],
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -594,211 +622,205 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
         final leave = await confirmDiscard(context);
         if (leave && mounted) Navigator.of(this.context).pop();
       },
-      child: Scaffold(
-        appBar: AppBar(title: Text(_isEdit ? 'تعديل الكوبون' : 'كوبون جديد')),
-        body: Form(
+      child: ContentEditorScaffold(
+        bar: BottomActionBar(label: _isEdit ? 'حفظ التعديلات' : 'إنشاء الكوبون', busy: _saving, onPressed: _save),
+        child: Form(
           key: _formKey,
           onChanged: _touch,
-          child: ListView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: const EdgeInsets.only(top: 4, bottom: 24),
-            children: [
-              FormSection(
-                title: 'الرمز',
-                subtitle: 'يُحوّل لحروف كبيرة تلقائياً',
-                icon: Icons.local_offer_outlined,
+          child: StaffPage(
+            title: _isEdit ? 'تعديل الكوبون' : 'كوبون جديد',
+            subtitle: _isEdit ? (widget.coupon!['code']?.toString() ?? '') : 'رمز خصم جديد للزبائن',
+            slivers: [
+              SliverList.list(
                 children: [
-                  TextFormField(
-                    controller: _code,
-                    textDirection: TextDirection.ltr,
-                    textAlign: TextAlign.left,
-                    textCapitalization: TextCapitalization.characters,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9_\-]')),
-                      _UpperCaseFormatter(),
-                    ],
-                    style: mono.copyWith(fontWeight: FontWeight.w800, letterSpacing: 1.4, color: placeInk),
-                    validator: (v) => (v == null || v.trim().length < 3) ? 'الرمز 3 أحرف على الأقل' : null,
-                    decoration: InputDecoration(
-                      labelText: 'رمز الكوبون',
-                      hintText: 'SUMMER25',
-                      suffixIcon: IconButton(
-                        tooltip: 'توليد رمز',
-                        icon: const Icon(Icons.casino_outlined),
-                        onPressed: _generateCode,
-                      ),
-                    ),
-                  ),
-                  StaffField(controller: _description, label: 'وصف داخلي (اختياري)', maxLines: 2),
-                ],
-              ),
-              FormSection(
-                title: 'قيمة الخصم',
-                icon: Icons.percent_rounded,
-                children: [
-                  ChoicePills<String>(
-                    options: const ['PERCENT', 'FIXED'],
-                    value: _type,
-                    labelOf: (t) => t == 'PERCENT' ? 'نسبة مئوية %' : 'مبلغ ثابت د.ع',
-                    iconOf: (t) => t == 'PERCENT' ? Icons.percent_rounded : Icons.payments_outlined,
-                    onChanged: (t) => setState(() {
-                      _type = t;
-                      _dirty = true;
-                    }),
-                  ),
-                  StaffField(
-                    controller: _value,
-                    label: _type == 'PERCENT' ? 'النسبة (0 - 100)' : 'المبلغ بالدينار',
-                    keyboard: const TextInputType.numberWithOptions(decimal: true),
-                    suffix: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Text(_type == 'PERCENT' ? '%' : 'د.ع',
-                          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, color: placeInk2)),
-                    ),
-                    validator: (v) {
-                      final n = parseNumber(v);
-                      if (n == null) return 'أدخل قيمة الخصم';
-                      if (n <= 0) return 'القيمة يجب أن تكون أكبر من صفر';
-                      if (_type == 'PERCENT' && n > 100) return 'النسبة لا تتجاوز 100%';
-                      return null;
-                    },
-                  ),
-                  StaffField(
-                    controller: _minTotal,
-                    label: 'الحد الأدنى لإجمالي الحجز (اختياري)',
-                    keyboard: TextInputType.number,
-                    validator: (v) {
-                      if ((v ?? '').trim().isEmpty) return null;
-                      final n = parseNumber(v);
-                      return (n == null || n < 0) ? 'قيمة غير صالحة' : null;
-                    },
-                  ),
-                ],
-              ),
-              FormSection(
-                title: 'حدود الاستخدام',
-                subtitle: 'اتركها فارغة لعدم التقييد',
-                icon: Icons.confirmation_number_outlined,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  FormSection(
+                    title: 'الرمز',
+                    subtitle: 'يُحوّل لحروف كبيرة تلقائياً',
+                    icon: Icons.local_offer_outlined,
                     children: [
-                      Expanded(
-                        child: StaffField(
-                          controller: _maxUses,
-                          label: 'الاستخدام الكلي',
-                          keyboard: TextInputType.number,
-                          digitsOnly: true,
-                          validator: _intValidator,
+                      TextFormField(
+                        controller: _code,
+                        textDirection: TextDirection.ltr,
+                        textAlign: TextAlign.left,
+                        textCapitalization: TextCapitalization.characters,
+                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9_\-]')), _UpperCaseFormatter()],
+                        style: mono.copyWith(fontWeight: FontWeight.w800, letterSpacing: 1.4, color: placeInk),
+                        validator: (v) => (v == null || v.trim().length < 3) ? 'الرمز 3 أحرف على الأقل' : null,
+                        decoration: InputDecoration(
+                          labelText: 'رمز الكوبون',
+                          hintText: 'SUMMER25',
+                          suffixIcon: IconButton(tooltip: 'توليد رمز', icon: const Icon(Icons.casino_outlined), onPressed: _generateCode),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: StaffField(
-                          controller: _perUser,
-                          label: 'لكل مستخدم',
-                          keyboard: TextInputType.number,
-                          digitsOnly: true,
-                          validator: _intValidator,
-                        ),
-                      ),
+                      StaffField(controller: _description, label: 'وصف داخلي (اختياري)', maxLines: 2),
                     ],
                   ),
-                  if (_isEdit)
-                    Text(
-                      'استُخدم حتى الآن ${asInt(widget.coupon!['usedCount'])} مرة',
-                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w600),
-                    ),
-                ],
-              ),
-              FormSection(
-                title: 'فترة الصلاحية',
-                subtitle: 'ينتهي الكوبون بنهاية يوم الانتهاء',
-                icon: Icons.date_range_outlined,
-                children: [
-                  DateField(
-                    label: 'يبدأ من',
-                    value: _startsAt,
-                    onChanged: (d) => setState(() {
-                      _startsAt = d;
-                      _dirty = true;
-                    }),
-                  ),
-                  DateField(
-                    label: 'ينتهي في',
-                    value: _expiresAt,
-                    firstDate: _startsAt,
-                    onChanged: (d) => setState(() {
-                      _expiresAt = d;
-                      _dirty = true;
-                    }),
-                  ),
-                ],
-              ),
-              FormSection(
-                title: 'نطاق التطبيق',
-                subtitle: 'بدون اختيار = كل الأنواع وكل الأماكن',
-                icon: Icons.category_outlined,
-                children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                  FormSection(
+                    title: 'قيمة الخصم',
+                    icon: Icons.percent_rounded,
                     children: [
-                      for (final t in const ['FARM', 'HALL', 'DECORATION'])
-                        FilterChip(
-                          label: Text(placeTypeLabel(t)),
-                          avatar: Icon(placeTypeIcon(t), size: 17, color: _types.contains(t) ? Colors.white : placeInk2),
-                          selected: _types.contains(t),
-                          showCheckmark: false,
-                          selectedColor: placeInk,
-                          side: BorderSide(color: _types.contains(t) ? placeInk : placeLine),
-                          labelStyle: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontWeight: FontWeight.w800,
-                            color: _types.contains(t) ? Colors.white : placeInk,
+                      ChoicePills<String>(
+                        options: const ['PERCENT', 'FIXED'],
+                        value: _type,
+                        labelOf: (t) => t == 'PERCENT' ? 'نسبة مئوية %' : 'مبلغ ثابت د.ع',
+                        iconOf: (t) => t == 'PERCENT' ? Icons.percent_rounded : Icons.payments_outlined,
+                        onChanged: (t) => setState(() {
+                          _type = t;
+                          _dirty = true;
+                        }),
+                      ),
+                      StaffField(
+                        controller: _value,
+                        label: _type == 'PERCENT' ? 'النسبة (0 - 100)' : 'المبلغ بالدينار',
+                        keyboard: const TextInputType.numberWithOptions(decimal: true),
+                        suffix: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Text(
+                            _type == 'PERCENT' ? '%' : 'د.ع',
+                            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, color: placeInk2),
                           ),
-                          onSelected: (on) => setState(() {
-                            on ? _types.add(t) : _types.remove(t);
-                            _dirty = true;
-                          }),
+                        ),
+                        validator: (v) {
+                          final n = parseNumber(v);
+                          if (n == null) return 'أدخل قيمة الخصم';
+                          if (n <= 0) return 'القيمة يجب أن تكون أكبر من صفر';
+                          if (_type == 'PERCENT' && n > 100) return 'النسبة لا تتجاوز 100%';
+                          return null;
+                        },
+                      ),
+                      StaffField(
+                        controller: _minTotal,
+                        label: 'الحد الأدنى لإجمالي الحجز (اختياري)',
+                        keyboard: TextInputType.number,
+                        validator: (v) {
+                          if ((v ?? '').trim().isEmpty) return null;
+                          final n = parseNumber(v);
+                          return (n == null || n < 0) ? 'قيمة غير صالحة' : null;
+                        },
+                      ),
+                    ],
+                  ),
+                  FormSection(
+                    title: 'حدود الاستخدام',
+                    subtitle: 'اتركها فارغة لعدم التقييد',
+                    icon: Icons.confirmation_number_outlined,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: StaffField(
+                              controller: _maxUses,
+                              label: 'الاستخدام الكلي',
+                              keyboard: TextInputType.number,
+                              digitsOnly: true,
+                              validator: _intValidator,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: StaffField(
+                              controller: _perUser,
+                              label: 'لكل مستخدم',
+                              keyboard: TextInputType.number,
+                              digitsOnly: true,
+                              validator: _intValidator,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_isEdit)
+                        Text(
+                          'استُخدم حتى الآن ${asInt(widget.coupon!['usedCount'])} مرة',
+                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w600),
                         ),
                     ],
                   ),
-                  PropertyPickerField(
-                    label: 'حصر بمكان محدد (اختياري)',
-                    name: _propertyName,
-                    placeholder: 'كل الأماكن',
-                    onPick: _pickProperty,
-                    onClear: () => setState(() {
-                      _propertyId = null;
-                      _propertyName = null;
-                      _dirty = true;
-                    }),
+                  FormSection(
+                    title: 'فترة الصلاحية',
+                    subtitle: 'ينتهي الكوبون بنهاية يوم الانتهاء',
+                    icon: Icons.date_range_outlined,
+                    children: [
+                      DateField(
+                        label: 'يبدأ من',
+                        value: _startsAt,
+                        onChanged: (d) => setState(() {
+                          _startsAt = d;
+                          _dirty = true;
+                        }),
+                      ),
+                      DateField(
+                        label: 'ينتهي في',
+                        value: _expiresAt,
+                        firstDate: _startsAt,
+                        onChanged: (d) => setState(() {
+                          _expiresAt = d;
+                          _dirty = true;
+                        }),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              FormSection(
-                title: 'الحالة',
-                icon: Icons.toggle_on_outlined,
-                children: [
-                  ToggleRow(
-                    title: 'فعّال',
-                    subtitle: 'يمكن للزبائن استخدامه ضمن الشروط أعلاه',
-                    value: _active,
-                    onChanged: (v) => setState(() {
-                      _active = v;
-                      _dirty = true;
-                    }),
+                  FormSection(
+                    title: 'نطاق التطبيق',
+                    subtitle: 'بدون اختيار = كل الأنواع وكل الأماكن',
+                    icon: Icons.category_outlined,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final t in const ['FARM', 'HALL', 'DECORATION'])
+                            FilterChip(
+                              label: Text(placeTypeLabel(t)),
+                              avatar: Icon(placeTypeIcon(t), size: 17, color: _types.contains(t) ? Colors.white : placeInk2),
+                              selected: _types.contains(t),
+                              showCheckmark: false,
+                              selectedColor: placeInk,
+                              side: BorderSide(color: _types.contains(t) ? placeInk : placeLine),
+                              labelStyle: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontWeight: FontWeight.w800,
+                                color: _types.contains(t) ? Colors.white : placeInk,
+                              ),
+                              onSelected: (on) => setState(() {
+                                on ? _types.add(t) : _types.remove(t);
+                                _dirty = true;
+                              }),
+                            ),
+                        ],
+                      ),
+                      PropertyPickerField(
+                        label: 'حصر بمكان محدد (اختياري)',
+                        name: _propertyName,
+                        placeholder: 'كل الأماكن',
+                        onPick: _pickProperty,
+                        onClear: () => setState(() {
+                          _propertyId = null;
+                          _propertyName = null;
+                          _dirty = true;
+                        }),
+                      ),
+                    ],
+                  ),
+                  FormSection(
+                    title: 'الحالة',
+                    icon: Icons.toggle_on_outlined,
+                    children: [
+                      ToggleRow(
+                        title: 'فعّال',
+                        subtitle: 'يمكن للزبائن استخدامه ضمن الشروط أعلاه',
+                        value: _active,
+                        onChanged: (v) => setState(() {
+                          _active = v;
+                          _dirty = true;
+                        }),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ],
           ),
-        ),
-        bottomNavigationBar: BottomActionBar(
-          label: _isEdit ? 'حفظ التعديلات' : 'إنشاء الكوبون',
-          busy: _saving,
-          onPressed: _save,
         ),
       ),
     );
@@ -871,9 +893,14 @@ class _CouponTesterSheetState extends State<_CouponTesterSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('تجربة كوبون', style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900, color: placeInk)),
-          const Text('تحقق من صلاحية رمز على مكان ومبلغ محددين',
-              style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2)),
+          const Text(
+            'تجربة كوبون',
+            style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900, color: placeInk),
+          ),
+          const Text(
+            'تحقق من صلاحية رمز على مكان ومبلغ محددين',
+            style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2),
+          ),
           const SizedBox(height: 14),
           TextField(
             controller: _code,
@@ -903,7 +930,10 @@ class _CouponTesterSheetState extends State<_CouponTesterSheet> {
               padding: const EdgeInsets.all(12),
               margin: const EdgeInsets.only(bottom: 10),
               decoration: BoxDecoration(color: placeDanger.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
-              child: Text(_error!, style: const TextStyle(fontFamily: 'Cairo', color: placeDanger, fontWeight: FontWeight.w700)),
+              child: Text(
+                _error!,
+                style: const TextStyle(fontFamily: 'Cairo', color: placeDanger, fontWeight: FontWeight.w700),
+              ),
             ),
           if (_result != null)
             Container(
@@ -913,13 +943,19 @@ class _CouponTesterSheetState extends State<_CouponTesterSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('✓ الكوبون ${_result!['code'] ?? ''} صالح',
-                      style: const TextStyle(fontFamily: 'Cairo', color: placeSuccess, fontWeight: FontWeight.w900)),
+                  Text(
+                    '✓ الكوبون ${_result!['code'] ?? ''} صالح',
+                    style: const TextStyle(fontFamily: 'Cairo', color: placeSuccess, fontWeight: FontWeight.w900),
+                  ),
                   const SizedBox(height: 4),
-                  Text('الخصم: ${formatIqd(_result!['discount'])}',
-                      style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: placeInk)),
-                  Text('بعد الخصم: ${formatIqd(_result!['totalAfterDiscount'])}',
-                      style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeInk)),
+                  Text(
+                    'الخصم: ${formatIqd(_result!['discount'])}',
+                    style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: placeInk),
+                  ),
+                  Text(
+                    'بعد الخصم: ${formatIqd(_result!['totalAfterDiscount'])}',
+                    style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeInk),
+                  ),
                 ],
               ),
             ),

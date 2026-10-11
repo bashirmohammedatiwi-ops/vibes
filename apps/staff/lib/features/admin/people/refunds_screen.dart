@@ -4,8 +4,8 @@ import '../../../core/api.dart';
 import '../../../core/format.dart';
 import '../../../core/session.dart';
 import '../../../core/theme.dart';
-import '../../../widgets/chat_ui.dart';
 import '../../../widgets/form_kit.dart';
+import '../../../widgets/kit.dart';
 import '../../ops/ops_booking_detail.dart';
 import 'people_common.dart';
 
@@ -20,8 +20,8 @@ class AdminRefundsScreen extends StatefulWidget {
 }
 
 class _AdminRefundsScreenState extends State<AdminRefundsScreen> {
-  final _refunds = PagedListController();
-  final _cancellations = PagedListController();
+  final _list = PagedListController();
+  late String _type = widget.initialTab == 1 ? 'cancellations' : 'refunds';
   String _status = 'PENDING';
   String _q = '';
 
@@ -85,72 +85,47 @@ class _AdminRefundsScreenState extends State<AdminRefundsScreen> {
       await withBusy(context, () => Api.send(path, method: 'PATCH', body: {'approve': approve, if (note!.isNotEmpty) 'adminNote': note}));
     }, success: approve ? 'تمت الموافقة' : 'تم رفض الطلب');
     if (done) {
-      _refunds.reload();
-      _cancellations.reload();
+      _list.reload();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final key = '$_status|$_q';
-    return DefaultTabController(
-      length: 2,
-      initialIndex: widget.initialTab,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('الاسترداد والإلغاء'),
-          bottom: const TabBar(
-            labelColor: placeInk,
-            indicatorColor: placeBrass,
-            labelStyle: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900),
-            tabs: [Tab(text: 'طلبات الاسترداد'), Tab(text: 'طلبات الإلغاء')],
-          ),
+    final refunds = _type == 'refunds';
+    return PagedStaffPage(
+      title: 'الاسترداد والإلغاء',
+      subtitle: refunds ? 'طلبات استرداد الزبائن مع سياق الدفع' : 'طلبات إلغاء الحجوزات',
+      resetKey: '$_type|$_status|$_q',
+      controller: _list,
+      fetch: refunds ? _fetchRefunds : _fetchCancellations,
+      search: SearchBox(
+        hint: 'الزبون، الهاتف أو المكان',
+        padding: SearchBox.barPadding,
+        onChanged: (v) => setState(() => _q = v),
+      ),
+      filters: FilterBar(groups: [
+        FilterGroup(
+          options: const ['refunds', 'cancellations'],
+          selected: _type,
+          labelOf: (v) => v == 'refunds' ? 'طلبات الاسترداد' : 'طلبات الإلغاء',
+          onSelected: (v) => setState(() => _type = v),
         ),
-        body: Column(
-          children: [
-            SearchBox(hint: 'الزبون، الهاتف أو المكان', onChanged: (v) => setState(() => _q = v)),
-            FilterBar(groups: [
-              FilterGroup(
-                options: const ['PENDING', 'APPROVED', 'REJECTED', 'all'],
-                selected: _status,
-                labelOf: (v) => v == 'all' ? 'الكل' : requestStatusLabel(v),
-                onSelected: (v) => setState(() => _status = v),
-              ),
-            ]),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  PagedList(
-                    key: ValueKey('r|$key'),
-                    controller: _refunds,
-                    fetch: _fetchRefunds,
-                    emptyTitle: _status == 'PENDING' ? 'لا طلبات استرداد معلّقة' : 'لا طلبات',
-                    itemBuilder: (context, r, _) => _RequestCard(
-                      row: r,
-                      refund: true,
-                      canReview: Session.can('refunds.review'),
-                      onApprove: () => _review(refund: true, row: r, approve: true),
-                      onReject: () => _review(refund: true, row: r, approve: false),
-                    ),
-                  ),
-                  PagedList(
-                    key: ValueKey('c|$key'),
-                    controller: _cancellations,
-                    fetch: _fetchCancellations,
-                    emptyTitle: _status == 'PENDING' ? 'لا طلبات إلغاء معلّقة' : 'لا طلبات',
-                    itemBuilder: (context, c, _) => _RequestCard(
-                      row: c,
-                      refund: false,
-                      canReview: Session.can('cancellations.review'),
-                      onApprove: () => _review(refund: false, row: c, approve: true),
-                      onReject: () => _review(refund: false, row: c, approve: false),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        FilterGroup(
+          options: const ['PENDING', 'APPROVED', 'REJECTED', 'all'],
+          selected: _status,
+          labelOf: (v) => v == 'all' ? 'الكل' : requestStatusLabel(v),
+          onSelected: (v) => setState(() => _status = v),
         ),
+      ]),
+      emptyIcon: refunds ? Icons.currency_exchange_rounded : Icons.event_busy_rounded,
+      emptyTitle: _status == 'PENDING' ? (refunds ? 'لا طلبات استرداد معلّقة' : 'لا طلبات إلغاء معلّقة') : 'لا طلبات',
+      skeletonHeight: 150,
+      itemBuilder: (context, r, _) => _RequestCard(
+        row: r,
+        refund: refunds,
+        canReview: Session.can(refunds ? 'refunds.review' : 'cancellations.review'),
+        onApprove: () => _review(refund: refunds, row: r, approve: true),
+        onReject: () => _review(refund: refunds, row: r, approve: false),
       ),
     );
   }
@@ -182,54 +157,63 @@ class _RequestCard extends StatelessWidget {
     final phone = user['phone']?.toString();
     final pending = status == 'PENDING';
     return ListCard(
-      highlight: pending ? placeBrass.withValues(alpha: 0.35) : null,
+      highlight: pending ? placeGold.withValues(alpha: 0.45) : null,
       onTap: booking['id'] != null && Session.can('bookings.read')
           ? () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => OpsBookingDetailScreen(bookingId: '${booking['id']}')))
           : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          ListRow(
+            leading: Avatar(name, size: 44, color: refund ? placeWarning : placeDanger),
+            title: name,
+            subtitleWidget: (phone ?? '').isEmpty ? null : PhoneText(phone),
+            trailing: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                StatusChip(requestStatusLabel(status), color: requestStatusColor(status), dense: true),
+                const SizedBox(height: 4),
+                MetaText(relativeAr(row['createdAt'])),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          // المبلغ
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ContactAvatar(name: name, phone: phone, size: 42),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      formatIqd(refund ? row['amount'] : row['expectedRefund']),
-                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.w900, color: placeInk),
-                    ),
-                    Text(
-                      refund ? 'مبلغ الاسترداد المطلوب' : 'الاسترداد المتوقع',
-                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: placeInk2),
-                    ),
-                  ],
-                ),
+              Text(
+                refund ? 'مبلغ الاسترداد المطلوب' : 'الاسترداد المتوقع',
+                style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w600, color: placeInk2),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  StatusPill(label: requestStatusLabel(status), color: requestStatusColor(status)),
-                  const SizedBox(height: 4),
-                  Text(relativeAr(row['createdAt']), style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: placeInk2)),
-                ],
+              const Spacer(),
+              Text(
+                formatIqd(refund ? row['amount'] : row['expectedRefund']),
+                style: const TextStyle(fontFamily: 'Cairo', fontSize: 17, fontWeight: FontWeight.w900, color: placeInk),
               ),
             ],
           ),
           const SizedBox(height: 10),
+          // سياق الحجز والدفع
           Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: placePaper, borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: placePaper, borderRadius: BorderRadius.circular(StaffRadius.md)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(nonEmpty(asMap(booking['property'])['name'], 'حجز'),
-                    style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeBrass)),
+                Row(
+                  children: [
+                    const Icon(Icons.event_note_rounded, size: 16, color: placeBrass),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(nonEmpty(asMap(booking['property'])['name'], 'حجز'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeInk)),
+                    ),
+                  ],
+                ),
                 Text(
-                  '$name · ${fmtDay(booking['startDate'])} · ${formatIqd(booking['totalPrice'])}',
+                  '${fmtDay(booking['startDate'])} · ${formatIqd(booking['totalPrice'])}',
                   style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 6),
@@ -237,14 +221,16 @@ class _RequestCard extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 4,
                   children: [
-                    StatusPill(
-                      label: 'الحجز: ${bookingStatusLabel(booking['status']?.toString())}',
+                    StatusChip(
+                      'الحجز: ${bookingStatusLabel(booking['status']?.toString())}',
                       color: bookingStatusColor(booking['status']?.toString()),
+                      dense: true,
                     ),
                     if (payment['status'] != null)
-                      StatusPill(
-                        label: 'الدفع: ${paymentStatusAr(payment['status']?.toString())} ${formatIqd(payment['amount'])}',
+                      StatusChip(
+                        'الدفع: ${paymentStatusAr(payment['status']?.toString())} ${formatIqd(payment['amount'])}',
                         color: paymentStatusColor(payment['status']?.toString()),
+                        dense: true,
                       ),
                   ],
                 ),
@@ -252,27 +238,27 @@ class _RequestCard extends StatelessWidget {
             ),
           ),
           if (reason.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text('سبب الزبون: $reason', style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.w700, color: placeInk, height: 1.5)),
           ],
           if (adminNote.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text('ملاحظة الإدارة: $adminNote', style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, height: 1.5)),
           ],
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Row(
             children: [
               PhoneButtons(phone: phone, compact: true),
               const Spacer(),
               if (pending && canReview) ...[
                 OutlinedButton(
-                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10)),
+                  style: OutlinedButton.styleFrom(foregroundColor: placeDanger, minimumSize: const Size(0, 44)),
                   onPressed: onReject,
                   child: const Text('رفض'),
                 ),
                 const SizedBox(width: 8),
                 FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: placeSuccess, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10)),
+                  style: FilledButton.styleFrom(backgroundColor: placeSuccess, minimumSize: const Size(0, 44)),
                   onPressed: onApprove,
                   child: const Text('موافقة'),
                 ),

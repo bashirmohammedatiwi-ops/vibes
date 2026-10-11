@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/api.dart';
 import '../core/connectivity.dart';
@@ -10,13 +11,12 @@ import '../core/staff_notifications.dart';
 import '../core/theme.dart';
 import '../core/staff_capabilities.dart';
 import 'account.dart';
-import 'bookings.dart';
 import 'calls.dart';
 import 'chat_room.dart';
 import 'chats_hub.dart';
-import 'now.dart';
+import 'today.dart';
+import 'admin/bookings/bookings_desk.dart';
 import 'ops/ops_hub.dart';
-import 'requests.dart';
 
 class OfficeShell extends StatefulWidget {
   const OfficeShell({super.key});
@@ -206,49 +206,46 @@ class _OfficeShellState extends State<OfficeShell> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final opsBadge = (_badges['bookings'] ?? 0) +
-        (_badges['requests'] ?? 0) +
+    final opsBadge = (_badges['requests'] ?? 0) +
         (_badges['pendingProperties'] ?? 0) +
         (_badges['pendingPayments'] ?? 0);
     final pages = <Widget>[
-      NowScreen(onPresenceChanged: _onPresenceChanged, onNavigate: goTo, badges: _badges),
+      TodayScreen(onPresenceChanged: _onPresenceChanged, onOpenInbox: () => goTo(StaffTab.chats)),
       if (Session.can('inbox.read')) const ChatsHubScreen(),
-      if (Session.can('bookings.read')) const BookingsScreen(),
+      if (Session.can('bookings.read') || Session.can('bookings.write')) const BookingsDeskScreen(),
       if (hasOpsAccess) OpsHubScreen(onNavigate: goTo),
-      if (Session.can('cancellations.review') || Session.can('refunds.review')) const RequestsScreen(),
       const AccountScreen(),
     ];
+    final todayBadge = (_badges['waiting'] ?? 0);
     final destinations = <NavigationDestination>[
       NavigationDestination(
-        icon: _badgeIcon(Icons.headset_mic_outlined, _badges['waiting'] ?? 0),
-        selectedIcon: _badgeIcon(Icons.headset_mic, _badges['waiting'] ?? 0),
-        label: 'الآن',
+        icon: _badgeIcon(Icons.space_dashboard_outlined, todayBadge),
+        selectedIcon: _badgeIcon(Icons.space_dashboard_rounded, todayBadge),
+        label: 'اليوم',
       ),
       if (Session.can('inbox.read'))
         NavigationDestination(
-          icon: _badgeIcon(Icons.chat_bubble_outline, _badges['chats'] ?? 0),
-          selectedIcon: _badgeIcon(Icons.chat_bubble, _badges['chats'] ?? 0),
-          label: 'محادثات',
+          icon: _badgeIcon(Icons.forum_outlined, _badges['chats'] ?? 0),
+          selectedIcon: _badgeIcon(Icons.forum_rounded, _badges['chats'] ?? 0),
+          label: 'الوارد',
         ),
-      if (Session.can('bookings.read'))
+      if (Session.can('bookings.read') || Session.can('bookings.write'))
         NavigationDestination(
-          icon: _badgeIcon(Icons.event_available_outlined, _badges['bookings'] ?? 0),
-          selectedIcon: _badgeIcon(Icons.event_available, _badges['bookings'] ?? 0),
+          icon: _badgeIcon(Icons.event_note_outlined, _badges['bookings'] ?? 0),
+          selectedIcon: _badgeIcon(Icons.event_note_rounded, _badges['bookings'] ?? 0),
           label: 'الحجوزات',
         ),
       if (hasOpsAccess)
         NavigationDestination(
-          icon: _badgeIcon(Icons.dashboard_customize_outlined, opsBadge),
-          selectedIcon: _badgeIcon(Icons.dashboard_customize, opsBadge),
-          label: 'عمليات',
+          icon: _badgeIcon(Icons.grid_view_outlined, opsBadge),
+          selectedIcon: _badgeIcon(Icons.grid_view_rounded, opsBadge),
+          label: 'الإدارة',
         ),
-      if (Session.can('cancellations.review') || Session.can('refunds.review'))
-        NavigationDestination(
-          icon: _badgeIcon(Icons.rule_outlined, _badges['requests'] ?? 0),
-          selectedIcon: _badgeIcon(Icons.rule, _badges['requests'] ?? 0),
-          label: 'الطلبات',
-        ),
-      const NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'حسابي'),
+      const NavigationDestination(
+        icon: Icon(Icons.account_circle_outlined),
+        selectedIcon: Icon(Icons.account_circle_rounded),
+        label: 'حسابي',
+      ),
     ];
     final safeIndex = _index.clamp(0, pages.length - 1);
 
@@ -275,10 +272,16 @@ class _OfficeShellState extends State<OfficeShell> with WidgetsBindingObserver {
                 ],
               ),
             ),
-            bottomNavigationBar: NavigationBar(
-              selectedIndex: safeIndex,
-              onDestinationSelected: (value) => setState(() => _index = value),
-              destinations: destinations,
+            bottomNavigationBar: DecoratedBox(
+              decoration: const BoxDecoration(border: Border(top: BorderSide(color: placeLine))),
+              child: NavigationBar(
+                selectedIndex: safeIndex,
+                onDestinationSelected: (value) {
+                  if (value != safeIndex) HapticFeedback.selectionClick();
+                  setState(() => _index = value);
+                },
+                destinations: destinations,
+              ),
             ),
           ),
           if (_incoming != null)

@@ -5,7 +5,7 @@ import '../../../core/api.dart';
 import '../../../core/format.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
-import '../../../widgets/ui.dart';
+import '../../../widgets/kit.dart';
 import 'booking_kit.dart';
 import 'booking_manage.dart';
 import 'booking_wizard.dart';
@@ -162,8 +162,7 @@ class _AdminBookingsListScreenState extends State<AdminBookingsListScreen> {
     final result = await showModalBottomSheet<BookingFilters>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: placePaper,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      useSafeArea: true,
       builder: (_) => _FiltersSheet(initial: _filters.copy()),
     );
     if (result == null) return;
@@ -228,27 +227,38 @@ class _AdminBookingsListScreenState extends State<AdminBookingsListScreen> {
     }
   }
 
+  int? _statusCount(String s) {
+    final st = _stats;
+    if (st == null) return null;
+    return switch (s) {
+      'ALL' => (asNum(st['total']) ?? 0).toInt(),
+      'PENDING' => (asNum(st['pending']) ?? 0).toInt(),
+      'CONFIRMED' => (asNum(st['confirmed']) ?? 0).toInt(),
+      'COMPLETED' => (asNum(st['completed']) ?? 0).toInt(),
+      _ => null,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: _selecting
-          ? AppBar(
-              backgroundColor: placeInk,
-              foregroundColor: Colors.white,
-              leading: IconButton(onPressed: () => setState(_selected.clear), icon: const Icon(Icons.close_rounded)),
-              title: Text('${_selected.length} محدد', style: const TextStyle(color: Colors.white)),
-              actions: [
-                TextButton(
-                  onPressed: () => setState(() => _selected.addAll(_rows.map((r) => '${r['id']}'))),
-                  child: const Text('تحديد الكل', style: TextStyle(color: Colors.white)),
-                ),
-              ],
-            )
-          : AppBar(title: const Text('كل الحجوزات')),
+    final page = StaffPage(
+      title: _selecting ? '${_selected.length} محدد' : 'كل الحجوزات',
+      subtitle: _selecting ? 'اختر الحجوزات ثم طبّق الحالة' : (_stats == null ? null : 'الإيراد المؤكد ${formatIqd(_stats!['revenue'])}'),
+      onRefresh: _refresh,
+      leading: _selecting
+          ? IconButton(tooltip: 'إلغاء التحديد', onPressed: () => setState(_selected.clear), icon: const Icon(Icons.close_rounded))
+          : null,
+      actions: [
+        if (_selecting)
+          IconButton(
+            tooltip: 'تحديد الكل',
+            onPressed: () => setState(() => _selected.addAll(_rows.map((r) => '${r['id']}'))),
+            icon: const Icon(Icons.select_all_rounded),
+          ),
+      ],
       floatingActionButton: !_selecting && canWriteBookings
           ? FloatingActionButton(
-              backgroundColor: placeInk,
-              foregroundColor: Colors.white,
+              heroTag: 'list-new-booking',
               tooltip: 'حجز جديد',
               onPressed: () async {
                 await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NewBookingWizardScreen()));
@@ -257,101 +267,127 @@ class _AdminBookingsListScreenState extends State<AdminBookingsListScreen> {
               child: const Icon(Icons.add_rounded),
             )
           : null,
-      bottomNavigationBar: _selecting
-          ? BottomActionBar(
-              label: 'تغيير حالة المحدد (${_selected.length})',
-              busy: _bulkBusy,
-              onPressed: _bulk,
-              secondaryLabel: 'إلغاء التحديد',
-              onSecondary: () => setState(_selected.clear),
-            )
-          : null,
-      body: NotificationListener<ScrollNotification>(
-        onNotification: (n) {
-          if (n.metrics.pixels > n.metrics.maxScrollExtent - 300) _loadMore();
-          return false;
-        },
-        child: AsyncList(
+      slivers: [
+        if (!_selecting) SliverToBoxAdapter(child: _StatsStrip(stats: _stats, onPick: _pickStatus)),
+        SliverToBoxAdapter(
+          child: Pad(
+            top: 4,
+            bottom: 6,
+            child: BookingSearchField(
+              controller: _search,
+              hint: 'هاتف، اسم الزبون، أو المكان',
+              onChanged: (_) {
+                setState(() {});
+                _debounce.run(_reset);
+              },
+              onClear: _reset,
+              trailing: Badge(
+                isLabelVisible: _filters.extraCount > 0,
+                label: Text('${_filters.extraCount}'),
+                backgroundColor: placeBrass,
+                child: SizedBox(
+                  width: 52,
+                  height: 52,
+                  child: IconButton.filled(
+                    style: IconButton.styleFrom(
+                      backgroundColor: _filters.extraCount > 0 ? placeInk : Colors.white,
+                      foregroundColor: _filters.extraCount > 0 ? Colors.white : placeInk,
+                      side: const BorderSide(color: placeLine),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(StaffRadius.md)),
+                    ),
+                    onPressed: _openFilters,
+                    icon: const Icon(Icons.tune_rounded),
+                    tooltip: 'فلاتر',
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: SegmentFilter<String>(
+            options: const ['ALL', ...allBookingStatuses],
+            value: _filters.status ?? 'ALL',
+            labelOf: (s) => s == 'ALL' ? 'الكل' : statusLabel(s),
+            colorOf: (s) => s == 'ALL' ? null : statusColor(s),
+            countOf: _statusCount,
+            onChanged: _pickStatus,
+          ),
+        ),
+        if (_filters.extraCount > 0) SliverToBoxAdapter(child: _activeFilters()),
+        if (!_loading && _error == null)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(StaffSpace.page, 8, StaffSpace.page, 8),
+              child: Text(
+                canWriteBookings && !_selecting ? '$_total نتيجة · اضغط مطولاً للتحديد الجماعي' : '$_total نتيجة',
+                style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+        ...asyncSlivers(
           loading: _loading,
           error: _error,
           isEmpty: _rows.isEmpty,
-          onRefresh: _refresh,
+          onRetry: _refresh,
+          skeletonHeight: 140,
+          emptyIcon: Icons.search_off_rounded,
           emptyTitle: 'لا حجوزات مطابقة',
           emptySubtitle: 'جرّب تغيير الفلاتر أو البحث',
-          padding: const EdgeInsets.only(bottom: 96),
-          header: [
-            _StatsStrip(stats: _stats),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _search,
-                      onChanged: (_) => _debounce.run(_reset),
-                      textInputAction: TextInputAction.search,
-                      decoration: InputDecoration(
-                        hintText: 'هاتف، اسم الزبون، أو المكان',
-                        prefixIcon: const Icon(Icons.search_rounded),
-                        suffixIcon: _search.text.isEmpty
-                            ? null
-                            : IconButton(
-                                onPressed: () {
-                                  _search.clear();
-                                  _reset();
-                                },
-                                icon: const Icon(Icons.close_rounded, size: 18),
-                              ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Badge(
-                    isLabelVisible: _filters.extraCount > 0,
-                    label: Text('${_filters.extraCount}'),
-                    backgroundColor: placeBrass,
-                    child: IconButton.filledTonal(
-                      onPressed: _openFilters,
-                      icon: const Icon(Icons.tune_rounded),
-                      tooltip: 'فلاتر',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            FilterChipsRow(
-              options: const ['ALL', ...allBookingStatuses],
-              selected: _filters.status ?? 'ALL',
-              labelBuilder: (s) => s == 'ALL' ? 'الكل' : statusLabel(s),
-              onSelected: (s) {
-                setState(() => _filters.status = s == 'ALL' ? null : s);
-                _reset();
+          slivers: [
+            SliverList.builder(
+              itemCount: _rows.length,
+              itemBuilder: (_, i) {
+                final row = _rows[i];
+                return BookingRowCard(
+                  row: row,
+                  selectable: _selecting,
+                  selected: _selected.contains('${row['id']}'),
+                  onTap: () => _selecting ? _toggle('${row['id']}') : _open(row),
+                  onLongPress: canWriteBookings ? () => _toggle('${row['id']}') : null,
+                );
               },
             ),
-            if (_filters.extraCount > 0) _activeFilters(),
-            if (!_loading && _error == null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
-                child: Text(
-                  canWriteBookings ? '$_total نتيجة · اضغط مطولاً للتحديد الجماعي' : '$_total نتيجة',
-                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w700),
-                ),
-              ),
+            SliverToBoxAdapter(child: LoadMoreTile(hasMore: _page < _totalPages, loading: _loadingMore, onPressed: _loadMore)),
           ],
-          children: [
-            for (final row in _rows)
-              BookingRowCard(
-                row: row,
-                selectable: _selecting,
-                selected: _selected.contains('${row['id']}'),
-                onTap: () => _selecting ? _toggle('${row['id']}') : _open(row),
-                onLongPress: canWriteBookings ? () => _toggle('${row['id']}') : null,
-              ),
-            LoadMoreTile(hasMore: _page < _totalPages, loading: _loadingMore, onPressed: _loadMore),
-          ],
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 64)),
+      ],
+    );
+    return PopScope(
+      canPop: !_selecting,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) setState(_selected.clear);
+      },
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (n) {
+          if (n.metrics.axis == Axis.vertical && n.metrics.pixels > n.metrics.maxScrollExtent - 300) _loadMore();
+          return false;
+        },
+        child: withBottomBar(
+          page,
+          _selecting
+              ? BookingActionBar(
+                  children: [
+                    BarButton(label: 'إلغاء التحديد', primary: false, onPressed: () => setState(_selected.clear)),
+                    BarButton(
+                      label: 'تغيير حالة المحدد (${_selected.length})',
+                      icon: Icons.swap_horiz_rounded,
+                      flex: 2,
+                      busy: _bulkBusy,
+                      onPressed: _bulk,
+                    ),
+                  ],
+                )
+              : null,
         ),
       ),
     );
+  }
+
+  void _pickStatus(String s) {
+    setState(() => _filters.status = s == 'ALL' ? null : s);
+    _reset();
   }
 
   Widget _activeFilters() {
@@ -367,7 +403,7 @@ class _AdminBookingsListScreenState extends State<AdminBookingsListScreen> {
     ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+      padding: const EdgeInsets.fromLTRB(StaffSpace.page, 6, StaffSpace.page, 0),
       child: Row(children: [for (final c in chips) Padding(padding: const EdgeInsetsDirectional.only(end: 6), child: c)]),
     );
   }
@@ -375,9 +411,9 @@ class _AdminBookingsListScreenState extends State<AdminBookingsListScreen> {
   Widget _chip(String label, VoidCallback clear) => InputChip(
         label: Text(label),
         labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w800, color: placeBrass),
-        backgroundColor: placeBrass.withValues(alpha: 0.08),
-        side: BorderSide(color: placeBrass.withValues(alpha: 0.3)),
-        visualDensity: VisualDensity.compact,
+        backgroundColor: placeGoldSoft,
+        side: BorderSide(color: placeGold.withValues(alpha: 0.4)),
+        deleteIconColor: placeBrass,
         onDeleted: () {
           setState(clear);
           _reset();
@@ -385,41 +421,40 @@ class _AdminBookingsListScreenState extends State<AdminBookingsListScreen> {
       );
 }
 
+/// شريط أرقام أفقي قابل للنقر (يضبط فلتر الحالة).
 class _StatsStrip extends StatelessWidget {
-  const _StatsStrip({required this.stats});
+  const _StatsStrip({required this.stats, required this.onPick});
   final Map<String, dynamic>? stats;
+  final ValueChanged<String> onPick;
 
   @override
   Widget build(BuildContext context) {
     final s = stats;
-    String n(String k) => s == null ? '—' : '${s[k] ?? 0}';
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-          child: Row(
-            children: [
-              StatTile(label: 'الإجمالي', value: n('total')),
-              const SizedBox(width: 8),
-              StatTile(label: 'بانتظار التأكيد', value: n('pending'), accent: placeShiftMorning),
-              const SizedBox(width: 8),
-              StatTile(label: 'مؤكدة', value: n('confirmed'), accent: placeSuccess),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: Row(
-            children: [
-              StatTile(label: 'مكتملة', value: n('completed'), accent: const Color(0xFF2563EB)),
-              const SizedBox(width: 8),
-              StatTile(label: 'خارجية', value: n('external'), accent: placeShiftEvening),
-              const SizedBox(width: 8),
-              StatTile(label: 'الإيراد المؤكد', value: s == null ? '—' : formatIqd(s['revenue']).replaceAll(' د.ع', ''), accent: placeBrass),
-            ],
-          ),
-        ),
-      ],
+    if (s == null) return const SizedBox.shrink(); // الإحصاءات ثانوية
+    String n(String k) => '${s[k] ?? 0}';
+    final tiles = [
+      KpiTile(label: 'الإجمالي', value: n('total'), icon: Icons.event_note_rounded, onTap: () => onPick('ALL')),
+      KpiTile(
+        label: 'بانتظار التأكيد',
+        value: n('pending'),
+        icon: Icons.hourglass_top_rounded,
+        color: placeWarning,
+        alert: (asNum(s['pending']) ?? 0) > 0,
+        onTap: () => onPick('PENDING'),
+      ),
+      KpiTile(label: 'مؤكدة', value: n('confirmed'), icon: Icons.verified_rounded, color: placeSuccess, onTap: () => onPick('CONFIRMED')),
+      KpiTile(label: 'مكتملة', value: n('completed'), icon: Icons.task_alt_rounded, color: placeInfo, onTap: () => onPick('COMPLETED')),
+      KpiTile(label: 'خارجية', value: n('external'), icon: Icons.public_rounded, color: placeShiftEvening),
+    ];
+    return SizedBox(
+      height: 124,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(StaffSpace.page, 4, StaffSpace.page, 4),
+        itemCount: tiles.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
+        itemBuilder: (_, i) => SizedBox(width: 128, child: tiles[i]),
+      ),
     );
   }
 }
@@ -439,7 +474,7 @@ class _FiltersSheetState extends State<_FiltersSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeInk)),
+        Text(title, style: const TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.w900, color: placeInk)),
         const SizedBox(height: 8),
         ChoicePills<String?>(options: options, value: value, labelOf: label, onChanged: (v) => setState(() => onChanged(v))),
       ],
@@ -457,12 +492,12 @@ class _FiltersSheetState extends State<_FiltersSheet> {
           Expanded(
             child: ListView(
               controller: scroll,
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+              padding: const EdgeInsets.fromLTRB(StaffSpace.page, 0, StaffSpace.page, 16),
               children: [
                 Row(
                   children: [
                     const Expanded(
-                      child: Text('فلاتر متقدّمة', style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900)),
+                      child: Text('فلاتر متقدّمة', style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900, color: placeInk)),
                     ),
                     TextButton(
                       onPressed: () => setState(() {
@@ -480,21 +515,36 @@ class _FiltersSheetState extends State<_FiltersSheet> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Text('المكان', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900)),
+                const Text('المكان', style: TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.w900, color: placeInk)),
                 const SizedBox(height: 8),
-                InputChip(
-                  avatar: const Icon(Icons.home_work_outlined, size: 18),
-                  label: Text(_f.property == null ? 'كل الأماكن' : '${_f.property!['name']}'),
-                  onPressed: () async {
+                StaffCard(
+                  radius: StaffRadius.md,
+                  padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 4, 4),
+                  onTap: () async {
                     final p = await pickProperty(context, approvedOnly: false);
                     if (p != null) setState(() => _f.property = p);
                   },
-                  onDeleted: _f.property == null ? null : () => setState(() => _f.property = null),
-                  backgroundColor: Colors.white,
-                  side: const BorderSide(color: placeLine),
+                  child: Row(
+                    children: [
+                      Icon(Icons.home_work_rounded, size: 20, color: _f.property == null ? placeInk3 : placeBrass),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _f.property == null ? 'كل الأماكن' : '${_f.property!['name']}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, color: placeInk),
+                        ),
+                      ),
+                      if (_f.property != null)
+                        IconButton(tooltip: 'مسح', onPressed: () => setState(() => _f.property = null), icon: const Icon(Icons.close_rounded, size: 20))
+                      else
+                        const Padding(padding: EdgeInsets.all(12), child: Icon(Icons.expand_more_rounded, color: placeInk3)),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 18),
-                const Text('تاريخ البداية', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900)),
+                const Text('تاريخ البداية', style: TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.w900, color: placeInk)),
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -538,15 +588,20 @@ class _FiltersSheetState extends State<_FiltersSheet> {
               ],
             ),
           ),
-          BottomActionBar(
-            label: 'تطبيق الفلاتر',
-            onPressed: () {
-              if (_f.from != null && _f.to != null && _f.to!.isBefore(_f.from!)) {
-                showToast(context, 'تاريخ «إلى» قبل «من»', error: true);
-                return;
-              }
-              Navigator.pop(context, _f);
-            },
+          BookingActionBar(
+            children: [
+              BarButton(
+                label: 'تطبيق الفلاتر',
+                icon: Icons.check_rounded,
+                onPressed: () {
+                  if (_f.from != null && _f.to != null && _f.to!.isBefore(_f.from!)) {
+                    showToast(context, 'تاريخ «إلى» قبل «من»', error: true);
+                    return;
+                  }
+                  Navigator.pop(context, _f);
+                },
+              ),
+            ],
           ),
         ],
       ),

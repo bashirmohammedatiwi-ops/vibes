@@ -51,13 +51,26 @@ Future<List<Property>> fetchProperties(
   return list.whereType<Map<String, dynamic>>().map(Property.fromJson).toList();
 }
 
+/// كل الأماكن المنشورة — صفحات من 100 حتى نهاية القائمة (حد أقصى 10 صفحات).
+/// كانت تُطلب أول 16 فقط، فتختفي الأماكن المضافة لاحقاً من القوائم والخريطة.
+Future<List<Property>> fetchAllProperties(ApiClient client, {String? type}) async {
+  const size = 100;
+  final all = <Property>[];
+  for (var page = 1; page <= 10; page++) {
+    final batch = await fetchProperties(client, type: type, page: page, pageSize: size);
+    all.addAll(batch);
+    if (batch.length < size) break;
+  }
+  return all;
+}
+
 final propertiesProvider = FutureProvider.family<List<Property>, String?>((
   ref,
   type,
 ) async {
   ref.keepAlive();
   final client = ref.watch(apiClientProvider);
-  return fetchProperties(client, type: type, pageSize: 16);
+  return fetchAllProperties(client, type: type);
 });
 
 final newPropertiesProvider = FutureProvider.family<List<Property>, String>((
@@ -198,7 +211,7 @@ class ReelsFeedController extends StateNotifier<AsyncValue<List<ReelItem>>> {
 
     // احتياط — نبنيها محلياً من الأماكن ذات الفيديو
     try {
-      final properties = await fetchProperties(_client, pageSize: 30);
+      final properties = await fetchAllProperties(_client);
       final reels = <ReelItem>[];
       for (final p in properties) {
         for (final m in p.media.where((m) => m.kind == MediaKind.reel)) {

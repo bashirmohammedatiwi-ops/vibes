@@ -4,6 +4,7 @@ import '../../../core/api.dart';
 import '../../../core/session.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
+import '../../../widgets/kit.dart';
 import '../../../widgets/ui.dart';
 import 'content_common.dart';
 
@@ -177,11 +178,7 @@ class _AdminReviewsScreenState extends State<AdminReviewsScreen> {
       final updated = asInt(res['updated']);
       final failed = asInt(res['failed']);
       if (mounted) {
-        showToast(
-          context,
-          failed > 0 ? 'تم $label $updated — فشل $failed' : 'تم $label $updated تقييم',
-          error: failed > 0 && updated == 0,
-        );
+        showToast(context, failed > 0 ? 'تم $label $updated — فشل $failed' : 'تم $label $updated تقييم', error: failed > 0 && updated == 0);
         _selected.clear();
         await _load(silent: true);
       }
@@ -199,123 +196,127 @@ class _AdminReviewsScreenState extends State<AdminReviewsScreen> {
   @override
   Widget build(BuildContext context) {
     final hasMore = _page < _totalPages;
+    final filtered = _q.isNotEmpty || _visible != 'ALL' || _minRating != 'ALL';
+    final state = contentStateSliver(
+      loading: _loading,
+      error: _error,
+      isEmpty: _rows.isEmpty,
+      onRetry: _load,
+      emptyIcon: Icons.star_outline_rounded,
+      emptyTitle: filtered ? 'لا تقييمات في هذا الفلتر' : 'لا توجد تقييمات بعد',
+      skeletonHeight: 150,
+    );
+    final allSelected = _selected.length == _rows.length;
     return PopScope(
       canPop: !_selecting,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop && _selecting) setState(_selected.clear);
       },
-      child: Scaffold(
-        appBar: _selecting
-            ? AppBar(
-                leading: IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => setState(_selected.clear)),
-                title: Text('${_selected.length} محدد'),
-                actions: [
-                  TextButton(
-                    onPressed: () => setState(() {
-                      if (_selected.length == _rows.length) {
-                        _selected.clear();
-                      } else {
-                        _selected.addAll(_rows.map((r) => '${r['id']}'));
-                      }
-                    }),
-                    child: Text(_selected.length == _rows.length ? 'إلغاء الكل' : 'تحديد الكل'),
-                  ),
-                ],
-              )
-            : AppBar(title: const Text('التقييمات')),
-        bottomNavigationBar: _selecting ? _bulkBar() : null,
-        body: Column(
-          children: [
-            if (!_canModerate)
-              const ReadOnlyNotice(message: 'تحتاج صلاحية «إدارة التقييمات والمنشورات» لعرض هذه الشاشة.'),
-            ContentSearchField(
-              hint: 'بحث في التعليق، الزبون، الهاتف أو المكان',
-              onChanged: (v) {
-                _q = v;
-                _load(silent: _rows.isNotEmpty);
-              },
-            ),
-            FilterChipsRow(
-              options: const ['ALL', 'true', 'false'],
-              selected: _visible,
-              labelBuilder: (v) => switch (v) {
-                'true' => 'ظاهرة',
-                'false' => 'مخفية',
-                _ => 'كل التقييمات',
-              },
-              onSelected: (v) {
-                setState(() => _visible = v);
-                _load();
-              },
-            ),
-            SizedBox(
-              height: 40,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  for (final r in const ['ALL', '5', '4', '3', '2'])
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(end: 8),
-                      child: ChoiceChip(
-                        avatar: r == 'ALL' ? null : const Icon(Icons.star_rounded, size: 16, color: placeBrass),
-                        label: Text(r == 'ALL' ? 'أي تقييم' : r == '5' ? '5 فقط' : '$r فأكثر'),
-                        selected: _minRating == r,
-                        onSelected: (_) {
-                          setState(() => _minRating = r);
-                          _load();
-                        },
-                        selectedColor: placeBrass.withValues(alpha: 0.2),
-                        side: BorderSide(color: _minRating == r ? placeBrass : placeLine),
-                        labelStyle: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, fontSize: 12.5),
-                        showCheckmark: false,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            if (!_loading && _error == null && _rows.isNotEmpty && !_selecting)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 6, 20, 0),
-                child: Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Text('اضغط مطولاً على تقييم لتحديد عدة تقييمات',
-                      style: TextStyle(fontFamily: 'Cairo', fontSize: 11.5, color: placeInk2)),
-                ),
-              ),
-            Expanded(
-              child: ContentListBody(
-                loading: _loading,
-                error: _error,
-                isEmpty: _rows.isEmpty,
-                onRefresh: () => _load(silent: true),
-                emptyTitle: 'لا تقييمات في هذا الفلتر',
-                child: ListView.builder(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                  itemCount: _rows.length + 1,
-                  itemBuilder: (context, i) {
-                    if (i == _rows.length) {
-                      return LoadMoreFooter(hasMore: hasMore, loading: _loadingMore, onLoadMore: _loadMore, total: _total);
+      child: ContentEditorScaffold(
+        bar: _selecting ? _bulkBar() : null,
+        child: ContentAutoLoad(
+          hasMore: hasMore && !_loading && _error == null,
+          loading: _loadingMore,
+          onLoadMore: _loadMore,
+          child: StaffPage(
+            title: _selecting ? '${_selected.length} محدد' : 'التقييمات',
+            subtitle: _selecting ? 'اختر إجراءً من الشريط السفلي' : (_loading ? 'جارٍ التحميل…' : '$_total تقييم'),
+            onRefresh: () => _load(silent: true),
+            leading: _selecting
+                ? IconButton(tooltip: 'إلغاء التحديد', icon: const Icon(Icons.close_rounded), onPressed: () => setState(_selected.clear))
+                : null,
+            actions: [
+              if (_selecting)
+                TextButton(
+                  onPressed: () => setState(() {
+                    if (allSelected) {
+                      _selected.clear();
+                    } else {
+                      _selected.addAll(_rows.map((r) => '${r['id']}'));
                     }
-                    final row = _rows[i];
-                    final id = '${row['id']}';
-                    return _ReviewCard(
-                      key: ValueKey(id),
-                      row: row,
-                      busy: _busy.contains(id),
-                      selecting: _selecting,
-                      selected: _selected.contains(id),
-                      onSelect: () => _toggleSelect(id),
-                      onVisibility: (v) => _setVisibility(row, v),
-                      onDelete: () => _delete(row),
-                    );
+                  }),
+                  child: Text(allSelected ? 'إلغاء الكل' : 'تحديد الكل'),
+                ),
+            ],
+            bottom: ContentToolbar(
+              height: kContentToolbarHeight,
+              children: [
+                ContentSearchField(
+                  hint: 'بحث في التعليق، الزبون، الهاتف أو المكان',
+                  onChanged: (v) {
+                    _q = v;
+                    _load(silent: _rows.isNotEmpty);
+                  },
+                ),
+                ContentChips<String>(
+                  selected: _visible,
+                  options: const [
+                    ContentChip('ALL', 'كل التقييمات'),
+                    ContentChip('true', 'ظاهرة', icon: Icons.visibility_outlined),
+                    ContentChip('false', 'مخفية', icon: Icons.visibility_off_outlined),
+                  ],
+                  onSelected: (v) {
+                    setState(() => _visible = v);
+                    _load();
+                  },
+                ),
+              ],
+            ),
+            slivers: [
+              if (!_canModerate)
+                const SliverToBoxAdapter(child: ReadOnlyNotice(message: 'تحتاج صلاحية «إدارة التقييمات والمنشورات» لعرض هذه الشاشة.')),
+              SliverToBoxAdapter(
+                child: ContentChips<String>(
+                  selected: _minRating,
+                  options: [
+                    for (final r in const ['ALL', '5', '4', '3', '2'])
+                      ContentChip(
+                        r,
+                        r == 'ALL'
+                            ? 'أي تقييم'
+                            : r == '5'
+                            ? '5 فقط'
+                            : '$r فأكثر',
+                        icon: r == 'ALL' ? null : Icons.star_rounded,
+                      ),
+                  ],
+                  onSelected: (r) {
+                    setState(() => _minRating = r);
+                    _load();
                   },
                 ),
               ),
-            ),
-          ],
+              if (!_loading && _error == null && _rows.isNotEmpty && !_selecting && _canModerate)
+                const SliverToBoxAdapter(child: ContentHint('اضغط مطولاً على تقييم لتحديد عدة تقييمات', icon: Icons.touch_app_outlined)),
+              if (state != null)
+                state
+              else ...[
+                SliverList.builder(
+                  itemCount: _rows.length,
+                  itemBuilder: (context, i) {
+                    final row = _rows[i];
+                    final id = '${row['id']}';
+                    return Padding(
+                      key: ValueKey(id),
+                      padding: const EdgeInsets.fromLTRB(StaffSpace.page, 0, StaffSpace.page, 10),
+                      child: _ReviewCard(
+                        row: row,
+                        busy: _busy.contains(id),
+                        selecting: _selecting,
+                        selected: _selected.contains(id),
+                        onSelect: () => _toggleSelect(id),
+                        onVisibility: (v) => _setVisibility(row, v),
+                        onDelete: () => _delete(row),
+                      ),
+                    );
+                  },
+                ),
+                SliverToBoxAdapter(
+                  child: LoadMoreFooter(hasMore: hasMore, loading: _loadingMore, onLoadMore: _loadMore, total: _total),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -324,9 +325,15 @@ class _AdminReviewsScreenState extends State<AdminReviewsScreen> {
   Widget _bulkBar() {
     return Container(
       padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + MediaQuery.of(context).padding.bottom),
-      decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: placeLine))),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: placeLine)),
+      ),
       child: _bulkBusy
-          ? const SizedBox(height: 48, child: Center(child: CircularProgressIndicator(color: placeBrass)))
+          ? const SizedBox(
+              height: 48,
+              child: Center(child: CircularProgressIndicator(color: placeGold)),
+            )
           : Row(
               children: [
                 Expanded(
@@ -361,7 +368,6 @@ class _AdminReviewsScreenState extends State<AdminReviewsScreen> {
 
 class _ReviewCard extends StatelessWidget {
   const _ReviewCard({
-    super.key,
     required this.row,
     required this.busy,
     required this.selecting,
@@ -388,139 +394,138 @@ class _ReviewCard extends StatelessWidget {
     final user = asMap(row['user']);
     final property = asMap(row['property']);
     final phone = user['phone']?.toString() ?? '';
+    final name = personLabel(user);
     final ratingColor = rating >= 4 ? placeSuccess : (rating == 3 ? placeShiftMorning : placeDanger);
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      decoration: BoxDecoration(
-        color: selected ? placeBrass.withValues(alpha: 0.07) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: selected ? placeBrass : placeLine, width: selected ? 1.5 : 1),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: selecting ? onSelect : null,
-        onLongPress: onSelect,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 10, 6),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return ContentRowCard(
+      selected: selected,
+      padding: const EdgeInsetsDirectional.fromSTEB(12, 12, 8, 6),
+      onTap: selecting ? onSelect : null,
+      onLongPress: onSelect,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  if (selecting)
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(end: 8),
-                      child: Icon(
-                        selected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                        color: selected ? placeBrass : placeInk2,
-                      ),
-                    ),
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundColor: placeInk.withValues(alpha: 0.06),
-                    child: Text(
-                      personLabel(user).characters.first,
-                      style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeInk),
-                    ),
+              if (selecting)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 8),
+                  child: Icon(
+                    selected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                    color: selected ? placeBrass : placeInk3,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          personLabel(user),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeInk),
-                        ),
-                        Text(
-                          [if (phone.isNotEmpty && phone != personLabel(user)) phone, relativeAr(row['createdAt'])].join(' · '),
-                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, color: placeInk2),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(color: ratingColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.star_rounded, size: 16, color: ratingColor),
-                        const SizedBox(width: 3),
-                        Text('$rating', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: ratingColor)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: List.generate(
-                  5,
-                  (i) => Icon(i < rating ? Icons.star_rounded : Icons.star_outline_rounded, size: 16, color: placeBrass),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                comment.isEmpty ? 'بدون تعليق' : comment,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 13.5,
-                  height: 1.5,
-                  color: comment.isEmpty ? placeInk2 : placeInk,
-                  fontStyle: comment.isEmpty ? FontStyle.italic : null,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  StatusPill(
-                    label: visible ? 'ظاهر' : 'مخفي',
-                    color: visible ? placeSuccess : placeInk2,
-                    icon: visible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                  ),
-                  if (property.isNotEmpty) StatusPill(label: property['name']?.toString() ?? '', color: placeBrass, icon: Icons.place_outlined),
-                ],
-              ),
-              if (note.isNotEmpty)
-                Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(top: 8),
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: placePaper, borderRadius: BorderRadius.circular(12)),
-                  child: Text('ملاحظة الإدارة: $note',
-                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w600)),
-                ),
-              if (!selecting)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+              Avatar(name, size: 40),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (busy)
-                      const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: placeBrass)),
-                      )
-                    else
-                      TextButton.icon(
-                        onPressed: () => onVisibility(!visible),
-                        icon: Icon(visible ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 18),
-                        label: Text(visible ? 'إخفاء' : 'إظهار'),
-                      ),
-                    CardAction(icon: Icons.delete_outline_rounded, tooltip: 'حذف', onTap: busy ? null : onDelete, color: placeDanger),
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, fontSize: 14.5, color: placeInk),
+                    ),
+                    Row(
+                      children: [
+                        if (phone.isNotEmpty && phone != name) ...[
+                          Text(
+                            phone,
+                            textDirection: TextDirection.ltr,
+                            style: const TextStyle(fontFamily: 'Montserrat', fontSize: 11.5, fontWeight: FontWeight.w600, color: placeInk2),
+                          ),
+                          const Text(' · ', style: TextStyle(color: placeInk3)),
+                        ],
+                        Flexible(
+                          child: Text(
+                            relativeAr(row['createdAt']),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, color: placeInk3, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
-                )
-              else
-                const SizedBox(height: 6),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                decoration: BoxDecoration(color: ratingColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(StaffRadius.sm)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.star_rounded, size: 16, color: ratingColor),
+                    const SizedBox(width: 3),
+                    Text(
+                      '$rating',
+                      style: TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w800, color: ratingColor),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-        ),
+          const SizedBox(height: 10),
+          Row(
+            children: List.generate(
+              5,
+              (i) => Icon(i < rating ? Icons.star_rounded : Icons.star_outline_rounded, size: 16, color: placeGold),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            comment.isEmpty ? 'بدون تعليق' : comment,
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 13.5,
+              height: 1.55,
+              fontWeight: FontWeight.w600,
+              color: comment.isEmpty ? placeInk3 : placeInk,
+              fontStyle: comment.isEmpty ? FontStyle.italic : null,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 10,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              StatusChip(visible ? 'ظاهر' : 'مخفي', color: visible ? placeSuccess : placeInk3, dense: true),
+              if (property.isNotEmpty) ContentMeta(icon: Icons.place_outlined, text: property['name']?.toString() ?? ''),
+            ],
+          ),
+          if (note.isNotEmpty)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: placePaper, borderRadius: BorderRadius.circular(StaffRadius.sm)),
+              child: Text(
+                'ملاحظة الإدارة: $note',
+                style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w600),
+              ),
+            ),
+          if (!selecting)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (busy)
+                  const InlineBusy()
+                else
+                  TextButton.icon(
+                    onPressed: () => onVisibility(!visible),
+                    icon: Icon(visible ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 18),
+                    label: Text(visible ? 'إخفاء' : 'إظهار'),
+                  ),
+                const SizedBox(width: 4),
+                CardAction(icon: Icons.delete_outline_rounded, tooltip: 'حذف', onTap: busy ? null : onDelete, color: placeDanger),
+              ],
+            )
+          else
+            const SizedBox(height: 6),
+        ],
       ),
     );
   }

@@ -6,6 +6,7 @@ import '../../core/net_image.dart';
 import '../../core/session.dart';
 import '../../core/theme.dart';
 import '../../widgets/form_kit.dart';
+import '../../widgets/kit.dart';
 import '../../widgets/ui.dart';
 import 'property_editor.dart';
 import 'property_media.dart';
@@ -96,9 +97,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       _changed = true;
       if (!mounted) return;
       showToast(context, 'تم إنشاء النسخة');
-      await Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => PropertyDetailScreen(propertyId: '${copy['id']}')),
-      );
+      await Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => PropertyDetailScreen(propertyId: '${copy['id']}')));
     } catch (e) {
       if (mounted) showToast(context, '$e', error: true);
     }
@@ -137,21 +136,42 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       },
       child: Scaffold(
         body: _loading
-            ? const Center(child: CircularProgressIndicator(color: placeBrass))
+            ? _skeleton()
             : _error != null
-                ? SafeArea(
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(_error!, style: const TextStyle(color: placeInk2)),
-                          const SizedBox(height: 12),
-                          FilledButton(onPressed: _load, child: const Text('إعادة المحاولة')),
-                        ],
-                      ),
-                    ),
-                  )
-                : _content(),
+            ? Scaffold(
+                appBar: AppBar(leading: BackButton(onPressed: () => Navigator.of(context).pop(_changed))),
+                body: Center(
+                  child: EmptyView(
+                    icon: Icons.cloud_off_rounded,
+                    title: 'تعذّر تحميل المكان',
+                    subtitle: _error,
+                    actionLabel: 'إعادة المحاولة',
+                    onAction: _load,
+                  ),
+                ),
+              )
+            : _content(),
+      ),
+    );
+  }
+
+  Widget _skeleton() {
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.all(StaffSpace.page),
+        physics: const NeverScrollableScrollPhysics(),
+        children: const [
+          SizedBox(height: 44),
+          SkeletonBox(height: 230),
+          SizedBox(height: 14),
+          Align(alignment: AlignmentDirectional.centerStart, child: SkeletonBox(height: 28, width: 220, radius: 8)),
+          SizedBox(height: 8),
+          Align(alignment: AlignmentDirectional.centerStart, child: SkeletonBox(height: 18, width: 160, radius: 8)),
+          SizedBox(height: 16),
+          SkeletonBox(height: 76),
+          SizedBox(height: 12),
+          SkeletonBox(height: 220),
+        ],
       ),
     );
   }
@@ -167,11 +187,13 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     final counts = p['_count'] is Map ? p['_count'] as Map : const {};
     final amenityLinks = (p['amenityLinks'] as List? ?? []);
     final name = p['name']?.toString() ?? '';
+    final reason = p['rejectionReason']?.toString() ?? '';
 
     return RefreshIndicator(
+      color: placeGold,
       onRefresh: () => _load(silent: true),
       child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
         slivers: [
           SliverAppBar(
             pinned: true,
@@ -184,228 +206,306 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           // المعرض داخل الصفحة (لا داخل الشريط المنهار) — السحب الأفقي للصور
           // والعمودي للصفحة لا يتعارضان، والضغط يفتح عارضاً بملء الشاشة.
           SliverToBoxAdapter(
-            child: SizedBox(
-              height: 260,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (gallery.isEmpty)
-                    Container(
-                      color: placeInk.withValues(alpha: 0.06),
-                      alignment: Alignment.center,
-                      child: const Icon(Icons.image_not_supported_outlined, size: 48, color: placeInk2),
-                    )
-                  else
-                    PageView.builder(
-                      controller: _page,
-                      itemCount: gallery.length,
-                      onPageChanged: (i) => setState(() => _pageIndex = i),
-                      itemBuilder: (context, i) => GestureDetector(
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => _GalleryViewer(
-                              urls: [
-                                for (final m in gallery) (m['url'] ?? m['thumbnailUrl']).toString(),
+            child: Pad(
+              top: 4,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(StaffRadius.lg),
+                child: SizedBox(
+                  height: 240,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (gallery.isEmpty)
+                        Container(
+                          color: placeLineSoft,
+                          alignment: Alignment.center,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(placeTypeIcon(p['type']?.toString()), size: 44, color: placeInk3),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'لا صور بعد',
+                                style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: placeInk3),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        PageView.builder(
+                          controller: _page,
+                          itemCount: gallery.length,
+                          onPageChanged: (i) => setState(() => _pageIndex = i),
+                          itemBuilder: (context, i) => GestureDetector(
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    _GalleryViewer(urls: [for (final m in gallery) (m['url'] ?? m['thumbnailUrl']).toString()], initial: i),
+                              ),
+                            ),
+                            child: NetImage(url: (gallery[i]['url'] ?? gallery[i]['thumbnailUrl'])?.toString(), radius: 0),
+                          ),
+                        ),
+                      if (gallery.length > 1)
+                        Positioned(
+                          bottom: 12,
+                          left: 0,
+                          right: 0,
+                          child: IgnorePointer(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                for (var i = 0; i < gallery.length && i < 12; i++)
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                                    width: i == _pageIndex ? 18 : 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: i == _pageIndex ? Colors.white : Colors.white54,
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                  ),
                               ],
-                              initial: i,
                             ),
                           ),
                         ),
-                        child: NetImage(
-                          url: (gallery[i]['url'] ?? gallery[i]['thumbnailUrl'])?.toString(),
-                          radius: 0,
-                        ),
-                      ),
-                    ),
-                  if (gallery.length > 1)
-                    Positioned(
-                      bottom: 10,
-                      left: 0,
-                      right: 0,
-                      child: IgnorePointer(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            for (var i = 0; i < gallery.length && i < 12; i++)
-                              AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                margin: const EdgeInsets.symmetric(horizontal: 2.5),
-                                width: i == _pageIndex ? 18 : 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  color: i == _pageIndex ? Colors.white : Colors.white54,
-                                  borderRadius: BorderRadius.circular(3),
-                                ),
+                      if (gallery.isNotEmpty)
+                        PositionedDirectional(
+                          top: 10,
+                          end: 10,
+                          child: IgnorePointer(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(color: const Color(0x8C0F1B2D), borderRadius: BorderRadius.circular(999)),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.zoom_out_map_rounded, size: 13, color: Colors.white),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    '${_pageIndex + 1}/${gallery.length}',
+                                    textDirection: TextDirection.ltr,
+                                    style: const TextStyle(
+                                      fontFamily: 'Montserrat',
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
                               ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  if (gallery.isNotEmpty)
-                    Positioned(
-                      top: 10,
-                      left: 10,
-                      child: IgnorePointer(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                          decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(999)),
-                          child: Text(
-                            '${_pageIndex + 1}/${gallery.length}',
-                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                ],
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
+          // ── الاسم والحالة ──
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+            child: Pad(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: Text(
                           name,
-                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 22, fontWeight: FontWeight.w900, color: placeInk),
+                          style: const TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: placeInk,
+                            height: 1.3,
+                          ),
                         ),
                       ),
-                      StatusPill(label: placeStatusLabel(status), color: placeStatusColor(status)),
+                      const SizedBox(width: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: StatusChip(placeStatusLabel(status), color: placeStatusColor(status)),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    [placeTypeLabel(p['type']?.toString()), cityName, provinceName].where((e) => e.isNotEmpty).join(' · '),
-                    style: const TextStyle(color: placeInk2, fontWeight: FontWeight.w600),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(placeTypeIcon(p['type']?.toString()), size: 16, color: placeInk3),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          [placeTypeLabel(p['type']?.toString()), cityName, provinceName].where((e) => e.isNotEmpty).join(' · '),
+                          style: const TextStyle(fontFamily: 'Cairo', color: placeInk2, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
                   ),
-                  if ((p['rejectionReason']?.toString() ?? '').isNotEmpty && (status == 'REJECTED' || status == 'SUSPENDED'))
+                  if (reason.isNotEmpty && (status == 'REJECTED' || status == 'SUSPENDED'))
                     Container(
-                      margin: const EdgeInsets.only(top: 10),
+                      margin: const EdgeInsets.only(top: 12),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: placeDanger.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(12),
+                        color: placeDanger.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(StaffRadius.md),
+                        border: Border.all(color: placeDanger.withValues(alpha: 0.2)),
                       ),
-                      child: Text(
-                        'السبب: ${p['rejectionReason']}',
-                        style: const TextStyle(color: placeDanger, fontWeight: FontWeight.w700, fontSize: 12.5),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.info_outline_rounded, color: placeDanger, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'السبب: $reason',
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                color: placeDanger,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12.5,
+                                height: 1.45,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                 ],
               ),
             ),
           ),
+          // ── أرقام سريعة ──
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+            child: Pad(
               child: Row(
                 children: [
                   StatTile(label: 'السعر / يوم', value: formatIqd(p['pricePerDay'])),
                   const SizedBox(width: 8),
-                  StatTile(label: 'الحجوزات', value: '${counts['bookings'] ?? 0}'),
+                  StatTile(label: 'الحجوزات', value: '${counts['bookings'] ?? 0}', accent: placeInfo),
                   const SizedBox(width: 8),
-                  StatTile(label: 'التقييم', value: '${p['ratingAvg'] ?? 0}'),
+                  StatTile(label: 'التقييم', value: '${p['ratingAvg'] ?? 0}', accent: placeBrass),
                 ],
               ),
             ),
           ),
-          if (_canWrite)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 1.9,
-                  children: [
-                    _ActionTile(
-                      icon: Icons.edit_outlined,
-                      title: 'تعديل البيانات',
-                      subtitle: 'كل خصائص المكان',
-                      onTap: () => _push(PropertyEditorScreen(property: p)),
-                    ),
-                    _ActionTile(
-                      icon: Icons.perm_media_outlined,
-                      title: 'الوسائط',
-                      subtitle: '${media.length} ملف · صور وفيديو وريلز و360°',
-                      onTap: () => _push(PropertyMediaScreen(propertyId: widget.propertyId, propertyName: name)),
-                    ),
-                    _ActionTile(
-                      icon: Icons.payments_outlined,
-                      title: 'الأسعار والتوفر',
-                      subtitle: 'مواسم وحظر أيام',
-                      onTap: () => _push(PropertyPricingScreen(propertyId: widget.propertyId, propertyName: name)),
-                    ),
-                    _ActionTile(
-                      icon: Icons.copy_all_outlined,
-                      title: 'تكرار المكان',
-                      subtitle: 'نسخة مسودة جاهزة للتعديل',
-                      onTap: _duplicate,
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: OutlinedButton.icon(
-                  onPressed: () => _push(PropertyMediaScreen(propertyId: widget.propertyId, propertyName: name)),
-                  icon: const Icon(Icons.perm_media_outlined),
-                  label: Text('عرض الوسائط (${media.length})'),
-                ),
-              ),
-            ),
+          // ── الاعتماد ──
           if (_canModerate)
             SliverToBoxAdapter(
               child: FormSection(
                 title: 'الاعتماد والنشر',
-                icon: Icons.verified_outlined,
+                subtitle: status == 'APPROVED' ? 'المكان منشور ويظهر للزبائن' : 'المكان غير ظاهر للزبائن حالياً',
+                icon: Icons.verified_rounded,
                 children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                  Row(
                     children: [
                       if (status != 'APPROVED')
-                        FilledButton.icon(
-                          onPressed: () => _setStatus('APPROVED'),
-                          icon: const Icon(Icons.check_circle_outline, size: 18),
-                          label: Text(status == 'SUSPENDED' ? 'إعادة نشر' : 'اعتماد ونشر'),
+                        Expanded(
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(backgroundColor: placeSuccess),
+                            onPressed: () => _setStatus('APPROVED'),
+                            icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
+                            label: Text(status == 'SUSPENDED' ? 'إعادة نشر' : 'اعتماد ونشر'),
+                          ),
                         ),
-                      if (status == 'PENDING')
-                        OutlinedButton(onPressed: () => _setStatus('REJECTED'), child: const Text('رفض')),
-                      if (status != 'SUSPENDED')
-                        OutlinedButton(onPressed: () => _setStatus('SUSPENDED'), child: const Text('تعليق')),
+                      if (status != 'SUSPENDED') ...[
+                        if (status != 'APPROVED') const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _setStatus('SUSPENDED'),
+                            icon: const Icon(Icons.pause_circle_outline_rounded, size: 18),
+                            label: const Text('تعليق'),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
+                  if (status == 'PENDING')
+                    TextButton.icon(
+                      style: TextButton.styleFrom(foregroundColor: placeDanger),
+                      onPressed: () => _setStatus('REJECTED'),
+                      icon: const Icon(Icons.block_rounded, size: 18),
+                      label: const Text('رفض مع ذكر السبب'),
+                    ),
                 ],
               ),
             ),
+          // ── إدارة المكان ──
+          const SliverToBoxAdapter(child: SectionHeader('إدارة المكان')),
+          SliverToBoxAdapter(
+            child: Pad(
+              child: TileGroup(
+                children: [
+                  if (_canWrite)
+                    TaskTile(
+                      icon: Icons.edit_note_rounded,
+                      title: 'تعديل البيانات',
+                      subtitle: 'الاسم، الموقع، الأسعار، السعة، المزايا',
+                      color: placeInfo,
+                      onTap: () => _push(PropertyEditorScreen(property: p)),
+                    ),
+                  TaskTile(
+                    icon: Icons.perm_media_rounded,
+                    title: _canWrite ? 'الوسائط' : 'عرض الوسائط',
+                    subtitle: '${media.length} ملف · صور وفيديو وريلز و360°',
+                    color: placeShiftEvening,
+                    trailing: _Trail('${media.length}'),
+                    onTap: () => _push(PropertyMediaScreen(propertyId: widget.propertyId, propertyName: name)),
+                  ),
+                  if (_canWrite)
+                    TaskTile(
+                      icon: Icons.calendar_month_rounded,
+                      title: 'الأسعار والتوفر',
+                      subtitle: 'مواسم، أسعار خاصة، وحظر أيام',
+                      color: placeSuccess,
+                      onTap: () => _push(PropertyPricingScreen(propertyId: widget.propertyId, propertyName: name)),
+                    ),
+                  if (_canWrite)
+                    TaskTile(
+                      icon: Icons.copy_all_rounded,
+                      title: 'تكرار المكان',
+                      subtitle: 'نسخة مسودة جاهزة للتعديل',
+                      color: placeBrass,
+                      onTap: _duplicate,
+                    ),
+                ],
+              ),
+            ),
+          ),
+          // ── التفاصيل ──
           SliverToBoxAdapter(
             child: FormSection(
               title: 'التفاصيل',
-              icon: Icons.info_outline,
+              icon: Icons.info_outline_rounded,
               children: [
-                _InfoRow('السعة', '${p['capacity'] ?? 0} شخص'),
-                if (p['weekendPrice'] != null) _InfoRow('سعر نهاية الأسبوع', formatIqd(p['weekendPrice'])),
-                if (p['priceMorningShift'] != null) _InfoRow('الصباحي', formatIqd(p['priceMorningShift'])),
-                if (p['priceEveningShift'] != null) _InfoRow('المسائي', formatIqd(p['priceEveningShift'])),
-                if ((p['phone']?.toString() ?? '').isNotEmpty) _InfoRow('الهاتف', '${p['phone']}'),
-                if ((p['address']?.toString() ?? '').isNotEmpty) _InfoRow('العنوان', '${p['address']}'),
-                if (p['provider'] is Map)
-                  _InfoRow('المزوّد', '${(p['provider'] as Map)['businessName'] ?? ''}'),
+                Column(
+                  children: _divided([
+                    InfoRow(icon: Icons.groups_rounded, label: 'السعة', value: '${p['capacity'] ?? 0} شخص'),
+                    if (p['weekendPrice'] != null)
+                      InfoRow(icon: Icons.weekend_rounded, label: 'نهاية الأسبوع', value: formatIqd(p['weekendPrice'])),
+                    if (p['priceMorningShift'] != null)
+                      InfoRow(icon: Icons.wb_sunny_rounded, label: 'الشفت الصباحي', value: formatIqd(p['priceMorningShift'])),
+                    if (p['priceEveningShift'] != null)
+                      InfoRow(icon: Icons.nights_stay_rounded, label: 'الشفت المسائي', value: formatIqd(p['priceEveningShift'])),
+                    if ((p['phone']?.toString() ?? '').isNotEmpty)
+                      InfoRow(icon: Icons.phone_rounded, label: 'الهاتف', value: '${p['phone']}'),
+                    if ((p['address']?.toString() ?? '').isNotEmpty)
+                      InfoRow(icon: Icons.location_on_rounded, label: 'العنوان', value: '${p['address']}'),
+                    if (p['provider'] is Map)
+                      InfoRow(icon: Icons.storefront_rounded, label: 'المزوّد', value: '${(p['provider'] as Map)['businessName'] ?? ''}'),
+                  ]),
+                ),
                 if ((p['description']?.toString() ?? '').isNotEmpty)
-                  Text(
-                    '${p['description']}',
-                    style: const TextStyle(height: 1.6, color: placeInk, fontWeight: FontWeight.w500),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: placePaper, borderRadius: BorderRadius.circular(StaffRadius.md)),
+                    child: Text(
+                      '${p['description']}',
+                      style: const TextStyle(fontFamily: 'Cairo', height: 1.65, color: placeInk, fontWeight: FontWeight.w500),
+                    ),
                   ),
               ],
             ),
@@ -414,6 +514,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             SliverToBoxAdapter(
               child: FormSection(
                 title: 'المزايا',
+                subtitle: '${amenityLinks.length} ميزة',
                 icon: Icons.checklist_rounded,
                 children: [
                   Wrap(
@@ -422,12 +523,24 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                     children: [
                       for (final link in amenityLinks)
                         if (link is Map && link['amenity'] is Map)
-                          Chip(
-                            label: Text('${(link['amenity'] as Map)['nameAr']}'),
-                            backgroundColor: placePaper,
-                            side: const BorderSide(color: placeLine),
-                            labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w700),
-                            visualDensity: VisualDensity.compact,
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: placePaper,
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: placeLine),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.check_rounded, size: 14, color: placeSuccess),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${(link['amenity'] as Map)['nameAr']}',
+                                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w700, color: placeInk),
+                                ),
+                              ],
+                            ),
                           ),
                     ],
                   ),
@@ -436,95 +549,46 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             ),
           if (_canWrite)
             SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
-                child: TextButton.icon(
+              child: Pad(
+                top: 8,
+                bottom: 32,
+                child: OutlinedButton.icon(
                   onPressed: _delete,
-                  style: TextButton.styleFrom(foregroundColor: placeDanger),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: placeDanger,
+                    side: BorderSide(color: placeDanger.withValues(alpha: .35)),
+                  ),
                   icon: const Icon(Icons.delete_outline_rounded),
-                  label: const Text('حذف المكان'),
+                  label: const Text('حذف المكان نهائياً'),
                 ),
               ),
             )
           else
-            const SliverToBoxAdapter(child: SizedBox(height: 40)),
+            const SliverToBoxAdapter(child: SizedBox(height: 32)),
         ],
       ),
     );
   }
+
+  static List<Widget> _divided(List<Widget> rows) => [
+    for (var i = 0; i < rows.length; i++) ...[if (i > 0) const Divider(height: 1, color: placeLineSoft), rows[i]],
+  ];
 }
 
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({required this.icon, required this.title, required this.subtitle, required this.onTap});
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: placeLine),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(color: placeBrass.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(11)),
-                child: Icon(icon, color: placeBrass, size: 20),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 13.5, color: placeInk)),
-                    Text(
-                      subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 10.5, color: placeInk2, height: 1.25),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  const _InfoRow(this.label, this.value);
-  final String label;
-  final String value;
+class _Trail extends StatelessWidget {
+  const _Trail(this.text);
+  final String text;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox(
-          width: 110,
-          child: Text(label, style: const TextStyle(color: placeInk2, fontWeight: FontWeight.w600, fontSize: 13)),
+        Text(
+          text,
+          style: const TextStyle(fontFamily: 'Montserrat', fontSize: 13, fontWeight: FontWeight.w700, color: placeInk3),
         ),
-        Expanded(
-          child: Text(value, style: const TextStyle(color: placeInk, fontWeight: FontWeight.w800, fontSize: 13.5)),
-        ),
+        const Icon(Icons.chevron_left_rounded, color: placeInk3),
       ],
     );
   }
@@ -555,11 +619,7 @@ class _GalleryViewerState extends State<_GalleryViewer> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: Text('${_index + 1} / ${widget.urls.length}'),
-      ),
+      appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white, title: Text('${_index + 1} / ${widget.urls.length}')),
       body: PageView.builder(
         controller: _controller,
         itemCount: widget.urls.length,
@@ -572,10 +632,9 @@ class _GalleryViewerState extends State<_GalleryViewer> {
               widget.urls[i],
               fit: BoxFit.contain,
               px: 1440,
-              loadingBuilder: (context, child, progress) => progress == null
-                  ? child
-                  : const Center(child: CircularProgressIndicator(color: Colors.white54, strokeWidth: 2)),
-              errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.white54, size: 48),
+              loadingBuilder: (context, child, progress) =>
+                  progress == null ? child : const Center(child: CircularProgressIndicator(color: Colors.white54, strokeWidth: 2)),
+              errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white54, size: 48),
             ),
           ),
         ),

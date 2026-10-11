@@ -6,6 +6,7 @@ import '../../core/api.dart';
 import '../../core/session.dart';
 import '../../core/theme.dart';
 import '../../widgets/form_kit.dart';
+import '../../widgets/kit.dart';
 import 'property_media.dart';
 
 /// نموذج إضافة/تعديل مكان — كل خصائص المكان في شاشة واحدة مرتبة بأقسام.
@@ -23,6 +24,8 @@ class PropertyEditorScreen extends StatefulWidget {
 class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
   final _formKey = GlobalKey<FormState>();
   final _scroll = ScrollController();
+  final _sectionKeys = List.generate(8, (_) => GlobalKey());
+  int _section = 0;
 
   final _name = TextEditingController();
   final _nameEn = TextEditingController();
@@ -78,6 +81,19 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
     super.initState();
     _fillFromProperty();
     _loadMeta();
+    _scroll.addListener(_syncSection);
+  }
+
+  /// يحدّث الشريحة النشطة في شريط الأقسام أثناء التمرير.
+  void _syncSection() {
+    final limit = MediaQuery.paddingOf(context).top + kToolbarHeight + 52 + 60;
+    var current = 0;
+    for (var i = 0; i < _sectionKeys.length; i++) {
+      final box = _sectionKeys[i].currentContext?.findRenderObject();
+      if (box is! RenderBox || !box.attached) continue;
+      if (box.localToGlobal(Offset.zero).dy <= limit) current = i;
+    }
+    if (current != _section) setState(() => _section = current);
   }
 
   @override
@@ -156,8 +172,7 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
     });
     try {
       final data = await Api.map('/api/staff/properties/form-meta');
-      List<Map<String, dynamic>> listOf(dynamic v) =>
-          (v as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      List<Map<String, dynamic>> listOf(dynamic v) => (v as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
       _provinces = listOf(data['provinces']);
       _amenities = listOf(data['amenities']);
       _providers = listOf(data['providers']);
@@ -189,9 +204,7 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
   List<Map<String, dynamic>> get _cities {
     for (final prov in _provinces) {
       if ('${prov['id']}' == _provinceId) {
-        return (prov['cities'] as List? ?? [])
-            .map((e) => Map<String, dynamic>.from(e as Map))
-            .toList();
+        return (prov['cities'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
     }
     return const [];
@@ -267,10 +280,7 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
     TimeOfDay initial = const TimeOfDay(hour: 9, minute: 0);
     if (current != null && current.contains(':')) {
       final parts = current.split(':');
-      initial = TimeOfDay(
-        hour: int.tryParse(parts[0]) ?? 9,
-        minute: int.tryParse(parts[1]) ?? 0,
-      );
+      initial = TimeOfDay(hour: int.tryParse(parts[0]) ?? 9, minute: int.tryParse(parts[1]) ?? 0);
     }
     final picked = await showTimePicker(context: context, initialTime: initial);
     if (picked == null) return;
@@ -353,10 +363,8 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
         showToast(context, 'تمت إضافة المكان — أضف الصور والفيديو الآن');
         await Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (_) => PropertyMediaScreen(
-              propertyId: '${created['id']}',
-              propertyName: created['name']?.toString() ?? _name.text.trim(),
-            ),
+            builder: (_) =>
+                PropertyMediaScreen(propertyId: '${created['id']}', propertyName: created['name']?.toString() ?? _name.text.trim()),
           ),
         );
       }
@@ -382,34 +390,65 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
           confirmLabel: 'خروج',
           danger: true,
         );
-        if (leave && mounted) Navigator.of(context).pop();
+        if (leave && context.mounted) Navigator.of(context).pop();
       },
       child: Scaffold(
-        appBar: AppBar(title: Text(_isEdit ? 'تعديل المكان' : 'مكان جديد')),
+        appBar: AppBar(
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_isEdit ? 'تعديل المكان' : 'مكان جديد'),
+              if (_isEdit && _name.text.trim().isNotEmpty)
+                Text(
+                  _name.text.trim(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w600, color: placeInk2),
+                ),
+            ],
+          ),
+          actions: [
+            if (_dirty)
+              const Padding(
+                padding: EdgeInsetsDirectional.only(end: 16),
+                child: Center(child: StatusChip('غير محفوظ', color: placeWarning, dense: true)),
+              ),
+          ],
+          bottom: (_loadingMeta || _metaError != null)
+              ? null
+              : PreferredSize(preferredSize: const Size.fromHeight(52), child: _sectionBar()),
+        ),
         body: _loadingMeta
-            ? const Center(child: CircularProgressIndicator(color: placeBrass))
+            ? ListView(
+                padding: const EdgeInsets.all(StaffSpace.page),
+                physics: const NeverScrollableScrollPhysics(),
+                children: const [
+                  SkeletonBox(height: 260),
+                  SizedBox(height: StaffSpace.gap),
+                  SkeletonBox(height: 320),
+                ],
+              )
             : _metaError != null
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(28),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(_metaError!, textAlign: TextAlign.center, style: const TextStyle(color: placeInk2)),
-                          const SizedBox(height: 14),
-                          FilledButton(onPressed: _loadMeta, child: const Text('إعادة المحاولة')),
-                        ],
-                      ),
-                    ),
-                  )
-                : Form(
-                    key: _formKey,
-                    onChanged: _touch,
-                    child: ListView(
-                      controller: _scroll,
-                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                      padding: const EdgeInsets.only(top: 4, bottom: 24),
-                      children: [
+            ? Center(
+                child: EmptyView(
+                  icon: Icons.cloud_off_rounded,
+                  title: 'تعذّر تحميل بيانات النموذج',
+                  subtitle: _metaError,
+                  actionLabel: 'إعادة المحاولة',
+                  onAction: _loadMeta,
+                ),
+              )
+            : Form(
+                key: _formKey,
+                onChanged: _touch,
+                child: SingleChildScrollView(
+                  controller: _scroll,
+                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.only(top: StaffSpace.gap, bottom: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final (i, section) in [
                         _basicsSection(),
                         _locationSection(),
                         _pricingSection(),
@@ -418,16 +457,62 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
                         _detailsSection(),
                         _publishSection(),
                         _advancedSection(),
-                      ],
-                    ),
+                      ].indexed)
+                        KeyedSubtree(key: _sectionKeys[i], child: section),
+                    ],
                   ),
+                ),
+              ),
         bottomNavigationBar: (_loadingMeta || _metaError != null)
             ? null
-            : BottomActionBar(
-                label: _isEdit ? 'حفظ التعديلات' : 'حفظ ومتابعة للصور',
-                busy: _saving,
-                onPressed: _save,
+            : BottomActionBar(label: _isEdit ? 'حفظ التعديلات' : 'حفظ ومتابعة للصور', busy: _saving, onPressed: _save),
+      ),
+    );
+  }
+
+  static const _sectionNames = ['الأساسيات', 'الموقع', 'الأسعار', 'التواصل', 'المزايا', 'الوسوم', 'النشر', 'متقدّم'];
+
+  void _jumpTo(int i) {
+    setState(() => _section = i);
+    final ctx = _sectionKeys[i].currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 320), curve: Curves.easeOutCubic, alignment: 0.02);
+    }
+  }
+
+  Widget _sectionBar() {
+    return Container(
+      height: 52,
+      alignment: AlignmentDirectional.centerStart,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: StaffSpace.page, vertical: 8),
+        itemCount: _sectionNames.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 6),
+        itemBuilder: (_, i) {
+          final on = _section == i;
+          final r = BorderRadius.circular(999);
+          return Material(
+            color: on ? placeInk : Colors.white,
+            borderRadius: r,
+            child: InkWell(
+              borderRadius: r,
+              onTap: () => _jumpTo(i),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: r,
+                  border: Border.all(color: on ? placeInk : placeLine),
+                ),
+                child: Text(
+                  _sectionNames[i],
+                  style: TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.w800, color: on ? Colors.white : placeInk2),
+                ),
               ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -435,9 +520,10 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
   Widget _basicsSection() {
     return FormSection(
       title: 'المعلومات الأساسية',
-      icon: Icons.storefront_outlined,
+      subtitle: 'ما يراه الزبون أولاً',
+      icon: Icons.storefront_rounded,
       children: [
-        const Text('نوع المكان', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: placeInk2)),
+        const _FieldLabel('نوع المكان'),
         ChoicePills<String>(
           options: const ['FARM', 'HALL', 'DECORATION'],
           value: _type,
@@ -457,17 +543,14 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
         StaffField(
           controller: _name,
           label: 'اسم المكان *',
+          hint: 'مثال: مزرعة الريحان',
           validator: (v) => requiredValidator(v, 'اسم المكان مطلوب'),
         ),
-        StaffField(
-          controller: _description,
-          label: 'الوصف',
-          hint: 'صف المكان بأسلوب جذاب للزبائن',
-          maxLines: 5,
-        ),
+        StaffField(controller: _description, label: 'الوصف', hint: 'صف المكان بأسلوب جذاب للزبائن', maxLines: 5),
         StaffField(
           controller: _capacity,
           label: 'السعة (عدد الأشخاص)',
+          helper: 'أقصى عدد ضيوف يستوعبه المكان',
           keyboard: TextInputType.number,
           digitsOnly: true,
         ),
@@ -480,16 +563,13 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
     return FormSection(
       title: 'الموقع',
       subtitle: 'المحافظة والمدينة والإحداثيات',
-      icon: Icons.place_outlined,
+      icon: Icons.place_rounded,
       children: [
         DropdownButtonFormField<String>(
           value: _provinceId,
           isExpanded: true,
           decoration: const InputDecoration(labelText: 'المحافظة *'),
-          items: [
-            for (final p in _provinces)
-              DropdownMenuItem(value: '${p['id']}', child: Text('${p['nameAr']}')),
-          ],
+          items: [for (final p in _provinces) DropdownMenuItem(value: '${p['id']}', child: Text('${p['nameAr']}'))],
           validator: (v) => v == null ? 'اختر المحافظة' : null,
           onChanged: (v) => setState(() {
             _provinceId = v;
@@ -501,34 +581,35 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
           value: cities.any((c) => '${c['id']}' == _cityId) ? _cityId : null,
           isExpanded: true,
           decoration: const InputDecoration(labelText: 'المدينة / المنطقة *'),
-          items: [
-            for (final c in cities)
-              DropdownMenuItem(value: '${c['id']}', child: Text('${c['nameAr']}')),
-          ],
+          items: [for (final c in cities) DropdownMenuItem(value: '${c['id']}', child: Text('${c['nameAr']}'))],
           validator: (v) => v == null ? 'اختر المدينة' : null,
           onChanged: (v) => setState(() {
             _cityId = v;
             _dirty = true;
           }),
         ),
-        StaffField(
-          controller: _address,
-          label: 'العنوان التفصيلي',
-          hint: 'أقرب نقطة دالة، الشارع …',
-        ),
+        StaffField(controller: _address, label: 'العنوان التفصيلي', hint: 'أقرب نقطة دالة، الشارع …'),
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: placePaper,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: placeLine),
+            borderRadius: BorderRadius.circular(StaffRadius.md),
+            border: Border.all(color: placeLineSoft),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'الصق رابط الموقع من خرائط جوجل ليُستخرج خط الطول والعرض تلقائياً',
-                style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w600, color: placeInk2),
+              const Row(
+                children: [
+                  Icon(Icons.auto_fix_high_rounded, size: 16, color: placeBrass),
+                  SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'الصق رابط الموقع من خرائط جوجل ليُستخرج خط الطول والعرض تلقائياً',
+                      style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w700, color: placeInk2, height: 1.4),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               Row(
@@ -542,7 +623,8 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  IconButton.filledTonal(
+                  IconButton.filled(
+                    style: IconButton.styleFrom(backgroundColor: placeInk, foregroundColor: Colors.white, minimumSize: const Size(48, 48)),
                     tooltip: 'لصق من الحافظة',
                     onPressed: _pasteMapLink,
                     icon: const Icon(Icons.content_paste_go_rounded),
@@ -612,17 +694,17 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
   Widget _pricingSection() {
     final shifted = _bookingMode == 'SHIFTS' || _bookingMode == 'HYBRID';
     String modeLabel(String? m) => switch (m) {
-          'FULL_DAY' => 'يوم كامل',
-          'SHIFTS' => 'شفتان',
-          'HYBRID' => 'هجين',
-          _ => 'تلقائي',
-        };
+      'FULL_DAY' => 'يوم كامل',
+      'SHIFTS' => 'شفتان',
+      'HYBRID' => 'هجين',
+      _ => 'تلقائي',
+    };
     return FormSection(
       title: 'الحجز والأسعار',
       subtitle: 'الأسعار بالدينار العراقي',
-      icon: Icons.payments_outlined,
+      icon: Icons.payments_rounded,
       children: [
-        const Text('وضع الحجز', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: placeInk2)),
+        const _FieldLabel('وضع الحجز'),
         ChoicePills<String?>(
           options: const [null, 'FULL_DAY', 'SHIFTS', 'HYBRID'],
           value: _bookingMode,
@@ -632,18 +714,16 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
             _dirty = true;
           }),
         ),
-        Text(
-          switch (_bookingMode) {
-            'FULL_DAY' => 'يُحجز المكان ليوم كامل فقط.',
-            'SHIFTS' => 'يُحجز المكان بشفت صباحي أو مسائي (حتى شفتان يومياً).',
-            'HYBRID' => 'يمكن حجز اليوم كاملاً أو بالشفت.',
-            _ => 'يُحدَّد الوضع تلقائياً حسب نوع المكان.',
-          },
-          style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, color: placeInk2),
-        ),
+        Text(switch (_bookingMode) {
+          'FULL_DAY' => 'يُحجز المكان ليوم كامل فقط.',
+          'SHIFTS' => 'يُحجز المكان بشفت صباحي أو مسائي (حتى شفتان يومياً).',
+          'HYBRID' => 'يمكن حجز اليوم كاملاً أو بالشفت.',
+          _ => 'يُحدَّد الوضع تلقائياً حسب نوع المكان.',
+        }, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk3, height: 1.4)),
         StaffField(
           controller: _price,
           label: 'السعر لليوم الكامل *',
+          suffix: const _Unit('د.ع'),
           keyboard: TextInputType.number,
           validator: (v) {
             final n = parseNumber(v);
@@ -655,30 +735,24 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
         StaffField(
           controller: _weekend,
           label: 'سعر نهاية الأسبوع (اختياري)',
+          helper: 'اتركه فارغاً لاستخدام السعر اليومي',
+          suffix: const _Unit('د.ع'),
           keyboard: TextInputType.number,
         ),
         if (shifted) ...[
           Row(
             children: [
               Expanded(
-                child: StaffField(
-                  controller: _priceMorning,
-                  label: 'سعر الصباحي',
-                  keyboard: TextInputType.number,
-                ),
+                child: StaffField(controller: _priceMorning, label: 'سعر الصباحي', keyboard: TextInputType.number),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: StaffField(
-                  controller: _priceEvening,
-                  label: 'سعر المسائي',
-                  keyboard: TextInputType.number,
-                ),
+                child: StaffField(controller: _priceEvening, label: 'سعر المسائي', keyboard: TextInputType.number),
               ),
             ],
           ),
-          const Divider(height: 8),
-          const Text('أوقات الشفتات', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: placeInk2)),
+          const Divider(height: 8, color: placeLineSoft),
+          const _FieldLabel('أوقات الشفتات'),
           Row(
             children: [
               Expanded(
@@ -690,11 +764,7 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _TimeBox(
-                  label: 'نهاية الصباحي',
-                  value: _morningEnd,
-                  onTap: () => _pickTime(_morningEnd, (v) => _morningEnd = v),
-                ),
+                child: _TimeBox(label: 'نهاية الصباحي', value: _morningEnd, onTap: () => _pickTime(_morningEnd, (v) => _morningEnd = v)),
               ),
             ],
           ),
@@ -709,11 +779,7 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _TimeBox(
-                  label: 'نهاية المسائي',
-                  value: _eveningEnd,
-                  onTap: () => _pickTime(_eveningEnd, (v) => _eveningEnd = v),
-                ),
+                child: _TimeBox(label: 'نهاية المسائي', value: _eveningEnd, onTap: () => _pickTime(_eveningEnd, (v) => _eveningEnd = v)),
               ),
             ],
           ),
@@ -721,13 +787,10 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
         if (_isEdit)
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: placeBrass.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-            ),
+            decoration: BoxDecoration(color: placeGoldSoft, borderRadius: BorderRadius.circular(StaffRadius.md)),
             child: const Row(
               children: [
-                Icon(Icons.info_outline, size: 18, color: placeBrass),
+                Icon(Icons.info_outline_rounded, size: 18, color: placeBrass),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -745,20 +808,11 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
   Widget _contactSection() {
     return FormSection(
       title: 'التواصل',
-      icon: Icons.call_outlined,
+      subtitle: 'أرقام المكان والمزوّد المالك',
+      icon: Icons.call_rounded,
       children: [
-        StaffField(
-          controller: _phone,
-          label: 'رقم الهاتف',
-          ltr: true,
-          keyboard: TextInputType.phone,
-        ),
-        StaffField(
-          controller: _whatsapp,
-          label: 'واتساب',
-          ltr: true,
-          keyboard: TextInputType.phone,
-        ),
+        StaffField(controller: _phone, label: 'رقم الهاتف', hint: '07xx xxx xxxx', ltr: true, keyboard: TextInputType.phone),
+        StaffField(controller: _whatsapp, label: 'واتساب', hint: '07xx xxx xxxx', ltr: true, keyboard: TextInputType.phone),
         if (_providers.isNotEmpty)
           DropdownButtonFormField<String?>(
             value: _providers.any((p) => '${p['id']}' == _providerId) ? _providerId : null,
@@ -769,17 +823,14 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
               for (final p in _providers)
                 DropdownMenuItem<String?>(
                   value: '${p['id']}',
-                  child: Text(
-                    () {
-                      final biz = p['businessName']?.toString() ?? '';
-                      final user = p['user'];
-                      final name = user is Map ? user['name']?.toString() ?? '' : '';
-                      final phone = user is Map ? user['phone']?.toString() ?? '' : '';
-                      final title = biz.isNotEmpty ? biz : (name.isNotEmpty ? name : 'مزوّد');
-                      return phone.isEmpty ? title : '$title · $phone';
-                    }(),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  child: Text(() {
+                    final biz = p['businessName']?.toString() ?? '';
+                    final user = p['user'];
+                    final name = user is Map ? user['name']?.toString() ?? '' : '';
+                    final phone = user is Map ? user['phone']?.toString() ?? '' : '';
+                    final title = biz.isNotEmpty ? biz : (name.isNotEmpty ? name : 'مزوّد');
+                    return phone.isEmpty ? title : '$title · $phone';
+                  }(), overflow: TextOverflow.ellipsis),
                 ),
             ],
             onChanged: (v) => setState(() {
@@ -809,7 +860,10 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
       icon: Icons.checklist_rounded,
       children: [
         if (items.isEmpty)
-          const Text('لا مزايا معرّفة لهذا النوع بعد.', style: TextStyle(color: placeInk2))
+          const Text(
+            'لا مزايا معرّفة لهذا النوع بعد.',
+            style: TextStyle(fontFamily: 'Cairo', color: placeInk3),
+          )
         else
           for (final entry in byCategory.entries)
             Column(
@@ -820,12 +874,7 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
                     padding: const EdgeInsets.only(bottom: 6),
                     child: Text(
                       _categoryLabel(entry.key),
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: placeInk2,
-                      ),
+                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w800, color: placeInk2),
                     ),
                   ),
                 Wrap(
@@ -834,14 +883,13 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
                   children: [
                     for (final a in entry.value)
                       FilterChip(
+                        avatar: _amenityIds.contains('${a['id']}') ? const Icon(Icons.check_rounded, size: 16, color: placeGold) : null,
                         label: Text('${a['nameAr']}'),
                         selected: _amenityIds.contains('${a['id']}'),
                         showCheckmark: false,
                         selectedColor: placeInk,
                         backgroundColor: Colors.white,
-                        side: BorderSide(
-                          color: _amenityIds.contains('${a['id']}') ? placeInk : placeLine,
-                        ),
+                        side: BorderSide(color: _amenityIds.contains('${a['id']}') ? placeInk : placeLine),
                         labelStyle: TextStyle(
                           fontFamily: 'Cairo',
                           fontSize: 12.5,
@@ -863,14 +911,15 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
   }
 
   String _categoryLabel(String key) => switch (key) {
-        'general' => 'عام',
-        _ => key,
-      };
+    'general' => 'عام',
+    _ => key,
+  };
 
   Widget _detailsSection() {
     return FormSection(
       title: 'الوسوم والشروط',
-      icon: Icons.sell_outlined,
+      subtitle: 'تساعد الزبون في البحث وتوضّح القواعد',
+      icon: Icons.sell_rounded,
       children: [
         Row(
           children: [
@@ -883,7 +932,8 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
             ),
             const SizedBox(width: 8),
             IconButton.filled(
-              style: IconButton.styleFrom(backgroundColor: placeInk),
+              tooltip: 'إضافة الوسم',
+              style: IconButton.styleFrom(backgroundColor: placeInk, minimumSize: const Size(48, 48)),
               onPressed: _addTag,
               icon: const Icon(Icons.add, color: Colors.white),
             ),
@@ -896,7 +946,10 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
             children: [
               for (final t in _tags)
                 InputChip(
-                  label: Text(t, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700)),
+                  label: Text(
+                    t,
+                    style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700),
+                  ),
                   backgroundColor: placePaper,
                   side: const BorderSide(color: placeLine),
                   onDeleted: () => setState(() {
@@ -906,12 +959,7 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
                 ),
             ],
           ),
-        StaffField(
-          controller: _rules,
-          label: 'الشروط والقواعد',
-          hint: 'سياسة الإلغاء، التعليمات، ما هو ممنوع …',
-          maxLines: 4,
-        ),
+        StaffField(controller: _rules, label: 'الشروط والقواعد', hint: 'سياسة الإلغاء، التعليمات، ما هو ممنوع …', maxLines: 4),
       ],
     );
   }
@@ -929,14 +977,13 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
   }
 
   Widget _publishSection() {
-    final statuses = _canModerate
-        ? const ['DRAFT', 'PENDING', 'APPROVED', 'SUSPENDED', 'REJECTED']
-        : const ['DRAFT', 'PENDING'];
+    final statuses = _canModerate ? const ['DRAFT', 'PENDING', 'APPROVED', 'SUSPENDED', 'REJECTED'] : const ['DRAFT', 'PENDING'];
     return FormSection(
       title: 'النشر والظهور',
-      icon: Icons.rocket_launch_outlined,
+      subtitle: 'الحالة وأماكن الظهور في التطبيق',
+      icon: Icons.rocket_launch_rounded,
       children: [
-        const Text('الحالة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: placeInk2)),
+        const _FieldLabel('الحالة'),
         if (statuses.contains(_status))
           ChoicePills<String>(
             options: statuses,
@@ -957,8 +1004,9 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
             statuses.contains(_status)
                 ? 'النشر للزبائن يتم بعد اعتماد المشرف — اختر «بانتظار الاعتماد» عند الجاهزية.'
                 : 'تغيير حالة النشر بيد المشرف.',
-            style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, color: placeInk2),
+            style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk3, height: 1.4),
           ),
+        const Divider(height: 4, color: placeLineSoft),
         ToggleRow(
           title: 'مكان مميز',
           subtitle: 'يظهر في قسم المميز بالصفحة الرئيسية',
@@ -983,21 +1031,32 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
 
   Widget _advancedSection() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+      margin: const EdgeInsets.fromLTRB(StaffSpace.page, 0, StaffSpace.page, StaffSpace.gap),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(StaffRadius.lg),
         border: Border.all(color: placeLine),
+        boxShadow: staffCardShadow,
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          leading: const Icon(Icons.tune_rounded, color: placeBrass),
+          tilePadding: const EdgeInsets.fromLTRB(16, 6, 12, 6),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+          leading: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(color: placeGoldSoft, borderRadius: BorderRadius.circular(12)),
+            child: const Icon(Icons.tune_rounded, size: 20, color: placeBrass),
+          ),
           title: const Text(
-            'متقدّم: الإنجليزية وSEO وملاحظات داخلية',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 14.5, color: placeInk),
+            'متقدّم',
+            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 15.5, color: placeInk),
+          ),
+          subtitle: const Text(
+            'الإنجليزية، SEO، وملاحظات داخلية',
+            style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w600, color: placeInk2),
           ),
           children: [
             StaffField(controller: _nameEn, label: 'الاسم بالإنجليزية', ltr: true),
@@ -1008,11 +1067,7 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
             const SizedBox(height: 12),
             StaffField(controller: _metaDescription, label: 'وصف SEO', maxLines: 2),
             const SizedBox(height: 12),
-            StaffField(
-              controller: _notes,
-              label: 'ملاحظات داخلية (لا تظهر للزبائن)',
-              maxLines: 3,
-            ),
+            StaffField(controller: _notes, label: 'ملاحظات داخلية', helper: 'للموظفين فقط — لا تظهر للزبائن', maxLines: 3),
           ],
         ),
       ),
@@ -1033,19 +1088,47 @@ class _TimeBox extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          suffixIcon: const Icon(Icons.schedule_rounded, size: 19),
-        ),
+        decoration: InputDecoration(labelText: label, suffixIcon: const Icon(Icons.schedule_rounded, size: 19)),
         child: Text(
           value ?? 'اختر',
           textDirection: TextDirection.ltr,
           textAlign: TextAlign.right,
-          style: TextStyle(
-            fontFamily: 'Montserrat',
-            fontWeight: FontWeight.w700,
-            color: value == null ? placeInk2 : placeInk,
-          ),
+          style: TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w700, color: value == null ? placeInk2 : placeInk),
+        ),
+      ),
+    );
+  }
+}
+
+/// عنوان صغير فوق مجموعة اختيارات.
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.w800, color: placeInk),
+    );
+  }
+}
+
+/// وحدة العملة داخل حقل السعر.
+class _Unit extends StatelessWidget {
+  const _Unit(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(end: 14),
+      child: Align(
+        widthFactor: 1,
+        alignment: AlignmentDirectional.centerEnd,
+        child: Text(
+          text,
+          style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.w800, color: placeInk3),
         ),
       ),
     );

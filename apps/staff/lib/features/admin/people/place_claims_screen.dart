@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/api.dart';
 import '../../../core/session.dart';
 import '../../../core/theme.dart';
-import '../../../widgets/chat_ui.dart';
 import '../../../widgets/form_kit.dart';
+import '../../../widgets/kit.dart';
 import '../../chat_room.dart';
 import 'people_common.dart';
 
@@ -71,33 +71,28 @@ class _PlaceClaimsScreenState extends State<PlaceClaimsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('طلبات ربط الأماكن')),
-      body: Column(
-        children: [
-          FilterBar(groups: [
-            FilterGroup(
-              options: const ['PENDING', 'APPROVED', 'REJECTED'],
-              selected: _status,
-              labelOf: claimStatusLabel,
-              onSelected: (v) => setState(() => _status = v),
-            ),
-          ]),
-          Expanded(
-            child: PagedList(
-              key: ValueKey(_status),
-              controller: _list,
-              fetch: _fetch,
-              emptyTitle: _status == 'PENDING' ? 'لا طلبات ربط معلّقة' : 'لا طلبات',
-              emptySubtitle: _status == 'PENDING' ? 'ستظهر هنا طلبات أصحاب الأماكن لربطها بحساباتهم' : null,
-              itemBuilder: (context, c, _) => _ClaimCard(
-                claim: c,
-                onApprove: () => _approve(c),
-                onReject: () => _reject(c),
-              ),
-            ),
-          ),
-        ],
+    return PagedStaffPage(
+      title: 'طلبات ربط الأماكن',
+      subtitle: 'أصحاب أماكن يطلبون ربطها بحساباتهم',
+      resetKey: _status,
+      controller: _list,
+      fetch: _fetch,
+      filters: FilterBar(groups: [
+        FilterGroup(
+          options: const ['PENDING', 'APPROVED', 'REJECTED'],
+          selected: _status,
+          labelOf: claimStatusLabel,
+          onSelected: (v) => setState(() => _status = v),
+        ),
+      ]),
+      emptyIcon: Icons.how_to_reg_outlined,
+      emptyTitle: _status == 'PENDING' ? 'لا طلبات ربط معلّقة' : 'لا طلبات',
+      emptySubtitle: _status == 'PENDING' ? 'ستظهر هنا طلبات أصحاب الأماكن لربطها بحساباتهم' : null,
+      skeletonHeight: 150,
+      itemBuilder: (context, c, _) => _ClaimCard(
+        claim: c,
+        onApprove: () => _approve(c),
+        onReject: () => _reject(c),
       ),
     );
   }
@@ -119,41 +114,31 @@ class _ClaimCard extends StatelessWidget {
     final phone = user['phone']?.toString();
     final pending = status == 'PENDING';
     return ListCard(
-      highlight: pending ? placeBrass.withValues(alpha: 0.35) : null,
+      highlight: pending ? placeGold.withValues(alpha: 0.45) : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              ContactAvatar(name: name, phone: phone, size: 42),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(name, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeInk)),
-                    PhoneText(phone),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  StatusPill(label: claimStatusLabel(status), color: requestStatusColor(status)),
-                  const SizedBox(height: 4),
-                  Text(relativeAr(claim['createdAt']), style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: placeInk2)),
-                ],
-              ),
-            ],
+          ListRow(
+            leading: Avatar(name, size: 44, color: placeBrass),
+            title: name,
+            subtitleWidget: (phone ?? '').isEmpty ? null : PhoneText(phone),
+            trailing: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                StatusChip(claimStatusLabel(status), color: requestStatusColor(status), dense: true),
+                const SizedBox(height: 4),
+                MetaText(relativeAr(claim['createdAt'])),
+              ],
+            ),
           ),
           const SizedBox(height: 10),
           Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: placePaper, borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: placePaper, borderRadius: BorderRadius.circular(StaffRadius.md)),
             child: Row(
               children: [
-                const Icon(Icons.home_work_outlined, color: placeBrass, size: 20),
-                const SizedBox(width: 8),
+                const IconBox(icon: Icons.home_work_rounded, color: placeBrass, size: 36),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,7 +153,7 @@ class _ClaimCard extends StatelessWidget {
                           fontFamily: 'Cairo',
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: current.isEmpty ? placeInk2 : placeShiftMorning,
+                          color: current.isEmpty ? placeInk2 : placeWarning,
                         ),
                       ),
                     ],
@@ -177,7 +162,7 @@ class _ClaimCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Row(
             children: [
               PhoneButtons(phone: phone, compact: true),
@@ -192,13 +177,13 @@ class _ClaimCard extends StatelessWidget {
               const Spacer(),
               if (pending && Session.can('providers.link')) ...[
                 OutlinedButton(
-                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10)),
+                  style: OutlinedButton.styleFrom(foregroundColor: placeDanger, minimumSize: const Size(0, 44)),
                   onPressed: onReject,
                   child: const Text('رفض'),
                 ),
                 const SizedBox(width: 8),
                 FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: placeSuccess, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10)),
+                  style: FilledButton.styleFrom(backgroundColor: placeSuccess, minimumSize: const Size(0, 44)),
                   onPressed: onApprove,
                   child: const Text('اعتماد'),
                 ),

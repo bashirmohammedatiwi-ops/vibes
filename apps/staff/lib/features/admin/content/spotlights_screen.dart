@@ -4,6 +4,7 @@ import '../../../core/api.dart';
 import '../../../core/session.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
+import '../../../widgets/kit.dart';
 import '../../../widgets/ui.dart';
 import 'content_common.dart';
 
@@ -21,6 +22,8 @@ class _AdminSpotlightsScreenState extends State<AdminSpotlightsScreen> {
   bool _loading = true;
   String? _error;
   final Set<String> _busy = {};
+  String _q = '';
+  String _filter = 'ALL';
 
   bool get _canWrite => Session.can('content.write');
 
@@ -122,86 +125,130 @@ class _AdminSpotlightsScreenState extends State<AdminSpotlightsScreen> {
 
   Future<void> _openEditor([Map<String, dynamic>? row]) async {
     final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => SpotlightEditorScreen(spotlight: row, nextSortOrder: _rows.length)),
+      MaterialPageRoute(
+        builder: (_) => SpotlightEditorScreen(spotlight: row, nextSortOrder: _rows.length),
+      ),
     );
     if (saved == true && mounted) _load(silent: true);
   }
 
+  List<Map<String, dynamic>> get _visibleRows {
+    final q = _q.toLowerCase();
+    return _rows.where((r) {
+      if (_filter == 'active' && r['isActive'] != true) return false;
+      if (_filter == 'inactive' && r['isActive'] == true) return false;
+      if (['FARM', 'HALL', 'DECORATION'].contains(_filter) && asMap(r['property'])['type'] != _filter) return false;
+      if (q.isEmpty) return true;
+      return '${asMap(r['property'])['name'] ?? ''} ${r['title'] ?? ''}'.toLowerCase().contains(q);
+    }).toList();
+  }
+
+  bool get _filtered => _q.isNotEmpty || _filter != 'ALL';
+
   @override
   Widget build(BuildContext context) {
     final activeCount = _rows.where((r) => r['isActive'] == true).length;
-    return Scaffold(
-      appBar: AppBar(title: const Text('الأماكن المميزة')),
+    final rows = _visibleRows;
+    final canReorder = _canWrite && !_filtered;
+    final state = contentStateSliver(
+      loading: _loading,
+      error: _error,
+      isEmpty: rows.isEmpty,
+      onRetry: _load,
+      emptyIcon: Icons.auto_awesome_outlined,
+      emptyTitle: _filtered ? 'لا عناصر مطابقة' : 'لا توجد عناصر مميزة',
+      emptySubtitle: !_filtered && _canWrite ? 'أضف مكاناً ليظهر في واجهة التطبيق' : null,
+      emptyActionLabel: !_filtered && _canWrite ? 'عنصر مميز' : null,
+      onEmptyAction: () => _openEditor(),
+      skeletonHeight: 112,
+      skeletonCount: 5,
+    );
+    int typeCount(String t) => _rows.where((r) => asMap(r['property'])['type'] == t).length;
+
+    Widget card(int i, {required bool reorderable}) {
+      final row = rows[i];
+      return Padding(
+        key: ValueKey(row['id']),
+        padding: const EdgeInsets.fromLTRB(StaffSpace.page, 0, StaffSpace.page, 10),
+        child: _SpotlightCard(
+          row: row,
+          index: _rows.indexOf(row),
+          canWrite: _canWrite,
+          reorderable: reorderable,
+          busy: _busy.contains('${row['id']}'),
+          onToggle: (v) => _toggle(row, v),
+          onEdit: () => _openEditor(row),
+          onDelete: () => _delete(row),
+        ),
+      );
+    }
+
+    return StaffPage(
+      title: 'الأماكن المميزة',
+      subtitle: _loading ? 'جارٍ التحميل…' : '${_rows.length} عنصر · $activeCount فعّال',
+      onRefresh: () => _load(silent: true),
       floatingActionButton: _canWrite
           ? FloatingActionButton.extended(
               onPressed: () => _openEditor(),
               backgroundColor: placeInk,
               foregroundColor: Colors.white,
               icon: const Icon(Icons.auto_awesome_outlined),
-              label: const Text('عنصر مميز', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800)),
+              label: const Text(
+                'عنصر مميز',
+                style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800),
+              ),
             )
           : null,
-      body: Column(
+      bottom: ContentToolbar(
+        height: kContentToolbarHeight,
         children: [
-          MaisonHeader(
-            title: 'مميزة الرئيسية',
-            subtitle: _loading ? 'جارٍ التحميل…' : '${_rows.length} عنصر · $activeCount فعّال',
-          ),
-          if (!_canWrite)
-            const ReadOnlyNotice(message: 'عرض فقط — للتعديل اطلب صلاحية «إضافة وتعديل البانرات والمميزة».')
-          else if (_rows.length > 1)
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 2, 20, 4),
-              child: Text(
-                'اسحب من المقبض ⋮⋮ لتغيير الترتيب',
-                style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2),
-              ),
-            ),
-          Expanded(
-            child: ContentListBody(
-              loading: _loading,
-              error: _error,
-              isEmpty: _rows.isEmpty,
-              onRefresh: () => _load(silent: true),
-              emptyTitle: 'لا توجد عناصر مميزة',
-              emptySubtitle: _canWrite ? 'أضف مكاناً ليظهر في واجهة التطبيق' : null,
-              child: _canWrite
-                  ? ReorderableListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-                      buildDefaultDragHandles: false,
-                      itemCount: _rows.length,
-                      onReorder: _reorder,
-                      proxyDecorator: (child, _, _) => Material(color: Colors.transparent, elevation: 6, child: child),
-                      itemBuilder: (context, i) => _SpotlightCard(
-                        key: ValueKey(_rows[i]['id']),
-                        row: _rows[i],
-                        index: i,
-                        canWrite: true,
-                        busy: _busy.contains('${_rows[i]['id']}'),
-                        onToggle: (v) => _toggle(_rows[i], v),
-                        onEdit: () => _openEditor(_rows[i]),
-                        onDelete: () => _delete(_rows[i]),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                      itemCount: _rows.length,
-                      itemBuilder: (context, i) => _SpotlightCard(row: _rows[i], index: i, canWrite: false, busy: false),
-                    ),
-            ),
+          ContentSearchField(hint: 'ابحث باسم المكان أو العنوان', onChanged: (v) => setState(() => _q = v)),
+          ContentChips<String>(
+            selected: _filter,
+            onSelected: (v) => setState(() => _filter = v),
+            options: [
+              ContentChip('ALL', 'الكل', count: _rows.length),
+              ContentChip('active', 'فعّالة', count: activeCount),
+              ContentChip('inactive', 'موقوفة', count: _rows.length - activeCount),
+              for (final t in const ['FARM', 'HALL', 'DECORATION'])
+                if (typeCount(t) > 0) ContentChip(t, placeTypeLabel(t), icon: placeTypeIcon(t), count: typeCount(t)),
+            ],
           ),
         ],
       ),
+      slivers: [
+        if (!_canWrite)
+          const SliverToBoxAdapter(child: ReadOnlyNotice(message: 'عرض فقط — للتعديل اطلب صلاحية «إضافة وتعديل البانرات والمميزة».'))
+        else if (!_loading && _rows.length > 1)
+          SliverToBoxAdapter(
+            child: ContentHint(
+              canReorder ? 'اسحب من المقبض ⋮⋮ لتغيير الترتيب' : 'أزل البحث والفلتر لتغيير الترتيب',
+              icon: Icons.drag_indicator_rounded,
+            ),
+          ),
+        if (state != null)
+          state
+        else if (canReorder)
+          SliverReorderableList(
+            itemCount: rows.length,
+            onReorder: _reorder,
+            proxyDecorator: (child, _, _) => Material(color: Colors.transparent, elevation: 6, child: child),
+            itemBuilder: (context, i) => card(i, reorderable: true),
+          )
+        else
+          SliverList.builder(itemCount: rows.length, itemBuilder: (context, i) => card(i, reorderable: false)),
+        if (_canWrite) const SliverToBoxAdapter(child: SizedBox(height: 72)),
+      ],
     );
   }
 }
 
 class _SpotlightCard extends StatelessWidget {
   const _SpotlightCard({
-    super.key,
     required this.row,
     required this.index,
     required this.canWrite,
+    required this.reorderable,
     required this.busy,
     this.onToggle,
     this.onEdit,
@@ -211,6 +258,7 @@ class _SpotlightCard extends StatelessWidget {
   final Map<String, dynamic> row;
   final int index;
   final bool canWrite;
+  final bool reorderable;
   final bool busy;
   final ValueChanged<bool>? onToggle;
   final VoidCallback? onEdit;
@@ -223,88 +271,84 @@ class _SpotlightCard extends StatelessWidget {
     final title = row['title']?.toString() ?? '';
     final type = property['type']?.toString();
     final height = asInt(row['height'], 176);
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: placeLine),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: canWrite ? onEdit : null,
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 92,
-                height: 92 * (height / 176).clamp(0.8, 1.3),
-                child: Opacity(
+    return ContentRowCard(
+      padding: const EdgeInsetsDirectional.fromSTEB(10, 10, 4, 10),
+      onTap: canWrite ? onEdit : null,
+      child: Row(
+        children: [
+          SizedBox(
+            width: 84,
+            height: 84 * (height / 176).clamp(0.8, 1.3),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Opacity(
                   opacity: active ? 1 : 0.45,
-                  child: NetImage(url: resolveMediaUrl(row['imageUrl']), radius: 14, icon: placeTypeIcon(type)),
+                  child: NetImage(url: resolveMediaUrl(row['imageUrl']), radius: StaffRadius.md, icon: placeTypeIcon(type)),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      property['name']?.toString() ?? 'مكان محذوف',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 15.5, color: placeInk),
+                PositionedDirectional(
+                  top: 5,
+                  start: 5,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(999)),
+                    child: Text(
+                      '#${index + 1}',
+                      style: const TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w800, fontSize: 11, color: placeInk),
                     ),
-                    if (title.isNotEmpty)
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, color: placeInk2, fontWeight: FontWeight.w600),
-                      ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        StatusPill(
-                          label: active ? 'فعّال' : 'موقوف',
-                          color: active ? placeSuccess : placeInk2,
-                        ),
-                        StatusPill(label: placeTypeLabel(type), color: placeBrass, icon: placeTypeIcon(type)),
-                        StatusPill(label: 'ارتفاع $height', color: placeShiftEvening, icon: Icons.height_rounded),
-                        StatusPill(label: '#${index + 1}', color: placeInk),
-                      ],
-                    ),
-                    if (canWrite)
-                      Row(
-                        children: [
-                          CardAction(icon: Icons.edit_outlined, tooltip: 'تعديل', onTap: onEdit),
-                          CardAction(icon: Icons.delete_outline_rounded, tooltip: 'حذف', onTap: onDelete, color: placeDanger),
-                          const Spacer(),
-                          busy
-                              ? const Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 14),
-                                  child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: placeBrass)),
-                                )
-                              : Switch.adaptive(value: active, activeTrackColor: placeBrass, onChanged: onToggle),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-              if (canWrite)
-                ReorderableDragStartListener(
-                  index: index,
-                  child: const Padding(
-                    padding: EdgeInsets.all(6),
-                    child: Icon(Icons.drag_indicator_rounded, color: placeInk2),
                   ),
                 ),
-            ],
+              ],
+            ),
           ),
-        ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  property['name']?.toString() ?? 'مكان محذوف',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, fontSize: 14.5, color: placeInk),
+                ),
+                if (title.isNotEmpty)
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w600),
+                  ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    StatusChip(active ? 'فعّال' : 'موقوف', color: active ? placeSuccess : placeInk3, dense: true),
+                    ContentMeta(icon: placeTypeIcon(type), text: placeTypeLabel(type)),
+                    ContentMeta(icon: Icons.height_rounded, text: '$height', number: true),
+                  ],
+                ),
+                if (canWrite)
+                  Row(
+                    children: [
+                      CardAction(icon: Icons.delete_outline_rounded, tooltip: 'حذف', onTap: onDelete, color: placeDanger),
+                      const Spacer(),
+                      busy ? const InlineBusy() : Switch.adaptive(value: active, activeTrackColor: placeGold, onChanged: onToggle),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+          if (canWrite && reorderable)
+            ReorderableDragStartListener(
+              index: index,
+              child: const SizedBox(width: 40, height: 48, child: Icon(Icons.drag_indicator_rounded, color: placeInk3)),
+            )
+          else
+            const SizedBox(width: 6),
+        ],
       ),
     );
   }
@@ -452,158 +496,156 @@ class _SpotlightEditorScreenState extends State<SpotlightEditorScreen> {
         final leave = await confirmDiscard(context);
         if (leave && mounted) Navigator.of(this.context).pop();
       },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(_isEdit ? 'تعديل المميز' : 'عنصر مميز جديد'),
-          actions: [
-            if (_isEdit)
-              IconButton(
-                tooltip: 'حذف',
-                onPressed: _saving ? null : _delete,
-                icon: const Icon(Icons.delete_outline_rounded, color: placeDanger),
-              ),
-          ],
-        ),
-        body: Form(
+      child: ContentEditorScaffold(
+        bar: BottomActionBar(label: _isEdit ? 'حفظ التعديلات' : 'إضافة', busy: _saving, onPressed: _save),
+        child: Form(
           key: _formKey,
           onChanged: _touch,
-          child: ListView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: const EdgeInsets.only(top: 4, bottom: 24),
-            children: [
-              FormSection(
-                title: 'المكان المرتبط',
-                subtitle: 'يفتح المكان عند الضغط على البطاقة',
-                icon: placeTypeIcon(_propertyType),
+          child: StaffPage(
+            title: _isEdit ? 'تعديل المميز' : 'عنصر مميز جديد',
+            subtitle: 'بطاقة في الواجهة الرئيسية تفتح مكاناً',
+            actions: [
+              if (_isEdit)
+                IconButton(
+                  tooltip: 'حذف',
+                  onPressed: _saving ? null : _delete,
+                  icon: const Icon(Icons.delete_outline_rounded, color: placeDanger),
+                ),
+            ],
+            slivers: [
+              SliverList.list(
                 children: [
-                  PropertyPickerField(
-                    label: 'المكان',
-                    name: _propertyName,
-                    onPick: _pickProperty,
-                  ),
-                  StaffField(
-                    controller: _title,
-                    label: 'عنوان مخصص (اختياري)',
-                    hint: 'يُستخدم اسم المكان إن تُرك فارغاً',
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ],
-              ),
-              FormSection(
-                title: 'الصورة',
-                subtitle: 'تُعبأ تلقائياً بغلاف المكان ويمكن تغييرها',
-                icon: Icons.image_outlined,
-                children: [
-                  ContentImageField(
-                    url: _imageUrl,
-                    aspectRatio: 4 / 3,
-                    onChanged: (url) => setState(() {
-                      _imageUrl = url;
-                      _dirty = true;
-                    }),
-                  ),
-                ],
-              ),
-              FormSection(
-                title: 'ارتفاع البطاقة',
-                subtitle: 'بين 140 و 280 — الافتراضي 176',
-                icon: Icons.height_rounded,
-                children: [
-                  Row(
+                  FormSection(
+                    title: 'المكان المرتبط',
+                    subtitle: 'يفتح المكان عند الضغط على البطاقة',
+                    icon: placeTypeIcon(_propertyType),
                     children: [
-                      Expanded(
-                        child: Slider(
-                          value: _height,
-                          min: 140,
-                          max: 280,
-                          divisions: 35,
-                          activeColor: placeBrass,
-                          label: '${_height.round()}',
-                          onChanged: (v) => setState(() {
-                            _height = v;
-                            _dirty = true;
-                          }),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 44,
-                        child: Text(
-                          '${_height.round()}',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeInk),
-                        ),
+                      PropertyPickerField(label: 'المكان', name: _propertyName, onPick: _pickProperty),
+                      StaffField(
+                        controller: _title,
+                        label: 'عنوان مخصص (اختياري)',
+                        hint: 'يُستخدم اسم المكان إن تُرك فارغاً',
+                        onChanged: (_) => setState(() {}),
                       ),
                     ],
                   ),
-                  Center(
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      width: 150,
-                      height: _height * 0.75,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [BoxShadow(color: placeInk.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4))],
+                  FormSection(
+                    title: 'الصورة',
+                    subtitle: 'تُعبأ تلقائياً بغلاف المكان ويمكن تغييرها',
+                    icon: Icons.image_outlined,
+                    children: [
+                      ContentImageField(
+                        url: _imageUrl,
+                        aspectRatio: 4 / 3,
+                        onChanged: (url) => setState(() {
+                          _imageUrl = url;
+                          _dirty = true;
+                        }),
                       ),
-                      child: Stack(
-                        fit: StackFit.expand,
+                    ],
+                  ),
+                  FormSection(
+                    title: 'ارتفاع البطاقة',
+                    subtitle: 'بين 140 و 280 — الافتراضي 176',
+                    icon: Icons.height_rounded,
+                    children: [
+                      Row(
                         children: [
-                          NetImage(url: previewUrl, radius: 16),
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              gradient: LinearGradient(
-                                begin: Alignment.bottomCenter,
-                                end: Alignment.center,
-                                colors: [Colors.black.withValues(alpha: 0.55), Colors.transparent],
-                              ),
+                          Expanded(
+                            child: Slider(
+                              value: _height,
+                              min: 140,
+                              max: 280,
+                              divisions: 35,
+                              activeColor: placeBrass,
+                              label: '${_height.round()}',
+                              onChanged: (v) => setState(() {
+                                _height = v;
+                                _dirty = true;
+                              }),
                             ),
                           ),
-                          PositionedDirectional(
-                            start: 10,
-                            end: 10,
-                            bottom: 8,
+                          SizedBox(
+                            width: 44,
                             child: Text(
-                              _title.text.trim().isNotEmpty ? _title.text.trim() : (_propertyName ?? 'معاينة'),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 12.5, color: Colors.white),
+                              '${_height.round()}',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeInk),
                             ),
                           ),
                         ],
                       ),
-                    ),
+                      Center(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 160),
+                          width: 150,
+                          height: _height * 0.75,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [BoxShadow(color: placeInk.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4))],
+                          ),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              NetImage(url: previewUrl, radius: 16),
+                              DecoratedBox(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(16),
+                                  gradient: LinearGradient(
+                                    begin: Alignment.bottomCenter,
+                                    end: Alignment.center,
+                                    colors: [Colors.black.withValues(alpha: 0.55), Colors.transparent],
+                                  ),
+                                ),
+                              ),
+                              PositionedDirectional(
+                                start: 10,
+                                end: 10,
+                                bottom: 8,
+                                child: Text(
+                                  _title.text.trim().isNotEmpty ? _title.text.trim() : (_propertyName ?? 'معاينة'),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 12.5,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              FormSection(
-                title: 'الظهور',
-                icon: Icons.visibility_outlined,
-                children: [
-                  StaffField(
-                    controller: _sort,
-                    label: 'ترتيب الظهور',
-                    helper: 'الأصغر يظهر أولاً',
-                    keyboard: TextInputType.number,
-                    digitsOnly: true,
-                  ),
-                  ToggleRow(
-                    title: 'فعّال',
-                    subtitle: 'يظهر في الواجهة الرئيسية',
-                    value: _active,
-                    onChanged: (v) => setState(() {
-                      _active = v;
-                      _dirty = true;
-                    }),
+                  FormSection(
+                    title: 'الظهور',
+                    icon: Icons.visibility_outlined,
+                    children: [
+                      StaffField(
+                        controller: _sort,
+                        label: 'ترتيب الظهور',
+                        helper: 'الأصغر يظهر أولاً',
+                        keyboard: TextInputType.number,
+                        digitsOnly: true,
+                      ),
+                      ToggleRow(
+                        title: 'فعّال',
+                        subtitle: 'يظهر في الواجهة الرئيسية',
+                        value: _active,
+                        onChanged: (v) => setState(() {
+                          _active = v;
+                          _dirty = true;
+                        }),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ],
           ),
-        ),
-        bottomNavigationBar: BottomActionBar(
-          label: _isEdit ? 'حفظ التعديلات' : 'إضافة',
-          busy: _saving,
-          onPressed: _save,
         ),
       ),
     );

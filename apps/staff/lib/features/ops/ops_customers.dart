@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api.dart';
+import '../../core/theme.dart';
 import '../../core/session.dart';
 import '../../widgets/ui.dart';
 import '../chat_room.dart';
@@ -56,10 +57,7 @@ class _OpsCustomersScreenState extends State<OpsCustomersScreen> {
                 Expanded(
                   child: TextField(
                     controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: 'هاتف أو اسم',
-                      prefixIcon: Icon(Icons.search),
-                    ),
+                    decoration: const InputDecoration(hintText: 'هاتف أو اسم', prefixIcon: Icon(Icons.search_rounded)),
                     onSubmitted: (_) => _search(),
                   ),
                 ),
@@ -71,42 +69,49 @@ class _OpsCustomersScreenState extends State<OpsCustomersScreen> {
           if (_error != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(_error!, style: const TextStyle(color: Color(0xFFB45309))),
+              child: Text(_error!, style: const TextStyle(color: placeWarning)),
             ),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator(color: placeGold))
                 : _rows.isEmpty
-                    ? const EmptyState(title: 'ابحث عن زبون', subtitle: 'بالهاتف أو الاسم')
-                    : ListView.builder(
-                        itemCount: _rows.length,
-                        itemBuilder: (context, i) {
-                          final row = _rows[i] as Map;
-                          return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                            child: ListTile(
-                              title: Text(row['name']?.toString() ?? 'زبون', style: const TextStyle(fontWeight: FontWeight.w900)),
-                              subtitle: Text('${row['phone'] ?? ''} · ${row['_count']?['bookings'] ?? 0} حجوزات'),
-                              trailing: Session.can('inbox.read')
-                                  ? IconButton(
-                                      icon: const Icon(Icons.chat_bubble_outline),
-                                      onPressed: () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (_) => ChatRoomScreen(
-                                              contactUserId: row['id'].toString(),
-                                              contactName: row['name']?.toString() ?? 'زبون',
-                                              contactPhone: row['phone']?.toString(),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    )
-                                  : null,
-                            ),
-                          );
-                        },
-                      ),
+                ? const EmptyState(title: 'ابحث عن زبون', subtitle: 'بالهاتف أو الاسم')
+                : ListView.builder(
+                    padding: const EdgeInsets.only(top: 8, bottom: 24),
+                    itemCount: _rows.length,
+                    itemBuilder: (context, i) {
+                      final row = _rows[i] as Map;
+                      return Card(
+                        margin: const EdgeInsets.fromLTRB(StaffSpace.page, 0, StaffSpace.page, StaffSpace.gap),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(StaffRadius.lg),
+                          side: const BorderSide(color: placeLine),
+                        ),
+                        elevation: 0,
+                        color: Colors.white,
+                        child: ListTile(
+                          title: Text(row['name']?.toString() ?? 'زبون', style: const TextStyle(fontWeight: FontWeight.w900)),
+                          subtitle: Text('${row['phone'] ?? ''} · ${row['_count']?['bookings'] ?? 0} حجوزات'),
+                          trailing: Session.can('inbox.read')
+                              ? IconButton(
+                                  icon: const Icon(Icons.chat_bubble_outline),
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => ChatRoomScreen(
+                                          contactUserId: row['id'].toString(),
+                                          contactName: row['name']?.toString() ?? 'زبون',
+                                          contactPhone: row['phone']?.toString(),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                )
+                              : null,
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../../core/api.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
+import '../../widgets/kit.dart';
 import '../../widgets/ui.dart';
 import 'ops_booking_detail.dart';
 
+/// الفواتير — تصفية حسب الحالة، والضغط يفتح الحجز.
 class OpsInvoicesScreen extends StatefulWidget {
   const OpsInvoicesScreen({super.key});
 
@@ -35,102 +37,112 @@ class _OpsInvoicesScreenState extends State<OpsInvoicesScreen> {
     _load();
   }
 
-  String _statusAr(String? raw) => switch (raw) {
-        'ISSUED' => 'صادرة',
-        'PAID' => 'مدفوعة',
-        'VOID' => 'ملغاة',
-        'REFUNDED' => 'مستردة',
-        _ => raw ?? '—',
-      };
+  static String _statusAr(String? raw) => switch (raw) {
+    'ALL' => 'الكل',
+    'ISSUED' => 'صادرة',
+    'PAID' => 'مدفوعة',
+    'VOID' => 'ملغاة',
+    'REFUNDED' => 'مستردة',
+    _ => raw ?? '—',
+  };
+
+  static Color _statusColor(String? raw) => switch (raw) {
+    'PAID' => placeSuccess,
+    'ISSUED' => placeInfo,
+    'VOID' => placeInk3,
+    'REFUNDED' => placeWarning,
+    _ => placeInk2,
+  };
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('الفواتير')),
-      body: Column(
-        children: [
-          FilterChipsRow(
+    return StaffPage(
+      title: 'الفواتير',
+      subtitle: _loading ? 'جارٍ التحميل…' : '${_rows.length} فاتورة',
+      onRefresh: _load,
+      slivers: [
+        SliverToBoxAdapter(
+          child: FilterChipsRow(
             options: const ['ALL', 'ISSUED', 'PAID', 'VOID', 'REFUNDED'],
             selected: _status,
-            labelBuilder: (s) => switch (s) {
-              'ALL' => 'الكل',
-              'ISSUED' => 'صادرة',
-              'PAID' => 'مدفوعة',
-              'VOID' => 'ملغاة',
-              'REFUNDED' => 'مستردة',
-              _ => s,
-            },
+            labelBuilder: _statusAr,
             onSelected: (v) {
               setState(() => _status = v);
               _load();
             },
           ),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _load,
-              child: _loading
-                  ? ListView(children: const [SizedBox(height: 120), Center(child: CircularProgressIndicator())])
-                  : _rows.isEmpty
-                      ? ListView(children: const [EmptyState(title: 'لا فواتير')])
-                      : ListView.builder(
-                          itemCount: _rows.length,
-                          itemBuilder: (context, i) {
-                            final row = _rows[i] as Map;
-                            final booking = row['booking'] as Map?;
-                            final bookingId = booking?['id']?.toString();
-                            return Card(
-                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                              child: InkWell(
-                                onTap: bookingId == null
-                                    ? null
-                                    : () => Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (_) => OpsBookingDetailScreen(bookingId: bookingId),
-                                          ),
-                                        ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(14),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              row['number']?.toString() ?? '',
-                                              style: const TextStyle(
-                                                fontFamily: 'Montserrat',
-                                                fontWeight: FontWeight.w800,
-                                                fontSize: 15,
-                                              ),
-                                            ),
-                                          ),
-                                          Text(
-                                            _statusAr(row['status']?.toString()),
-                                            style: const TextStyle(fontWeight: FontWeight.w800, color: placeBrass),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        booking?['property']?['name']?.toString() ?? 'حجز',
-                                        style: const TextStyle(fontWeight: FontWeight.w900),
-                                      ),
-                                      Text(
-                                        '${booking?['user']?['name'] ?? booking?['guestName'] ?? ''} · ${formatIqd(row['total'])}',
-                                        style: const TextStyle(color: placeInk2),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 6)),
+        if (_loading)
+          const SkeletonSliver(count: 6, height: 92)
+        else if (_rows.isEmpty)
+          const SliverToBoxAdapter(
+            child: EmptyView(icon: Icons.receipt_long_rounded, title: 'لا فواتير', subtitle: 'لا توجد فواتير بهذه الحالة.'),
+          )
+        else
+          SliverList.separated(
+            itemCount: _rows.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
+            itemBuilder: (context, i) {
+              final row = _rows[i] as Map;
+              final booking = row['booking'] as Map?;
+              final bookingId = booking?['id']?.toString();
+              final status = row['status']?.toString();
+              final customer = '${booking?['user']?['name'] ?? booking?['guestName'] ?? ''}';
+              return Pad(
+                bottom: 0,
+                child: StaffCard(
+                  onTap: bookingId == null
+                      ? null
+                      : () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => OpsBookingDetailScreen(bookingId: bookingId))),
+                  child: Row(
+                    children: [
+                      const IconBox(icon: Icons.receipt_long_rounded, color: placeBrass, size: 44),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              booking?['property']?['name']?.toString() ?? 'حجز',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 14.5, fontWeight: FontWeight.w900, color: placeInk),
+                            ),
+                            Text(
+                              row['number']?.toString() ?? '',
+                              textDirection: TextDirection.ltr,
+                              style: const TextStyle(fontFamily: 'Montserrat', fontSize: 12, fontWeight: FontWeight.w700, color: placeInk3),
+                            ),
+                            if (customer.trim().isNotEmpty)
+                              Text(
+                                customer,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.w600, color: placeInk2),
                               ),
-                            );
-                          },
+                          ],
                         ),
-            ),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          StatusChip(_statusAr(status), color: _statusColor(status), dense: true),
+                          const SizedBox(height: 6),
+                          Text(
+                            formatIqd(row['total']),
+                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 13.5, fontWeight: FontWeight.w900, color: placeInk),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
-        ],
-      ),
+      ],
     );
   }
 }

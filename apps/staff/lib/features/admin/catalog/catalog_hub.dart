@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import '../../../core/api.dart';
 import '../../../core/session.dart';
 import '../../../core/theme.dart';
-import '../../../widgets/form_kit.dart';
-import '../../../widgets/ui.dart';
+import '../../../widgets/kit.dart';
+import '../../../widgets/ui.dart' show lightTap;
 import 'activity_screen.dart';
 import 'admin_notifications_screen.dart';
 import 'amenities_screen.dart';
+import 'catalog_common.dart';
 import 'locations_screen.dart';
 import 'reports_screen.dart';
 import 'settings_screen.dart';
@@ -18,6 +19,7 @@ class _HubEntry {
     required this.title,
     required this.subtitle,
     required this.icon,
+    required this.color,
     required this.builder,
     this.requires,
     this.writeCode,
@@ -27,6 +29,7 @@ class _HubEntry {
   final String title;
   final String subtitle;
   final IconData icon;
+  final Color color;
   final WidgetBuilder builder;
 
   /// صلاحية لازمة لظهور البطاقة (null = لكل الموظفين).
@@ -45,6 +48,7 @@ final _entries = <_HubEntry>[
     title: 'التقارير',
     subtitle: 'إيراد، حجوزات، عوالم، أعلى الأماكن',
     icon: Icons.insights_rounded,
+    color: placeSuccess,
     requires: 'reports.read',
     builder: (_) => const ReportsScreen(),
   ),
@@ -53,6 +57,7 @@ final _entries = <_HubEntry>[
     title: 'إشعارات الإدارة',
     subtitle: 'تنبيهات الفريق وقراءتها',
     icon: Icons.notifications_active_outlined,
+    color: placeBrass,
     requires: 'activity.read',
     builder: (_) => const AdminNotificationsScreen(),
   ),
@@ -61,6 +66,7 @@ final _entries = <_HubEntry>[
     title: 'سجل النشاط',
     subtitle: 'كل إجراءات الفريق',
     icon: Icons.history_rounded,
+    color: placeInfo,
     requires: 'activity.read',
     builder: (_) => const ActivityLogScreen(),
   ),
@@ -69,6 +75,7 @@ final _entries = <_HubEntry>[
     title: 'المحافظات والمدن',
     subtitle: 'المواقع وصور المحافظات',
     icon: Icons.location_city_outlined,
+    color: placeShiftEvening,
     writeCode: 'locations.write',
     builder: (_) => const LocationsScreen(),
   ),
@@ -77,6 +84,7 @@ final _entries = <_HubEntry>[
     title: 'مزايا الأماكن',
     subtitle: 'الكتالوج حسب الفئة والنوع',
     icon: Icons.sell_outlined,
+    color: placeBrass,
     writeCode: 'amenities.write',
     builder: (_) => const AmenitiesScreen(),
   ),
@@ -85,9 +93,16 @@ final _entries = <_HubEntry>[
     title: 'إعدادات المنصة',
     subtitle: 'الدعم، الدفع، الشفتات، الصيانة',
     icon: Icons.tune_rounded,
+    color: placeInk,
     writeCode: 'settings.write',
     builder: (_) => const PlatformSettingsScreen(),
   ),
+];
+
+const _groups = <(String, String?, List<String>)>[
+  ('التحليلات والمتابعة', 'أرقام المنصة وحركة الفريق', ['reports', 'notifications', 'activity']),
+  ('كتالوج المنصة', 'القوائم التي تظهر في نماذج الأماكن', ['locations', 'amenities']),
+  ('الإعدادات', null, ['settings']),
 ];
 
 /// مدخل "الإعداد والتقارير": المواقع، المزايا، الإعدادات، التقارير، النشاط والإشعارات.
@@ -96,7 +111,7 @@ final _entries = <_HubEntry>[
 class CatalogHubScreen extends StatefulWidget {
   const CatalogHubScreen({super.key, this.embedded = false});
 
-  /// true عند عرضه داخل تبويب بدون AppBar خاص.
+  /// true عند عرضه داخل تبويب بدون زر رجوع.
   final bool embedded;
 
   /// هل يظهر المدخل لهذا الموظف؟ (دائماً — أقسام القراءة متاحة للجميع)
@@ -109,6 +124,8 @@ class CatalogHubScreen extends StatefulWidget {
 class _CatalogHubScreenState extends State<CatalogHubScreen> {
   int _unread = 0;
   bool _maintenance = false;
+  Map<String, dynamic> _stats = {};
+  bool _loaded = false;
 
   @override
   void initState() {
@@ -117,7 +134,8 @@ class _CatalogHubScreenState extends State<CatalogHubScreen> {
   }
 
   Future<void> _refresh() async {
-    await Future.wait([_loadUnread(), _loadSettingsFlag()]);
+    await Future.wait([_loadUnread(), _loadSettingsFlag(), _loadStats()]);
+    if (mounted) setState(() => _loaded = true);
   }
 
   Future<void> _loadUnread() async {
@@ -136,157 +154,127 @@ class _CatalogHubScreenState extends State<CatalogHubScreen> {
     } catch (_) {}
   }
 
+  /// مؤشرات المنصة العامة (نفس مصدر شاشة التقارير) — لمن يملك reports.read فقط.
+  Future<void> _loadStats() async {
+    if (!Session.can('reports.read')) return;
+    try {
+      final data = await Api.map('/api/admin/dashboard/stats');
+      if (mounted) setState(() => _stats = data);
+    } catch (_) {}
+  }
+
+  _HubEntry _entry(String id) => _entries.firstWhere((e) => e.id == id);
+
   Future<void> _open(_HubEntry e) async {
     lightTap();
     await Navigator.of(context).push(MaterialPageRoute(builder: e.builder));
     if (mounted) _refresh();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final visible = _entries.where((e) => e.visible).toList();
-    final body = RefreshIndicator(
-      onRefresh: _refresh,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 28),
-        children: [
-          if (widget.embedded)
-            const MaisonHeader(title: 'الإعداد والتقارير', subtitle: 'كتالوج المنصة وإعداداتها وتقاريرها'),
-          if (_maintenance)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Material(
-                color: placeDanger.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(14),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(14),
-                  onTap: () => _open(_entries.firstWhere((e) => e.id == 'settings')),
-                  child: const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        Icon(Icons.construction_rounded, color: placeDanger, size: 20),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'وضع الصيانة مفعّل — الحجز متوقف للعملاء',
-                            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, color: placeDanger),
-                          ),
-                        ),
-                        Icon(Icons.chevron_left_rounded, color: placeDanger),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 1.12,
-              children: [
-                for (final e in visible)
-                  _HubTile(
-                    entry: e,
-                    badge: e.id == 'notifications' ? _unread : 0,
-                    onTap: () => _open(e),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-    if (widget.embedded) return body;
-    return Scaffold(
-      appBar: AppBar(title: const Text('الإعداد والتقارير')),
-      body: body,
+  List<Widget> _kpis() {
+    final tiles = <Widget>[];
+    final notif = _entry('notifications');
+    final reports = _entry('reports');
+    final settings = _entry('settings');
+    if (notif.visible) {
+      tiles.add(KpiTile(
+        label: 'إشعارات غير مقروءة',
+        value: _loaded ? fmtCount(_unread) : '—',
+        icon: Icons.notifications_active_outlined,
+        color: placeBrass,
+        alert: _unread > 0,
+        onTap: () => _open(notif),
+      ));
+    }
+    tiles.add(KpiTile(
+      label: 'وضع الصيانة',
+      value: !_loaded ? '—' : (_maintenance ? 'مفعّل' : 'متوقف'),
+      icon: Icons.construction_rounded,
+      color: _maintenance ? placeDanger : placeSuccess,
+      alert: _maintenance,
+      onTap: () => _open(settings),
+    ));
+    if (reports.visible && _stats.isNotEmpty) {
+      tiles.add(KpiTile(
+        label: 'حجوزات هذا الشهر',
+        value: fmtCount(_stats['monthlyBookings']),
+        icon: Icons.event_available_outlined,
+        color: placeInfo,
+        onTap: () => _open(reports),
+      ));
+      tiles.add(KpiTile(
+        label: 'إجمالي الإيراد',
+        value: fmtCompact(asNum(_stats['totalRevenue'])),
+        icon: Icons.payments_outlined,
+        color: placeSuccess,
+        onTap: () => _open(reports),
+      ));
+    }
+    return tiles;
+  }
+
+  Widget _tile(_HubEntry e) {
+    final count = e.id == 'notifications' ? _unread : 0;
+    Widget? trailing;
+    if (count == 0) {
+      if (e.id == 'settings' && _maintenance) {
+        trailing = const StatusChip('صيانة', color: placeDanger, dense: true);
+      } else if (e.readOnly) {
+        trailing = const StatusChip('عرض فقط', color: placeInk2, dense: true);
+      }
+    }
+    return TaskTile(
+      icon: e.icon,
+      title: e.title,
+      subtitle: e.subtitle,
+      color: e.color,
+      count: count,
+      trailing: trailing,
+      onTap: () => _open(e),
     );
   }
-}
-
-class _HubTile extends StatelessWidget {
-  const _HubTile({required this.entry, required this.onTap, this.badge = 0});
-
-  final _HubEntry entry;
-  final VoidCallback onTap;
-  final int badge;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: placeLine),
+    final kpis = _kpis();
+    return StaffPage(
+      title: 'الإعداد والتقارير',
+      subtitle: 'كتالوج المنصة وإعداداتها وتقاريرها',
+      showBack: widget.embedded ? false : null,
+      onRefresh: _refresh,
+      slivers: [
+        if (_maintenance)
+          SliverToBoxAdapter(
+            child: CatalogAlertBanner(
+              text: 'وضع الصيانة مفعّل — الحجز متوقف للعملاء',
+              icon: Icons.construction_rounded,
+              onTap: () => _open(_entry('settings')),
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: placeInk.withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(entry.icon, color: placeInk, size: 22),
-                  ),
-                  const Spacer(),
-                  if (badge > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(color: placeBrass, borderRadius: BorderRadius.circular(999)),
-                      child: Text(
-                        badge > 99 ? '99+' : '$badge',
-                        style: const TextStyle(
-                          fontFamily: 'Montserrat',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                    )
-                  else if (entry.readOnly)
-                    const StatusPill(label: 'عرض فقط', color: placeInk2, icon: Icons.visibility_outlined),
-                ],
+        if (kpis.isNotEmpty)
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(StaffSpace.page, 4, StaffSpace.page, 0),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                mainAxisExtent: 118,
               ),
-              const Spacer(),
-              Text(
-                entry.title,
-                style: const TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.w900, color: placeInk),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                entry.subtitle,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: placeInk2,
-                  height: 1.3,
-                ),
-              ),
-            ],
+              delegate: SliverChildListDelegate(kpis),
+            ),
           ),
-        ),
-      ),
+        for (final (title, subtitle, ids) in _groups)
+          ...() {
+            final entries = [for (final id in ids) _entry(id)].where((e) => e.visible).toList();
+            if (entries.isEmpty) return const <Widget>[];
+            final pending = entries.fold<int>(0, (s, e) => s + (e.id == 'notifications' ? _unread : 0));
+            return <Widget>[
+              SliverToBoxAdapter(child: SectionHeader(title, subtitle: subtitle, count: pending)),
+              SliverToBoxAdapter(child: Pad(child: TileGroup(children: [for (final e in entries) _tile(e)]))),
+            ];
+          }(),
+      ],
     );
   }
 }

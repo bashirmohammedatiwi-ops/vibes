@@ -4,6 +4,7 @@ import '../../../core/api.dart';
 import '../../../core/session.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
+import '../../../widgets/kit.dart';
 import 'catalog_common.dart';
 
 /// إعدادات المنصة — قراءة لأي موظف، وتعديل بصلاحية settings.write.
@@ -222,6 +223,7 @@ class _PlatformSettingsScreenState extends State<PlatformSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final dirty = _dirty;
+    final ready = !_loading && _raw.isNotEmpty;
     return PopScope(
       canPop: !dirty,
       onPopInvokedWithResult: (didPop, _) async {
@@ -230,8 +232,7 @@ class _PlatformSettingsScreenState extends State<PlatformSettingsScreen> {
         if (await _confirmLeave()) nav.pop();
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('إعدادات المنصة')),
-        bottomNavigationBar: _canWrite && !_loading && _raw.isNotEmpty
+        bottomNavigationBar: _canWrite && ready
             ? BottomActionBar(
                 label: dirty ? 'حفظ التغييرات (${_changes.length})' : 'لا تغييرات',
                 busy: _saving,
@@ -240,19 +241,61 @@ class _PlatformSettingsScreenState extends State<PlatformSettingsScreen> {
                 onSecondary: () => setState(() => _apply(_raw)),
               )
             : null,
-        body: RefreshIndicator(
-          onRefresh: () async {
-            if (_dirty) {
-              showToast(context, 'احفظ التغييرات أو تراجع عنها أولاً');
-              return;
-            }
-            await _load();
-          },
-          child: _loading
-              ? const CatalogLoadingView()
-              : _error != null && _raw.isEmpty
-                  ? CatalogErrorView(message: _error!, onRetry: _load)
-                  : Form(key: _form, child: _body()),
+        body: Form(
+          key: _form,
+          child: StaffPage(
+            title: 'إعدادات المنصة',
+            subtitle: _canWrite ? 'الدعم، الدفع، الشفتات، الصيانة' : 'عرض فقط',
+            onRefresh: () async {
+              if (_dirty) {
+                showToast(context, 'احفظ التغييرات أو تراجع عنها أولاً');
+                return;
+              }
+              await _load();
+            },
+            slivers: [
+              if (_loading)
+                const SliverToBoxAdapter(child: CatalogLoadingView(count: 5, height: 150))
+              else if (_error != null && _raw.isEmpty)
+                SliverFillRemaining(hasScrollBody: false, child: CatalogErrorView(message: _error!, onRetry: _load))
+              else
+                SliverToBoxAdapter(child: _body()),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// ملخص الحالة أعلى الصفحة: الصيانة، طرق الدفع، واتساب.
+  Widget _statusStrip() {
+    final gateways = ['manualProofEnabled', 'zainCashEnabled', 'qiCardEnabled'].where((k) => _flags[k] == true).length;
+    final maintenance = _flags['maintenanceMode'] == true;
+    final whatsapp = _flags['notifyWhatsappEnabled'] == true;
+    Widget cell(IconData icon, String label, String value, Color color) => Expanded(
+          child: Column(
+            children: [
+              IconBox(icon: icon, color: color, size: 34),
+              const SizedBox(height: 6),
+              Text(value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.w900, color: color)),
+              Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: catalogMetaStyle),
+            ],
+          ),
+        );
+    return Pad(
+      top: 4,
+      child: StaffCard(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        child: Row(
+          children: [
+            cell(Icons.construction_rounded, 'وضع الصيانة', maintenance ? 'مفعّل' : 'متوقف',
+                maintenance ? placeDanger : placeSuccess),
+            cell(Icons.payments_outlined, 'طرق الدفع', '$gateways من 3', gateways == 0 ? placeDanger : placeInk),
+            cell(Icons.chat_outlined, 'واتساب', whatsapp ? 'مفعّل' : 'متوقف', whatsapp ? placeSuccess : placeInk3),
+          ],
         ),
       ),
     );
@@ -263,33 +306,14 @@ class _PlatformSettingsScreenState extends State<PlatformSettingsScreen> {
         ? Map<String, dynamic>.from(_raw['paymentGatewaysConfigured'] as Map)
         : <String, dynamic>{};
     final whatsappReady = _raw['whatsappConfigured'] == true;
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.only(top: 4, bottom: 24),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (!_canWrite) const ReadOnlyBanner(text: 'عرض فقط — تعديل الإعدادات يتطلب صلاحية settings.write'),
         if (_flags['maintenanceMode'] == true)
-          Container(
-            margin: const EdgeInsets.fromLTRB(16, 4, 16, 6),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: placeDanger.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: placeDanger.withValues(alpha: 0.3)),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.construction_rounded, color: placeDanger, size: 20),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'وضع الصيانة مفعّل — الحجز متوقف للعملاء',
-                    style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, color: placeDanger),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const CatalogAlertBanner(text: 'وضع الصيانة مفعّل — الحجز متوقف للعملاء', icon: Icons.construction_rounded),
+        _statusStrip(),
+        const SectionHeader('التواصل والسياسات'),
         _readOnly(FormSection(
           title: 'التواصل والدفع اليدوي',
           icon: Icons.support_agent_rounded,
@@ -361,6 +385,7 @@ class _PlatformSettingsScreenState extends State<PlatformSettingsScreen> {
             ),
           ],
         )),
+        const SectionHeader('التشغيل'),
         _readOnly(FormSection(
           title: 'أوقات الشفتات',
           icon: Icons.schedule_rounded,
@@ -417,10 +442,10 @@ class _PlatformSettingsScreenState extends State<PlatformSettingsScreen> {
               ),
           ],
         )),
+        const SectionHeader('النظام', subtitle: 'للقراءة فقط'),
         FormSection(
           title: 'معلومات النظام',
           icon: Icons.info_outline_rounded,
-          subtitle: 'للقراءة فقط',
           children: [
             CopyRow(label: 'اسم التطبيق', value: '${_raw['appName'] ?? ''}'),
             CopyRow(label: 'الموقع العام', value: '${_raw['publicWebUrl'] ?? ''}'),
@@ -442,6 +467,7 @@ class _PlatformSettingsScreenState extends State<PlatformSettingsScreen> {
               ),
           ],
         ),
+        const SizedBox(height: 8),
       ],
     );
   }
@@ -486,7 +512,7 @@ class _PlatformSettingsScreenState extends State<PlatformSettingsScreen> {
   Widget _shiftRow(String label, String startKey, String endKey, Color color) {
     return Row(
       children: [
-        Container(width: 4, height: 40, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4))),
+        Container(width: 4, height: 44, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4))),
         const SizedBox(width: 10),
         SizedBox(
           width: 86,
@@ -511,7 +537,7 @@ class _PlatformSettingsScreenState extends State<PlatformSettingsScreen> {
         return null;
       },
       builder: (state) => InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(StaffRadius.md),
         onTap: () => _pickTime(key),
         child: InputDecorator(
           decoration: InputDecoration(

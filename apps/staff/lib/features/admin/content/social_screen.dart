@@ -5,30 +5,30 @@ import '../../../core/api.dart';
 import '../../../core/session.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
-import '../../../widgets/ui.dart';
+import '../../../widgets/kit.dart';
 import 'content_common.dart';
 import '../../../core/net_image.dart';
 
 String socialStatusLabel(String? s) => switch (s) {
-      'PUBLISHED' => 'منشور',
-      'HIDDEN' => 'مخفي',
-      'REPORTED' => 'مُبلَّغ عنه',
-      _ => s ?? '—',
-    };
+  'PUBLISHED' => 'منشور',
+  'HIDDEN' => 'مخفي',
+  'REPORTED' => 'مُبلَّغ عنه',
+  _ => s ?? '—',
+};
 
 Color socialStatusColor(String? s) => switch (s) {
-      'PUBLISHED' => placeSuccess,
-      'HIDDEN' => placeInk2,
-      'REPORTED' => placeDanger,
-      _ => placeInk2,
-    };
+  'PUBLISHED' => placeSuccess,
+  'HIDDEN' => placeInk2,
+  'REPORTED' => placeDanger,
+  _ => placeInk2,
+};
 
 IconData socialStatusIcon(String? s) => switch (s) {
-      'PUBLISHED' => Icons.public_rounded,
-      'HIDDEN' => Icons.visibility_off_outlined,
-      'REPORTED' => Icons.flag_outlined,
-      _ => Icons.help_outline_rounded,
-    };
+  'PUBLISHED' => Icons.public_rounded,
+  'HIDDEN' => Icons.visibility_off_outlined,
+  'REPORTED' => Icons.flag_outlined,
+  _ => Icons.help_outline_rounded,
+};
 
 bool _isVideo(String url) {
   final u = url.toLowerCase().split('?').first;
@@ -124,6 +124,16 @@ class _AdminSocialScreenState extends State<AdminSocialScreen> {
   }
 
   Future<void> _moderate(Map<String, dynamic> row, String status) async {
+    if (status == 'HIDDEN') {
+      final ok = await confirmDialog(
+        context,
+        title: 'إخفاء المنشور؟',
+        message: 'لن يظهر المنشور للزبائن حتى يُعاد نشره.',
+        confirmLabel: 'إخفاء',
+        danger: true,
+      );
+      if (!ok || !mounted) return;
+    }
     final id = '${row['id']}';
     final prev = row['status'];
     setState(() {
@@ -133,7 +143,14 @@ class _AdminSocialScreenState extends State<AdminSocialScreen> {
     try {
       await Api.send('/api/admin/social/$id', method: 'PATCH', body: {'status': status});
       if (mounted) {
-        showToast(context, status == 'PUBLISHED' ? 'تم نشر المنشور' : status == 'HIDDEN' ? 'تم إخفاء المنشور' : 'تم وضعه كمُبلَّغ عنه');
+        showToast(
+          context,
+          status == 'PUBLISHED'
+              ? 'تم نشر المنشور'
+              : status == 'HIDDEN'
+              ? 'تم إخفاء المنشور'
+              : 'تم وضعه كمُبلَّغ عنه',
+        );
         if (_status != 'ALL' && _status != status) setState(() => _rows.remove(row));
       }
     } catch (e) {
@@ -162,56 +179,73 @@ class _AdminSocialScreenState extends State<AdminSocialScreen> {
   @override
   Widget build(BuildContext context) {
     final hasMore = _page < _totalPages;
-    return Scaffold(
-      appBar: AppBar(title: const Text('منشورات التجارب')),
-      body: Column(
-        children: [
+    final state = contentStateSliver(
+      loading: _loading,
+      error: _error,
+      isEmpty: _rows.isEmpty,
+      onRetry: _load,
+      emptyIcon: _status == 'REPORTED' ? Icons.verified_outlined : Icons.photo_library_outlined,
+      emptyTitle: _status == 'REPORTED' ? 'لا بلاغات — كل شيء نظيف' : 'لا منشورات في هذا الفلتر',
+      skeletonHeight: 150,
+    );
+    return ContentAutoLoad(
+      hasMore: hasMore && !_loading && _error == null,
+      loading: _loadingMore,
+      onLoadMore: _loadMore,
+      child: StaffPage(
+        title: 'منشورات التجارب',
+        subtitle: _loading ? 'جارٍ التحميل…' : '$_total منشور',
+        onRefresh: () => _load(silent: true),
+        bottom: ContentToolbar(
+          height: kContentToolbarHeight,
+          children: [
+            ContentSearchField(
+              hint: 'بحث في الوصف، الزبون أو المكان',
+              onChanged: (v) {
+                _q = v;
+                _load(silent: _rows.isNotEmpty);
+              },
+            ),
+            ContentChips<String>(
+              selected: _status,
+              options: [
+                for (final s in const ['ALL', 'REPORTED', 'PUBLISHED', 'HIDDEN'])
+                  ContentChip(s, s == 'ALL' ? 'الكل' : socialStatusLabel(s), icon: s == 'ALL' ? null : socialStatusIcon(s)),
+              ],
+              onSelected: (v) {
+                setState(() => _status = v);
+                _load();
+              },
+            ),
+          ],
+        ),
+        slivers: [
           if (!_canModerate)
-            const ReadOnlyNotice(message: 'تحتاج صلاحية «إدارة التقييمات والمنشورات» لإدارة المنشورات.'),
-          ContentSearchField(
-            hint: 'بحث في الوصف، الزبون أو المكان',
-            onChanged: (v) {
-              _q = v;
-              _load(silent: _rows.isNotEmpty);
-            },
-          ),
-          FilterChipsRow(
-            options: const ['ALL', 'REPORTED', 'PUBLISHED', 'HIDDEN'],
-            selected: _status,
-            labelBuilder: (s) => s == 'ALL' ? 'الكل' : socialStatusLabel(s),
-            onSelected: (v) {
-              setState(() => _status = v);
-              _load();
-            },
-          ),
-          Expanded(
-            child: ContentListBody(
-              loading: _loading,
-              error: _error,
-              isEmpty: _rows.isEmpty,
-              onRefresh: () => _load(silent: true),
-              emptyTitle: _status == 'REPORTED' ? 'لا بلاغات — كل شيء نظيف' : 'لا منشورات في هذا الفلتر',
-              child: ListView.builder(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                itemCount: _rows.length + 1,
-                itemBuilder: (context, i) {
-                  if (i == _rows.length) {
-                    return LoadMoreFooter(hasMore: hasMore, loading: _loadingMore, onLoadMore: _loadMore, total: _total);
-                  }
-                  final row = _rows[i];
-                  return _PostCard(
-                    key: ValueKey(row['id']),
+            const SliverToBoxAdapter(child: ReadOnlyNotice(message: 'تحتاج صلاحية «إدارة التقييمات والمنشورات» لإدارة المنشورات.')),
+          if (state != null)
+            state
+          else ...[
+            SliverList.builder(
+              itemCount: _rows.length,
+              itemBuilder: (context, i) {
+                final row = _rows[i];
+                return Padding(
+                  key: ValueKey(row['id']),
+                  padding: const EdgeInsets.fromLTRB(StaffSpace.page, 0, StaffSpace.page, 10),
+                  child: _PostCard(
                     row: row,
                     canModerate: _canModerate,
                     busy: _busy.contains('${row['id']}'),
                     onOpen: () => _open(row),
                     onModerate: (s) => _moderate(row, s),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
-          ),
+            SliverToBoxAdapter(
+              child: LoadMoreFooter(hasMore: hasMore, loading: _loadingMore, onLoadMore: _loadMore, total: _total),
+            ),
+          ],
         ],
       ),
     );
@@ -219,14 +253,7 @@ class _AdminSocialScreenState extends State<AdminSocialScreen> {
 }
 
 class _PostCard extends StatelessWidget {
-  const _PostCard({
-    super.key,
-    required this.row,
-    required this.canModerate,
-    required this.busy,
-    required this.onOpen,
-    required this.onModerate,
-  });
+  const _PostCard({required this.row, required this.canModerate, required this.busy, required this.onOpen, required this.onModerate});
 
   final Map<String, dynamic> row;
   final bool canModerate;
@@ -246,116 +273,112 @@ class _PostCard extends StatelessWidget {
     final property = asMap(row['property']);
     final cover = media.isEmpty ? null : media.first;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: status == 'REPORTED' ? placeDanger.withValues(alpha: 0.4) : placeLine),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onOpen,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
+    return ContentRowCard(
+      onTap: onOpen,
+      borderColor: status == 'REPORTED' ? placeDanger.withValues(alpha: 0.4) : placeLine,
+      padding: const EdgeInsetsDirectional.fromSTEB(12, 12, 8, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 84,
-                    height: 84,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (cover != null && _isVideo(cover))
-                          Container(
-                            decoration: BoxDecoration(color: placeInk, borderRadius: BorderRadius.circular(14)),
-                            child: const Icon(Icons.play_circle_outline_rounded, color: Colors.white, size: 34),
-                          )
-                        else
-                          NetImage(url: resolveMediaUrl(cover), radius: 14, icon: Icons.photo_outlined),
-                        if (media.length > 1)
-                          PositionedDirectional(
-                            top: 5,
-                            end: 5,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
-                              child: Text('+${media.length - 1}',
-                                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white)),
+              SizedBox(
+                width: 80,
+                height: 80,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (cover != null && _isVideo(cover))
+                      Container(
+                        decoration: BoxDecoration(color: placeInk, borderRadius: BorderRadius.circular(StaffRadius.md)),
+                        child: const Icon(Icons.play_circle_outline_rounded, color: Colors.white, size: 34),
+                      )
+                    else
+                      NetImage(url: resolveMediaUrl(cover), radius: StaffRadius.md, icon: Icons.photo_outlined),
+                    if (media.length > 1)
+                      PositionedDirectional(
+                        top: 5,
+                        end: 5,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
+                          child: Text(
+                            '+${media.length - 1}',
+                            style: const TextStyle(
+                              fontFamily: 'Montserrat',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
                             ),
                           ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Text(
-                          property['name']?.toString() ?? '—',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 15, color: placeInk),
-                        ),
-                        Text(
-                          '${personLabel(row['user'])} · ${relativeAr(row['createdAt'])}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, color: placeInk2),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          caption.isEmpty ? 'بدون وصف' : caption,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 12.5,
-                            height: 1.4,
-                            color: caption.isEmpty ? placeInk2 : placeInk,
+                        Expanded(
+                          child: Text(
+                            property['name']?.toString() ?? '—',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, fontSize: 14.5, color: placeInk),
                           ),
                         ),
+                        const SizedBox(width: 6),
+                        StatusChip(socialStatusLabel(status), color: socialStatusColor(status), dense: true),
                       ],
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  StatusPill(label: socialStatusLabel(status), color: socialStatusColor(status), icon: socialStatusIcon(status)),
-                  const SizedBox(width: 10),
-                  _Count(icon: Icons.favorite_border_rounded, value: likes),
-                  _Count(icon: Icons.mode_comment_outlined, value: comments),
-                  if (reports > 0) _Count(icon: Icons.flag_outlined, value: reports, color: placeDanger),
-                  const Spacer(),
-                  if (canModerate)
-                    busy
-                        ? const Padding(
-                            padding: EdgeInsets.all(8),
-                            child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: placeBrass)),
-                          )
-                        : status == 'PUBLISHED'
-                            ? TextButton.icon(
-                                onPressed: () => onModerate('HIDDEN'),
-                                icon: const Icon(Icons.visibility_off_outlined, size: 18),
-                                label: const Text('إخفاء'),
-                              )
-                            : TextButton.icon(
-                                onPressed: () => onModerate('PUBLISHED'),
-                                icon: const Icon(Icons.public_rounded, size: 18),
-                                label: const Text('نشر'),
-                              ),
-                ],
+                    Text(
+                      '${personLabel(row['user'])} · ${relativeAr(row['createdAt'])}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      caption.isEmpty ? 'بدون وصف' : caption,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontFamily: 'Cairo', fontSize: 12.5, height: 1.45, color: caption.isEmpty ? placeInk3 : placeInk),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              _Count(icon: Icons.favorite_border_rounded, value: likes),
+              _Count(icon: Icons.mode_comment_outlined, value: comments),
+              if (reports > 0) _Count(icon: Icons.flag_outlined, value: reports, color: placeDanger),
+              const Spacer(),
+              if (canModerate)
+                busy
+                    ? const InlineBusy()
+                    : status == 'PUBLISHED'
+                    ? TextButton.icon(
+                        style: TextButton.styleFrom(foregroundColor: placeDanger),
+                        onPressed: () => onModerate('HIDDEN'),
+                        icon: const Icon(Icons.visibility_off_outlined, size: 18),
+                        label: const Text('إخفاء'),
+                      )
+                    : TextButton.icon(
+                        onPressed: () => onModerate('PUBLISHED'),
+                        icon: const Icon(Icons.public_rounded, size: 18),
+                        label: const Text('نشر'),
+                      ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -371,13 +394,16 @@ class _Count extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsetsDirectional.only(end: 10),
+      padding: const EdgeInsetsDirectional.only(end: 12),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 15, color: color),
-          const SizedBox(width: 3),
-          Text('$value', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w800, color: color)),
+          Icon(icon, size: 15, color: color == placeInk2 ? placeInk3 : color),
+          const SizedBox(width: 4),
+          Text(
+            '$value',
+            style: TextStyle(fontFamily: 'Montserrat', fontSize: 12, fontWeight: FontWeight.w700, color: color),
+          ),
         ],
       ),
     );
@@ -443,7 +469,14 @@ class _SocialPostDetailScreenState extends State<SocialPostDetailScreen> {
       await Api.send('/api/admin/social/${widget.postId}', method: 'PATCH', body: {'status': status});
       widget.onStatusChanged?.call(status);
       if (mounted) {
-        showToast(context, status == 'PUBLISHED' ? 'تم نشر المنشور' : status == 'HIDDEN' ? 'تم إخفاء المنشور' : 'تم وضعه كمُبلَّغ عنه');
+        showToast(
+          context,
+          status == 'PUBLISHED'
+              ? 'تم نشر المنشور'
+              : status == 'HIDDEN'
+              ? 'تم إخفاء المنشور'
+              : 'تم وضعه كمُبلَّغ عنه',
+        );
       }
     } catch (e) {
       post['status'] = prev;
@@ -468,10 +501,7 @@ class _SocialPostDetailScreenState extends State<SocialPostDetailScreen> {
           backgroundColor: Colors.black,
           appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white),
           body: Center(
-            child: InteractiveViewer(
-              maxScale: 5,
-              child: staffNetworkImage(resolved, fit: BoxFit.contain),
-            ),
+            child: InteractiveViewer(maxScale: 5, child: staffNetworkImage(resolved, fit: BoxFit.contain)),
           ),
         ),
       ),
@@ -481,53 +511,97 @@ class _SocialPostDetailScreenState extends State<SocialPostDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final post = _post;
-    return Scaffold(
-      appBar: AppBar(title: Text(asMap(post?['property'])['name']?.toString() ?? 'المنشور')),
-      bottomNavigationBar: post != null && _canModerate ? _actions(post['status']?.toString()) : null,
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: placeBrass))
-          : _error != null || post == null
-              ? ListView(children: [
-                  const SizedBox(height: 80),
-                  EmptyState(title: 'تعذّر التحميل', subtitle: _error),
-                  Center(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        setState(() => _loading = true);
-                        _load();
-                      },
-                      child: const Text('إعادة المحاولة'),
-                    ),
+    final status = post?['status']?.toString();
+    final counts = asMap(post?['_count']);
+    return ContentEditorScaffold(
+      bar: post != null && _canModerate ? _actions(status) : null,
+      child: StaffPage(
+        title: asMap(post?['property'])['name']?.toString() ?? 'المنشور',
+        subtitle: post == null ? null : '${socialStatusLabel(status)} · ${relativeAr(post['createdAt'])}',
+        onRefresh: post == null ? null : _load,
+        slivers: _loading
+            ? [
+                const SliverToBoxAdapter(
+                  child: Pad(top: 8, child: AspectRatio(aspectRatio: 1, child: SkeletonBox())),
+                ),
+                const SkeletonSliver(count: 3, height: 96),
+              ]
+            : _error != null || post == null
+            ? [
+                SliverToBoxAdapter(
+                  child: ContentErrorView(
+                    error: _error,
+                    onRetry: () {
+                      setState(() => _loading = true);
+                      _load();
+                    },
                   ),
-                ])
-              : RefreshIndicator(
-                  color: placeBrass,
-                  onRefresh: _load,
-                  child: ListView(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    children: [
-                      _mediaGallery(_mediaOf(post)),
-                      _header(post),
-                      _commentsSection(asMapList(post['comments']), asInt(asMap(post['_count'])['comments'])),
-                      _reportsSection(asMapList(post['reports']), asInt(asMap(post['_count'])['reports'])),
+                ),
+              ]
+            : [
+                SliverToBoxAdapter(child: _mediaGallery(_mediaOf(post))),
+                SliverToBoxAdapter(child: _header(post)),
+                SliverToBoxAdapter(
+                  child: _listSection(
+                    title: 'البلاغات',
+                    icon: Icons.flag_outlined,
+                    emptyText: 'لا بلاغات على هذا المنشور',
+                    total: asInt(counts['reports']),
+                    danger: true,
+                    rows: [
+                      for (final r in asMapList(post['reports']))
+                        _line(
+                          personLabel(r['user']),
+                          (r['reason']?.toString() ?? '').isEmpty ? 'بدون سبب' : r['reason'].toString(),
+                          r['createdAt'],
+                          danger: true,
+                        ),
                     ],
                   ),
                 ),
+                SliverToBoxAdapter(
+                  child: _listSection(
+                    title: 'التعليقات',
+                    icon: Icons.mode_comment_outlined,
+                    emptyText: 'لا تعليقات',
+                    total: asInt(counts['comments']),
+                    rows: [
+                      for (final c in asMapList(post['comments']))
+                        _line(personLabel(c['user']), c['body']?.toString() ?? '', c['createdAt']),
+                    ],
+                  ),
+                ),
+              ],
+      ),
     );
   }
 
   Widget _mediaGallery(List<String> media) {
     if (media.isEmpty) {
-      return Container(
-        height: 120,
-        margin: const EdgeInsets.fromLTRB(16, 8, 16, 6),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: placeLine)),
-        alignment: Alignment.center,
-        child: const Text('منشور بدون وسائط', style: TextStyle(fontFamily: 'Cairo', color: placeInk2)),
+      return const Pad(
+        top: 8,
+        child: StaffCard(
+          child: SizedBox(
+            height: 96,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.hide_image_outlined, color: placeInk3),
+                  SizedBox(height: 4),
+                  Text(
+                    'منشور بدون وسائط',
+                    style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: placeInk2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       );
     }
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+    return Pad(
+      top: 8,
       child: Column(
         children: [
           AspectRatio(
@@ -543,17 +617,20 @@ class _SocialPostDetailScreenState extends State<SocialPostDetailScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 2),
                     child: _isVideo(url)
                         ? Container(
-                            decoration: BoxDecoration(color: placeInk, borderRadius: BorderRadius.circular(20)),
+                            decoration: BoxDecoration(color: placeInk, borderRadius: BorderRadius.circular(StaffRadius.lg)),
                             child: const Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(Icons.play_circle_outline_rounded, color: Colors.white, size: 56),
                                 SizedBox(height: 6),
-                                Text('فيديو — اضغط للتشغيل', style: TextStyle(fontFamily: 'Cairo', color: Colors.white70)),
+                                Text(
+                                  'فيديو — اضغط للتشغيل',
+                                  style: TextStyle(fontFamily: 'Cairo', color: Colors.white70),
+                                ),
                               ],
                             ),
                           )
-                        : NetImage(url: resolveMediaUrl(url), radius: 20),
+                        : NetImage(url: resolveMediaUrl(url), radius: StaffRadius.lg),
                   ),
                 );
               },
@@ -571,10 +648,7 @@ class _SocialPostDetailScreenState extends State<SocialPostDetailScreen> {
                       margin: const EdgeInsets.symmetric(horizontal: 3),
                       width: i == _mediaIndex ? 18 : 6,
                       height: 6,
-                      decoration: BoxDecoration(
-                        color: i == _mediaIndex ? placeBrass : placeLine,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
+                      decoration: BoxDecoration(color: i == _mediaIndex ? placeGold : placeLine, borderRadius: BorderRadius.circular(6)),
                     ),
                 ],
               ),
@@ -588,78 +662,146 @@ class _SocialPostDetailScreenState extends State<SocialPostDetailScreen> {
     final status = post['status']?.toString();
     final caption = post['caption']?.toString() ?? '';
     final user = asMap(post['user']);
+    final name = personLabel(user);
+    final phone = user['phone']?.toString() ?? '';
     final counts = asMap(post['_count']);
-    return FormSection(
-      title: personLabel(user),
-      subtitle: [
-        if ((user['phone']?.toString() ?? '').isNotEmpty && user['phone'] != personLabel(user)) user['phone'].toString(),
-        formatStamp(post['createdAt']),
-      ].join(' · '),
-      icon: Icons.person_outline_rounded,
-      children: [
-        Text(
-          caption.isEmpty ? 'بدون وصف' : caption,
-          style: TextStyle(fontFamily: 'Cairo', fontSize: 14, height: 1.6, color: caption.isEmpty ? placeInk2 : placeInk),
-        ),
-        Row(
+    final reports = asInt(counts['reports']);
+    return Pad(
+      child: StaffCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            StatusPill(label: socialStatusLabel(status), color: socialStatusColor(status), icon: socialStatusIcon(status)),
-            const SizedBox(width: 10),
-            _Count(icon: Icons.favorite_border_rounded, value: asInt(post['likesCount'], asInt(counts['likes']))),
-            _Count(icon: Icons.mode_comment_outlined, value: asInt(post['commentsCount'], asInt(counts['comments']))),
-            _Count(icon: Icons.flag_outlined, value: asInt(counts['reports']), color: asInt(counts['reports']) > 0 ? placeDanger : placeInk2),
+            Row(
+              children: [
+                Avatar(name, size: 42),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, fontSize: 14.5, color: placeInk),
+                      ),
+                      if (phone.isNotEmpty && phone != name)
+                        Text(
+                          phone,
+                          textDirection: TextDirection.ltr,
+                          style: const TextStyle(fontFamily: 'Montserrat', fontSize: 11.5, fontWeight: FontWeight.w600, color: placeInk2),
+                        ),
+                    ],
+                  ),
+                ),
+                StatusChip(socialStatusLabel(status), color: socialStatusColor(status)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              caption.isEmpty ? 'بدون وصف' : caption,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 14,
+                height: 1.6,
+                fontWeight: FontWeight.w600,
+                color: caption.isEmpty ? placeInk3 : placeInk,
+              ),
+            ),
+            const Divider(height: 22),
+            Row(
+              children: [
+                _Count(icon: Icons.favorite_border_rounded, value: asInt(post['likesCount'], asInt(counts['likes']))),
+                _Count(icon: Icons.mode_comment_outlined, value: asInt(post['commentsCount'], asInt(counts['comments']))),
+                _Count(icon: Icons.flag_outlined, value: reports, color: reports > 0 ? placeDanger : placeInk2),
+                const Spacer(),
+                Text(
+                  formatStamp(post['createdAt']),
+                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, color: placeInk3, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _listSection({
+    required String title,
+    required IconData icon,
+    required String emptyText,
+    required int total,
+    required List<Widget> rows,
+    bool danger = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionHeader(title, subtitle: total > rows.length ? 'آخر ${rows.length} من $total' : null, count: danger ? total : null),
+        Pad(
+          bottom: 0,
+          child: rows.isEmpty
+              ? StaffCard(
+                  child: Row(
+                    children: [
+                      IconBox(icon: icon, color: danger ? placeSuccess : placeInk3, size: 34),
+                      const SizedBox(width: 10),
+                      Text(
+                        emptyText,
+                        style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: placeInk2),
+                      ),
+                    ],
+                  ),
+                )
+              : TileGroup(children: rows),
         ),
       ],
     );
   }
 
-  Widget _commentsSection(List<Map<String, dynamic>> comments, int total) {
-    return FormSection(
-      title: 'التعليقات',
-      subtitle: total > comments.length ? 'آخر ${comments.length} من $total' : null,
-      icon: Icons.mode_comment_outlined,
-      children: comments.isEmpty
-          ? [const Text('لا تعليقات', style: TextStyle(fontFamily: 'Cairo', color: placeInk2))]
-          : [for (final c in comments) _line(personLabel(c['user']), c['body']?.toString() ?? '', c['createdAt'])],
-    );
-  }
-
-  Widget _reportsSection(List<Map<String, dynamic>> reports, int total) {
-    return FormSection(
-      title: 'البلاغات',
-      subtitle: total > reports.length ? 'آخر ${reports.length} من $total' : null,
-      icon: Icons.flag_outlined,
-      children: reports.isEmpty
-          ? [const Text('لا بلاغات', style: TextStyle(fontFamily: 'Cairo', color: placeInk2))]
-          : [
-              for (final r in reports)
-                _line(personLabel(r['user']), (r['reason']?.toString() ?? '').isEmpty ? 'بدون سبب' : r['reason'].toString(), r['createdAt'],
-                    danger: true),
-            ],
-    );
-  }
-
   Widget _line(String who, String text, dynamic at, {bool danger = false}) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: danger ? placeDanger.withValues(alpha: 0.05) : placePaper,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(who, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, fontSize: 12.5, color: placeInk)),
-              ),
-              Text(relativeAr(at), style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: placeInk2)),
-            ],
+          Avatar(who, size: 40, color: danger ? placeDanger : placeNavyHigh),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        who,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, fontSize: 13.5, color: placeInk),
+                      ),
+                    ),
+                    Text(
+                      relativeAr(at),
+                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: placeInk3, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  text,
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 12.5,
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                    color: danger ? placeDanger : placeInk2,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 2),
-          Text(text, style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, height: 1.45, color: placeInk)),
         ],
       ),
     );
@@ -668,9 +810,15 @@ class _SocialPostDetailScreenState extends State<SocialPostDetailScreen> {
   Widget _actions(String? status) {
     return Container(
       padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + MediaQuery.of(context).padding.bottom),
-      decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: placeLine))),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: placeLine)),
+      ),
       child: _busy
-          ? const SizedBox(height: 48, child: Center(child: CircularProgressIndicator(color: placeBrass)))
+          ? const SizedBox(
+              height: 48,
+              child: Center(child: CircularProgressIndicator(color: placeGold)),
+            )
           : Row(
               children: [
                 if (status != 'REPORTED') ...[

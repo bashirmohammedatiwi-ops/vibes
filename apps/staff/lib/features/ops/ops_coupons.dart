@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/api.dart';
 import '../../core/session.dart';
 import '../../core/theme.dart';
+import '../../widgets/form_kit.dart';
 import '../../widgets/ui.dart';
 
 class OpsCouponsScreen extends StatefulWidget {
@@ -37,7 +38,7 @@ class _OpsCouponsScreenState extends State<OpsCouponsScreen> {
       await Api.send('/api/staff/coupons/$id/active', method: 'POST', body: {'isActive': isActive});
       await _load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) showToast(context, '$e', error: true);
     }
   }
 
@@ -56,43 +57,52 @@ class _OpsCouponsScreenState extends State<OpsCouponsScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
-            ? ListView(children: const [SizedBox(height: 120), Center(child: CircularProgressIndicator())])
+            ? ListView(
+                children: const [
+                  SizedBox(height: 120),
+                  Center(child: CircularProgressIndicator(color: placeGold)),
+                ],
+              )
             : _rows.isEmpty
-                ? ListView(children: const [EmptyState(title: 'لا كوبونات')])
-                : ListView.builder(
-                    itemCount: _rows.length,
-                    itemBuilder: (context, i) {
-                      final row = _rows[i] as Map;
-                      final id = row['id']?.toString() ?? '';
-                      final active = row['isActive'] == true;
-                      final used = row['usedCount'] ?? 0;
-                      final max = row['maxUses'];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                        child: ListTile(
-                          title: Text(
-                            row['code']?.toString() ?? '',
-                            style: const TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w800, fontSize: 16),
-                          ),
-                          subtitle: Text(
-                            '${_discountLabel(row)} · استخدام $used${max != null ? '/$max' : ''}'
-                            '${(row['description']?.toString() ?? '').isNotEmpty ? '\n${row['description']}' : ''}',
-                            style: const TextStyle(color: placeInk2),
-                          ),
-                          isThreeLine: (row['description']?.toString() ?? '').isNotEmpty,
-                          trailing: canWrite
-                              ? Switch(value: active, onChanged: (v) => _setActive(id, v))
-                              : Text(
-                                  active ? 'نشط' : 'متوقف',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    color: active ? placeBrass : placeInk2,
-                                  ),
-                                ),
-                        ),
-                      );
-                    },
-                  ),
+            ? ListView(children: const [EmptyState(title: 'لا كوبونات')])
+            : ListView.builder(
+                padding: const EdgeInsets.only(top: 8, bottom: 24),
+                itemCount: _rows.length,
+                itemBuilder: (context, i) {
+                  final row = _rows[i] as Map;
+                  final id = row['id']?.toString() ?? '';
+                  final active = row['isActive'] == true;
+                  final used = row['usedCount'] ?? 0;
+                  final max = row['maxUses'];
+                  return Card(
+                    margin: const EdgeInsets.fromLTRB(StaffSpace.page, 0, StaffSpace.page, StaffSpace.gap),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(StaffRadius.lg),
+                      side: const BorderSide(color: placeLine),
+                    ),
+                    elevation: 0,
+                    color: Colors.white,
+                    child: ListTile(
+                      title: Text(
+                        row['code']?.toString() ?? '',
+                        style: const TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w800, fontSize: 16),
+                      ),
+                      subtitle: Text(
+                        '${_discountLabel(row)} · استخدام $used${max != null ? '/$max' : ''}'
+                        '${(row['description']?.toString() ?? '').isNotEmpty ? '\n${row['description']}' : ''}',
+                        style: const TextStyle(color: placeInk2),
+                      ),
+                      isThreeLine: (row['description']?.toString() ?? '').isNotEmpty,
+                      trailing: canWrite
+                          ? Switch(value: active, onChanged: (v) => _setActive(id, v))
+                          : Text(
+                              active ? 'نشط' : 'متوقف',
+                              style: TextStyle(fontWeight: FontWeight.w800, color: active ? placeBrass : placeInk2),
+                            ),
+                    ),
+                  );
+                },
+              ),
       ),
     );
   }

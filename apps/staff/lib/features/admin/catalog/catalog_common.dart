@@ -4,6 +4,7 @@ import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
+import '../../../widgets/kit.dart';
 
 /// أدوات مشتركة لشاشات الإعداد (المواقع، المزايا، الإعدادات، التقارير، النشاط).
 
@@ -58,6 +59,20 @@ String relativeTimeAr(dynamic raw) {
   return DateFormat('d MMM', 'ar').format(d);
 }
 
+/// عنوان يوم لتجميع القوائم الزمنية: اليوم / أمس / التاريخ.
+String dayHeaderAr(dynamic raw) {
+  final d = parseDate(raw);
+  if (d == null) return 'بدون تاريخ';
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final day = DateTime(d.year, d.month, d.day);
+  final diff = today.difference(day).inDays;
+  if (diff == 0) return 'اليوم';
+  if (diff == 1) return 'أمس';
+  if (d.year == now.year) return DateFormat('EEEE d MMMM', 'ar').format(d);
+  return DateFormat('d MMMM yyyy', 'ar').format(d);
+}
+
 /// مولّد معرّف (slug) مطابق للوحة الويب: أحرف لاتينية/عربية وأرقام وشرطات.
 String slugify(String text) {
   final s = text
@@ -71,7 +86,20 @@ String slugify(String text) {
 
 String errorText(Object e) => e.toString().replaceFirst('Exception: ', '');
 
-/// حالة الخطأ مع زر إعادة المحاولة — قابلة للسحب للتحديث.
+/// أنماط نصية موحّدة لصفوف القوائم.
+const catalogTitleStyle = TextStyle(fontFamily: 'Cairo', fontSize: 14.5, fontWeight: FontWeight.w800, color: placeInk);
+const catalogSubtitleStyle = TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w600, color: placeInk2);
+const catalogMetaStyle = TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.w700, color: placeInk3);
+
+/// شريط تقدّم رفيع أسفل رأس الصفحة أثناء تنفيذ إجراء.
+PreferredSizeWidget? catalogBusyBar(bool busy) => busy
+    ? const PreferredSize(
+        preferredSize: Size.fromHeight(2),
+        child: LinearProgressIndicator(minHeight: 2, color: placeGold, backgroundColor: Colors.transparent),
+      )
+    : null;
+
+/// حالة الخطأ مع زر إعادة المحاولة — تُوضع داخل SliverFillRemaining أو أي حاوية.
 class CatalogErrorView extends StatelessWidget {
   const CatalogErrorView({super.key, required this.message, required this.onRetry});
 
@@ -80,49 +108,61 @@ class CatalogErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(32),
-      children: [
-        const SizedBox(height: 60),
-        Icon(Icons.cloud_off_rounded, size: 52, color: placeInk2.withValues(alpha: 0.5)),
-        const SizedBox(height: 12),
-        const Text(
-          'تعذّر التحميل',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontFamily: 'Cairo', fontSize: 17, fontWeight: FontWeight.w900, color: placeInk),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          message,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontFamily: 'Cairo', color: placeInk2, height: 1.5),
-        ),
-        const SizedBox(height: 16),
-        Center(
-          child: OutlinedButton.icon(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(color: placeDanger.withValues(alpha: .08), shape: BoxShape.circle),
+            child: const Icon(Icons.cloud_off_rounded, size: 34, color: placeDanger),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'تعذّر التحميل',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontFamily: 'Cairo', fontSize: 16.5, fontWeight: FontWeight.w900, color: placeInk),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, color: placeInk2, height: 1.5),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
             onPressed: onRetry,
+            style: OutlinedButton.styleFrom(minimumSize: const Size(160, 48)),
             icon: const Icon(Icons.refresh_rounded, size: 18),
             label: const Text('إعادة المحاولة'),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-/// تحميل أولي داخل قائمة (يسمح بالسحب للتحديث).
+/// هيكل تحميل (عمود من مستطيلات نابضة) — للحاويات غير الـ sliver.
 class CatalogLoadingView extends StatelessWidget {
-  const CatalogLoadingView({super.key});
+  const CatalogLoadingView({super.key, this.count = 5, this.height = 76});
+
+  final int count;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      children: const [
-        SizedBox(height: 160),
-        Center(child: CircularProgressIndicator(color: placeBrass)),
-      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: StaffSpace.page, vertical: 8),
+      child: Column(
+        children: [
+          for (var i = 0; i < count; i++) ...[
+            if (i > 0) const SizedBox(height: 10),
+            SkeletonBox(height: height),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -135,31 +175,68 @@ class ReadOnlyBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: placeBrass.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: placeBrass.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.visibility_outlined, size: 18, color: placeBrass),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.w700, color: placeInk),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(StaffSpace.page, 4, StaffSpace.page, 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: placeGoldSoft,
+          borderRadius: BorderRadius.circular(StaffRadius.md),
+          border: Border.all(color: placeBrass.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          children: [
+            const IconBox(icon: Icons.visibility_outlined, color: placeBrass, size: 32),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.w700, color: placeInk),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-/// حقل بحث مستدير.
+/// شريط تنبيه ملوّن (مثل وضع الصيانة) قابل للضغط اختيارياً.
+class CatalogAlertBanner extends StatelessWidget {
+  const CatalogAlertBanner({super.key, required this.text, required this.icon, this.color = placeDanger, this.onTap});
+
+  final String text;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Pad(
+      top: 4,
+      bottom: 8,
+      child: StaffCard(
+        onTap: onTap,
+        color: color.withValues(alpha: .06),
+        borderColor: color.withValues(alpha: .3),
+        radius: StaffRadius.md,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            IconBox(icon: icon, color: color, size: 34),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(text, style: TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.w800, color: color)),
+            ),
+            if (onTap != null) Icon(Icons.chevron_left_rounded, color: color),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// حقل بحث مستدير بطابع الـ kit.
 class CatalogSearchField extends StatelessWidget {
   const CatalogSearchField({super.key, required this.controller, required this.hint, required this.onChanged});
 
@@ -169,23 +246,34 @@ class CatalogSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(StaffRadius.md),
+      borderSide: const BorderSide(color: placeLine),
+    );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      padding: const EdgeInsets.fromLTRB(StaffSpace.page, 4, StaffSpace.page, 4),
       child: ValueListenableBuilder<TextEditingValue>(
         valueListenable: controller,
         builder: (context, value, _) => TextField(
           controller: controller,
           onChanged: onChanged,
           textInputAction: TextInputAction.search,
-          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w600),
+          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: placeInk),
           decoration: InputDecoration(
             hintText: hint,
-            isDense: true,
+            hintStyle: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w600, color: placeInk3),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            border: border,
+            enabledBorder: border,
+            focusedBorder: border.copyWith(borderSide: const BorderSide(color: placeGold, width: 1.4)),
             prefixIcon: const Icon(Icons.search_rounded, color: placeInk2),
             suffixIcon: value.text.isEmpty
                 ? null
                 : IconButton(
-                    icon: const Icon(Icons.close_rounded, size: 18),
+                    tooltip: 'مسح',
+                    icon: const Icon(Icons.close_rounded, size: 18, color: placeInk2),
                     onPressed: () {
                       controller.clear();
                       onChanged('');
@@ -198,63 +286,24 @@ class CatalogSearchField extends StatelessWidget {
   }
 }
 
-/// عنوان قسم صغير داخل القوائم.
-class SectionLabel extends StatelessWidget {
-  const SectionLabel(this.title, {super.key, this.trailing});
+/// سطر صغير يلخّص عدد النتائج مع عنصر اختياري على الطرف.
+class CatalogResultsLine extends StatelessWidget {
+  const CatalogResultsLine({super.key, required this.text, this.trailing});
 
-  final String title;
-  final String? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(fontFamily: 'Cairo', fontSize: 14.5, fontWeight: FontWeight.w900, color: placeInk),
-            ),
-          ),
-          if (trailing != null)
-            Text(
-              trailing!,
-              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w700, color: placeInk2),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// بطاقة بيضاء موحّدة.
-class CatalogCard extends StatelessWidget {
-  const CatalogCard({super.key, required this.child, this.onTap, this.padding = const EdgeInsets.all(14), this.margin});
-
-  final Widget child;
-  final VoidCallback? onTap;
-  final EdgeInsets padding;
-  final EdgeInsets? margin;
+  final String text;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: margin ?? const EdgeInsets.fromLTRB(16, 5, 16, 5),
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(18),
-          child: Container(
-            padding: padding,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: placeLine),
-            ),
-            child: child,
-          ),
+      padding: const EdgeInsets.fromLTRB(StaffSpace.page + 4, 0, StaffSpace.page, 6),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 32),
+        child: Row(
+          children: [
+            Expanded(child: Text(text, style: catalogSubtitleStyle.copyWith(fontWeight: FontWeight.w800))),
+            ?trailing,
+          ],
         ),
       ),
     );
@@ -271,35 +320,76 @@ class CopyRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 2,
-          child: Text(label, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, color: placeInk2, fontWeight: FontWeight.w700)),
-        ),
-        Expanded(
-          flex: 3,
-          child: Text(
-            value.isEmpty ? '—' : value,
-            textDirection: ltr ? TextDirection.ltr : null,
-            textAlign: TextAlign.end,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, color: placeInk, fontWeight: FontWeight.w700),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 44),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(label, style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, color: placeInk2, fontWeight: FontWeight.w600)),
           ),
-        ),
-        if (value.isNotEmpty)
-          IconButton(
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.copy_rounded, size: 16, color: placeInk2),
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: value));
-              showToast(context, 'تم النسخ');
-            },
+          Expanded(
+            flex: 3,
+            child: Text(
+              value.isEmpty ? '—' : value,
+              textDirection: ltr ? TextDirection.ltr : null,
+              textAlign: TextAlign.end,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, color: placeInk, fontWeight: FontWeight.w800),
+            ),
           ),
-      ],
+          if (value.isNotEmpty)
+            IconButton(
+              tooltip: 'نسخ',
+              icon: const Icon(Icons.copy_rounded, size: 16, color: placeInk3),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: value));
+                showToast(context, 'تم النسخ');
+              },
+            )
+          else
+            const SizedBox(width: 12),
+        ],
+      ),
     );
   }
+}
+
+/// خيار في ورقة إجراءات سفلية.
+class SheetAction {
+  const SheetAction(this.value, this.label, this.icon, {this.danger = false, this.enabled = true});
+
+  final String value;
+  final String label;
+  final IconData icon;
+  final bool danger;
+  final bool enabled;
+}
+
+/// ورقة إجراءات سفلية موحّدة تعيد قيمة الخيار المختار.
+Future<String?> showActionSheet(BuildContext context, {required String title, required List<SheetAction> actions}) {
+  return showStaffSheet<String>(
+    context,
+    title: title,
+    child: SingleChildScrollView(
+      child: TileGroup(
+        children: [
+          for (final a in actions)
+            Opacity(
+              opacity: a.enabled ? 1 : .45,
+              child: TaskTile(
+                icon: a.icon,
+                title: a.label,
+                color: a.danger ? placeDanger : placeInk,
+                onTap: a.enabled ? () => Navigator.of(context).pop(a.value) : null,
+                trailing: const SizedBox.shrink(),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
 }
 
 /// ورقة سفلية بنموذج بسيط (اسم عربي + إنجليزي …) تعيد القيم عند الحفظ.
@@ -314,8 +404,7 @@ Future<Map<String, String>?> showNameSheet(
   return showModalBottomSheet<Map<String, String>>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+    useSafeArea: true,
     builder: (_) => _NameSheet(
       title: title,
       subtitle: subtitle,
@@ -365,45 +454,42 @@ class _NameSheetState extends State<_NameSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 18, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+      padding: EdgeInsets.fromLTRB(StaffSpace.page, 0, StaffSpace.page, MediaQuery.viewInsetsOf(context).bottom + 16),
       child: Form(
         key: _form,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 14),
-                decoration: BoxDecoration(color: placeLine, borderRadius: BorderRadius.circular(4)),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(widget.title, style: const TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900, color: placeInk)),
+              if (widget.subtitle != null)
+                Text(widget.subtitle!, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.w600, color: placeInk2)),
+              const SizedBox(height: 16),
+              StaffField(
+                controller: _ar,
+                label: 'الاسم بالعربية',
+                validator: (v) {
+                  final t = v?.trim() ?? '';
+                  if (t.isEmpty) return 'الاسم مطلوب';
+                  if (t.length < 2) return 'الاسم قصير جداً';
+                  return null;
+                },
               ),
-            ),
-            Text(widget.title, style: const TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900, color: placeInk)),
-            if (widget.subtitle != null)
-              Text(widget.subtitle!, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, color: placeInk2)),
-            const SizedBox(height: 14),
-            StaffField(
-              controller: _ar,
-              label: 'الاسم بالعربية',
-              validator: (v) {
-                final t = v?.trim() ?? '';
-                if (t.isEmpty) return 'الاسم مطلوب';
-                if (t.length < 2) return 'الاسم قصير جداً';
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            StaffField(
-              controller: _en,
-              label: 'الاسم بالإنجليزية (اختياري)',
-              ltr: true,
-              helper: 'يُستخدم الاسم العربي إن تُرك فارغاً',
-            ),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: _submit, child: Text(widget.confirmLabel)),
-          ],
+              const SizedBox(height: 12),
+              StaffField(
+                controller: _en,
+                label: 'الاسم بالإنجليزية (اختياري)',
+                ltr: true,
+                helper: 'يُستخدم الاسم العربي إن تُرك فارغاً',
+              ),
+              const SizedBox(height: 18),
+              SizedBox(
+                height: 50,
+                child: FilledButton(onPressed: _submit, child: Text(widget.confirmLabel)),
+              ),
+            ],
+          ),
         ),
       ),
     );

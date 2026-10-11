@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/api.dart';
 import '../../core/session.dart';
 import '../../core/theme.dart';
+import '../../widgets/form_kit.dart';
 import '../../widgets/ui.dart';
 
 class OpsProvidersScreen extends StatefulWidget {
@@ -20,9 +21,7 @@ class _OpsProvidersScreenState extends State<OpsProvidersScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final path = _q.trim().isEmpty
-          ? '/api/staff/providers'
-          : '/api/staff/providers?q=${Uri.encodeQueryComponent(_q.trim())}';
+      final path = _q.trim().isEmpty ? '/api/staff/providers' : '/api/staff/providers?q=${Uri.encodeQueryComponent(_q.trim())}';
       _rows = await Api.list(path);
     } catch (_) {
       _rows = [];
@@ -43,14 +42,10 @@ class _OpsProvidersScreenState extends State<OpsProvidersScreen> {
       if (reason == null) return;
     }
     try {
-      await Api.send(
-        '/api/staff/providers/$id/verify',
-        method: 'POST',
-        body: {'verified': verified, if (reason != null) 'reason': reason},
-      );
+      await Api.send('/api/staff/providers/$id/verify', method: 'POST', body: {'verified': verified, if (reason != null) 'reason': reason});
       await _load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) showToast(context, '$e', error: true);
     }
   }
 
@@ -63,7 +58,7 @@ class _OpsProvidersScreenState extends State<OpsProvidersScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: TextField(
-              decoration: const InputDecoration(hintText: 'بحث بالاسم أو الهاتف', prefixIcon: Icon(Icons.search)),
+              decoration: const InputDecoration(hintText: 'بحث بالاسم أو الهاتف', prefixIcon: Icon(Icons.search_rounded)),
               onSubmitted: (v) {
                 _q = v;
                 _load();
@@ -74,42 +69,48 @@ class _OpsProvidersScreenState extends State<OpsProvidersScreen> {
             child: RefreshIndicator(
               onRefresh: _load,
               child: _loading
-                  ? ListView(children: const [SizedBox(height: 120), Center(child: CircularProgressIndicator())])
+                  ? ListView(
+                      children: const [
+                        SizedBox(height: 120),
+                        Center(child: CircularProgressIndicator(color: placeGold)),
+                      ],
+                    )
                   : _rows.isEmpty
-                      ? ListView(children: const [EmptyState(title: 'لا مزودين')])
-                      : ListView.builder(
-                          itemCount: _rows.length,
-                          itemBuilder: (context, i) {
-                            final row = _rows[i] as Map;
-                            final id = row['id']?.toString() ?? '';
-                            final verified = row['verified'] == true;
-                            return Card(
-                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                              child: ListTile(
-                                title: Text(
-                                  () {
-                                    final biz = row['businessName']?.toString() ?? '';
-                                    if (biz.isNotEmpty) return biz;
-                                    return row['user']?['name']?.toString() ?? 'مزود';
-                                  }(),
-                                  style: const TextStyle(fontWeight: FontWeight.w900),
-                                ),
-                                subtitle: Text(
-                                  '${row['user']?['phone'] ?? ''} · ${row['_count']?['properties'] ?? 0} مكان · ${row['kycStatus'] ?? ''}',
-                                  style: const TextStyle(color: placeInk2),
-                                ),
-                                trailing: Session.can('providers.link')
-                                    ? verified
-                                        ? const Icon(Icons.verified, color: Color(0xFF15803D))
-                                        : FilledButton(
-                                            onPressed: () => _verify(id, true),
-                                            child: const Text('تحقق'),
-                                          )
-                                    : null,
-                              ),
-                            );
-                          },
-                        ),
+                  ? ListView(children: const [EmptyState(title: 'لا مزودين')])
+                  : ListView.builder(
+                      padding: const EdgeInsets.only(top: 8, bottom: 24),
+                      itemCount: _rows.length,
+                      itemBuilder: (context, i) {
+                        final row = _rows[i] as Map;
+                        final id = row['id']?.toString() ?? '';
+                        final verified = row['verified'] == true;
+                        return Card(
+                          margin: const EdgeInsets.fromLTRB(StaffSpace.page, 0, StaffSpace.page, StaffSpace.gap),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(StaffRadius.lg),
+                            side: const BorderSide(color: placeLine),
+                          ),
+                          elevation: 0,
+                          color: Colors.white,
+                          child: ListTile(
+                            title: Text(() {
+                              final biz = row['businessName']?.toString() ?? '';
+                              if (biz.isNotEmpty) return biz;
+                              return row['user']?['name']?.toString() ?? 'مزود';
+                            }(), style: const TextStyle(fontWeight: FontWeight.w900)),
+                            subtitle: Text(
+                              '${row['user']?['phone'] ?? ''} · ${row['_count']?['properties'] ?? 0} مكان · ${row['kycStatus'] ?? ''}',
+                              style: const TextStyle(color: placeInk2),
+                            ),
+                            trailing: Session.can('providers.link')
+                                ? verified
+                                      ? const Icon(Icons.verified_rounded, color: placeSuccess)
+                                      : FilledButton(onPressed: () => _verify(id, true), child: const Text('تحقق'))
+                                : null,
+                          ),
+                        );
+                      },
+                    ),
             ),
           ),
         ],

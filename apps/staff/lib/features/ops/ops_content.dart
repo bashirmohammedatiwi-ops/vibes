@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api.dart';
 import '../../core/theme.dart';
+import '../../widgets/form_kit.dart';
 import '../../widgets/ui.dart';
 
 class OpsContentScreen extends StatefulWidget {
@@ -56,7 +57,7 @@ class _OpsContentScreenState extends State<OpsContentScreen> with SingleTickerPr
       await Api.send('/api/staff/banners/$id/active', method: 'POST', body: {'isActive': isActive});
       await _load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) showToast(context, '$e', error: true);
     }
   }
 
@@ -65,7 +66,7 @@ class _OpsContentScreenState extends State<OpsContentScreen> with SingleTickerPr
       await Api.send('/api/staff/spotlights/$id/active', method: 'POST', body: {'isActive': isActive});
       await _load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) showToast(context, '$e', error: true);
     }
   }
 
@@ -83,7 +84,7 @@ class _OpsContentScreenState extends State<OpsContentScreen> with SingleTickerPr
       );
       await _load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) showToast(context, '$e', error: true);
     }
   }
 
@@ -102,7 +103,7 @@ class _OpsContentScreenState extends State<OpsContentScreen> with SingleTickerPr
         ),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: placeGold))
           : TabBarView(
               controller: _tabs,
               children: [
@@ -111,25 +112,27 @@ class _OpsContentScreenState extends State<OpsContentScreen> with SingleTickerPr
                   child: _banners.isEmpty
                       ? ListView(children: const [EmptyState(title: 'لا بانرات')])
                       : ListView.builder(
+                          padding: const EdgeInsets.only(top: 8, bottom: 24),
                           itemCount: _banners.length,
                           itemBuilder: (context, i) {
                             final row = _banners[i] as Map;
                             final id = row['id']?.toString() ?? '';
                             final active = row['isActive'] == true;
                             return Card(
-                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                              margin: const EdgeInsets.fromLTRB(StaffSpace.page, 0, StaffSpace.page, StaffSpace.gap),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(StaffRadius.lg),
+                                side: const BorderSide(color: placeLine),
+                              ),
+                              elevation: 0,
+                              color: Colors.white,
                               child: ListTile(
                                 title: Text(row['title']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.w900)),
                                 subtitle: Text(
-                                  row['subtitle']?.toString().isNotEmpty == true
-                                      ? row['subtitle'].toString()
-                                      : (active ? 'نشط' : 'متوقف'),
+                                  row['subtitle']?.toString().isNotEmpty == true ? row['subtitle'].toString() : (active ? 'نشط' : 'متوقف'),
                                   style: const TextStyle(color: placeInk2),
                                 ),
-                                trailing: Switch(
-                                  value: active,
-                                  onChanged: (v) => _setBannerActive(id, v),
-                                ),
+                                trailing: Switch(value: active, onChanged: (v) => _setBannerActive(id, v)),
                               ),
                             );
                           },
@@ -151,6 +154,7 @@ class _OpsContentScreenState extends State<OpsContentScreen> with SingleTickerPr
                         child: _reviews.isEmpty
                             ? ListView(children: const [EmptyState(title: 'لا تقييمات')])
                             : ListView.builder(
+                                padding: const EdgeInsets.only(top: 8, bottom: 24),
                                 itemCount: _reviews.length,
                                 itemBuilder: (context, i) {
                                   final row = _reviews[i] as Map;
@@ -159,7 +163,13 @@ class _OpsContentScreenState extends State<OpsContentScreen> with SingleTickerPr
                                   final property = row['property'] as Map?;
                                   final user = row['user'] as Map?;
                                   return Card(
-                                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                    margin: const EdgeInsets.fromLTRB(StaffSpace.page, 0, StaffSpace.page, StaffSpace.gap),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(StaffRadius.lg),
+                                      side: const BorderSide(color: placeLine),
+                                    ),
+                                    elevation: 0,
+                                    color: Colors.white,
                                     child: Padding(
                                       padding: const EdgeInsets.all(14),
                                       child: Column(
@@ -182,15 +192,9 @@ class _OpsContentScreenState extends State<OpsContentScreen> with SingleTickerPr
                                             spacing: 8,
                                             children: [
                                               if (visible)
-                                                OutlinedButton(
-                                                  onPressed: () => _setReviewVisible(id, false),
-                                                  child: const Text('إخفاء'),
-                                                )
+                                                OutlinedButton(onPressed: () => _setReviewVisible(id, false), child: const Text('إخفاء'))
                                               else
-                                                FilledButton(
-                                                  onPressed: () => _setReviewVisible(id, true),
-                                                  child: const Text('إظهار'),
-                                                ),
+                                                FilledButton(onPressed: () => _setReviewVisible(id, true), child: const Text('إظهار')),
                                             ],
                                           ),
                                         ],
@@ -208,6 +212,7 @@ class _OpsContentScreenState extends State<OpsContentScreen> with SingleTickerPr
                   child: _spotlights.isEmpty
                       ? ListView(children: const [EmptyState(title: 'لا عناصر مميزة')])
                       : ListView.builder(
+                          padding: const EdgeInsets.only(top: 8, bottom: 24),
                           itemCount: _spotlights.length,
                           itemBuilder: (context, i) {
                             final row = _spotlights[i] as Map;
@@ -215,7 +220,13 @@ class _OpsContentScreenState extends State<OpsContentScreen> with SingleTickerPr
                             final active = row['isActive'] == true;
                             final property = row['property'] as Map?;
                             return Card(
-                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                              margin: const EdgeInsets.fromLTRB(StaffSpace.page, 0, StaffSpace.page, StaffSpace.gap),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(StaffRadius.lg),
+                                side: const BorderSide(color: placeLine),
+                              ),
+                              elevation: 0,
+                              color: Colors.white,
                               child: ListTile(
                                 title: Text(
                                   (row['title']?.toString().isNotEmpty == true)
@@ -227,10 +238,7 @@ class _OpsContentScreenState extends State<OpsContentScreen> with SingleTickerPr
                                   property?['name']?.toString() ?? (active ? 'نشط' : 'متوقف'),
                                   style: const TextStyle(color: placeInk2),
                                 ),
-                                trailing: Switch(
-                                  value: active,
-                                  onChanged: (v) => _setSpotlightActive(id, v),
-                                ),
+                                trailing: Switch(value: active, onChanged: (v) => _setSpotlightActive(id, v)),
                               ),
                             );
                           },

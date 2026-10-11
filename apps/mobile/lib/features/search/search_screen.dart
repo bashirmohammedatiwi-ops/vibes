@@ -176,7 +176,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           cityId: _filters.cityId,
           province: _filters.province,
           sort: _filters.sort,
-          pageSize: 40,
+          pageSize: 100,
         );
       }
 

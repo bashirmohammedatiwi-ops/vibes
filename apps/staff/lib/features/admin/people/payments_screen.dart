@@ -6,6 +6,7 @@ import '../../../core/format.dart';
 import '../../../core/session.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
+import '../../../widgets/kit.dart';
 import 'payment_detail.dart';
 import 'people_common.dart';
 
@@ -74,7 +75,15 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen> {
         maxLines: 3,
         danger: true,
       );
-      if (note == null) return;
+      if (note == null || !mounted) return;
+      final ok = await confirmDialog(
+        context,
+        title: 'رفض ${ids.length} دفعة؟',
+        message: 'ستُعلَّم الدفعات المحددة «فشل» مع سبب الرفض.',
+        confirmLabel: 'رفض',
+        danger: true,
+      );
+      if (!ok) return;
     } else {
       final ok = await confirmDialog(
         context,
@@ -105,6 +114,14 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen> {
     }
   }
 
+  void _selectAll() {
+    setState(() {
+      for (final p in _list.items) {
+        if (p['status'] == 'PENDING') _selected.add('${p['id']}');
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -112,97 +129,75 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen> {
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) setState(_selected.clear);
       },
-      child: Scaffold(
-        appBar: _selecting
-            ? AppBar(
-                backgroundColor: placeInk,
-                foregroundColor: Colors.white,
-                leading: IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => setState(_selected.clear)),
-                title: Text('${_selected.length} محددة', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        for (final p in _list.items) {
-                          if (p['status'] == 'PENDING') _selected.add('${p['id']}');
-                        }
-                      });
-                    },
-                    child: const Text('تحديد الكل', style: TextStyle(color: Colors.white)),
-                  ),
-                ],
-              )
-            : AppBar(title: const Text('المدفوعات')),
-        body: Column(
-          children: [
-            SearchBox(hint: 'الزبون، الهاتف، المكان أو رقم العملية', onChanged: (v) => setState(() => _q = v)),
-            FilterBar(groups: [
-              FilterGroup(
-                options: const ['PENDING', 'PAID', 'FAILED', 'REFUNDED', 'all'],
-                selected: _status,
-                labelOf: (v) => v == 'all' ? 'كل الحالات' : paymentStatusAr(v),
-                onSelected: (v) => setState(() {
-                  _status = v;
-                  _selected.clear();
-                }),
-              ),
-            ]),
-            FilterBar(groups: [
-              FilterGroup(
-                options: const ['all', 'MANUAL', 'ZAIN_CASH', 'QI_CARD'],
-                selected: _method,
-                labelOf: (v) => v == 'all' ? 'كل الطرق' : methodLabel(v),
-                onSelected: (v) => setState(() => _method = v),
-              ),
-              FilterGroup(
-                options: const ['proof'],
-                selected: _proofOnly ? 'proof' : '',
-                labelOf: (_) => 'مع إثبات',
-                onSelected: (_) => setState(() => _proofOnly = !_proofOnly),
-              ),
-            ]),
-            Expanded(
-              child: PagedList(
-                key: ValueKey('$_q|$_status|$_method|$_proofOnly'),
-                controller: _list,
-                fetch: _fetch,
-                onLoaded: (r) => setState(() {
-                  _total = r.total;
-                  _pendingProof = asInt(r.raw['pendingProof']);
-                }),
-                header: _header(),
-                emptyTitle: _status == 'PENDING' ? 'لا مدفوعات بانتظار التحقق' : 'لا مدفوعات',
-                emptySubtitle: 'غيّر الفلاتر لعرض المزيد',
-                itemBuilder: (context, p, _) => _PaymentCard(
-                  payment: p,
-                  selected: _selected.contains('${p['id']}'),
-                  onTap: () => _open(p),
-                  onLongPress: () => _toggle(p),
-                ),
-              ),
-            ),
-          ],
+      child: PagedStaffPage(
+        title: _selecting ? '${_selected.length} محددة' : 'المدفوعات',
+        subtitle: _selecting ? 'اعتمد أو ارفض الدفعات المحددة' : (_total == null ? null : '$_total دفعة'),
+        leading: _selecting
+            ? IconButton(tooltip: 'إلغاء التحديد', icon: const Icon(Icons.close_rounded), onPressed: () => setState(_selected.clear))
+            : null,
+        actions: [
+          if (_selecting) IconButton(tooltip: 'تحديد الكل', icon: const Icon(Icons.select_all_rounded), onPressed: _selectAll),
+        ],
+        resetKey: '$_q|$_status|$_method|$_proofOnly',
+        controller: _list,
+        fetch: _fetch,
+        onLoaded: (r) => setState(() {
+          _total = r.total;
+          _pendingProof = asInt(r.raw['pendingProof']);
+        }),
+        search: SearchBox(
+          hint: 'الزبون، الهاتف، المكان أو رقم العملية',
+          padding: SearchBox.barPadding,
+          onChanged: (v) => setState(() => _q = v),
         ),
-        bottomNavigationBar: _selecting
-            ? Container(
-                padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + MediaQuery.of(context).padding.bottom),
-                decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: placeLine))),
+        filters: FilterBar(groups: [
+          FilterGroup(
+            options: const ['PENDING', 'PAID', 'FAILED', 'REFUNDED', 'all'],
+            selected: _status,
+            labelOf: (v) => v == 'all' ? 'كل الحالات' : paymentStatusAr(v),
+            onSelected: (v) => setState(() {
+              _status = v;
+              _selected.clear();
+            }),
+          ),
+          FilterGroup(
+            options: const ['proof'],
+            selected: _proofOnly ? 'proof' : '',
+            labelOf: (_) => 'مع إثبات',
+            onSelected: (_) => setState(() => _proofOnly = !_proofOnly),
+          ),
+          FilterGroup(
+            options: const ['all', 'MANUAL', 'ZAIN_CASH', 'QI_CARD'],
+            selected: _method,
+            labelOf: (v) => v == 'all' ? 'كل الطرق' : methodLabel(v),
+            onSelected: (v) => setState(() => _method = v),
+          ),
+        ]),
+        listHeader: _header(),
+        emptyIcon: Icons.receipt_long_outlined,
+        emptyTitle: _status == 'PENDING' ? 'لا مدفوعات بانتظار التحقق' : 'لا مدفوعات',
+        emptySubtitle: 'غيّر الفلاتر لعرض المزيد',
+        itemBuilder: (context, p, _) => _PaymentCard(
+          payment: p,
+          selected: _selected.contains('${p['id']}'),
+          onTap: () => _open(p),
+          onLongPress: () => _toggle(p),
+        ),
+        bottomBar: _selecting
+            ? ActionBarShell(
                 child: Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(foregroundColor: placeDanger),
-                        onPressed: () => _bulk('FAILED'),
-                        child: const Text('رفض المحدد'),
-                      ),
+                      child: BarButton(label: 'رفض المحدد', color: placeDanger, outlined: true, onPressed: () => _bulk('FAILED')),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       flex: 2,
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(backgroundColor: placeSuccess),
+                      child: BarButton(
+                        label: 'اعتماد ${_selected.length}',
+                        icon: Icons.check_circle_rounded,
+                        color: placeSuccess,
                         onPressed: () => _bulk('PAID'),
-                        child: Text('اعتماد ${_selected.length}'),
                       ),
                     ),
                   ],
@@ -213,33 +208,34 @@ class _AdminPaymentsScreenState extends State<AdminPaymentsScreen> {
     );
   }
 
-  Widget _header() {
+  Widget? _header() {
+    final banner = _pendingProof > 0 && !(_status == 'PENDING' && _proofOnly);
+    final hint = _canVerify && _status == 'PENDING' && !_selecting;
+    if (!banner && !hint) return null;
     return Column(
       children: [
-        if (_pendingProof > 0 && !(_status == 'PENDING' && _proofOnly))
+        if (banner)
           NoticeBanner(
             title: '$_pendingProof إثبات دفع بانتظار المراجعة',
             text: 'اضغط لعرضها',
-            color: placeShiftMorning,
-            icon: Icons.receipt_long_outlined,
+            color: placeWarning,
+            icon: Icons.receipt_long_rounded,
             onTap: () => setState(() {
               _status = 'PENDING';
               _proofOnly = true;
             }),
           ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 2, 20, 4),
-          child: Row(
-            children: [
-              Text(_total == null ? '' : '$_total دفعة',
-                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w700, color: placeInk2)),
-              const Spacer(),
-              if (_canVerify && _status == 'PENDING' && !_selecting)
-                const Text('اضغط مطولاً للتحديد الجماعي',
-                    style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: placeInk2)),
-            ],
+        if (hint)
+          const Padding(
+            padding: EdgeInsets.fromLTRB(StaffSpace.page, 0, StaffSpace.page, 8),
+            child: Row(
+              children: [
+                Icon(Icons.touch_app_outlined, size: 16, color: placeInk3),
+                SizedBox(width: 6),
+                Text('اضغط مطولاً على دفعة للتحديد الجماعي', style: TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.w600, color: placeInk3)),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
@@ -262,55 +258,27 @@ class _PaymentCard extends StatelessWidget {
     final needsReview = status == 'PENDING' && hasProof;
     return ListCard(
       selected: selected,
-      highlight: needsReview ? placeShiftMorning.withValues(alpha: 0.45) : null,
+      highlight: needsReview ? placeWarning.withValues(alpha: 0.45) : null,
       onTap: onTap,
       onLongPress: onLongPress,
-      child: Row(
-        children: [
-          if (selected)
-            const Padding(
-              padding: EdgeInsetsDirectional.only(end: 10),
-              child: Icon(Icons.check_circle_rounded, color: placeBrass, size: 26),
-            )
-          else
-            Container(
-              width: 44,
-              height: 44,
-              margin: const EdgeInsetsDirectional.only(end: 10),
-              decoration: BoxDecoration(color: paymentStatusColor(status).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-              child: Icon(methodIcon(p['method']?.toString()), color: paymentStatusColor(status), size: 22),
-            ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(nonEmpty(asMap(booking['property'])['name'], 'دفعة'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 14.5, fontWeight: FontWeight.w900, color: placeInk)),
-                Text(
-                  '${nonEmpty(user['name'] ?? booking['guestName'], 'زبون')} · ${methodLabel(p['method']?.toString())}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 5),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    StatusPill(label: paymentStatusAr(status), color: paymentStatusColor(status)),
-                    if (hasProof) StatusPill(label: 'إثبات', color: placeShiftEvening, icon: Icons.image_outlined),
-                    StatusPill(label: relativeAr(p['createdAt']), color: placeInk2),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(formatIqd(p['amount']),
-              style: const TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.w900, color: placeInk)),
+      child: ListRow(
+        leading: selected
+            ? const SizedBox(width: 44, height: 44, child: Icon(Icons.check_circle_rounded, color: placeGold, size: 30))
+            : IconBox(icon: methodIcon(p['method']?.toString()), color: paymentStatusColor(status), size: 44),
+        title: nonEmpty(asMap(booking['property'])['name'], 'دفعة'),
+        subtitle: '${nonEmpty(user['name'] ?? booking['guestName'], 'زبون')} · ${methodLabel(p['method']?.toString())}',
+        chips: [
+          StatusChip(paymentStatusAr(status), color: paymentStatusColor(status), dense: true),
+          if (hasProof) const StatusChip('إثبات', color: placeShiftEvening, dense: true),
         ],
+        trailing: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            MetaText(formatIqd(p['amount']), strong: true),
+            const SizedBox(height: 4),
+            MetaText(relativeAr(p['createdAt'])),
+          ],
+        ),
       ),
     );
   }

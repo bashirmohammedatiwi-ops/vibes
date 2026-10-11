@@ -7,7 +7,7 @@ import '../../core/format.dart';
 import '../../core/session.dart';
 import '../../core/theme.dart';
 import '../../widgets/form_kit.dart';
-import '../../widgets/ui.dart';
+import '../../widgets/kit.dart';
 
 /// الأسعار والتوفر: قواعد أسعار (أيام الأسبوع / مواسم) + حظر وفتح الأيام.
 class PropertyPricingScreen extends StatelessWidget {
@@ -28,15 +28,25 @@ class PropertyPricingScreen extends StatelessWidget {
               const Text('الأسعار والتوفر'),
               Text(
                 propertyName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w600, color: placeInk2),
               ),
             ],
           ),
           bottom: const TabBar(
             labelColor: placeInk,
-            indicatorColor: placeBrass,
-            labelStyle: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800),
-            tabs: [Tab(text: 'قواعد الأسعار'), Tab(text: 'التوفر والحظر')],
+            unselectedLabelColor: placeInk3,
+            indicatorColor: placeGold,
+            indicatorWeight: 3,
+            indicatorSize: TabBarIndicatorSize.label,
+            dividerColor: placeLine,
+            labelStyle: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 14),
+            unselectedLabelStyle: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, fontSize: 14),
+            tabs: [
+              Tab(icon: Icon(Icons.sell_rounded, size: 20), iconMargin: EdgeInsets.only(bottom: 2), text: 'قواعد الأسعار'),
+              Tab(icon: Icon(Icons.event_busy_rounded, size: 20), iconMargin: EdgeInsets.only(bottom: 2), text: 'التوفر والحظر'),
+            ],
           ),
         ),
         body: TabBarView(
@@ -162,93 +172,132 @@ class _RulesTabState extends State<_RulesTab> {
               backgroundColor: placeInk,
               foregroundColor: Colors.white,
               icon: const Icon(Icons.add),
-              label: const Text('قاعدة جديدة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800)),
+              label: const Text(
+                'قاعدة جديدة',
+                style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800),
+              ),
             )
           : null,
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: placeBrass))
+          ? ListView(
+              padding: const EdgeInsets.all(StaffSpace.page),
+              physics: const NeverScrollableScrollPhysics(),
+              children: const [SkeletonBox(height: 150), SizedBox(height: 10), SkeletonBox(height: 150)],
+            )
           : _error != null
-              ? Center(child: Text(_error!, style: const TextStyle(color: placeInk2)))
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: _rules.isEmpty
-                      ? ListView(
-                          children: const [
-                            SizedBox(height: 60),
-                            EmptyState(
-                              title: 'لا قواعد أسعار',
-                              subtitle: 'يُستخدم السعر الافتراضي للمكان. أضف قاعدة لنهاية الأسبوع أو لموسم معيّن.',
-                            ),
-                          ],
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 10, 16, 100),
-                          itemCount: _rules.length,
-                          itemBuilder: (context, i) {
-                            final r = _rules[i];
-                            final active = r['isActive'] != false;
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(color: placeLine),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          (r['name']?.toString() ?? '').isEmpty ? 'قاعدة بدون اسم' : '${r['name']}',
-                                          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 15),
-                                        ),
-                                      ),
-                                      StatusPill(
-                                        label: r['ruleType'] == 'DATE_RANGE' ? 'موسم' : 'أسبوعية',
-                                        color: r['ruleType'] == 'DATE_RANGE' ? placeShiftEvening : placeBrass,
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(_describe(r), style: const TextStyle(color: placeInk2, fontWeight: FontWeight.w600)),
-                                  const SizedBox(height: 10),
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 6,
-                                    children: [
-                                      if (r['fullDayPrice'] != null) _PriceChip('يوم كامل', formatIqd(r['fullDayPrice'])),
-                                      if (r['morningPrice'] != null) _PriceChip('صباحي', formatIqd(r['morningPrice'])),
-                                      if (r['eveningPrice'] != null) _PriceChip('مسائي', formatIqd(r['eveningPrice'])),
-                                      _PriceChip('الأولوية', '${r['priority'] ?? 0}'),
-                                    ],
-                                  ),
-                                  if (_canWrite) ...[
-                                    const SizedBox(height: 6),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: ToggleRow(
-                                            title: active ? 'مفعّلة' : 'معطّلة',
-                                            value: active,
-                                            onChanged: (v) => _toggle(r, v),
-                                          ),
-                                        ),
-                                        IconButton(
-                                          onPressed: () => _delete(r),
-                                          icon: const Icon(Icons.delete_outline_rounded, color: placeDanger),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            );
-                          },
+          ? Center(
+              child: EmptyView(
+                icon: Icons.cloud_off_rounded,
+                title: 'تعذّر تحميل القواعد',
+                subtitle: _error,
+                actionLabel: 'إعادة المحاولة',
+                onAction: _load,
+              ),
+            )
+          : RefreshIndicator(
+              color: placeGold,
+              onRefresh: _load,
+              child: _rules.isEmpty
+                  ? ListView(
+                      children: [
+                        EmptyView(
+                          icon: Icons.sell_outlined,
+                          title: 'لا قواعد أسعار',
+                          subtitle: 'يُستخدم السعر الافتراضي للمكان. أضف قاعدة لنهاية الأسبوع أو لموسم معيّن.',
+                          actionLabel: _canWrite ? 'إضافة قاعدة' : null,
+                          onAction: _canWrite ? _add : null,
                         ),
+                      ],
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(StaffSpace.page, StaffSpace.page, StaffSpace.page, 100),
+                      itemCount: _rules.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: StaffSpace.gap),
+                      itemBuilder: (context, i) => _ruleCard(_rules[i]),
+                    ),
+            ),
+    );
+  }
+
+  Widget _ruleCard(Map<String, dynamic> r) {
+    final active = r['isActive'] != false;
+    final season = r['ruleType'] == 'DATE_RANGE';
+    final color = season ? placeShiftEvening : placeBrass;
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 180),
+      opacity: active ? 1 : .6,
+      child: StaffCard(
+        padding: EdgeInsets.zero,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  IconBox(icon: season ? Icons.date_range_rounded : Icons.view_week_rounded, color: color),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          (r['name']?.toString() ?? '').isEmpty ? 'قاعدة بدون اسم' : '${r['name']}',
+                          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 15, color: placeInk),
+                        ),
+                        Text(
+                          _describe(r),
+                          style: const TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 12.5,
+                            color: placeInk2,
+                            fontWeight: FontWeight.w600,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  StatusChip(season ? 'موسم' : 'أسبوعية', color: color, dense: true),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  if (r['fullDayPrice'] != null) _PriceChip('يوم كامل', formatIqd(r['fullDayPrice'])),
+                  if (r['morningPrice'] != null) _PriceChip('صباحي', formatIqd(r['morningPrice'])),
+                  if (r['eveningPrice'] != null) _PriceChip('مسائي', formatIqd(r['eveningPrice'])),
+                  _PriceChip('الأولوية', '${r['priority'] ?? 0}'),
+                ],
+              ),
+            ),
+            if (_canWrite) ...[
+              const Divider(height: 1, color: placeLineSoft),
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(14, 2, 4, 2),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ToggleRow(title: active ? 'مفعّلة' : 'معطّلة', value: active, onChanged: (v) => _toggle(r, v)),
+                    ),
+                    IconButton(
+                      tooltip: 'حذف القاعدة',
+                      onPressed: () => _delete(r),
+                      icon: const Icon(Icons.delete_outline_rounded, color: placeDanger),
+                    ),
+                  ],
                 ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
@@ -262,12 +311,22 @@ class _PriceChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: placePaper, borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(
+        color: placePaper,
+        borderRadius: BorderRadius.circular(StaffRadius.sm),
+        border: Border.all(color: placeLineSoft),
+      ),
       child: Text.rich(
         TextSpan(
           children: [
-            TextSpan(text: '$label  ', style: const TextStyle(color: placeInk2, fontSize: 11.5)),
-            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5, color: placeInk)),
+            TextSpan(
+              text: '$label  ',
+              style: const TextStyle(color: placeInk2, fontSize: 11.5),
+            ),
+            TextSpan(
+              text: value,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5, color: placeInk),
+            ),
           ],
         ),
         style: const TextStyle(fontFamily: 'Cairo'),
@@ -363,16 +422,26 @@ class _RuleSheetState extends State<_RuleSheet> {
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        padding: const EdgeInsets.fromLTRB(StaffSpace.page, 0, StaffSpace.page, 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('قاعدة سعر جديدة', style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 14),
+            const Text(
+              'قاعدة سعر جديدة',
+              style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900, color: placeInk),
+            ),
+            const Text(
+              'تتفوّق القاعدة على السعر الافتراضي في الأيام التي تنطبق عليها.',
+              style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2),
+            ),
+            const SizedBox(height: 16),
             StaffField(controller: _name, label: 'اسم القاعدة', hint: 'مثال: أسعار نهاية الأسبوع'),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
+            const _SheetLabel('تنطبق على'),
+            const SizedBox(height: 8),
             ChoicePills<String>(
               options: const ['WEEKDAY', 'DATE_RANGE'],
+              iconOf: (t) => t == 'WEEKDAY' ? Icons.view_week_rounded : Icons.date_range_rounded,
               value: _type,
               labelOf: (t) => t == 'WEEKDAY' ? 'أيام الأسبوع' : 'فترة / موسم',
               onChanged: (v) => setState(() => _type = v),
@@ -389,6 +458,8 @@ class _RuleSheetState extends State<_RuleSheet> {
                       selected: _days.contains(i),
                       showCheckmark: false,
                       selectedColor: placeInk,
+                      backgroundColor: Colors.white,
+                      side: BorderSide(color: _days.contains(i) ? placeInk : placeLine),
                       labelStyle: TextStyle(
                         fontFamily: 'Cairo',
                         fontWeight: FontWeight.w700,
@@ -401,22 +472,32 @@ class _RuleSheetState extends State<_RuleSheet> {
             else
               Row(
                 children: [
-                  Expanded(child: _DateBox(label: 'من', date: _start, onTap: () => _pickDate(true))),
+                  Expanded(
+                    child: _DateBox(label: 'من', date: _start, onTap: () => _pickDate(true)),
+                  ),
                   const SizedBox(width: 10),
-                  Expanded(child: _DateBox(label: 'إلى (شاملة)', date: _end, onTap: () => _pickDate(false))),
+                  Expanded(
+                    child: _DateBox(label: 'إلى (شاملة)', date: _end, onTap: () => _pickDate(false)),
+                  ),
                 ],
               ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
+            const _SheetLabel('الأسعار (د.ع) — سعر واحد على الأقل'),
+            const SizedBox(height: 8),
             StaffField(controller: _full, label: 'سعر اليوم الكامل', keyboard: TextInputType.number),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Row(
               children: [
-                Expanded(child: StaffField(controller: _morning, label: 'سعر الصباحي', keyboard: TextInputType.number)),
+                Expanded(
+                  child: StaffField(controller: _morning, label: 'سعر الصباحي', keyboard: TextInputType.number),
+                ),
                 const SizedBox(width: 10),
-                Expanded(child: StaffField(controller: _evening, label: 'سعر المسائي', keyboard: TextInputType.number)),
+                Expanded(
+                  child: StaffField(controller: _evening, label: 'سعر المسائي', keyboard: TextInputType.number),
+                ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             StaffField(
               controller: _priority,
               label: 'الأولوية',
@@ -424,8 +505,11 @@ class _RuleSheetState extends State<_RuleSheet> {
               keyboard: TextInputType.number,
               digitsOnly: true,
             ),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: _submit, child: const Text('إضافة القاعدة')),
+            const SizedBox(height: 18),
+            SizedBox(
+              height: 50,
+              child: FilledButton.icon(onPressed: _submit, icon: const Icon(Icons.check_rounded), label: const Text('إضافة القاعدة')),
+            ),
           ],
         ),
       ),
@@ -523,11 +607,7 @@ class _AvailabilityTabState extends State<_AvailabilityTab> {
       final dates = _selected.toList()..sort();
       final shifts = [_shift];
       if (block) {
-        await Api.send('$_base/bulk', method: 'POST', body: {
-          'dates': dates,
-          'isAvailable': false,
-          'shifts': shifts,
-        });
+        await Api.send('$_base/bulk', method: 'POST', body: {'dates': dates, 'isAvailable': false, 'shifts': shifts});
       } else {
         await Api.send('$_base/clear', method: 'POST', body: {'dates': dates, 'shifts': shifts});
       }
@@ -553,23 +633,34 @@ class _AvailabilityTabState extends State<_AvailabilityTab> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-          child: Row(
-            children: [
-              IconButton(onPressed: () => _shiftMonth(-1), icon: const Icon(Icons.chevron_right_rounded)),
-              Expanded(
-                child: Text(
-                  DateFormat.yMMMM('ar').format(_month),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.w900),
+          padding: const EdgeInsets.fromLTRB(StaffSpace.page, 12, StaffSpace.page, 8),
+          child: StaffCard(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            child: Row(
+              children: [
+                IconButton(tooltip: 'الشهر السابق', onPressed: () => _shiftMonth(-1), icon: const Icon(Icons.chevron_right_rounded)),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        DateFormat.yMMMM('ar').format(_month),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.w900, color: placeInk),
+                      ),
+                      Text(
+                        _canWrite ? 'اضغط الأيام لتحديدها ثم احظر أو افتح' : 'الأيام المحظورة باللون الأحمر',
+                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.w600, color: placeInk3),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              IconButton(onPressed: () => _shiftMonth(1), icon: const Icon(Icons.chevron_left_rounded)),
-            ],
+                IconButton(tooltip: 'الشهر التالي', onPressed: () => _shiftMonth(1), icon: const Icon(Icons.chevron_left_rounded)),
+              ],
+            ),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          padding: const EdgeInsets.symmetric(horizontal: StaffSpace.page),
           child: Row(
             children: [
               for (final d in _dayShort)
@@ -587,92 +678,114 @@ class _AvailabilityTabState extends State<_AvailabilityTab> {
         const SizedBox(height: 6),
         Expanded(
           child: _loading
-              ? const Center(child: CircularProgressIndicator(color: placeBrass))
+              ? const Center(child: CircularProgressIndicator(color: placeGold))
               : _error != null
-                  ? Center(child: Text(_error!, style: const TextStyle(color: placeInk2)))
-                  : Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: GridView.builder(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 7,
-                          mainAxisSpacing: 6,
-                          crossAxisSpacing: 6,
-                        ),
-                        itemCount: leading + daysInMonth,
-                        itemBuilder: (context, i) {
-                          if (i < leading) return const SizedBox.shrink();
-                          final day = i - leading + 1;
-                          final iso = _isoDay(DateTime(_month.year, _month.month, day));
-                          final blockedShifts = _blocked[iso] ?? const <String>{};
-                          final blocked = blockedShifts.isNotEmpty;
-                          final selected = _selected.contains(iso);
-                          final past = iso.compareTo(todayIso) < 0;
-                          return GestureDetector(
-                            onTap: !_canWrite
-                                ? null
-                                : () => setState(() => selected ? _selected.remove(iso) : _selected.add(iso)),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 120),
-                              decoration: BoxDecoration(
-                                color: selected
-                                    ? placeInk
-                                    : blocked
-                                        ? placeDanger.withValues(alpha: 0.12)
-                                        : Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
+              ? Center(
+                  child: EmptyView(
+                    icon: Icons.cloud_off_rounded,
+                    title: 'تعذّر تحميل التوفر',
+                    subtitle: _error,
+                    actionLabel: 'إعادة المحاولة',
+                    onAction: _load,
+                  ),
+                )
+              : Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: StaffSpace.page),
+                  child: GridView.builder(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 7,
+                      mainAxisSpacing: 6,
+                      crossAxisSpacing: 6,
+                    ),
+                    itemCount: leading + daysInMonth,
+                    itemBuilder: (context, i) {
+                      if (i < leading) return const SizedBox.shrink();
+                      final day = i - leading + 1;
+                      final iso = _isoDay(DateTime(_month.year, _month.month, day));
+                      final blockedShifts = _blocked[iso] ?? const <String>{};
+                      final blocked = blockedShifts.isNotEmpty;
+                      final selected = _selected.contains(iso);
+                      final past = iso.compareTo(todayIso) < 0;
+                      return GestureDetector(
+                        onTap: !_canWrite ? null : () => setState(() => selected ? _selected.remove(iso) : _selected.add(iso)),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 120),
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? placeInk
+                                : blocked
+                                ? placeDanger.withValues(alpha: 0.1)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(StaffRadius.sm),
+                            border: Border.all(
+                              color: selected
+                                  ? placeInk
+                                  : blocked
+                                  ? placeDanger.withValues(alpha: 0.5)
+                                  : (iso == todayIso ? placeGold : placeLine),
+                              width: iso == todayIso ? 1.6 : 1,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                '$day',
+                                style: TextStyle(
+                                  fontFamily: 'Montserrat',
+                                  fontWeight: FontWeight.w800,
                                   color: selected
-                                      ? placeInk
+                                      ? Colors.white
                                       : blocked
-                                          ? placeDanger.withValues(alpha: 0.5)
-                                          : (iso == todayIso ? placeBrass : placeLine),
-                                  width: iso == todayIso ? 1.6 : 1,
+                                      ? placeDanger
+                                      : (past ? placeInk2.withValues(alpha: 0.5) : placeInk),
                                 ),
                               ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    '$day',
-                                    style: TextStyle(
-                                      fontFamily: 'Montserrat',
-                                      fontWeight: FontWeight.w800,
-                                      color: selected
-                                          ? Colors.white
-                                          : blocked
-                                              ? placeDanger
-                                              : (past ? placeInk2.withValues(alpha: 0.5) : placeInk),
-                                    ),
+                              if (blocked)
+                                Text(
+                                  blockedShifts.contains('FULL')
+                                      ? 'محظور'
+                                      : blockedShifts.length > 1
+                                      ? 'شفتان'
+                                      : (blockedShifts.first == 'MORNING' ? 'صباحي' : 'مسائي'),
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: selected ? Colors.white70 : placeDanger,
                                   ),
-                                  if (blocked)
-                                    Text(
-                                      blockedShifts.contains('FULL')
-                                          ? 'محظور'
-                                          : blockedShifts.length > 1
-                                              ? 'شفتان'
-                                              : (blockedShifts.first == 'MORNING' ? 'صباحي' : 'مسائي'),
-                                      style: TextStyle(
-                                        fontSize: 8.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: selected ? Colors.white70 : placeDanger,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
         ),
         if (_canWrite)
           Container(
-            padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + MediaQuery.of(context).padding.bottom),
-            decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: placeLine))),
+            padding: EdgeInsets.fromLTRB(StaffSpace.page, 12, StaffSpace.page, 12 + MediaQuery.of(context).padding.bottom),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: placeLine)),
+              boxShadow: [BoxShadow(color: Color(0x120F1B2D), blurRadius: 18, offset: Offset(0, -4))],
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Row(
+                  children: [
+                    const _Legend(color: placeDanger, label: 'محظور'),
+                    const SizedBox(width: 12),
+                    const _Legend(color: placeGold, label: 'اليوم', outline: true),
+                    const Spacer(),
+                    if (_selected.isNotEmpty)
+                      TextButton(onPressed: () => setState(_selected.clear), child: Text('إلغاء التحديد (${_selected.length})')),
+                  ],
+                ),
+                const SizedBox(height: 6),
                 Row(
                   children: [
                     Expanded(
@@ -693,9 +806,10 @@ class _AvailabilityTabState extends State<_AvailabilityTab> {
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton(
+                      child: OutlinedButton.icon(
                         onPressed: (_busy || _selected.isEmpty) ? null : () => _apply(block: false),
-                        child: Text('فتح (${_selected.length})'),
+                        icon: const Icon(Icons.lock_open_rounded, size: 18),
+                        label: Text('فتح (${_selected.length})'),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -704,12 +818,15 @@ class _AvailabilityTabState extends State<_AvailabilityTab> {
                         style: FilledButton.styleFrom(backgroundColor: placeDanger),
                         onPressed: (_busy || _selected.isEmpty) ? null : () => _apply(block: true),
                         child: _busy
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              )
-                            : Text('حظر (${_selected.length})'),
+                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.block_rounded, size: 18),
+                                  const SizedBox(width: 6),
+                                  Text('حظر (${_selected.length})'),
+                                ],
+                              ),
                       ),
                     ),
                   ],
@@ -717,6 +834,49 @@ class _AvailabilityTabState extends State<_AvailabilityTab> {
               ],
             ),
           ),
+      ],
+    );
+  }
+}
+
+class _SheetLabel extends StatelessWidget {
+  const _SheetLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.w800, color: placeInk),
+    );
+  }
+}
+
+class _Legend extends StatelessWidget {
+  const _Legend({required this.color, required this.label, this.outline = false});
+  final Color color;
+  final String label;
+  final bool outline;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: outline ? Colors.white : color.withValues(alpha: .15),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: color, width: outline ? 1.6 : 1),
+          ),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.w700, color: placeInk2),
+        ),
       ],
     );
   }

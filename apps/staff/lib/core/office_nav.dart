@@ -7,9 +7,9 @@ List<StaffTab> visibleStaffTabs() {
   return [
     StaffTab.now,
     if (Session.can('inbox.read')) StaffTab.chats,
-    if (Session.can('bookings.read')) StaffTab.bookings,
+    if (Session.can('bookings.read') || Session.can('bookings.write')) StaffTab.bookings,
     if (hasOpsAccess) StaffTab.ops,
-    if (Session.can('cancellations.review') || Session.can('refunds.review')) StaffTab.requests,
+    // الطلبات صارت ضمن «اليوم» و«الإدارة» — خمسة تبويبات واضحة فقط
     StaffTab.account,
   ];
 }

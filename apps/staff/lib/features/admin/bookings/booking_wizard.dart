@@ -6,7 +6,7 @@ import '../../../core/format.dart';
 import '../../../core/session.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
-import '../../../widgets/ui.dart';
+import '../../../widgets/kit.dart';
 import 'booking_kit.dart';
 import 'booking_manage.dart';
 
@@ -282,43 +282,76 @@ class _NewBookingWizardScreenState extends State<NewBookingWizardScreen> {
 
   // ─────────── الواجهة ───────────
 
+  static const _stepIcons = [
+    Icons.person_rounded,
+    Icons.home_work_rounded,
+    Icons.event_rounded,
+    Icons.fact_check_rounded,
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final last = _step == _steps.length - 1;
+    final page = StaffPage(
+      title: 'حجز جديد',
+      subtitle: 'الخطوة ${_step + 1} من ${_steps.length} · ${_steps[_step]}',
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(72),
+        child: _StepHeader(
+          steps: _steps,
+          icons: _stepIcons,
+          current: _step,
+          onTap: (i) {
+            if (i < _step) setState(() => _step = i);
+          },
+        ),
+      ),
+      slivers: [
+        SliverToBoxAdapter(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOut,
+            child: KeyedSubtree(
+              key: ValueKey(_step),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: switch (_step) {
+                    0 => _customerStep(),
+                    1 => _propertyStep(),
+                    2 => _scheduleStep(),
+                    _ => _reviewStep(),
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
     return PopScope(
       canPop: _step == 0,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) setState(() => _step--);
       },
-      child: Scaffold(
-        appBar: AppBar(title: const Text('حجز جديد')),
-        bottomNavigationBar: BottomActionBar(
-          label: _step == _steps.length - 1 ? 'إنشاء الحجز' : 'التالي',
-          busy: _creating,
-          onPressed: _next,
-          secondaryLabel: _step == 0 ? 'إلغاء' : 'السابق',
-          onSecondary: _back,
-        ),
-        body: Column(
+      child: withBottomBar(
+        page,
+        BookingActionBar(
+          top: _step >= 2 ? _priceStrip() : null,
           children: [
-            _StepHeader(steps: _steps, current: _step, onTap: (i) {
-              if (i < _step) setState(() => _step = i);
-            }),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: KeyedSubtree(
-                  key: ValueKey(_step),
-                  child: ListView(
-                    padding: const EdgeInsets.only(top: 4, bottom: 24),
-                    children: switch (_step) {
-                      0 => _customerStep(),
-                      1 => _propertyStep(),
-                      2 => _scheduleStep(),
-                      _ => _reviewStep(),
-                    },
-                  ),
-                ),
-              ),
+            BarButton(
+              label: _step == 0 ? 'إلغاء' : 'السابق',
+              icon: _step == 0 ? null : Icons.arrow_back_rounded,
+              primary: false,
+              onPressed: _creating ? null : _back,
+            ),
+            BarButton(
+              label: last ? 'إنشاء الحجز' : 'التالي',
+              icon: last ? Icons.check_rounded : Icons.arrow_forward_rounded,
+              flex: 2,
+              busy: _creating,
+              onPressed: _next,
             ),
           ],
         ),
@@ -326,51 +359,87 @@ class _NewBookingWizardScreenState extends State<NewBookingWizardScreen> {
     );
   }
 
+  /// ملخص السعر فوق أزرار الشريط السفلي.
+  Widget _priceStrip() {
+    final q = _quote;
+    final available = q?['available'] == true;
+    return Row(
+      children: [
+        const Text('الإجمالي', style: TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.w700, color: placeInk2)),
+        const SizedBox(width: 8),
+        if (_quoting)
+          const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: placeGold))
+        else
+          Text(
+            q == null ? '—' : formatIqd(q['totalPrice']),
+            style: const TextStyle(fontFamily: 'Cairo', fontSize: 17, fontWeight: FontWeight.w900, color: placeInk),
+          ),
+        const Spacer(),
+        if (!_quoting && q != null)
+          StatusChip(available ? 'متاح' : 'غير متاح', color: available ? placeSuccess : placeDanger, dense: true)
+        else if (!_quoting && _quoteError != null)
+          const StatusChip('تعذّر الحساب', color: placeDanger, dense: true),
+      ],
+    );
+  }
+
   List<Widget> _customerStep() {
     final canSearch = Session.can('users.read');
     return [
-      FormSection(
+      if (canSearch)
+        Pad(
+          child: _PickCard(
+            icon: Icons.person_search_rounded,
+            title: _customer == null ? 'بحث في الزبائن' : 'تغيير الزبون',
+            subtitle: 'اختر زبوناً مسجلاً بالاسم أو الهاتف',
+            onTap: _chooseCustomer,
+          ),
+        ),
+      if (_customer != null)
+        Pad(
+          child: StaffCard(
+            color: placeSuccess.withValues(alpha: .05),
+            borderColor: placeSuccess.withValues(alpha: .3),
+            padding: const EdgeInsetsDirectional.fromSTEB(14, 10, 4, 10),
+            child: Row(
+              children: [
+                Avatar(_name.text.isEmpty ? (_customer!['phone']?.toString() ?? '') : _name.text, size: 42, color: placeSuccess),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _name.text.isEmpty ? 'زبون مسجّل' : _name.text,
+                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 14.5, fontWeight: FontWeight.w900, color: placeInk),
+                      ),
+                      Text(
+                        'زبون مسجّل · ${asMap(_customer!['_count'])?['bookings'] ?? 0} حجز سابق',
+                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w700, color: placeSuccess),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'إزالة',
+                  onPressed: () => setState(() {
+                    _customer = null;
+                    _phone.clear();
+                    _name.clear();
+                  }),
+                  icon: const Icon(Icons.close_rounded, size: 20),
+                ),
+              ],
+            ),
+          ),
+        ),
+      BookingSection(
         title: 'بيانات الزبون',
         subtitle: canSearch
-            ? 'اختر زبوناً موجوداً أو أدخل رقماً جديداً'
+            ? 'أو أدخل رقماً جديداً — يُنشأ الحساب تلقائياً'
             : 'أدخل رقم الزبون — يُنشأ حسابه تلقائياً إن لم يكن مسجلاً',
-        icon: Icons.person_outline_rounded,
+        icon: Icons.person_rounded,
         children: [
-          if (canSearch)
-            OutlinedButton.icon(
-              onPressed: _chooseCustomer,
-              icon: const Icon(Icons.person_search_outlined),
-              label: Text(_customer == null ? 'بحث في الزبائن' : 'تغيير الزبون'),
-            ),
-          if (_customer != null)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: placeSuccess.withValues(alpha: 0.07),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: placeSuccess.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.verified_user_outlined, color: placeSuccess),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'زبون مسجّل · ${asMap(_customer!['_count'])?['bookings'] ?? 0} حجز سابق',
-                      style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, color: placeSuccess),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => setState(() {
-                      _customer = null;
-                      _phone.clear();
-                      _name.clear();
-                    }),
-                    icon: const Icon(Icons.close_rounded, size: 18),
-                  ),
-                ],
-              ),
-            ),
           StaffField(
             controller: _phone,
             label: 'رقم الهاتف *',
@@ -392,64 +461,73 @@ class _NewBookingWizardScreenState extends State<NewBookingWizardScreen> {
 
   List<Widget> _propertyStep() {
     final p = _property;
+    if (p == null) {
+      return [
+        Pad(
+          child: _PickCard(
+            icon: Icons.travel_explore_rounded,
+            title: 'اختر المكان',
+            subtitle: 'الأماكن المنشورة فقط قابلة للحجز',
+            onTap: _chooseProperty,
+            large: true,
+          ),
+        ),
+      ];
+    }
     return [
-      FormSection(
-        title: 'المكان',
-        subtitle: 'الأماكن المنشورة فقط قابلة للحجز',
-        icon: Icons.home_work_outlined,
-        children: [
-          if (p == null)
-            _BigPickButton(icon: Icons.search_rounded, label: 'اختر المكان', onTap: _chooseProperty)
-          else ...[
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(color: placeBrass.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
-                  child: Icon(placeTypeIcon(p['type']?.toString()), color: placeBrass),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('${p['name']}', style: const TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.w900)),
-                      Text(
-                        [
-                          placeTypeLabel(p['type']?.toString()),
-                          if (asMap(p['city'])?['nameAr'] != null) '${asMap(p['city'])!['nameAr']}',
-                        ].join(' · '),
-                        style: const TextStyle(fontFamily: 'Cairo', color: placeInk2, fontWeight: FontWeight.w700),
-                      ),
-                    ],
+      Pad(
+        child: StaffCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  IconBox(icon: placeTypeIcon(p['type']?.toString()), color: placeBrass, size: 48),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${p['name']}', style: const TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.w900, color: placeInk)),
+                        Text(
+                          [
+                            placeTypeLabel(p['type']?.toString()),
+                            if (asMap(p['city'])?['nameAr'] != null) '${asMap(p['city'])!['nameAr']}',
+                          ].join(' · '),
+                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, color: placeInk2, fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                if (_loadingProperty)
-                  const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-              ],
-            ),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                if (p['pricePerDay'] != null) StatusPill(label: 'اليوم ${formatIqd(p['pricePerDay'])}', color: placeInk),
-                if (p['priceMorningShift'] != null)
-                  StatusPill(label: 'صباحي ${formatIqd(p['priceMorningShift'])}', color: placeShiftMorning),
-                if (p['priceEveningShift'] != null)
-                  StatusPill(label: 'مسائي ${formatIqd(p['priceEveningShift'])}', color: placeShiftEvening),
-                if ((asNum(p['capacity']) ?? 0) > 0) StatusPill(label: 'السعة ${p['capacity']}', color: placeInk2),
-                StatusPill(
-                  label: _shiftOptions.length == 1
-                      ? (_shiftOptions.first == 'FULL' ? 'يوم كامل فقط' : 'شفت واحد')
-                      : (_shiftOptions.contains('FULL') ? 'يوم كامل أو شفتات' : 'شفتات فقط'),
-                  color: placeBrass,
-                ),
-              ],
-            ),
-            OutlinedButton.icon(onPressed: _chooseProperty, icon: const Icon(Icons.swap_horiz_rounded), label: const Text('تغيير المكان')),
-          ],
-        ],
+                  if (_loadingProperty)
+                    const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: placeGold)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  if (p['pricePerDay'] != null) StatusChip('اليوم ${formatIqd(p['pricePerDay'])}', color: placeInk, dense: true),
+                  if (p['priceMorningShift'] != null)
+                    StatusChip('صباحي ${formatIqd(p['priceMorningShift'])}', color: placeShiftMorning, dense: true),
+                  if (p['priceEveningShift'] != null)
+                    StatusChip('مسائي ${formatIqd(p['priceEveningShift'])}', color: placeShiftEvening, dense: true),
+                  if ((asNum(p['capacity']) ?? 0) > 0) StatusChip('السعة ${p['capacity']}', color: placeInk2, dense: true),
+                  StatusChip(
+                    _shiftOptions.length == 1
+                        ? (_shiftOptions.first == 'FULL' ? 'يوم كامل فقط' : 'شفت واحد')
+                        : (_shiftOptions.contains('FULL') ? 'يوم كامل أو شفتات' : 'شفتات فقط'),
+                    color: placeBrass,
+                    dense: true,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(onPressed: _chooseProperty, icon: const Icon(Icons.swap_horiz_rounded), label: const Text('تغيير المكان')),
+            ],
+          ),
+        ),
       ),
     ];
   }
@@ -457,9 +535,10 @@ class _NewBookingWizardScreenState extends State<NewBookingWizardScreen> {
   List<Widget> _scheduleStep() {
     final capacity = (asNum(_property?['capacity']) ?? 0).toInt();
     return [
-      FormSection(
+      BookingSection(
         title: 'الموعد',
-        icon: Icons.event_outlined,
+        subtitle: _property?['name']?.toString(),
+        icon: Icons.event_rounded,
         children: [
           DateField(
             label: 'يوم الحجز',
@@ -485,7 +564,7 @@ class _NewBookingWizardScreenState extends State<NewBookingWizardScreen> {
               },
             )
           else
-            Align(alignment: AlignmentDirectional.centerStart, child: ShiftBadge(shift: _shiftOptions.first)),
+            Align(alignment: AlignmentDirectional.centerStart, child: BookingShiftChip(shift: _shiftOptions.first, short: false)),
           if (_shift == 'FULL')
             DaysStepper(
               value: _days,
@@ -495,7 +574,8 @@ class _NewBookingWizardScreenState extends State<NewBookingWizardScreen> {
               },
             ),
           DaysStepper(
-            label: capacity > 0 ? 'عدد الضيوف (السعة $capacity)' : 'عدد الضيوف',
+            label: capacity > 0 ? 'الضيوف (السعة $capacity)' : 'عدد الضيوف',
+            icon: Icons.people_alt_rounded,
             value: _guests,
             max: capacity > 0 ? capacity : 2000,
             onChanged: (v) => setState(() => _guests = v),
@@ -503,22 +583,20 @@ class _NewBookingWizardScreenState extends State<NewBookingWizardScreen> {
           if (_start != null && _days > 1)
             Text(
               'من ${fmtDay(_start!)} حتى ${fmtDay(_end!.subtract(const Duration(days: 1)))}',
-              style: const TextStyle(fontFamily: 'Cairo', color: placeInk2, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, color: placeInk2, fontWeight: FontWeight.w700),
             ),
         ],
       ),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-        child: QuoteCard(quote: _quote, loading: _quoting, error: _quoteError),
-      ),
+      Pad(child: QuoteCard(quote: _quote, loading: _quoting, error: _quoteError)),
     ];
   }
 
   List<Widget> _reviewStep() {
     return [
-      FormSection(
+      BookingSection(
         title: 'الملخص',
-        icon: Icons.fact_check_outlined,
+        icon: Icons.fact_check_rounded,
+        trailing: TextButton(onPressed: () => setState(() => _step = 0), child: const Text('تعديل')),
         children: [
           InfoLine(
             icon: Icons.person_outline_rounded,
@@ -535,9 +613,10 @@ class _NewBookingWizardScreenState extends State<NewBookingWizardScreen> {
           InfoLine(icon: Icons.people_outline, label: 'الضيوف', value: '$_guests'),
         ],
       ),
-      FormSection(
+      BookingSection(
         title: 'خصم وملاحظات',
-        icon: Icons.local_offer_outlined,
+        icon: Icons.local_offer_rounded,
+        color: placeShiftEvening,
         children: [
           StaffField(
             controller: _coupon,
@@ -548,66 +627,95 @@ class _NewBookingWizardScreenState extends State<NewBookingWizardScreen> {
                 ? 'رمز صالح — خصم ${formatIqd(_quote!['discount'])}'
                 : null,
           ),
-          if (_couponError != null)
-            Text(_couponError!, style: const TextStyle(fontFamily: 'Cairo', color: placeDanger, fontWeight: FontWeight.w800)),
+          if (_couponError != null) HintBanner(icon: Icons.error_outline_rounded, text: _couponError!, color: placeDanger),
           StaffField(controller: _notes, label: 'ملاحظات الحجز', hint: 'تظهر في تفاصيل الحجز', maxLines: 3),
-          ToggleRow(
+        ],
+      ),
+      Pad(
+        child: StaffCard(
+          color: _confirmNow ? placeSuccess.withValues(alpha: .05) : Colors.white,
+          borderColor: _confirmNow ? placeSuccess.withValues(alpha: .3) : placeLine,
+          onTap: () => setState(() => _confirmNow = !_confirmNow),
+          child: ToggleRow(
             title: 'تأكيد فوري واعتبار الدفع مستلماً',
             subtitle: 'للطلبات الهاتفية المدفوعة — وإلا يبقى الحجز «بانتظار التأكيد»',
             value: _confirmNow,
             onChanged: (v) => setState(() => _confirmNow = v),
           ),
-        ],
+        ),
       ),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-        child: QuoteCard(quote: _quote, loading: _quoting, error: _quoteError),
-      ),
+      Pad(child: QuoteCard(quote: _quote, loading: _quoting, error: _quoteError)),
     ];
   }
 }
 
+/// شريط الخطوات (دوائر مرقّمة + خط تقدّم) — يُثبَّت أسفل رأس الصفحة.
 class _StepHeader extends StatelessWidget {
-  const _StepHeader({required this.steps, required this.current, required this.onTap});
+  const _StepHeader({required this.steps, required this.icons, required this.current, required this.onTap});
   final List<String> steps;
+  final List<IconData> icons;
   final int current;
   final ValueChanged<int> onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+    return Container(
+      height: 72,
+      color: placePaper,
+      padding: const EdgeInsets.symmetric(horizontal: StaffSpace.page),
       child: Row(
         children: [
           for (var i = 0; i < steps.length; i++) ...[
             Expanded(
-              child: GestureDetector(
-                onTap: () => onTap(i),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(StaffRadius.sm),
+                onTap: i < current ? () => onTap(i) : null,
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      height: 5,
+                      width: 30,
+                      height: 30,
                       decoration: BoxDecoration(
-                        color: i <= current ? placeBrass : placeLine,
-                        borderRadius: BorderRadius.circular(4),
+                        color: i < current ? placeSuccess : (i == current ? placeInk : Colors.white),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: i <= current ? Colors.transparent : placeLine),
+                      ),
+                      child: Icon(
+                        i < current ? Icons.check_rounded : icons[i],
+                        size: 16,
+                        color: i <= current ? Colors.white : placeInk3,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Text(
-                      '${i + 1}. ${steps[i]}',
+                      steps[i],
                       style: TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 11.5,
                         fontWeight: i == current ? FontWeight.w900 : FontWeight.w700,
-                        color: i <= current ? placeInk : placeInk2,
+                        color: i <= current ? placeInk : placeInk3,
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-            if (i < steps.length - 1) const SizedBox(width: 6),
+            if (i < steps.length - 1)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: i < current ? placeSuccess : placeLine,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ],
       ),
@@ -615,32 +723,37 @@ class _StepHeader extends StatelessWidget {
   }
 }
 
-class _BigPickButton extends StatelessWidget {
-  const _BigPickButton({required this.icon, required this.label, required this.onTap});
+/// بطاقة اختيار كبيرة (اختيار مكان / بحث في الزبائن).
+class _PickCard extends StatelessWidget {
+  const _PickCard({required this.icon, required this.title, required this.subtitle, required this.onTap, this.large = false});
   final IconData icon;
-  final String label;
+  final String title;
+  final String subtitle;
   final VoidCallback onTap;
+  final bool large;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return StaffCard(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        height: 96,
-        decoration: BoxDecoration(
-          color: placePaper,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: placeBrass.withValues(alpha: 0.4)),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: placeBrass, size: 28),
-            const SizedBox(height: 6),
-            Text(label, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeInk)),
-          ],
-        ),
+      color: placeGoldSoft,
+      borderColor: placeGold.withValues(alpha: .45),
+      padding: EdgeInsets.all(large ? 20 : 14),
+      child: Row(
+        children: [
+          IconBox(icon: icon, color: placeBrass, size: large ? 52 : 44, filled: large),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(fontFamily: 'Cairo', fontSize: large ? 17 : 15, fontWeight: FontWeight.w900, color: placeInk)),
+                Text(subtitle, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.w600, color: placeInk2)),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_left_rounded, color: placeBrass),
+        ],
       ),
     );
   }

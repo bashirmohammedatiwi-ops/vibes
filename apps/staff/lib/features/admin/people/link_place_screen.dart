@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/api.dart';
 import '../../../core/session.dart';
 import '../../../core/theme.dart';
-import '../../../widgets/chat_ui.dart';
 import '../../../widgets/form_kit.dart';
+import '../../../widgets/kit.dart';
 import 'people_common.dart';
 
 /// الحساب المختار للربط (مستخدم — يتحوّل إلى مزود موثّق بعد الربط).
@@ -35,7 +35,8 @@ class _LinkPlaceScreenState extends State<LinkPlaceScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: placePaper,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(StaffRadius.xl))),
       builder: (_) => const _AccountPicker(),
     );
     if (picked != null) setState(() => _account = picked);
@@ -46,7 +47,8 @@ class _LinkPlaceScreenState extends State<LinkPlaceScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: placePaper,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(StaffRadius.xl))),
       builder: (_) => const _PropertyPicker(),
     );
     if (picked != null) setState(() => _property = picked);
@@ -83,71 +85,88 @@ class _LinkPlaceScreenState extends State<LinkPlaceScreen> {
     final p = _property;
     final current = asMap(p?['provider']);
     return Scaffold(
-      appBar: AppBar(title: const Text('ربط مكان بمزود')),
-      body: ListView(
-        padding: const EdgeInsets.only(top: 4, bottom: 24),
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 4, 20, 8),
-            child: Text(
-              'اختر حساب صاحب المكان ثم المكان. بعد الربط يصبح الحساب مزوداً موثّقاً وتظهر حجوزات المكان في بوابته.',
-              style: TextStyle(fontFamily: 'Cairo', color: placeInk2, height: 1.6),
-            ),
-          ),
-          FormSection(
-            title: '١. الحساب',
-            icon: Icons.person_outline_rounded,
-            children: [
-              if (a == null)
-                _PickButton(label: 'اختر الحساب', icon: Icons.person_search_outlined, onTap: _pickAccount)
-              else
-                _Selected(
-                  leading: ContactAvatar(name: a.name, phone: a.phone, size: 44),
-                  title: a.name,
-                  subtitle: [a.phone ?? '', a.subtitle ?? ''].where((s) => s.isNotEmpty).join(' · '),
-                  onChange: _pickAccount,
-                ),
-            ],
-          ),
-          FormSection(
-            title: '٢. المكان',
-            icon: Icons.home_work_outlined,
-            children: [
-              if (p == null)
-                _PickButton(label: 'اختر المكان', icon: Icons.travel_explore_rounded, onTap: _pickProperty)
-              else ...[
-                _Selected(
-                  leading: SizedBox(width: 48, height: 48, child: NetImage(url: _cover(p), radius: 12, icon: placeTypeIcon(p['type']?.toString()))),
-                  title: nonEmpty(p['name'], 'مكان'),
-                  subtitle: '${placeTypeLabel(p['type']?.toString())} · ${nonEmpty(asMap(p['city'])['nameAr'], '')}',
-                  onChange: _pickProperty,
-                ),
-                if (current.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: placeShiftMorning.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.warning_amber_rounded, color: placeShiftMorning, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'مرتبط حالياً بـ ${nonEmpty(current['businessName'], asMap(current['user'])['name']?.toString() ?? 'مزود')} — سيُنقل للحساب المختار.',
-                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.w700, color: placeShiftMorning),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ],
-          ),
-        ],
-      ),
       bottomNavigationBar: BottomActionBar(
         label: 'ربط المكان',
         busy: _saving,
         onPressed: a != null && p != null ? _submit : null,
+      ),
+      body: StaffPage(
+        title: 'ربط مكان بمزود',
+        subtitle: 'اختر الحساب ثم المكان',
+        slivers: [
+          const SliverToBoxAdapter(
+            child: NoticeBanner(
+              text: 'بعد الربط يصبح الحساب مزوداً موثّقاً وتظهر حجوزات المكان في بوابته.',
+              color: placeInfo,
+              icon: Icons.info_outline_rounded,
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: DetailCard(
+              title: '١. الحساب',
+              subtitle: 'صاحب المكان',
+              icon: Icons.person_rounded,
+              color: placeInfo,
+              trailing: a == null ? null : const Icon(Icons.check_circle_rounded, color: placeSuccess),
+              children: [
+                const SizedBox(height: 4),
+                if (a == null)
+                  _PickButton(label: 'اختر الحساب', icon: Icons.person_search_rounded, onTap: _pickAccount)
+                else
+                  _Selected(
+                    leading: Avatar(a.name, size: 44),
+                    title: a.name,
+                    subtitle: a.subtitle ?? '',
+                    phone: a.phone,
+                    onChange: _pickAccount,
+                  ),
+                const SizedBox(height: 6),
+              ],
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: DetailCard(
+              title: '٢. المكان',
+              subtitle: 'المكان المراد ربطه',
+              icon: Icons.home_work_rounded,
+              color: placeBrass,
+              trailing: p == null ? null : const Icon(Icons.check_circle_rounded, color: placeSuccess),
+              children: [
+                const SizedBox(height: 4),
+                if (p == null)
+                  _PickButton(label: 'اختر المكان', icon: Icons.travel_explore_rounded, onTap: _pickProperty)
+                else ...[
+                  _Selected(
+                    leading: SizedBox(width: 48, height: 48, child: NetImage(url: _cover(p), radius: 12, icon: placeTypeIcon(p['type']?.toString()))),
+                    title: nonEmpty(p['name'], 'مكان'),
+                    subtitle: [placeTypeLabel(p['type']?.toString()), nonEmpty(asMap(p['city'])['nameAr'], '')].where((s) => s.isNotEmpty).join(' · '),
+                    onChange: _pickProperty,
+                  ),
+                  if (current.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: placeWarning.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(StaffRadius.md)),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, color: placeWarning, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'مرتبط حالياً بـ ${nonEmpty(current['businessName'], asMap(current['user'])['name']?.toString() ?? 'مزود')} — سيُنقل للحساب المختار.',
+                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.w700, color: placeWarning),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+                const SizedBox(height: 6),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -168,40 +187,33 @@ class _PickButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-      onPressed: onTap,
-      icon: Icon(icon),
-      label: Text(label),
+    return SizedBox(
+      height: 52,
+      child: OutlinedButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon),
+        label: Text(label),
+      ),
     );
   }
 }
 
 class _Selected extends StatelessWidget {
-  const _Selected({required this.leading, required this.title, required this.subtitle, required this.onChange});
+  const _Selected({required this.leading, required this.title, required this.subtitle, required this.onChange, this.phone});
   final Widget leading;
   final String title;
   final String subtitle;
+  final String? phone;
   final VoidCallback onChange;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        leading,
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeInk)),
-              if (subtitle.isNotEmpty)
-                Text(subtitle, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w600)),
-            ],
-          ),
-        ),
-        TextButton(onPressed: onChange, child: const Text('تغيير')),
-      ],
+    return ListRow(
+      leading: leading,
+      title: title,
+      subtitle: subtitle.isEmpty ? null : subtitle,
+      subtitleWidget: (phone ?? '').isEmpty ? null : PhoneText(phone),
+      trailing: TextButton(onPressed: onChange, child: const Text('تغيير')),
     );
   }
 }
@@ -253,7 +265,7 @@ class _AccountPickerState extends State<_AccountPicker> {
         children: [
           const SizedBox(height: 12),
           const SheetHandle(),
-          const Text('اختر الحساب', style: TextStyle(fontFamily: 'Cairo', fontSize: 17, fontWeight: FontWeight.w900, color: placeInk)),
+          const Text('اختر الحساب', style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900, color: placeInk)),
           if (sources.length > 1)
             FilterBar(groups: [
               FilterGroup(
@@ -268,36 +280,27 @@ class _AccountPickerState extends State<_AccountPicker> {
           Expanded(
             child: sources.isEmpty
                 ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text('تحتاج صلاحية عرض المزودين أو الحسابات لاختيار الحساب',
-                          textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Cairo', color: placeInk2)),
+                    child: EmptyView(
+                      icon: Icons.lock_outline_rounded,
+                      title: 'لا صلاحية',
+                      subtitle: 'تحتاج صلاحية عرض المزودين أو الحسابات لاختيار الحساب',
                     ),
                   )
                 : PagedList(
                     key: ValueKey('$_source|$_q'),
                     fetch: _fetch,
+                    emptyIcon: Icons.person_search_rounded,
                     emptyTitle: 'لا نتائج',
                     emptySubtitle: 'ابحث بالاسم أو رقم الهاتف',
                     itemBuilder: (context, row, _) {
                       final a = _toAccount(row);
                       return ListCard(
                         onTap: () => Navigator.of(context).pop(a),
-                        child: Row(
-                          children: [
-                            ContactAvatar(name: a.name, phone: a.phone, size: 40),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(a.name, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeInk)),
-                                  PhoneText(a.phone),
-                                ],
-                              ),
-                            ),
-                            if (a.subtitle != null) StatusPill(label: a.subtitle!, color: placeInk2),
-                          ],
+                        child: ListRow(
+                          leading: Avatar(a.name, size: 42),
+                          title: a.name,
+                          subtitleWidget: (a.phone ?? '').isEmpty ? null : PhoneText(a.phone),
+                          trailing: a.subtitle == null ? null : StatusChip(a.subtitle!, color: placeInk2, dense: true),
                         ),
                       );
                     },
@@ -329,55 +332,45 @@ class _PropertyPickerState extends State<_PropertyPicker> {
         children: [
           const SizedBox(height: 12),
           const SheetHandle(),
-          const Text('اختر المكان', style: TextStyle(fontFamily: 'Cairo', fontSize: 17, fontWeight: FontWeight.w900, color: placeInk)),
+          const Text('اختر المكان', style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900, color: placeInk)),
           SearchBox(hint: 'اسم المكان أو العنوان', onChanged: (v) => setState(() => _q = v)),
           const SizedBox(height: 6),
           Expanded(
             child: !allowed
                 ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text('تحتاج صلاحية «عرض الأماكن» للبحث عن الأماكن',
-                          textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Cairo', color: placeInk2)),
+                    child: EmptyView(
+                      icon: Icons.lock_outline_rounded,
+                      title: 'لا صلاحية',
+                      subtitle: 'تحتاج صلاحية «عرض الأماكن» للبحث عن الأماكن',
                     ),
                   )
                 : PagedList(
                     key: ValueKey(_q),
                     fetch: (page) => fetchPage('/api/admin/properties', {'q': _q, 'status': 'all'}, page: page),
+                    emptyIcon: Icons.travel_explore_rounded,
                     emptyTitle: 'لا أماكن مطابقة',
                     itemBuilder: (context, p, _) {
                       final provider = asMap(p['provider']);
                       final status = p['status']?.toString();
                       return ListCard(
                         onTap: () => Navigator.of(context).pop(p),
-                        child: Row(
-                          children: [
-                            SizedBox(width: 52, height: 52, child: NetImage(url: _cover(p), radius: 12, icon: placeTypeIcon(p['type']?.toString()))),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(nonEmpty(p['name'], 'مكان'),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeInk)),
-                                  Text(
-                                    provider.isEmpty
-                                        ? 'بدون مزود'
-                                        : 'المزود: ${nonEmpty(provider['businessName'], asMap(provider['user'])['name']?.toString() ?? '')}',
-                                    style: TextStyle(
-                                      fontFamily: 'Cairo',
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: provider.isEmpty ? placeInk2 : placeShiftMorning,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                        child: ListRow(
+                          leading: SizedBox(width: 52, height: 52, child: NetImage(url: _cover(p), radius: 12, icon: placeTypeIcon(p['type']?.toString()))),
+                          title: nonEmpty(p['name'], 'مكان'),
+                          subtitleWidget: Text(
+                            provider.isEmpty
+                                ? 'بدون مزود'
+                                : 'المزود: ${nonEmpty(provider['businessName'], asMap(provider['user'])['name']?.toString() ?? '')}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: provider.isEmpty ? placeInk2 : placeWarning,
                             ),
-                            StatusPill(label: placeStatusLabel(status), color: placeStatusColor(status)),
-                          ],
+                          ),
+                          chips: [StatusChip(placeStatusLabel(status), color: placeStatusColor(status), dense: true)],
                         ),
                       );
                     },

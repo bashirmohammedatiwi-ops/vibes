@@ -4,6 +4,12 @@ import 'package:flutter/services.dart';
 import '../core/shift.dart';
 import '../core/theme.dart';
 
+/// ═══════════════════════════════════════════════════════════
+/// عناصر قديمة مشتركة — أُعيد تنسيقها على نظام «VIBES مكتب»
+/// (نفس الواجهات البرمجية؛ تستفيد منها كل الشاشات تلقائياً).
+/// ═══════════════════════════════════════════════════════════
+
+/// رأس شاشة بسيط: عنوان كبير + وصف + عنصر على الطرف.
 class MaisonHeader extends StatelessWidget {
   const MaisonHeader({super.key, required this.title, this.subtitle, this.trailing});
 
@@ -14,29 +20,36 @@ class MaisonHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+      padding: const EdgeInsets.fromLTRB(StaffSpace.page, 10, StaffSpace.page, 6),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900, color: placeInk)),
+                Text(
+                  title,
+                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 24, fontWeight: FontWeight.w900, color: placeInk, height: 1.25),
+                ),
                 if (subtitle != null) ...[
-                  const SizedBox(height: 4),
-                  Text(subtitle!, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: placeInk2)),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle!,
+                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.w600, color: placeInk2, height: 1.45),
+                  ),
                 ],
               ],
             ),
           ),
-          if (trailing != null) trailing!,
+          if (trailing != null) ...[const SizedBox(width: 12), trailing!],
         ],
       ),
     );
   }
 }
 
+/// مؤشر رقمي صغير (يُستخدم داخل Row — يتمدد تلقائياً).
 class StatTile extends StatelessWidget {
   const StatTile({super.key, required this.label, required this.value, this.accent});
 
@@ -46,25 +59,45 @@ class StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = accent ?? placeInk;
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(StaffRadius.lg),
           border: Border.all(color: placeLine),
+          boxShadow: staffCardShadow,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: placeInk2)),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    color: accent ?? placeInk,
+            Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(color: accent ?? placeGold, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w700, color: placeInk2),
                   ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(
+                value,
+                style: TextStyle(fontFamily: 'Montserrat', fontSize: 20, fontWeight: FontWeight.w800, color: color, height: 1.15),
+              ),
             ),
           ],
         ),
@@ -73,6 +106,7 @@ class StatTile extends StatelessWidget {
   }
 }
 
+/// شارة الشفت (صباحي/مسائي/كامل).
 class ShiftBadge extends StatelessWidget {
   const ShiftBadge({super.key, required this.shift});
 
@@ -82,20 +116,28 @@ class ShiftBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = shiftColor(shift);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
-      child: Text(
-        shiftLabel(shift),
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: color),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(999)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            shiftLabel(shift),
+            style: TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.w800, color: color),
+          ),
+        ],
       ),
     );
   }
 }
 
+/// نقطة الحضور (متاح/مشغول…) مع نبض اختياري.
 class PresenceDot extends StatelessWidget {
   const PresenceDot({super.key, required this.state, this.pulse = false});
 
@@ -113,12 +155,18 @@ class PresenceDot extends StatelessWidget {
       child: Container(
         width: 10,
         height: 10,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle, boxShadow: [BoxShadow(color: color.withValues(alpha: 0.45), blurRadius: 6)]),
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 1.5),
+          boxShadow: [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 6)],
+        ),
       ),
     );
   }
 }
 
+/// صف شرائح تصفية أفقي قابل للتمرير.
 class FilterChipsRow extends StatelessWidget {
   const FilterChipsRow({super.key, required this.options, required this.selected, required this.onSelected, this.labelBuilder});
 
@@ -131,26 +179,57 @@ class FilterChipsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: StaffSpace.page, vertical: 8),
       child: Row(
         children: [
-          for (final item in options)
+          for (var i = 0; i < options.length; i++)
             Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: ChoiceChip(
-                label: Text(labelBuilder?.call(item) ?? item),
-                selected: selected == item,
-                onSelected: (_) => onSelected(item),
-                selectedColor: placeInk,
-                labelStyle: TextStyle(
-                  color: selected == item ? Colors.white : placeInk,
-                  fontWeight: FontWeight.w600,
-                ),
-                side: const BorderSide(color: placeLine),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              padding: EdgeInsetsDirectional.only(end: i == options.length - 1 ? 0 : 8),
+              child: _FilterPill(
+                label: labelBuilder?.call(options[i]) ?? options[i],
+                selected: selected == options[i],
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  onSelected(options[i]);
+                },
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _FilterPill extends StatelessWidget {
+  const _FilterPill({required this.label, required this.selected, required this.onTap});
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = BorderRadius.circular(999);
+    return Material(
+      color: selected ? placeInk : Colors.white,
+      borderRadius: r,
+      child: InkWell(
+        borderRadius: r,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          constraints: const BoxConstraints(minHeight: 38),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: r,
+            border: Border.all(color: selected ? placeInk : placeLine),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.w800, color: selected ? Colors.white : placeInk),
+          ),
+        ),
       ),
     );
   }
@@ -214,6 +293,7 @@ class _AudioWaveBarsState extends State<AudioWaveBars> with SingleTickerProvider
   }
 }
 
+/// حالة فارغة (النسخة القديمة) — بنفس شكل EmptyView الجديد.
 class EmptyState extends StatelessWidget {
   const EmptyState({super.key, required this.title, this.subtitle});
 
@@ -224,16 +304,29 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.inbox_outlined, size: 48, color: placeInk2.withValues(alpha: 0.5)),
-            const SizedBox(height: 12),
-            Text(title, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            Container(
+              width: 72,
+              height: 72,
+              decoration: const BoxDecoration(color: placeGoldSoft, shape: BoxShape.circle),
+              child: const Icon(Icons.inbox_rounded, size: 34, color: placeBrass),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontFamily: 'Cairo', fontSize: 16.5, fontWeight: FontWeight.w900, color: placeInk),
+            ),
             if (subtitle != null) ...[
-              const SizedBox(height: 6),
-              Text(subtitle!, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: placeInk2)),
+              const SizedBox(height: 4),
+              Text(
+                subtitle!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, color: placeInk2, height: 1.5),
+              ),
             ],
           ],
         ),
@@ -242,26 +335,44 @@ class EmptyState extends StatelessWidget {
   }
 }
 
+/// نافذة سفلية لإدخال نص قصير (سبب، ملاحظة…).
 Future<String?> promptText(BuildContext context, {required String title, String hint = '', int maxLines = 3}) async {
   final controller = TextEditingController();
   return showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(StaffRadius.xl))),
     builder: (context) => Padding(
-      padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(context).viewInsets.bottom + 20),
+      padding: EdgeInsets.fromLTRB(StaffSpace.page, 8, StaffSpace.page, MediaQuery.of(context).viewInsets.bottom + 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(color: placeLine, borderRadius: BorderRadius.circular(99)),
+            ),
+          ),
+          Text(
+            title,
+            style: const TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900, color: placeInk),
+          ),
           const SizedBox(height: 12),
-          TextField(controller: controller, maxLines: maxLines, decoration: InputDecoration(hintText: hint)),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('إرسال'),
+          TextField(
+            controller: controller,
+            maxLines: maxLines,
+            autofocus: true,
+            decoration: InputDecoration(hintText: hint),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 50,
+            child: FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('إرسال')),
           ),
         ],
       ),

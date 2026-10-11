@@ -4,6 +4,7 @@ import '../../../core/api.dart';
 import '../../../core/session.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
+import '../../../widgets/kit.dart';
 import '../../../widgets/ui.dart';
 import 'content_common.dart';
 
@@ -21,6 +22,8 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
   bool _loading = true;
   String? _error;
   final Set<String> _busy = {};
+  String _q = '';
+  String _filter = 'ALL';
 
   bool get _canWrite => Session.can('content.write');
 
@@ -121,91 +124,128 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
 
   Future<void> _openEditor([Map<String, dynamic>? row]) async {
     final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => BannerEditorScreen(banner: row, nextSortOrder: _rows.length)),
+      MaterialPageRoute(
+        builder: (_) => BannerEditorScreen(banner: row, nextSortOrder: _rows.length),
+      ),
     );
     if (saved == true && mounted) _load(silent: true);
   }
 
+  List<Map<String, dynamic>> get _visibleRows {
+    final q = _q.toLowerCase();
+    return _rows.where((r) {
+      if (_filter == 'active' && r['isActive'] != true) return false;
+      if (_filter == 'inactive' && r['isActive'] == true) return false;
+      if (q.isEmpty) return true;
+      return '${r['title'] ?? ''} ${r['subtitle'] ?? ''} ${r['linkUrl'] ?? ''}'.toLowerCase().contains(q);
+    }).toList();
+  }
+
+  bool get _filtered => _q.isNotEmpty || _filter != 'ALL';
+
   @override
   Widget build(BuildContext context) {
     final activeCount = _rows.where((r) => r['isActive'] == true).length;
-    return Scaffold(
-      appBar: AppBar(title: const Text('البانرات')),
+    final rows = _visibleRows;
+    final canReorder = _canWrite && !_filtered;
+    final state = contentStateSliver(
+      loading: _loading,
+      error: _error,
+      isEmpty: rows.isEmpty,
+      onRetry: _load,
+      emptyIcon: Icons.view_carousel_outlined,
+      emptyTitle: _filtered ? 'لا بانرات مطابقة' : 'لا توجد بانرات',
+      emptySubtitle: !_filtered && _canWrite ? 'أضف أول بانر ليظهر أعلى التطبيق' : null,
+      emptyActionLabel: !_filtered && _canWrite ? 'بانر جديد' : null,
+      onEmptyAction: () => _openEditor(),
+      skeletonHeight: 190,
+      skeletonCount: 3,
+    );
+
+    Widget card(int i, {required bool reorderable}) {
+      final row = rows[i];
+      return Padding(
+        key: ValueKey(row['id']),
+        padding: const EdgeInsets.fromLTRB(StaffSpace.page, 0, StaffSpace.page, 10),
+        child: _BannerCard(
+          row: row,
+          index: _rows.indexOf(row),
+          canWrite: _canWrite,
+          reorderable: reorderable,
+          busy: _busy.contains('${row['id']}'),
+          onToggle: (v) => _toggle(row, v),
+          onEdit: () => _openEditor(row),
+          onDelete: () => _delete(row),
+        ),
+      );
+    }
+
+    return StaffPage(
+      title: 'البانرات',
+      subtitle: _loading ? 'جارٍ التحميل…' : '${_rows.length} بانر · $activeCount فعّال',
+      onRefresh: () => _load(silent: true),
       floatingActionButton: _canWrite
           ? FloatingActionButton.extended(
               onPressed: () => _openEditor(),
               backgroundColor: placeInk,
               foregroundColor: Colors.white,
               icon: const Icon(Icons.add_photo_alternate_outlined),
-              label: const Text('بانر جديد', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800)),
+              label: const Text(
+                'بانر جديد',
+                style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800),
+              ),
             )
           : null,
-      body: Column(
+      bottom: ContentToolbar(
+        height: kContentToolbarHeight,
         children: [
-          MaisonHeader(
-            title: 'إعلانات الواجهة',
-            subtitle: _loading ? 'جارٍ التحميل…' : '${_rows.length} بانر · $activeCount فعّال',
-          ),
-          if (!_canWrite)
-            const ReadOnlyNotice(message: 'عرض فقط — لإضافة أو تعديل البانرات اطلب صلاحية «إضافة وتعديل البانرات والمميزة».')
-          else if (_rows.length > 1)
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 2, 20, 4),
-              child: Text(
-                'اسحب من المقبض ⋮⋮ لتغيير ترتيب الظهور في التطبيق',
-                style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2),
-              ),
-            ),
-          Expanded(
-            child: ContentListBody(
-              loading: _loading,
-              error: _error,
-              isEmpty: _rows.isEmpty,
-              onRefresh: () => _load(silent: true),
-              emptyTitle: 'لا توجد بانرات',
-              emptySubtitle: _canWrite ? 'أضف أول بانر ليظهر أعلى التطبيق' : null,
-              child: _canWrite
-                  ? ReorderableListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-                      buildDefaultDragHandles: false,
-                      itemCount: _rows.length,
-                      onReorder: _reorder,
-                      proxyDecorator: (child, _, _) => Material(color: Colors.transparent, elevation: 6, child: child),
-                      itemBuilder: (context, i) => _BannerCard(
-                        key: ValueKey(_rows[i]['id']),
-                        row: _rows[i],
-                        index: i,
-                        canWrite: true,
-                        busy: _busy.contains('${_rows[i]['id']}'),
-                        onToggle: (v) => _toggle(_rows[i], v),
-                        onEdit: () => _openEditor(_rows[i]),
-                        onDelete: () => _delete(_rows[i]),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                      itemCount: _rows.length,
-                      itemBuilder: (context, i) => _BannerCard(
-                        row: _rows[i],
-                        index: i,
-                        canWrite: false,
-                        busy: false,
-                      ),
-                    ),
-            ),
+          ContentSearchField(hint: 'ابحث بعنوان البانر أو الرابط', onChanged: (v) => setState(() => _q = v)),
+          ContentChips<String>(
+            selected: _filter,
+            onSelected: (v) => setState(() => _filter = v),
+            options: [
+              ContentChip('ALL', 'الكل', count: _rows.length),
+              ContentChip('active', 'فعّالة', count: activeCount),
+              ContentChip('inactive', 'موقوفة', count: _rows.length - activeCount),
+            ],
           ),
         ],
       ),
+      slivers: [
+        if (!_canWrite)
+          const SliverToBoxAdapter(
+            child: ReadOnlyNotice(message: 'عرض فقط — لإضافة أو تعديل البانرات اطلب صلاحية «إضافة وتعديل البانرات والمميزة».'),
+          )
+        else if (!_loading && _rows.length > 1)
+          SliverToBoxAdapter(
+            child: ContentHint(
+              canReorder ? 'اسحب من المقبض ⋮⋮ لتغيير ترتيب الظهور في التطبيق' : 'أزل البحث والفلتر لتغيير الترتيب',
+              icon: Icons.drag_indicator_rounded,
+            ),
+          ),
+        if (state != null)
+          state
+        else if (canReorder)
+          SliverReorderableList(
+            itemCount: rows.length,
+            onReorder: _reorder,
+            proxyDecorator: (child, _, _) => Material(color: Colors.transparent, elevation: 6, child: child),
+            itemBuilder: (context, i) => card(i, reorderable: true),
+          )
+        else
+          SliverList.builder(itemCount: rows.length, itemBuilder: (context, i) => card(i, reorderable: false)),
+        if (_canWrite) const SliverToBoxAdapter(child: SizedBox(height: 72)),
+      ],
     );
   }
 }
 
 class _BannerCard extends StatelessWidget {
   const _BannerCard({
-    super.key,
     required this.row,
     required this.index,
     required this.canWrite,
+    required this.reorderable,
     required this.busy,
     this.onToggle,
     this.onEdit,
@@ -215,6 +255,7 @@ class _BannerCard extends StatelessWidget {
   final Map<String, dynamic> row;
   final int index;
   final bool canWrite;
+  final bool reorderable;
   final bool busy;
   final ValueChanged<bool>? onToggle;
   final VoidCallback? onEdit;
@@ -226,114 +267,106 @@ class _BannerCard extends StatelessWidget {
     final title = row['title']?.toString() ?? '';
     final subtitle = row['subtitle']?.toString() ?? '';
     final link = row['linkUrl']?.toString() ?? '';
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: placeLine),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: canWrite ? onEdit : null,
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AspectRatio(
-                aspectRatio: 16 / 7,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Opacity(opacity: active ? 1 : 0.45, child: NetImage(url: resolveMediaUrl(row['imageUrl']), radius: 14)),
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.center,
-                          colors: [Colors.black.withValues(alpha: 0.6), Colors.transparent],
+    return ContentRowCard(
+      padding: const EdgeInsets.all(10),
+      onTap: canWrite ? onEdit : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AspectRatio(
+            aspectRatio: 16 / 7,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Opacity(
+                  opacity: active ? 1 : 0.45,
+                  child: NetImage(url: resolveMediaUrl(row['imageUrl']), radius: StaffRadius.md),
+                ),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(StaffRadius.md),
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.center,
+                      colors: [Colors.black.withValues(alpha: 0.6), Colors.transparent],
+                    ),
+                  ),
+                ),
+                PositionedDirectional(
+                  start: 12,
+                  end: 12,
+                  bottom: 10,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 16, color: Colors.white),
+                      ),
+                      if (subtitle.isNotEmpty)
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600),
+                        ),
+                    ],
+                  ),
+                ),
+                PositionedDirectional(
+                  top: 8,
+                  start: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(999)),
+                    child: Text(
+                      '#${index + 1}',
+                      style: const TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w800, fontSize: 12, color: placeInk),
+                    ),
+                  ),
+                ),
+                if (canWrite && reorderable)
+                  PositionedDirectional(
+                    top: 4,
+                    end: 4,
+                    child: ReorderableDragStartListener(
+                      index: index,
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        alignment: Alignment.center,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(10)),
+                          child: const Icon(Icons.drag_indicator_rounded, color: placeInk, size: 20),
                         ),
                       ),
                     ),
-                    PositionedDirectional(
-                      start: 12,
-                      end: 12,
-                      bottom: 10,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 16, color: Colors.white),
-                          ),
-                          if (subtitle.isNotEmpty)
-                            Text(
-                              subtitle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600),
-                            ),
-                        ],
-                      ),
-                    ),
-                    PositionedDirectional(
-                      top: 8,
-                      start: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(999)),
-                        child: Text('#${index + 1}',
-                            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 12, color: placeInk)),
-                      ),
-                    ),
-                  ],
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              StatusChip(active ? 'فعّال' : 'موقوف', color: active ? placeSuccess : placeInk3, dense: true),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ContentMeta(
+                  icon: link.isEmpty ? Icons.link_off_rounded : Icons.link_rounded,
+                  text: link.isEmpty ? 'بدون رابط' : link,
+                  ltr: link.isNotEmpty,
                 ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  StatusPill(
-                    label: active ? 'فعّال' : 'موقوف',
-                    color: active ? placeSuccess : placeInk2,
-                    icon: active ? Icons.check_circle_rounded : Icons.pause_circle_rounded,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      link.isEmpty ? 'بدون رابط' : link,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textDirection: link.isEmpty ? null : TextDirection.ltr,
-                      textAlign: TextAlign.start,
-                      style: const TextStyle(fontSize: 12, color: placeInk2, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  if (canWrite) ...[
-                    CardAction(icon: Icons.edit_outlined, tooltip: 'تعديل', onTap: onEdit),
-                    CardAction(icon: Icons.delete_outline_rounded, tooltip: 'حذف', onTap: onDelete, color: placeDanger),
-                    busy
-                        ? const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 14),
-                            child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: placeBrass)),
-                          )
-                        : Switch.adaptive(value: active, activeTrackColor: placeBrass, onChanged: onToggle),
-                    ReorderableDragStartListener(
-                      index: index,
-                      child: const Padding(
-                        padding: EdgeInsets.all(6),
-                        child: Icon(Icons.drag_indicator_rounded, color: placeInk2),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+              if (canWrite) ...[
+                CardAction(icon: Icons.delete_outline_rounded, tooltip: 'حذف', onTap: onDelete, color: placeDanger),
+                busy ? const InlineBusy() : Switch.adaptive(value: active, activeTrackColor: placeGold, onChanged: onToggle),
+              ],
             ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -429,13 +462,7 @@ class _BannerEditorScreenState extends State<BannerEditorScreen> {
   }
 
   Future<void> _delete() async {
-    final ok = await confirmDialog(
-      context,
-      title: 'حذف البانر؟',
-      message: 'لا يمكن التراجع عن الحذف.',
-      confirmLabel: 'حذف',
-      danger: true,
-    );
+    final ok = await confirmDialog(context, title: 'حذف البانر؟', message: 'لا يمكن التراجع عن الحذف.', confirmLabel: 'حذف', danger: true);
     if (!ok || !mounted) return;
     setState(() => _saving = true);
     try {
@@ -461,89 +488,86 @@ class _BannerEditorScreenState extends State<BannerEditorScreen> {
         final leave = await confirmDiscard(context);
         if (leave && mounted) Navigator.of(this.context).pop();
       },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(_isEdit ? 'تعديل البانر' : 'بانر جديد'),
-          actions: [
-            if (_isEdit)
-              IconButton(
-                tooltip: 'حذف',
-                onPressed: _saving ? null : _delete,
-                icon: const Icon(Icons.delete_outline_rounded, color: placeDanger),
-              ),
-          ],
-        ),
-        body: Form(
+      child: ContentEditorScaffold(
+        bar: BottomActionBar(label: _isEdit ? 'حفظ التعديلات' : 'إضافة البانر', busy: _saving, onPressed: _save),
+        child: Form(
           key: _formKey,
           onChanged: _touch,
-          child: ListView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: const EdgeInsets.only(top: 4, bottom: 24),
-            children: [
-              FormSection(
-                title: 'الصورة',
-                subtitle: 'يفضّل صورة عرضية بنسبة 16:7 تقريباً',
-                icon: Icons.image_outlined,
+          child: StaffPage(
+            title: _isEdit ? 'تعديل البانر' : 'بانر جديد',
+            subtitle: _isEdit ? 'التعديلات تظهر في التطبيق فور الحفظ' : 'إعلان جديد أعلى التطبيق',
+            actions: [
+              if (_isEdit)
+                IconButton(
+                  tooltip: 'حذف',
+                  onPressed: _saving ? null : _delete,
+                  icon: const Icon(Icons.delete_outline_rounded, color: placeDanger),
+                ),
+            ],
+            slivers: [
+              SliverList.list(
                 children: [
-                  ContentImageField(
-                    url: _imageUrl,
-                    aspectRatio: 16 / 7,
-                    onChanged: (url) => setState(() {
-                      _imageUrl = url;
-                      _dirty = true;
-                    }),
+                  FormSection(
+                    title: 'الصورة',
+                    subtitle: 'يفضّل صورة عرضية بنسبة 16:7 تقريباً',
+                    icon: Icons.image_outlined,
+                    children: [
+                      ContentImageField(
+                        url: _imageUrl,
+                        aspectRatio: 16 / 7,
+                        onChanged: (url) => setState(() {
+                          _imageUrl = url;
+                          _dirty = true;
+                        }),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              FormSection(
-                title: 'النص',
-                icon: Icons.title_rounded,
-                children: [
-                  StaffField(
-                    controller: _title,
-                    label: 'العنوان الرئيسي',
-                    validator: (v) => requiredValidator(v, 'أضف العنوان الرئيسي'),
+                  FormSection(
+                    title: 'النص',
+                    icon: Icons.title_rounded,
+                    children: [
+                      StaffField(
+                        controller: _title,
+                        label: 'العنوان الرئيسي',
+                        validator: (v) => requiredValidator(v, 'أضف العنوان الرئيسي'),
+                      ),
+                      StaffField(controller: _subtitle, label: 'العنوان الفرعي (اختياري)', maxLines: 2),
+                    ],
                   ),
-                  StaffField(controller: _subtitle, label: 'العنوان الفرعي (اختياري)', maxLines: 2),
-                ],
-              ),
-              FormSection(
-                title: 'الرابط والظهور',
-                icon: Icons.link_rounded,
-                children: [
-                  StaffField(
-                    controller: _link,
-                    label: 'رابط عند الضغط (اختياري)',
-                    hint: 'https://… أو /farms/slug',
-                    ltr: true,
-                    keyboard: TextInputType.url,
-                    validator: linkValidator,
-                  ),
-                  StaffField(
-                    controller: _sort,
-                    label: 'ترتيب الظهور',
-                    helper: 'الأصغر يظهر أولاً',
-                    keyboard: TextInputType.number,
-                    digitsOnly: true,
-                  ),
-                  ToggleRow(
-                    title: 'فعّال',
-                    subtitle: 'يظهر في التطبيق فور الحفظ',
-                    value: _active,
-                    onChanged: (v) => setState(() {
-                      _active = v;
-                      _dirty = true;
-                    }),
+                  FormSection(
+                    title: 'الرابط والظهور',
+                    icon: Icons.link_rounded,
+                    children: [
+                      StaffField(
+                        controller: _link,
+                        label: 'رابط عند الضغط (اختياري)',
+                        hint: 'https://… أو /farms/slug',
+                        ltr: true,
+                        keyboard: TextInputType.url,
+                        validator: linkValidator,
+                      ),
+                      StaffField(
+                        controller: _sort,
+                        label: 'ترتيب الظهور',
+                        helper: 'الأصغر يظهر أولاً',
+                        keyboard: TextInputType.number,
+                        digitsOnly: true,
+                      ),
+                      ToggleRow(
+                        title: 'فعّال',
+                        subtitle: 'يظهر في التطبيق فور الحفظ',
+                        value: _active,
+                        onChanged: (v) => setState(() {
+                          _active = v;
+                          _dirty = true;
+                        }),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ],
           ),
-        ),
-        bottomNavigationBar: BottomActionBar(
-          label: _isEdit ? 'حفظ التعديلات' : 'إضافة البانر',
-          busy: _saving,
-          onPressed: _save,
         ),
       ),
     );

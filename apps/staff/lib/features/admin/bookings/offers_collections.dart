@@ -4,7 +4,7 @@ import '../../../core/api.dart';
 import '../../../core/format.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
-import '../../../widgets/ui.dart';
+import '../../../widgets/kit.dart';
 import 'booking_kit.dart';
 import 'booking_manage.dart';
 
@@ -17,13 +17,13 @@ String offerStatusLabel(String? s) => switch (s) {
     };
 
 Color offerStatusColor(String? s) => switch (s) {
-      'PENDING' => placeShiftMorning,
+      'PENDING' => placeWarning,
       'ACCEPTED' => placeSuccess,
       'DECLINED' => placeDanger,
-      _ => placeInk2,
+      _ => placeInk3,
     };
 
-/// حالة مشتركة لقوائم مرقّمة مع بحث وفلتر.
+/// حالة مشتركة لقوائم مرقّمة مع بحث وفلتر (بنمط slivers).
 mixin _PagedSearch<T extends StatefulWidget> on State<T> {
   final search = TextEditingController();
   final debounce = Debouncer();
@@ -93,35 +93,63 @@ mixin _PagedSearch<T extends StatefulWidget> on State<T> {
     if (mounted) setState(() => loadingMore = false);
   }
 
-  Widget searchField(String hint) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-        child: TextField(
+  Widget searchField(String hint) => Pad(
+        top: 4,
+        bottom: 6,
+        child: BookingSearchField(
           controller: search,
-          onChanged: (_) => debounce.run(reset),
-          decoration: InputDecoration(hintText: hint, prefixIcon: const Icon(Icons.search_rounded)),
+          hint: hint,
+          onChanged: (_) {
+            setState(() {});
+            debounce.run(reset);
+          },
+          onClear: reset,
         ),
       );
 
-  Widget scrollBody({
+  /// صفحة قائمة مرقّمة كاملة: رأس + بحث/فلاتر + عناصر + تحميل المزيد.
+  Widget pagedPage({
+    required String title,
+    String? subtitle,
     required List<Widget> header,
-    required List<Widget> children,
+    required String countLabel,
+    required Widget Function(Map<String, dynamic> row) itemBuilder,
+    required IconData emptyIcon,
     required String emptyTitle,
+    String? emptySubtitle,
   }) {
     return NotificationListener<ScrollNotification>(
       onNotification: (n) {
-        if (n.metrics.pixels > n.metrics.maxScrollExtent - 300) loadMore();
+        if (n.metrics.axis == Axis.vertical && n.metrics.pixels > n.metrics.maxScrollExtent - 300) loadMore();
         return false;
       },
-      child: AsyncList(
-        loading: loading,
-        error: error,
-        isEmpty: rows.isEmpty,
+      child: StaffPage(
+        title: title,
+        subtitle: subtitle,
         onRefresh: load,
-        emptyTitle: emptyTitle,
-        header: header,
-        children: [
-          ...children,
-          LoadMoreTile(hasMore: page < totalPages, loading: loadingMore, onPressed: loadMore),
+        slivers: [
+          ...header.map((w) => SliverToBoxAdapter(child: w)),
+          if (!loading && error == null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(StaffSpace.page, 8, StaffSpace.page, 8),
+                child: Text('$total $countLabel', style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ...asyncSlivers(
+            loading: loading,
+            error: error,
+            isEmpty: rows.isEmpty,
+            onRetry: load,
+            skeletonHeight: 104,
+            emptyIcon: emptyIcon,
+            emptyTitle: emptyTitle,
+            emptySubtitle: emptySubtitle,
+            slivers: [
+              SliverList.builder(itemCount: rows.length, itemBuilder: (_, i) => itemBuilder(rows[i])),
+              SliverToBoxAdapter(child: LoadMoreTile(hasMore: page < totalPages, loading: loadingMore, onPressed: loadMore)),
+            ],
+          ),
         ],
       ),
     );
@@ -153,53 +181,56 @@ class _PriceOffersScreenState extends State<PriceOffersScreen> with _PagedSearch
     final property = asMap(o['property']);
     final customer = asMap(o['customer']);
     final provider = asMap(o['provider']);
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: placePaper,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
-      builder: (ctx) => SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.only(top: 16, bottom: 16),
+    final status = o['status']?.toString();
+    showStaffSheet<void>(
+      context,
+      title: property?['name']?.toString() ?? 'عرض سعر',
+      child: Builder(
+        builder: (ctx) => SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
+              Row(
+                children: [
+                  StatusChip(offerStatusLabel(status), color: offerStatusColor(status)),
+                  const Spacer(),
+                  Text(formatIqd(o['amount']), style: const TextStyle(fontFamily: 'Cairo', fontSize: 20, fontWeight: FontWeight.w900, color: placeInk)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              StaffCard(
+                child: Column(
                   children: [
-                    Expanded(
-                      child: Text(
-                        property?['name']?.toString() ?? 'عرض سعر',
-                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900),
-                      ),
+                    InfoLine(icon: Icons.event_outlined, label: 'الموعد', value: fmtRange(o['startDate'], o['endDate'])),
+                    InfoLine(icon: Icons.schedule_rounded, label: 'الشفت', value: shiftShort(o['shift']?.toString())),
+                    InfoLine(icon: Icons.storefront_outlined, label: 'المزوّد', value: provider?['businessName']?.toString() ?? '—'),
+                    InfoLine(
+                      icon: Icons.person_outline_rounded,
+                      label: 'الزبون',
+                      value: [customer?['name'], customer?['phone']].whereType<Object>().join(' · '),
                     ),
-                    StatusPill(label: offerStatusLabel(o['status']?.toString()), color: offerStatusColor(o['status']?.toString())),
+                    InfoLine(icon: Icons.add_circle_outline_rounded, label: 'أُرسل', value: fmtStamp(o['createdAt'])),
+                    if (o['expiresAt'] != null) InfoLine(icon: Icons.timer_off_outlined, label: 'ينتهي', value: fmtStamp(o['expiresAt'])),
+                    if ((o['message']?.toString() ?? '').isNotEmpty)
+                      InfoLine(icon: Icons.chat_bubble_outline_rounded, label: 'الرسالة', value: '${o['message']}'),
                   ],
                 ),
               ),
-              FormSection(
-                title: 'تفاصيل العرض',
-                icon: Icons.local_offer_outlined,
-                children: [
-                  InfoLine(icon: Icons.attach_money_rounded, label: 'المبلغ', value: formatIqd(o['amount'])),
-                  InfoLine(icon: Icons.event_outlined, label: 'الموعد', value: fmtRange(o['startDate'], o['endDate'])),
-                  InfoLine(icon: Icons.schedule_rounded, label: 'الشفت', value: shiftShort(o['shift']?.toString())),
-                  InfoLine(icon: Icons.storefront_outlined, label: 'المزوّد', value: provider?['businessName']?.toString() ?? '—'),
-                  InfoLine(
-                    icon: Icons.person_outline_rounded,
-                    label: 'الزبون',
-                    value: [customer?['name'], customer?['phone']].whereType<Object>().join(' · '),
+              if (customer?['phone'] != null) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    onPressed: () => callPhone(context, '${customer!['phone']}'),
+                    icon: const Icon(Icons.call_rounded, size: 18, color: placeSuccess),
+                    label: const Text('اتصال بالزبون'),
                   ),
-                  InfoLine(icon: Icons.add_circle_outline_rounded, label: 'أُرسل', value: fmtStamp(o['createdAt'])),
-                  if (o['expiresAt'] != null) InfoLine(icon: Icons.timer_off_outlined, label: 'ينتهي', value: fmtStamp(o['expiresAt'])),
-                  if ((o['message']?.toString() ?? '').isNotEmpty)
-                    InfoLine(icon: Icons.chat_bubble_outline_rounded, label: 'الرسالة', value: '${o['message']}'),
-                ],
-              ),
-              if (o['bookingId'] != null && canReadBookings)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                ),
+              ],
+              if (o['bookingId'] != null && canReadBookings) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 52,
                   child: FilledButton.icon(
                     onPressed: () {
                       Navigator.pop(ctx);
@@ -211,6 +242,7 @@ class _PriceOffersScreenState extends State<PriceOffersScreen> with _PagedSearch
                     label: const Text('فتح الحجز الناتج'),
                   ),
                 ),
+              ],
             ],
           ),
         ),
@@ -220,29 +252,27 @@ class _PriceOffersScreenState extends State<PriceOffersScreen> with _PagedSearch
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('عروض الأسعار')),
-      body: scrollBody(
-        emptyTitle: 'لا عروض أسعار',
-        header: [
-          searchField('هاتف الزبون أو اسم المكان'),
-          FilterChipsRow(
-            options: const ['ALL', 'PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED'],
-            selected: _status,
-            labelBuilder: (s) => s == 'ALL' ? 'الكل' : offerStatusLabel(s),
-            onSelected: (s) {
-              setState(() => _status = s);
-              reset();
-            },
-          ),
-          if (!loading && error == null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
-              child: Text('$total عرض', style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w700)),
-            ),
-        ],
-        children: [for (final o in rows) _OfferCard(offer: o, onTap: () => _details(o))],
-      ),
+    return pagedPage(
+      title: 'عروض الأسعار',
+      subtitle: 'عروض المزوّدين للزبائن',
+      countLabel: 'عرض',
+      emptyIcon: Icons.local_offer_outlined,
+      emptyTitle: 'لا عروض أسعار',
+      emptySubtitle: 'لا توجد عروض مطابقة لهذا الفلتر',
+      header: [
+        searchField('هاتف الزبون أو اسم المكان'),
+        SegmentFilter<String>(
+          options: const ['ALL', 'PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED'],
+          value: _status,
+          labelOf: (s) => s == 'ALL' ? 'الكل' : offerStatusLabel(s),
+          colorOf: (s) => s == 'ALL' ? null : offerStatusColor(s),
+          onChanged: (s) {
+            setState(() => _status = s);
+            reset();
+          },
+        ),
+      ],
+      itemBuilder: (o) => _OfferCard(offer: o, onTap: () => _details(o)),
     );
   }
 }
@@ -257,41 +287,63 @@ class _OfferCard extends StatelessWidget {
     final o = offer;
     final customer = asMap(o['customer']);
     final provider = asMap(o['provider']);
-    return _Card(
-      onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  asMap(o['property'])?['name']?.toString() ?? '—',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.w900),
+    final status = o['status']?.toString();
+    return Pad(
+      bottom: 10,
+      child: StaffCard(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                IconBox(icon: Icons.local_offer_rounded, color: offerStatusColor(status), size: 40),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        asMap(o['property'])?['name']?.toString() ?? '—',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.w900, color: placeInk),
+                      ),
+                      Text(
+                        '${provider?['businessName'] ?? 'مزوّد'} ← ${customer?['name'] ?? customer?['phone'] ?? 'زبون'}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, color: placeInk2, fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              StatusPill(label: offerStatusLabel(o['status']?.toString()), color: offerStatusColor(o['status']?.toString())),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${provider?['businessName'] ?? 'مزوّد'} ← ${customer?['name'] ?? customer?['phone'] ?? 'زبون'}',
-            style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, color: placeInk2, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Text(formatIqd(o['amount']), style: const TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.w900)),
-              const SizedBox(width: 8),
-              ShiftBadge(shift: o['shift']?.toString()),
-              const Spacer(),
-              Text(fmtRange(o['startDate'], o['endDate']),
-                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, color: placeInk2, fontWeight: FontWeight.w700)),
-            ],
-          ),
-        ],
+                const SizedBox(width: 8),
+                StatusChip(offerStatusLabel(status), color: offerStatusColor(status), dense: true),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const Divider(height: 1, color: placeLineSoft),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Text(formatIqd(o['amount']), style: const TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.w900, color: placeInk)),
+                const SizedBox(width: 8),
+                BookingShiftChip(shift: o['shift']?.toString()),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    fmtRange(o['startDate'], o['endDate']),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, color: placeInk2, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -320,89 +372,88 @@ class _CollectionsScreenState extends State<CollectionsScreen> with _PagedSearch
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('قوائم الزبائن')),
-      body: scrollBody(
-        emptyTitle: 'لا قوائم محفوظة',
-        header: [
-          searchField('اسم القائمة أو الزبون أو الهاتف'),
-          FilterChipsRow(
-            options: const ['ALL', 'PUBLIC', 'PRIVATE'],
-            selected: _visibility,
-            labelBuilder: (s) => switch (s) {
-              'PUBLIC' => 'عامة',
-              'PRIVATE' => 'خاصة',
-              _ => 'الكل',
-            },
-            onSelected: (s) {
-              setState(() => _visibility = s);
-              reset();
-            },
+    return pagedPage(
+      title: 'قوائم الزبائن',
+      subtitle: 'المفضلة والقوائم المحفوظة',
+      countLabel: 'قائمة',
+      emptyIcon: Icons.collections_bookmark_outlined,
+      emptyTitle: 'لا قوائم محفوظة',
+      header: [
+        searchField('اسم القائمة أو الزبون أو الهاتف'),
+        SegmentFilter<String>(
+          options: const ['ALL', 'PUBLIC', 'PRIVATE'],
+          value: _visibility,
+          labelOf: (s) => switch (s) {
+            'PUBLIC' => 'عامة',
+            'PRIVATE' => 'خاصة',
+            _ => 'الكل',
+          },
+          onChanged: (s) {
+            setState(() => _visibility = s);
+            reset();
+          },
+        ),
+      ],
+      itemBuilder: (c) => Pad(
+        bottom: 10,
+        child: StaffCard(
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => CollectionDetailScreen(collectionId: '${c['id']}')),
           ),
-          if (!loading && error == null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
-              child: Text('$total قائمة', style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w700)),
-            ),
-        ],
-        children: [
-          for (final c in rows)
-            _Card(
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => CollectionDetailScreen(collectionId: '${c['id']}')),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 60,
+                height: 60,
+                child: NetImage(url: mediaUrl(c['coverUrl']?.toString()), icon: Icons.collections_bookmark_outlined, radius: StaffRadius.md),
               ),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 56,
-                    height: 56,
-                    child: NetImage(url: mediaUrl(c['coverUrl']?.toString()), icon: Icons.collections_bookmark_outlined),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                '${c['name'] ?? '—'}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.w900),
-                              ),
-                            ),
-                            if (c['isDefault'] == true) ...[
-                              const SizedBox(width: 6),
-                              const StatusPill(label: 'المفضلة', color: placeBrass),
-                            ],
-                          ],
+                        Flexible(
+                          child: Text(
+                            '${c['name'] ?? '—'}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.w900, color: placeInk),
+                          ),
                         ),
-                        Text(
-                          [asMap(c['user'])?['name'], asMap(c['user'])?['phone']].whereType<Object>().join(' · '),
-                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            StatusPill(label: '${asMap(c['_count'])?['items'] ?? 0} مكان', color: placeInk),
-                            const SizedBox(width: 6),
-                            StatusPill(
-                              label: c['visibility'] == 'PUBLIC' ? 'عامة' : 'خاصة',
-                              color: c['visibility'] == 'PUBLIC' ? placeSuccess : placeInk2,
-                              icon: c['visibility'] == 'PUBLIC' ? Icons.public_rounded : Icons.lock_outline_rounded,
-                            ),
-                          ],
+                        if (c['isDefault'] == true) ...[
+                          const SizedBox(width: 6),
+                          const StatusChip('المفضلة', color: placeBrass, dense: true),
+                        ],
+                      ],
+                    ),
+                    Text(
+                      [asMap(c['user'])?['name'], asMap(c['user'])?['phone']].whereType<Object>().join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        StatusChip('${asMap(c['_count'])?['items'] ?? 0} مكان', color: placeInk, dense: true),
+                        StatusChip(
+                          c['visibility'] == 'PUBLIC' ? 'عامة' : 'خاصة',
+                          color: c['visibility'] == 'PUBLIC' ? placeSuccess : placeInk2,
+                          dense: true,
                         ),
                       ],
                     ),
-                  ),
-                  const Icon(Icons.chevron_left_rounded, color: placeInk2),
-                ],
+                  ],
+                ),
               ),
-            ),
-        ],
+              const Icon(Icons.chevron_left_rounded, color: placeInk3),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -443,96 +494,93 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
     final c = _data;
     final items = [for (final i in (c?['items'] as List? ?? const [])) if (i is Map) Map<String, dynamic>.from(i)];
     final user = asMap(c?['user']);
-    return Scaffold(
-      appBar: AppBar(title: Text(c?['name']?.toString() ?? 'القائمة')),
-      body: AsyncList(
-        loading: _loading,
-        error: _error,
-        isEmpty: c == null,
-        onRefresh: _load,
-        children: c == null
-            ? const []
-            : [
-                FormSection(
-                  title: '${c['name'] ?? ''}',
-                  subtitle: (c['description']?.toString() ?? '').isEmpty ? null : '${c['description']}',
-                  icon: Icons.collections_bookmark_outlined,
-                  children: [
-                    InfoLine(icon: Icons.person_outline_rounded, label: 'الزبون', value: '${user?['name'] ?? 'بدون اسم'}'),
-                    if (user?['phone'] != null) InfoLine(icon: Icons.phone_outlined, label: 'الهاتف', value: '${user!['phone']}', ltr: true),
-                    InfoLine(icon: Icons.visibility_outlined, label: 'الظهور', value: c['visibility'] == 'PUBLIC' ? 'عامة' : 'خاصة'),
-                    InfoLine(icon: Icons.add_circle_outline_rounded, label: 'أُنشئت', value: fmtStamp(c['createdAt'])),
-                    InfoLine(icon: Icons.update_rounded, label: 'آخر تحديث', value: fmtStamp(c['updatedAt'])),
-                  ],
-                ),
-                SectionLabel('الأماكن (${items.length})'),
-                if (items.isEmpty) const EmptyState(title: 'القائمة فارغة'),
-                for (final item in items)
-                  _Card(
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(color: placeBrass.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
-                          child: Icon(placeTypeIcon(asMap(item['property'])?['type']?.toString()), color: placeBrass),
+    final phone = user?['phone']?.toString();
+    return StaffPage(
+      title: c?['name']?.toString() ?? 'القائمة',
+      subtitle: c == null ? null : '${items.length} مكان · ${c['visibility'] == 'PUBLIC' ? 'عامة' : 'خاصة'}',
+      onRefresh: _load,
+      slivers: [
+        ...asyncSlivers(
+          loading: _loading,
+          error: _error,
+          isEmpty: c == null,
+          onRetry: _load,
+          skeletonCount: 4,
+          emptyIcon: Icons.collections_bookmark_outlined,
+          emptyTitle: 'القائمة غير موجودة',
+          slivers: c == null
+              ? const []
+              : [
+                  if ((c['description']?.toString() ?? '').isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: Pad(
+                        top: 4,
+                        child: Text('${c['description']}', style: const TextStyle(fontFamily: 'Cairo', fontSize: 13.5, color: placeInk2, height: 1.6)),
+                      ),
+                    ),
+                  SliverToBoxAdapter(
+                    child: Pad(
+                      top: 4,
+                      child: StaffCard(
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Avatar('${user?['name'] ?? '؟'}', size: 44),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('${user?['name'] ?? 'بدون اسم'}', style: const TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.w900, color: placeInk)),
+                                      if (phone != null)
+                                        Text(phone, textDirection: TextDirection.ltr, style: const TextStyle(fontFamily: 'Montserrat', fontSize: 12.5, fontWeight: FontWeight.w700, color: placeInk2)),
+                                    ],
+                                  ),
+                                ),
+                                if (phone != null)
+                                  RoundIconAction(icon: Icons.call_rounded, color: placeSuccess, tooltip: 'اتصال', onTap: () => callPhone(context, phone)),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            const Divider(height: 1),
+                            const SizedBox(height: 4),
+                            InfoLine(icon: Icons.visibility_outlined, label: 'الظهور', value: c['visibility'] == 'PUBLIC' ? 'عامة' : 'خاصة'),
+                            InfoLine(icon: Icons.add_circle_outline_rounded, label: 'أُنشئت', value: fmtStamp(c['createdAt'])),
+                            InfoLine(icon: Icons.update_rounded, label: 'آخر تحديث', value: fmtStamp(c['updatedAt'])),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${asMap(item['property'])?['name'] ?? '—'}',
-                                style: const TextStyle(fontFamily: 'Cairo', fontSize: 14.5, fontWeight: FontWeight.w900),
-                              ),
-                              Text(
-                                [
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(child: SectionHeader('الأماكن', count: items.length)),
+                  if (items.isEmpty)
+                    const SliverToBoxAdapter(child: EmptyView(icon: Icons.inbox_outlined, title: 'القائمة فارغة'))
+                  else
+                    SliverToBoxAdapter(
+                      child: Pad(
+                        child: TileGroup(
+                          children: [
+                            for (final item in items)
+                              TaskTile(
+                                icon: placeTypeIcon(asMap(item['property'])?['type']?.toString()),
+                                color: placeBrass,
+                                title: '${asMap(item['property'])?['name'] ?? '—'}',
+                                subtitle: [
                                   placeTypeLabel(asMap(item['property'])?['type']?.toString()),
                                   asMap(asMap(item['property'])?['city'])?['nameAr'],
                                   'أُضيف ${fmtStamp(item['createdAt'])}',
+                                  if ((item['note']?.toString() ?? '').isNotEmpty) '“${item['note']}”',
                                 ].whereType<Object>().join(' · '),
-                                style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, color: placeInk2, fontWeight: FontWeight.w600),
+                                trailing: const SizedBox.shrink(),
                               ),
-                              if ((item['note']?.toString() ?? '').isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text('“${item['note']}”', style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5)),
-                                ),
-                            ],
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-              ],
-      ),
-    );
-  }
-}
-
-class _Card extends StatelessWidget {
-  const _Card({required this.child, this.onTap});
-  final Widget child;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 5, 16, 5),
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(18),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), border: Border.all(color: placeLine)),
-            child: child,
-          ),
+                ],
         ),
-      ),
+      ],
     );
   }
 }

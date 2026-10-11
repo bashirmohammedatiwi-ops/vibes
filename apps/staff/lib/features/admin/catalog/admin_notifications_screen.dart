@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import '../../../core/api.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
-import '../../../widgets/ui.dart';
+import '../../../widgets/kit.dart';
+import '../../../widgets/ui.dart' show FilterChipsRow;
 import 'catalog_common.dart';
 
 const _typeLabels = <String, String>{
@@ -58,7 +59,6 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
   static const _pageSize = 30;
 
   final _search = TextEditingController();
-  final _scroll = ScrollController();
   Timer? _debounce;
 
   final List<Map<String, dynamic>> _items = [];
@@ -78,9 +78,6 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    _scroll.addListener(() {
-      if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 300) _loadMore();
-    });
     _load();
   }
 
@@ -88,7 +85,6 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
   void dispose() {
     _debounce?.cancel();
     _search.dispose();
-    _scroll.dispose();
     super.dispose();
   }
 
@@ -202,37 +198,16 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
   }
 
   Future<void> _clearRead() async {
-    final days = await showModalBottomSheet<int>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 18, 20, 4),
-              child: Text('مسح الإشعارات المقروءة',
-                  style: TextStyle(fontFamily: 'Cairo', fontSize: 17, fontWeight: FontWeight.w900)),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text('تُحذف نهائياً — غير المقروءة لا تتأثر',
-                  style: TextStyle(fontFamily: 'Cairo', fontSize: 12.5, color: placeInk2)),
-            ),
-            for (final (d, label) in const [(30, 'الأقدم من 30 يوماً'), (7, 'الأقدم من 7 أيام'), (0, 'كل المقروءة')])
-              ListTile(
-                leading: Icon(d == 0 ? Icons.delete_sweep_outlined : Icons.history_rounded,
-                    color: d == 0 ? placeDanger : placeInk),
-                title: Text(label, style: TextStyle(color: d == 0 ? placeDanger : placeInk)),
-                onTap: () => Navigator.pop(context, d),
-              ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+    final picked = await showActionSheet(
+      context,
+      title: 'مسح الإشعارات المقروءة',
+      actions: const [
+        SheetAction('30', 'الأقدم من 30 يوماً', Icons.history_rounded),
+        SheetAction('7', 'الأقدم من 7 أيام', Icons.history_rounded),
+        SheetAction('0', 'كل المقروءة', Icons.delete_sweep_outlined, danger: true),
+      ],
     );
+    final days = picked == null ? null : int.tryParse(picked);
     if (days == null || !mounted) return;
     final ok = await confirmDialog(
       context,
@@ -282,47 +257,57 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
   void _open(Map<String, dynamic> n) {
     _markRead(n);
     final type = n['type']?.toString();
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
-      builder: (sheet) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+    final color = _typeColor(type);
+    showStaffSheet<void>(
+      context,
+      title: '${n['title'] ?? ''}',
+      child: Builder(
+        builder: (sheet) => SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
                 children: [
-                  StatusPill(label: _typeLabels[type] ?? type ?? '—', color: _typeColor(type), icon: _typeIcon(type)),
+                  StatusChip(_typeLabels[type] ?? type ?? '—', color: color == placeInk ? placeInk2 : color),
                   const Spacer(),
-                  Text(fmtDateTime(n['createdAt']), style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2)),
+                  Text(fmtDateTime(n['createdAt']), style: catalogMetaStyle),
                 ],
               ),
-              const SizedBox(height: 12),
-              Text('${n['title'] ?? ''}',
-                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900, color: placeInk)),
               if ('${n['body'] ?? ''}'.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                SelectableText('${n['body']}',
-                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 14, color: placeInk, height: 1.6)),
+                const SizedBox(height: 12),
+                StaffCard(
+                  child: SelectableText('${n['body']}',
+                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 14, color: placeInk, height: 1.6)),
+                ),
               ],
               if (n['entityType'] != null || n['entityId'] != null) ...[
                 const SizedBox(height: 10),
-                CopyRow(label: 'العنصر', value: '${n['entityType'] ?? ''}'),
-                CopyRow(label: 'المعرّف', value: '${n['entityId'] ?? ''}'),
+                StaffCard(
+                  padding: const EdgeInsetsDirectional.fromSTEB(14, 4, 4, 4),
+                  child: Column(
+                    children: [
+                      CopyRow(label: 'العنصر', value: '${n['entityType'] ?? ''}'),
+                      CopyRow(label: 'المعرّف', value: '${n['entityId'] ?? ''}'),
+                    ],
+                  ),
+                ),
               ],
-              const SizedBox(height: 14),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(foregroundColor: placeDanger),
-                onPressed: () async {
-                  Navigator.pop(sheet);
-                  await _delete(n);
-                },
-                icon: const Icon(Icons.delete_outline),
-                label: const Text('حذف الإشعار'),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 50,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: placeDanger,
+                    side: BorderSide(color: placeDanger.withValues(alpha: .4)),
+                  ),
+                  onPressed: () async {
+                    Navigator.pop(sheet);
+                    await _delete(n);
+                  },
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('حذف الإشعار'),
+                ),
               ),
             ],
           ),
@@ -331,40 +316,42 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
     );
   }
 
+  bool _onScroll(ScrollNotification n) {
+    if (n.metrics.axis == Axis.vertical && n.metrics.pixels > n.metrics.maxScrollExtent - 300) _loadMore();
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('إشعارات الإدارة'),
-        bottom: _busy
-            ? const PreferredSize(preferredSize: Size.fromHeight(2), child: LinearProgressIndicator(minHeight: 2))
-            : null,
+    return NotificationListener<ScrollNotification>(
+      onNotification: _onScroll,
+      child: StaffPage(
+        title: 'إشعارات الإدارة',
+        subtitle: _loading && _items.isEmpty ? null : '${fmtCount(_unread)} غير مقروء من ${fmtCount(_total)}',
+        bottom: catalogBusyBar(_busy),
+        onRefresh: _load,
         actions: [
           IconButton(tooltip: 'تعليم الكل كمقروء', onPressed: _busy ? null : _readAll, icon: const Icon(Icons.done_all_rounded)),
           IconButton(tooltip: 'مسح المقروء', onPressed: _busy ? null : _clearRead, icon: const Icon(Icons.delete_sweep_outlined)),
         ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: CustomScrollView(
-          controller: _scroll,
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  CatalogSearchField(controller: _search, hint: 'بحث في العنوان والنص…', onChanged: _onSearch),
-                  FilterChipsRow(
-                    options: const ['ALL', 'UNREAD'],
-                    selected: _unreadOnly ? 'UNREAD' : 'ALL',
-                    onSelected: (v) {
-                      setState(() => _unreadOnly = v == 'UNREAD');
-                      _load();
-                    },
-                    labelBuilder: (v) => v == 'UNREAD' ? 'غير المقروءة ($_unread)' : 'الكل',
-                  ),
-                  FilterChipsRow(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                CatalogSearchField(controller: _search, hint: 'بحث في العنوان والنص…', onChanged: _onSearch),
+                FilterChipsRow(
+                  options: const ['ALL', 'UNREAD'],
+                  selected: _unreadOnly ? 'UNREAD' : 'ALL',
+                  onSelected: (v) {
+                    setState(() => _unreadOnly = v == 'UNREAD');
+                    _load();
+                  },
+                  labelBuilder: (v) => v == 'UNREAD' ? 'غير المقروءة ($_unread)' : 'الكل',
+                ),
+                Transform.translate(
+                  offset: const Offset(0, -6),
+                  child: FilterChipsRow(
                     options: ['ALL', ..._typeLabels.keys],
                     selected: _type,
                     onSelected: (v) {
@@ -373,60 +360,47 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
                     },
                     labelBuilder: (v) => v == 'ALL' ? 'كل الأنواع' : _typeLabels[v]!,
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
-                    child: Text(
-                      _loading ? 'جارٍ التحميل…' : '${fmtCount(_total)} إشعار · ${fmtCount(_unread)} غير مقروء — اسحب لليسار للحذف',
-                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w700, color: placeInk2),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                CatalogResultsLine(
+                  text: _loading ? 'جارٍ التحميل…' : '${fmtCount(_total)} إشعار — اسحب البطاقة للحذف',
+                ),
+              ],
             ),
-            if (_loading && _items.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(child: CircularProgressIndicator(color: placeBrass)),
-              )
-            else if (_error != null && _items.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(_error!, textAlign: TextAlign.center, style: const TextStyle(fontFamily: 'Cairo', color: placeInk2)),
-                    const SizedBox(height: 10),
-                    OutlinedButton(onPressed: _load, child: const Text('إعادة المحاولة')),
-                  ],
-                ),
-              )
-            else if (_items.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: EmptyState(
-                  title: _unreadOnly ? 'لا إشعارات غير مقروءة' : 'لا إشعارات',
-                  subtitle: 'كل شيء تحت السيطرة',
-                ),
-              )
-            else
-              SliverList.builder(
-                itemCount: _items.length + 1,
-                itemBuilder: (context, i) {
-                  if (i == _items.length) {
-                    return Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Center(
-                        child: _loadingMore
-                            ? const CircularProgressIndicator(color: placeBrass, strokeWidth: 2)
-                            : const SizedBox.shrink(),
-                      ),
-                    );
-                  }
-                  return _tile(_items[i]);
-                },
+          ),
+          if (_loading && _items.isEmpty)
+            const SkeletonSliver(count: 8, height: 72)
+          else if (_error != null && _items.isEmpty)
+            SliverFillRemaining(hasScrollBody: false, child: CatalogErrorView(message: _error!, onRetry: _load))
+          else if (_items.isEmpty)
+            SliverToBoxAdapter(
+              child: EmptyView(
+                icon: Icons.notifications_off_outlined,
+                title: _unreadOnly ? 'لا إشعارات غير مقروءة' : 'لا إشعارات',
+                subtitle: 'كل شيء تحت السيطرة',
               ),
-          ],
-        ),
+            )
+          else
+            SliverList.builder(
+              itemCount: _items.length + 1,
+              itemBuilder: (context, i) {
+                if (i == _items.length) {
+                  return Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Center(
+                      child: _loadingMore
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(color: placeBrass, strokeWidth: 2),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  );
+                }
+                return Pad(bottom: 8, child: _tile(_items[i]));
+              },
+            ),
+        ],
       ),
     );
   }
@@ -440,26 +414,28 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
       direction: DismissDirection.startToEnd, // في RTL: سحب لليسار
       confirmDismiss: (_) => _delete(n),
       background: Container(
-        margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
         padding: const EdgeInsets.symmetric(horizontal: 20),
         alignment: AlignmentDirectional.centerStart,
-        decoration: BoxDecoration(color: placeDanger, borderRadius: BorderRadius.circular(18)),
-        child: const Icon(Icons.delete_outline, color: Colors.white),
+        decoration: BoxDecoration(color: placeDanger, borderRadius: BorderRadius.circular(StaffRadius.lg)),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.delete_outline, color: Colors.white),
+            SizedBox(width: 6),
+            Text('حذف', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, color: Colors.white)),
+          ],
+        ),
       ),
-      child: CatalogCard(
-        margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      child: StaffCard(
         padding: const EdgeInsets.all(12),
+        color: unread ? placeGoldSoft : Colors.white,
+        borderColor: unread ? placeGold.withValues(alpha: .35) : placeLine,
         onTap: () => _open(n),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-              child: Icon(_typeIcon(type), size: 20, color: color),
-            ),
-            const SizedBox(width: 10),
+            IconBox(icon: _typeIcon(type), color: color, size: 40),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -471,15 +447,11 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
                           '${n['title'] ?? ''}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontWeight: unread ? FontWeight.w900 : FontWeight.w700,
-                            color: placeInk,
-                          ),
+                          style: catalogTitleStyle.copyWith(fontWeight: unread ? FontWeight.w900 : FontWeight.w700),
                         ),
                       ),
-                      Text(relativeTimeAr(n['createdAt']),
-                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: placeInk2)),
+                      const SizedBox(width: 8),
+                      Text(relativeTimeAr(n['createdAt']), style: catalogMetaStyle),
                     ],
                   ),
                   if ('${n['body'] ?? ''}'.isNotEmpty)
@@ -487,18 +459,24 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
                       '${n['body']}',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, color: placeInk2, height: 1.4),
+                      style: catalogSubtitleStyle.copyWith(height: 1.45),
                     ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      StatusChip(_typeLabels[type] ?? type ?? 'نظام', color: color == placeInk ? placeInk2 : color, dense: true),
+                      const Spacer(),
+                      if (unread)
+                        Container(
+                          width: 9,
+                          height: 9,
+                          decoration: const BoxDecoration(color: placeGold, shape: BoxShape.circle),
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ),
-            if (unread)
-              Container(
-                width: 9,
-                height: 9,
-                margin: const EdgeInsetsDirectional.only(start: 8, top: 6),
-                decoration: const BoxDecoration(color: placeBrass, shape: BoxShape.circle),
-              ),
           ],
         ),
       ),

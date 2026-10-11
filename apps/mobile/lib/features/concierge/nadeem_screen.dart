@@ -337,7 +337,7 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
         type: type,
         province: province,
         sort: sort ?? 'rating',
-        pageSize: 40,
+        pageSize: 100,
       );
       for (final p in extra) {
         if (seen.add(p.id)) pool.add(p);

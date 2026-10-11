@@ -7,7 +7,8 @@ import '../../../core/api.dart';
 import '../../../core/shift.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
-import '../../../widgets/ui.dart';
+import '../../../widgets/kit.dart';
+import '../../../widgets/ui.dart' show FilterChipsRow;
 import 'catalog_common.dart';
 
 const activityActionLabels = <String, String>{
@@ -164,7 +165,6 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
   ];
 
   final _search = TextEditingController();
-  final _scroll = ScrollController();
   Timer? _debounce;
 
   final List<Map<String, dynamic>> _items = [];
@@ -183,9 +183,6 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
   void initState() {
     super.initState();
     if (widget.entityType != null) _entity = widget.entityType!;
-    _scroll.addListener(() {
-      if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 300) _loadMore();
-    });
     _load();
   }
 
@@ -193,7 +190,6 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
   void dispose() {
     _debounce?.cancel();
     _search.dispose();
-    _scroll.dispose();
     super.dispose();
   }
 
@@ -285,37 +281,48 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
     final meta = row['metadata'];
     final metaText = meta is Map && meta.isNotEmpty ? const JsonEncoder.withIndent('  ').convert(meta) : null;
     final action = '${row['action'] ?? ''}';
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
-      builder: (context) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.55,
-        maxChildSize: 0.9,
-        builder: (context, controller) => ListView(
-          controller: controller,
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+    final type = row['entityType']?.toString();
+    final color = _actionColor(action);
+    showStaffSheet<void>(
+      context,
+      title: activityLabel(action),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(activityLabel(action),
-                style: const TextStyle(fontFamily: 'Cairo', fontSize: 19, fontWeight: FontWeight.w900, color: placeInk)),
-            const SizedBox(height: 4),
-            Text(fmtDateTime(row['createdAt']), style: const TextStyle(fontFamily: 'Cairo', color: placeInk2)),
-            const SizedBox(height: 14),
-            CopyRow(label: 'المنفّذ', value: '${user['name'] ?? ''}', ltr: false),
-            CopyRow(label: 'الهاتف', value: '${user['phone'] ?? ''}'),
-            CopyRow(label: 'رمز الإجراء', value: action),
-            CopyRow(label: 'نوع العنصر', value: _entityLabels[row['entityType']] ?? '${row['entityType'] ?? ''}', ltr: false),
-            CopyRow(label: 'معرّف العنصر', value: '${row['entityId'] ?? ''}'),
+            Row(
+              children: [
+                IconBox(icon: _entityIcon(type), color: color, size: 34),
+                const SizedBox(width: 10),
+                Expanded(child: Text(fmtDateTime(row['createdAt']), style: catalogSubtitleStyle)),
+                StatusChip(_entityLabels[type] ?? type ?? 'النظام', color: color, dense: true),
+              ],
+            ),
+            const SizedBox(height: 12),
+            StaffCard(
+              padding: const EdgeInsetsDirectional.fromSTEB(14, 4, 4, 4),
+              child: Column(
+                children: [
+                  CopyRow(label: 'المنفّذ', value: '${user['name'] ?? ''}', ltr: false),
+                  CopyRow(label: 'الهاتف', value: '${user['phone'] ?? ''}'),
+                  CopyRow(label: 'رمز الإجراء', value: action),
+                  CopyRow(label: 'نوع العنصر', value: _entityLabels[row['entityType']] ?? '${row['entityType'] ?? ''}', ltr: false),
+                  CopyRow(label: 'معرّف العنصر', value: '${row['entityId'] ?? ''}'),
+                ],
+              ),
+            ),
             if (metaText != null) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               const Text('البيانات الإضافية',
-                  style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeInk)),
+                  style: TextStyle(fontFamily: 'Cairo', fontSize: 14.5, fontWeight: FontWeight.w900, color: placeInk)),
               const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: placePaper, borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(
+                  color: placePaper,
+                  borderRadius: BorderRadius.circular(StaffRadius.md),
+                  border: Border.all(color: placeLine),
+                ),
                 child: SelectableText(
                   metaText,
                   textDirection: TextDirection.ltr,
@@ -329,11 +336,35 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
     );
   }
 
+  bool _onScroll(ScrollNotification n) {
+    if (n.metrics.axis == Axis.vertical && n.metrics.pixels > n.metrics.maxScrollExtent - 300) _loadMore();
+    return false;
+  }
+
+  /// يدمج السجلات مع عناوين الأيام (اليوم/أمس/تاريخ).
+  List<Object> get _rows {
+    final out = <Object>[];
+    String? last;
+    for (final r in _items) {
+      final h = dayHeaderAr(r['createdAt']);
+      if (h != last) {
+        out.add(h);
+        last = h;
+      }
+      out.add(r);
+    }
+    return out;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('سجل النشاط'),
+    final rows = _rows;
+    return NotificationListener<ScrollNotification>(
+      onNotification: _onScroll,
+      child: StaffPage(
+        title: 'سجل النشاط',
+        subtitle: widget.entityId != null ? 'سجل عنصر محدد' : 'كل إجراءات الفريق',
+        onRefresh: _load,
         actions: [
           IconButton(
             tooltip: 'الفترة',
@@ -341,99 +372,94 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
             icon: Icon(Icons.date_range_rounded, color: _range != null ? placeBrass : placeInk),
           ),
         ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: CustomScrollView(
-          controller: _scroll,
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  CatalogSearchField(controller: _search, hint: 'بحث بالاسم أو الهاتف أو الإجراء…', onChanged: _onSearch),
-                  if (widget.entityId == null)
-                    FilterChipsRow(
-                      options: _entityFilters,
-                      selected: _entity,
-                      onSelected: (v) {
-                        setState(() => _entity = v);
-                        _load();
-                      },
-                      labelBuilder: (v) => v == 'ALL' ? 'الكل' : (_entityLabels[v] ?? v),
-                    ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 12, 4),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _loading ? 'جارٍ التحميل…' : '${fmtCount(_total)} سجل',
-                            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, color: placeInk2),
-                          ),
-                        ),
-                        if (_range != null)
-                          InputChip(
-                            label: Text('${fmtShortDate(_range!.start)} – ${fmtShortDate(_range!.end)}'),
-                            labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w700),
-                            onDeleted: () {
-                              setState(() => _range = null);
-                              _load();
-                            },
-                            onPressed: _pickRange,
-                            visualDensity: VisualDensity.compact,
-                          ),
-                      ],
-                    ),
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                CatalogSearchField(controller: _search, hint: 'بحث بالاسم أو الهاتف أو الإجراء…', onChanged: _onSearch),
+                if (widget.entityId == null)
+                  FilterChipsRow(
+                    options: _entityFilters,
+                    selected: _entity,
+                    onSelected: (v) {
+                      setState(() => _entity = v);
+                      _load();
+                    },
+                    labelBuilder: (v) => v == 'ALL' ? 'الكل' : (_entityLabels[v] ?? v),
                   ),
-                ],
-              ),
-            ),
-            if (_loading && _items.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(child: CircularProgressIndicator(color: placeBrass)),
-              )
-            else if (_error != null && _items.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(_error!, textAlign: TextAlign.center, style: const TextStyle(fontFamily: 'Cairo', color: placeInk2)),
-                    const SizedBox(height: 10),
-                    OutlinedButton(onPressed: _load, child: const Text('إعادة المحاولة')),
-                  ],
+                CatalogResultsLine(
+                  text: _loading ? 'جارٍ التحميل…' : '${fmtCount(_total)} سجل',
+                  trailing: _range == null
+                      ? null
+                      : InputChip(
+                          avatar: const Icon(Icons.date_range_rounded, size: 16, color: placeBrass),
+                          label: Text('${fmtShortDate(_range!.start)} – ${fmtShortDate(_range!.end)}'),
+                          labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w800, color: placeInk),
+                          backgroundColor: placeGoldSoft,
+                          side: BorderSide(color: placeBrass.withValues(alpha: .3)),
+                          onDeleted: () {
+                            setState(() => _range = null);
+                            _load();
+                          },
+                          onPressed: _pickRange,
+                          visualDensity: VisualDensity.compact,
+                        ),
                 ),
-              )
-            else if (_items.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: EmptyState(title: 'لا نشاط مطابق', subtitle: 'غيّر الفلاتر أو الفترة'),
-              )
-            else
-              SliverList.builder(
-                itemCount: _items.length + 1,
-                itemBuilder: (context, i) {
-                  if (i == _items.length) {
-                    return Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Center(
-                        child: _loadingMore
-                            ? const CircularProgressIndicator(color: placeBrass, strokeWidth: 2)
-                            : Text(
-                                _page >= _totalPages ? 'نهاية السجل' : '',
-                                style: const TextStyle(fontFamily: 'Cairo', color: placeInk2),
-                              ),
-                      ),
-                    );
-                  }
-                  return _tile(_items[i]);
+              ],
+            ),
+          ),
+          if (_loading && _items.isEmpty)
+            const SkeletonSliver(count: 8, height: 70)
+          else if (_error != null && _items.isEmpty)
+            SliverFillRemaining(hasScrollBody: false, child: CatalogErrorView(message: _error!, onRetry: _load))
+          else if (_items.isEmpty)
+            SliverToBoxAdapter(
+              child: EmptyView(
+                icon: Icons.history_rounded,
+                title: 'لا نشاط مطابق',
+                subtitle: 'غيّر الفلاتر أو الفترة',
+                actionLabel: _range != null || _entity != 'ALL' || _q.isNotEmpty ? 'مسح الفلاتر' : null,
+                onAction: () {
+                  _search.clear();
+                  setState(() {
+                    _range = null;
+                    if (widget.entityType == null) _entity = 'ALL';
+                    _q = '';
+                  });
+                  _load();
                 },
               ),
-          ],
-        ),
+            )
+          else
+            SliverList.builder(
+              itemCount: rows.length + 1,
+              itemBuilder: (context, i) {
+                if (i == rows.length) {
+                  return Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Center(
+                      child: _loadingMore
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(color: placeBrass, strokeWidth: 2),
+                            )
+                          : Text(_page >= _totalPages ? 'نهاية السجل' : '', style: catalogMetaStyle),
+                    ),
+                  );
+                }
+                final r = rows[i];
+                if (r is String) {
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(StaffSpace.page + 4, 12, StaffSpace.page, 6),
+                    child: Text(r, style: catalogMetaStyle.copyWith(fontSize: 12.5, fontWeight: FontWeight.w800, color: placeInk2)),
+                  );
+                }
+                return Pad(bottom: 8, child: _tile(r as Map<String, dynamic>));
+              },
+            ),
+        ],
       ),
     );
   }
@@ -444,45 +470,45 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
     final user = row['user'] is Map ? Map<String, dynamic>.from(row['user'] as Map) : <String, dynamic>{};
     final color = _actionColor(action);
     final meta = _metaSummary(action, row['metadata']);
-    return CatalogCard(
-      margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+    final who = '${user['name'] ?? user['phone'] ?? 'النظام'}';
+    return StaffCard(
       padding: const EdgeInsets.all(12),
       onTap: () => _showDetail(row),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-            child: Icon(_entityIcon(type), size: 20, color: color),
-          ),
-          const SizedBox(width: 10),
+          IconBox(icon: _entityIcon(type), color: color, size: 40),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Expanded(
-                      child: Text(activityLabel(action),
-                          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeInk)),
-                    ),
-                    Text(relativeTimeAr(row['createdAt']),
-                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: placeInk2)),
+                    Expanded(child: Text(activityLabel(action), maxLines: 1, overflow: TextOverflow.ellipsis, style: catalogTitleStyle)),
+                    const SizedBox(width: 8),
+                    Text(relativeTimeAr(row['createdAt']), style: catalogMetaStyle),
                   ],
                 ),
-                Text(
-                  '${user['name'] ?? user['phone'] ?? 'النظام'}${type != null ? ' · ${_entityLabels[type] ?? type}' : ''}',
-                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w700, color: placeInk2),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Avatar(who, size: 18, color: placeInk2),
+                    const SizedBox(width: 6),
+                    Flexible(child: Text(who, maxLines: 1, overflow: TextOverflow.ellipsis, style: catalogSubtitleStyle)),
+                    if (type != null) ...[
+                      const SizedBox(width: 6),
+                      StatusChip(_entityLabels[type] ?? type, color: color == placeInk ? placeInk2 : color, dense: true),
+                    ],
+                  ],
                 ),
                 if (meta != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 2),
+                    padding: const EdgeInsets.only(top: 4),
                     child: Text(meta,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk)),
+                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w600, color: placeInk, height: 1.4)),
                   ),
               ],
             ),

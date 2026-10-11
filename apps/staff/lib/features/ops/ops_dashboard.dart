@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../core/api.dart';
 import '../../core/theme.dart';
-import '../../widgets/ui.dart';
+import '../../widgets/kit.dart';
 
+/// «لوحة اليوم» — أرقام لحظية لكل ما ينتظر في المنصة.
 class OpsDashboardScreen extends StatefulWidget {
   const OpsDashboardScreen({super.key});
 
@@ -13,14 +14,14 @@ class OpsDashboardScreen extends StatefulWidget {
 
 class _OpsDashboardScreenState extends State<OpsDashboardScreen> {
   Map<String, dynamic> _stats = {};
-  bool _loading = true;
+  bool _loaded = false;
 
   Future<void> _load() async {
-    setState(() => _loading = true);
     try {
-      _stats = await Api.map('/api/staff/dashboard');
+      final data = await Api.map('/api/staff/dashboard');
+      if (mounted) setState(() => _stats = data);
     } catch (_) {}
-    if (mounted) setState(() => _loading = false);
+    if (mounted) setState(() => _loaded = true);
   }
 
   @override
@@ -31,29 +32,44 @@ class _OpsDashboardScreenState extends State<OpsDashboardScreen> {
 
   int _n(String k) => (_stats[k] as num?)?.toInt() ?? 0;
 
+  Widget _grid(List<Widget> children) => SliverPadding(
+    padding: const EdgeInsets.symmetric(horizontal: StaffSpace.page),
+    sliver: SliverGrid.count(crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 1.55, children: children),
+  );
+
+  KpiTile _kpi(String label, String key, IconData icon, Color color, {bool alertable = true}) =>
+      KpiTile(label: label, value: '${_n(key)}', icon: icon, color: color, alert: alertable && _n(key) > 0);
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('لوحة اليوم')),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            if (_loading) const LinearProgressIndicator(),
-            const SizedBox(height: 8),
-            Row(children: [StatTile(label: 'انتظار مكالمة', value: '${_n('waiting')}', accent: placeBrass), const SizedBox(width: 10), StatTile(label: 'حجوزات اليوم', value: '${_n('todayBookings')}')]),
-            const SizedBox(height: 10),
-            Row(children: [StatTile(label: 'بانتظار تأكيد', value: '${_n('pendingBookings')}'), const SizedBox(width: 10), StatTile(label: 'بانتظار دفع', value: '${_n('awaitingPayment')}', accent: placeShiftMorning)]),
-            const SizedBox(height: 10),
-            Row(children: [StatTile(label: 'مدفوعات معلّقة', value: '${_n('pendingPayments')}'), const SizedBox(width: 10), StatTile(label: 'أماكن بانتظار', value: '${_n('pendingProperties')}', accent: placeShiftEvening)]),
-            const SizedBox(height: 10),
-            Row(children: [StatTile(label: 'طلبات مفتوحة', value: '${_n('openRequests')}'), const SizedBox(width: 10), StatTile(label: 'رسائل غير مقروءة', value: '${_n('unreadMessages')}')]),
-            const SizedBox(height: 10),
-            Row(children: [StatTile(label: 'مزودون بانتظار', value: '${_n('pendingProviders')}'), const SizedBox(width: 10), const Expanded(child: SizedBox())]),
-          ],
-        ),
-      ),
+    return StaffPage(
+      title: 'لوحة اليوم',
+      subtitle: 'أرقام لحظية — اسحب للتحديث',
+      onRefresh: _load,
+      slivers: [
+        if (!_loaded)
+          _grid(List.generate(8, (_) => const SkeletonBox(height: double.infinity)))
+        else ...[
+          const SliverToBoxAdapter(child: SectionHeader('التواصل')),
+          _grid([
+            _kpi('مكالمات بالانتظار', 'waiting', Icons.phone_in_talk_rounded, placeWarning),
+            _kpi('رسائل غير مقروءة', 'unreadMessages', Icons.forum_rounded, placeInfo),
+          ]),
+          const SliverToBoxAdapter(child: SectionHeader('الحجوزات')),
+          _grid([
+            _kpi('حجوزات اليوم', 'todayBookings', Icons.today_rounded, placeSuccess, alertable: false),
+            _kpi('بانتظار التأكيد', 'pendingBookings', Icons.hourglass_top_rounded, placeBrass),
+            _kpi('بانتظار الدفع', 'awaitingPayment', Icons.payments_rounded, placeWarning),
+            _kpi('طلبات مفتوحة', 'openRequests', Icons.rule_rounded, placeDanger),
+          ]),
+          const SliverToBoxAdapter(child: SectionHeader('المراجعة')),
+          _grid([
+            _kpi('مدفوعات معلّقة', 'pendingPayments', Icons.receipt_long_rounded, placeInfo),
+            _kpi('أماكن بانتظار', 'pendingProperties', Icons.villa_rounded, placeShiftEvening),
+            _kpi('مزودون بانتظار', 'pendingProviders', Icons.storefront_rounded, placeNavyHigh),
+          ]),
+        ],
+      ],
     );
   }
 }

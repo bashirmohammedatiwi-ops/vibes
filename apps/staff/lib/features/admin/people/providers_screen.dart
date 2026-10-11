@@ -4,9 +4,8 @@ import '../../../core/api.dart';
 import '../../../core/format.dart';
 import '../../../core/session.dart';
 import '../../../core/theme.dart';
-import '../../../widgets/chat_ui.dart';
 import '../../../widgets/form_kit.dart';
-import '../../../widgets/ui.dart';
+import '../../../widgets/kit.dart';
 import '../../ops/property_detail.dart';
 import 'customers_screen.dart';
 import 'link_place_screen.dart';
@@ -46,63 +45,51 @@ class _AdminProvidersScreenState extends State<AdminProvidersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('المزودون'),
-        actions: [
+    return PagedStaffPage(
+      title: 'المزودون',
+      subtitle: _total == null ? null : '$_total مزود',
+      actions: [
+        IconButton(
+          tooltip: 'طلبات ربط الأماكن',
+          icon: const Icon(Icons.how_to_reg_rounded),
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlaceClaimsScreen())),
+        ),
+        if (Session.can('providers.link'))
           IconButton(
-            tooltip: 'طلبات ربط الأماكن',
-            icon: const Icon(Icons.how_to_reg_outlined),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlaceClaimsScreen())),
+            tooltip: 'ربط مكان بمزود',
+            icon: const Icon(Icons.add_link_rounded),
+            onPressed: () async {
+              final ok = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const LinkPlaceScreen()));
+              if (ok == true) _list.reload();
+            },
           ),
-          if (Session.can('providers.link'))
-            IconButton(
-              tooltip: 'ربط مكان بمزود',
-              icon: const Icon(Icons.add_link_rounded),
-              onPressed: () async {
-                final ok = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const LinkPlaceScreen()));
-                if (ok == true) _list.reload();
-              },
-            ),
-        ],
+      ],
+      resetKey: '$_q|$_kyc',
+      controller: _list,
+      fetch: _fetch,
+      onLoaded: (r) => setState(() => _total = r.total),
+      search: SearchBox(
+        hint: 'الاسم التجاري، المالك أو الهاتف',
+        padding: SearchBox.barPadding,
+        onChanged: (v) => setState(() => _q = v),
       ),
-      body: Column(
-        children: [
-          SearchBox(hint: 'الاسم التجاري، المالك أو الهاتف', onChanged: (v) => setState(() => _q = v)),
-          FilterBar(groups: [
-            FilterGroup(
-              options: const ['pending', 'verified', 'rejected', 'all'],
-              selected: _kyc,
-              labelOf: (v) => switch (v) {
-                'pending' => 'بانتظار التوثيق',
-                'verified' => 'موثّقون',
-                'rejected' => 'مرفوضون',
-                _ => 'الكل',
-              },
-              onSelected: (v) => setState(() => _kyc = v),
-            ),
-          ]),
-          if (_total != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 2, 20, 2),
-              child: Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: Text('$_total مزود', style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w700, color: placeInk2)),
-              ),
-            ),
-          Expanded(
-            child: PagedList(
-              key: ValueKey('$_q|$_kyc'),
-              controller: _list,
-              fetch: _fetch,
-              onLoaded: (r) => setState(() => _total = r.total),
-              emptyTitle: _kyc == 'pending' ? 'لا طلبات توثيق معلّقة' : 'لا مزودين',
-              emptySubtitle: _q.isEmpty ? null : 'جرّب بحثاً آخر',
-              itemBuilder: (context, p, _) => _ProviderCard(provider: p, onTap: () => _open(p)),
-            ),
-          ),
-        ],
-      ),
+      filters: FilterBar(groups: [
+        FilterGroup(
+          options: const ['pending', 'verified', 'rejected', 'all'],
+          selected: _kyc,
+          labelOf: (v) => switch (v) {
+            'pending' => 'بانتظار التوثيق',
+            'verified' => 'موثّقون',
+            'rejected' => 'مرفوضون',
+            _ => 'الكل',
+          },
+          onSelected: (v) => setState(() => _kyc = v),
+        ),
+      ]),
+      emptyIcon: _kyc == 'pending' ? Icons.verified_user_outlined : Icons.storefront_outlined,
+      emptyTitle: _kyc == 'pending' ? 'لا طلبات توثيق معلّقة' : 'لا مزودين',
+      emptySubtitle: _q.isEmpty ? null : 'جرّب بحثاً آخر',
+      itemBuilder: (context, p, _) => _ProviderCard(provider: p, onTap: () => _open(p)),
     );
   }
 }
@@ -120,52 +107,21 @@ class _ProviderCard extends StatelessWidget {
     final kyc = p['kycStatus']?.toString();
     final name = providerDisplayName(p);
     final owner = user['name']?.toString() ?? '';
+    final phone = user['phone']?.toString();
     return ListCard(
       onTap: onTap,
-      child: Row(
-        children: [
-          ContactAvatar(name: name, phone: user['phone']?.toString(), size: 46),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.w900, color: placeInk)),
-                    ),
-                    if (verified) ...[
-                      const SizedBox(width: 4),
-                      const Icon(Icons.verified_rounded, size: 16, color: placeSuccess),
-                    ],
-                  ],
-                ),
-                if (owner.isNotEmpty && owner != name)
-                  Text(owner, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w600)),
-                PhoneText(user['phone']?.toString()),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    StatusPill(label: kycLabel(kyc, verified: verified), color: kycColor(kyc, verified: verified)),
-                    StatusPill(
-                      label: '${asInt(asMap(p['_count'])['properties'])} مكان',
-                      color: placeInk2,
-                      icon: Icons.home_work_outlined,
-                    ),
-                    StatusPill(label: relativeAr(p['createdAt']), color: placeInk2, icon: Icons.schedule_rounded),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.chevron_left_rounded, color: placeInk2),
+      child: ListRow(
+        leading: Avatar(name, size: 46, color: placeBrass),
+        title: name,
+        titleBadge: verified ? const Icon(Icons.verified_rounded, size: 16, color: placeSuccess) : null,
+        subtitle: owner.isNotEmpty && owner != name ? owner : null,
+        subtitleWidget: (phone ?? '').isEmpty ? null : PhoneText(phone),
+        chips: [
+          StatusChip(kycLabel(kyc, verified: verified), color: kycColor(kyc, verified: verified), dense: true),
+          StatusChip('${asInt(asMap(p['_count'])['properties'])} مكان', color: placeInk2, dense: true),
         ],
+        trailing: MetaText(relativeAr(p['createdAt'])),
+        chevron: true,
       ),
     );
   }
@@ -302,25 +258,27 @@ class _AdminProviderDetailScreenState extends State<AdminProviderDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final d = _data;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) Navigator.of(context).pop(_changed);
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('ملف المزود'),
+        bottomNavigationBar: d == null || !_canLink ? null : _actions(),
+        body: StaffPage(
+          title: 'ملف المزود',
+          onRefresh: d == null ? null : _load,
           actions: [
-            if (_canLink && _data != null)
+            if (_canLink && d != null)
               IconButton(tooltip: 'ربط مكان', icon: const Icon(Icons.add_link_rounded), onPressed: _linkPlace),
           ],
+          slivers: _loading
+              ? const [SliverToBoxAdapter(child: SizedBox(height: 4)), SkeletonSliver(count: 4, height: 120)]
+              : _error != null && d == null
+                  ? [SliverToBoxAdapter(child: ErrorRetry(message: _error!, onRetry: _load))]
+                  : _body(d!),
         ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator(color: placeBrass))
-            : _error != null && _data == null
-                ? Center(child: ErrorRetry(message: _error!, onRetry: _load))
-                : RefreshIndicator(color: placeBrass, onRefresh: _load, child: _body()),
-        bottomNavigationBar: _data == null || !_canLink ? null : _actions(),
       ),
     );
   }
@@ -330,27 +288,35 @@ class _AdminProviderDetailScreenState extends State<AdminProviderDetailScreen> {
     final verified = p['verified'] == true;
     final kyc = p['kycStatus']?.toString();
     if (verified) {
-      return Container(
-        padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + MediaQuery.of(context).padding.bottom),
-        decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: placeLine))),
-        child: OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(foregroundColor: placeDanger, side: const BorderSide(color: placeDanger)),
+      return ActionBarShell(
+        child: BarButton(
+          label: 'إلغاء التوثيق',
+          icon: Icons.gpp_bad_outlined,
+          color: placeDanger,
+          outlined: true,
           onPressed: _revoke,
-          icon: const Icon(Icons.gpp_bad_outlined, size: 19),
-          label: const Text('إلغاء التوثيق'),
         ),
       );
     }
-    return BottomActionBar(
-      label: 'توثيق المزود',
-      onPressed: _verify,
-      secondaryLabel: kyc == 'REJECTED' ? null : 'رفض',
-      onSecondary: _reject,
+    return ActionBarShell(
+      child: Row(
+        children: [
+          if (kyc != 'REJECTED') ...[
+            Expanded(
+              child: BarButton(label: 'رفض', icon: Icons.close_rounded, color: placeDanger, outlined: true, onPressed: _reject),
+            ),
+            const SizedBox(width: 10),
+          ],
+          Expanded(
+            flex: 2,
+            child: BarButton(label: 'توثيق المزود', icon: Icons.verified_rounded, color: placeSuccess, onPressed: _verify),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _body() {
-    final d = _data!;
+  List<Widget> _body(Map<String, dynamic> d) {
     final p = asMap(d['provider']);
     final user = asMap(p['user']);
     final stats = asMap(d['stats']);
@@ -367,172 +333,192 @@ class _AdminProviderDetailScreenState extends State<AdminProviderDetailScreen> {
     final placeTypes = (p['placeTypes']?.toString() ?? '').split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
     final byStatus = asMapList(stats['bookingsByStatus']);
 
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.only(bottom: 24),
-      children: [
-        if (!verified && reason.isNotEmpty)
-          NoticeBanner(
+    return [
+      const SliverToBoxAdapter(child: SizedBox(height: 4)),
+      if (!verified && reason.isNotEmpty)
+        SliverToBoxAdapter(
+          child: NoticeBanner(
             title: kyc == 'REJECTED' ? 'تم رفض التوثيق' : 'ملاحظة التوثيق',
             text: reason,
-            color: kyc == 'REJECTED' ? placeDanger : placeShiftMorning,
+            color: kyc == 'REJECTED' ? placeDanger : placeWarning,
             icon: Icons.report_gmailerrorred_rounded,
           ),
-        Container(
-          margin: const EdgeInsets.fromLTRB(16, 8, 16, 6),
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), border: Border.all(color: placeLine)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  ContactAvatar(name: name, phone: phone, size: 58),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(name,
-                                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 19, fontWeight: FontWeight.w900, color: placeInk)),
-                            ),
-                            if (verified) ...[
-                              const SizedBox(width: 5),
-                              const Icon(Icons.verified_rounded, size: 19, color: placeSuccess),
+        ),
+      // ── بطاقة الهوية ──
+      SliverToBoxAdapter(
+        child: Pad(
+          child: StaffCard(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Avatar(name, size: 60, color: placeBrass),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(name,
+                                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 19, fontWeight: FontWeight.w900, color: placeInk)),
+                              ),
+                              if (verified) ...[
+                                const SizedBox(width: 5),
+                                const Icon(Icons.verified_rounded, size: 19, color: placeSuccess),
+                              ],
                             ],
-                          ],
-                        ),
-                        if ((user['name']?.toString() ?? '').isNotEmpty && user['name'] != name)
-                          Text('المالك: ${user['name']}',
-                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, color: placeInk2, fontWeight: FontWeight.w700)),
-                        PhoneText(phone),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: [
-                  StatusPill(label: kycLabel(kyc, verified: verified), color: kycColor(kyc, verified: verified)),
-                  if (user['isActive'] == false) const StatusPill(label: 'الحساب موقوف', color: placeDanger, icon: Icons.block_rounded),
-                  StatusPill(label: 'منذ ${fmtDate(p['createdAt'])}', color: placeInk2),
-                  for (final t in placeTypes) StatusPill(label: placeTypeLabel(t), color: placeBrass, icon: placeTypeIcon(t)),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  if (phone != null && phone.isNotEmpty) ...[
-                    ActionChipButton(icon: Icons.call_rounded, label: 'اتصال', color: placeSuccess, onTap: () => callPhone(context, phone)),
-                    const SizedBox(width: 8),
-                    ActionChipButton(
-                      icon: Icons.chat_rounded,
-                      label: 'واتساب',
-                      color: const Color(0xFF16A34A),
-                      onTap: () => openWhatsApp(context, phone),
-                    ),
-                  ],
-                  if (Session.can('users.read') && user['id'] != null) ...[
-                    const SizedBox(width: 8),
-                    ActionChipButton(
-                      icon: Icons.person_outline_rounded,
-                      label: 'الحساب',
-                      color: placeShiftEvening,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => AdminCustomerDetailScreen(userId: '${user['id']}')),
+                          ),
+                          if ((user['name']?.toString() ?? '').isNotEmpty && user['name'] != name)
+                            Text('المالك: ${user['name']}',
+                                style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, color: placeInk2, fontWeight: FontWeight.w700)),
+                          if ((phone ?? '').isNotEmpty) PhoneText(phone),
+                        ],
                       ),
                     ),
                   ],
-                ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    StatusChip(kycLabel(kyc, verified: verified), color: kycColor(kyc, verified: verified)),
+                    if (user['isActive'] == false) const StatusChip('الحساب موقوف', color: placeDanger),
+                    StatusChip('منذ ${fmtDate(p['createdAt'])}', color: placeInk2),
+                    for (final t in placeTypes) StatusChip(placeTypeLabel(t), color: placeBrass),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    if (phone != null && phone.isNotEmpty) ...[
+                      ActionChipButton(icon: Icons.call_rounded, label: 'اتصال', color: placeSuccess, onTap: () => callPhone(context, phone)),
+                      const SizedBox(width: 8),
+                      ActionChipButton(
+                        icon: Icons.chat_rounded,
+                        label: 'واتساب',
+                        color: const Color(0xFF16A34A),
+                        onTap: () => openWhatsApp(context, phone),
+                      ),
+                    ],
+                    if (Session.can('users.read') && user['id'] != null) ...[
+                      const SizedBox(width: 8),
+                      ActionChipButton(
+                        icon: Icons.person_outline_rounded,
+                        label: 'الحساب',
+                        color: placeShiftEvening,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => AdminCustomerDetailScreen(userId: '${user['id']}')),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      if (requestNote.trim().isNotEmpty)
+        SliverToBoxAdapter(
+          child: DetailCard(
+            title: 'رسالة طلب الانضمام',
+            icon: Icons.mark_email_unread_outlined,
+            color: placeInfo,
+            children: [Text(requestNote, style: const TextStyle(fontFamily: 'Cairo', color: placeInk, height: 1.6))],
+          ),
+        ),
+      // ── مؤشرات ──
+      SliverToBoxAdapter(
+        child: Pad(
+          child: Row(
+            children: [
+              Expanded(
+                child: KpiTile(label: 'الإيراد المؤكد', value: formatIqd(stats['revenue']), icon: Icons.account_balance_wallet_rounded, color: placeSuccess),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: KpiTile(label: 'حجوزات مؤكدة', value: '${asInt(stats['confirmedBookings'])}', icon: Icons.event_available_rounded, color: placeInfo),
               ),
             ],
           ),
         ),
-        if (requestNote.trim().isNotEmpty)
-          FormSection(
-            title: 'رسالة طلب الانضمام',
-            icon: Icons.mark_email_unread_outlined,
-            children: [Text(requestNote, style: const TextStyle(fontFamily: 'Cairo', color: placeInk, height: 1.6))],
-          ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-          child: Row(
-            children: [
-              StatTile(label: 'الإيراد المؤكد', value: formatIqd(stats['revenue']), accent: placeSuccess),
-              const SizedBox(width: 10),
-              StatTile(label: 'حجوزات مؤكدة', value: '${asInt(stats['confirmedBookings'])}'),
-            ],
-          ),
-        ),
-        if (byStatus.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      ),
+      if (byStatus.isNotEmpty)
+        SliverToBoxAdapter(
+          child: Pad(
             child: Wrap(
               spacing: 6,
               runSpacing: 6,
               children: [
                 for (final s in byStatus)
-                  StatusPill(
-                    label: '${bookingStatusLabel(s['status']?.toString())}: ${asInt(s['count'])}',
+                  StatusChip(
+                    '${bookingStatusLabel(s['status']?.toString())}: ${asInt(s['count'])}',
                     color: bookingStatusColor(s['status']?.toString()),
                   ),
               ],
             ),
           ),
-        if (asInt(coverage['totalSlots']) > 0) _CoverageCard(coverage: coverage),
-        SectionLabel('الأماكن', trailing: Text('${properties.length}', style: const TextStyle(color: placeInk2))),
-        if (properties.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Text('لا أماكن مرتبطة بهذا المزود', style: TextStyle(fontFamily: 'Cairo', color: placeInk2)),
-                ),
-                if (_canLink) TextButton.icon(onPressed: _linkPlace, icon: const Icon(Icons.add_link_rounded, size: 18), label: const Text('ربط مكان')),
-              ],
-            ),
-          )
-        else
-          for (final prop in properties) _PlaceRow(property: prop),
-        if (recent.isNotEmpty) ...[
-          const SectionLabel('آخر الحجوزات'),
-          for (final b in recent) BookingMiniCard(booking: b, showCustomer: true),
-        ],
-        if (activities.isNotEmpty) ...[
-          const SectionLabel('سجل الإجراءات'),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: placeLine)),
-            child: Column(
-              children: [
-                for (var i = 0; i < activities.length; i++) ...[
-                  if (i > 0) const Divider(height: 1, color: placeLine),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    leading: const Icon(Icons.history_rounded, color: placeInk2, size: 20),
-                    title: Text(_activityLabel(activities[i]['action']?.toString()),
-                        style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800)),
-                    subtitle: Text(
-                      '${nonEmpty(asMap(activities[i]['user'])['name'], '')} · ${fmtDateTime(activities[i]['createdAt'])}',
-                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5),
-                    ),
+        ),
+      if (asInt(coverage['totalSlots']) > 0) SliverToBoxAdapter(child: _CoverageCard(coverage: coverage)),
+      SliverToBoxAdapter(
+        child: SectionLabel(
+          'الأماكن',
+          count: properties.length,
+          trailing: _canLink && properties.isNotEmpty
+              ? TextButton.icon(onPressed: _linkPlace, icon: const Icon(Icons.add_link_rounded, size: 18), label: const Text('ربط مكان'))
+              : null,
+        ),
+      ),
+      if (properties.isEmpty)
+        SliverToBoxAdapter(
+          child: Pad(
+            child: StaffCard(
+              child: Row(
+                children: [
+                  const IconBox(icon: Icons.home_work_outlined, color: placeInk3),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text('لا أماكن مرتبطة بهذا المزود',
+                        style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: placeInk2)),
                   ),
+                  if (_canLink)
+                    TextButton.icon(onPressed: _linkPlace, icon: const Icon(Icons.add_link_rounded, size: 18), label: const Text('ربط مكان')),
                 ],
+              ),
+            ),
+          ),
+        )
+      else
+        SliverList.list(children: [for (final prop in properties) _PlaceRow(property: prop)]),
+      if (recent.isNotEmpty) ...[
+        SliverToBoxAdapter(child: SectionLabel('آخر الحجوزات', count: recent.length)),
+        SliverList.list(children: [for (final b in recent) BookingMiniCard(booking: b, showCustomer: true)]),
+      ],
+      if (activities.isNotEmpty) ...[
+        const SliverToBoxAdapter(child: SectionLabel('سجل الإجراءات')),
+        SliverToBoxAdapter(
+          child: Pad(
+            child: TileGroup(
+              children: [
+                for (final a in activities)
+                  TaskTile(
+                    icon: Icons.history_rounded,
+                    color: placeInk2,
+                    title: _activityLabel(a['action']?.toString()),
+                    subtitle: [nonEmpty(asMap(a['user'])['name'], ''), fmtDateTime(a['createdAt'])].where((s) => s.isNotEmpty).join(' · '),
+                    trailing: const SizedBox.shrink(),
+                  ),
               ],
             ),
           ),
-        ],
+        ),
       ],
-    );
+    ];
   }
 
   String _activityLabel(String? a) => switch (a) {
@@ -556,11 +542,13 @@ class _CoverageCard extends StatelessWidget {
     final closed = asInt(coverage['closedDays']);
     final open = asInt(coverage['openDays']);
     double f(int v) => total == 0 ? 0 : v / total;
-    return FormSection(
+    return DetailCard(
       title: 'إشغال ${asInt(coverage['days'])} يوماً القادمة',
       subtitle: '${asInt(coverage['propertyCount'])} مكان · $total يوم-مكان',
-      icon: Icons.insights_outlined,
+      icon: Icons.insights_rounded,
+      color: placeShiftEvening,
       children: [
+        const SizedBox(height: 4),
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: SizedBox(
@@ -575,6 +563,7 @@ class _CoverageCard extends StatelessWidget {
             ),
           ),
         ),
+        const SizedBox(height: 10),
         Wrap(
           spacing: 12,
           runSpacing: 6,
@@ -585,6 +574,7 @@ class _CoverageCard extends StatelessWidget {
             _legend('متاح', open, placeLine),
           ],
         ),
+        const SizedBox(height: 4),
       ],
     );
   }
@@ -615,35 +605,15 @@ class _PlaceRow extends StatelessWidget {
       onTap: canOpen
           ? () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PropertyDetailScreen(propertyId: '${p['id']}')))
           : null,
-      child: Row(
-        children: [
-          SizedBox(width: 64, height: 64, child: NetImage(url: cover, radius: 12, icon: placeTypeIcon(p['type']?.toString()))),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(nonEmpty(p['name'], 'مكان'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, color: placeInk)),
-                Text(
-                  '${placeTypeLabel(p['type']?.toString())} · ${nonEmpty(asMap(p['city'])['nameAr'], '')}',
-                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 6,
-                  children: [
-                    StatusPill(label: placeStatusLabel(status), color: placeStatusColor(status)),
-                    StatusPill(label: '${asInt(count['bookings'])} حجز', color: placeInk2),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          if (canOpen) const Icon(Icons.chevron_left_rounded, color: placeInk2),
+      child: ListRow(
+        leading: SizedBox(width: 60, height: 60, child: NetImage(url: cover, radius: StaffRadius.md, icon: placeTypeIcon(p['type']?.toString()))),
+        title: nonEmpty(p['name'], 'مكان'),
+        subtitle: [placeTypeLabel(p['type']?.toString()), nonEmpty(asMap(p['city'])['nameAr'], '')].where((s) => s.isNotEmpty).join(' · '),
+        chips: [
+          StatusChip(placeStatusLabel(status), color: placeStatusColor(status), dense: true),
+          StatusChip('${asInt(count['bookings'])} حجز', color: placeInk2, dense: true),
         ],
+        chevron: canOpen,
       ),
     );
   }

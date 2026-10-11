@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/api.dart';
@@ -11,7 +13,8 @@ import '../core/session.dart';
 import '../core/shift.dart' show bookingStatusAr;
 import '../core/theme.dart';
 import '../widgets/chat_ui.dart';
-import '../widgets/ui.dart';
+import '../widgets/kit.dart';
+import '../widgets/ui.dart' show lightTap;
 import 'calls.dart';
 
 class ChatRoomScreen extends StatefulWidget {
@@ -293,7 +296,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   Future<void> _addNote() async {
     final id = _primaryConversationId;
     if (id == null || !Session.can('inbox.note')) return;
-    final note = await promptText(context, title: 'ملاحظة داخلية', hint: 'تظهر للموظفين فقط', maxLines: 3);
+    final current = _ops?['staffNote']?.toString();
+    final note = await showStaffSheet<String>(
+      context,
+      title: 'ملاحظة داخلية',
+      child: _NoteForm(initial: current),
+    );
     if (note == null || note.trim().isEmpty) return;
     try {
       await Api.send('/api/staff/inbox/$id/note', method: 'POST', body: {
@@ -309,57 +317,118 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     }
   }
 
+  // ── تواصل خارجي ──
+  Future<void> _dialPhone() async {
+    final phone = widget.contactPhone;
+    if (phone == null || phone.isEmpty) return;
+    final uri = Uri.parse('tel:$phone');
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
+
+  Future<void> _openWhatsApp() async {
+    final phone = widget.contactPhone;
+    if (phone == null || phone.isEmpty) return;
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    final uri = Uri.parse('https://wa.me/$digits');
+    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Future<void> _copyPhone() async {
+    final phone = widget.contactPhone;
+    if (phone == null || phone.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: phone));
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('نُسخ الرقم')));
+  }
+
+  bool get _canCall => Session.can('calls.outbound') || Session.can('calls.answer');
+  bool get _urgent => _ops?['priority']?.toString() == 'URGENT';
+  String? get _assignedTo => _ops?['assignedToId']?.toString();
+  bool get _assignedToMe => _assignedTo != null && _assignedTo == Session.me['id']?.toString();
+
   void _showTools() {
-    final urgent = _ops?['priority']?.toString() == 'URGENT';
+    final urgent = _urgent;
     final note = _ops?['staffNote']?.toString();
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: Text('أدوات المحادثة', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
+    final hasPhone = widget.contactPhone != null && widget.contactPhone!.isNotEmpty;
+    void run(BuildContext sheet, VoidCallback action) {
+      Navigator.pop(sheet);
+      action();
+    }
+
+    showStaffSheet<void>(
+      context,
+      title: 'أدوات المحادثة',
+      child: Builder(
+        builder: (sheet) => SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (note != null && note.isNotEmpty) ...[
+                _InternalNoteCard(note: note),
+                const SizedBox(height: 12),
+              ],
+              TileGroup(
+                children: [
+                  if (Session.can('inbox.reply'))
+                    TaskTile(
+                      icon: _assignedToMe ? Icons.how_to_reg_rounded : Icons.person_add_alt_1_rounded,
+                      color: placeSuccess,
+                      title: _assignedToMe ? 'مسندة لك' : 'تعيين لي',
+                      subtitle: _assignedToMe ? 'أنت المسؤول عن هذه المحادثة' : 'استلم المحادثة لتكون المسؤول عنها',
+                      onTap: () => run(sheet, _claim),
+                    ),
+                  TaskTile(
+                    icon: urgent ? Icons.flag_rounded : Icons.outlined_flag_rounded,
+                    color: placeDanger,
+                    title: urgent ? 'إلغاء العاجل' : 'تعليم كعاجلة',
+                    subtitle: urgent ? 'إعادة الأولوية إلى عادية' : 'تظهر أولاً في الوارد بعلامة حمراء',
+                    onTap: () => run(sheet, () => _setUrgent(!urgent)),
+                  ),
+                  if (Session.can('inbox.note'))
+                    TaskTile(
+                      icon: Icons.sticky_note_2_outlined,
+                      color: placeBrass,
+                      title: note != null && note.isNotEmpty ? 'تعديل الملاحظة الداخلية' : 'إضافة ملاحظة داخلية',
+                      subtitle: 'تظهر للموظفين فقط',
+                      onTap: () => run(sheet, _addNote),
+                    ),
+                ],
               ),
-            ),
-            if (note != null && note.isNotEmpty)
-              ListTile(
-                leading: const Icon(Icons.sticky_note_2_outlined, color: placeBrass),
-                title: const Text('ملاحظة حالية'),
-                subtitle: Text(note, maxLines: 3, overflow: TextOverflow.ellipsis),
-              ),
-            if (Session.can('inbox.reply'))
-              ListTile(
-                leading: const Icon(Icons.person_add_alt_1_outlined),
-                title: const Text('تعيين لي'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _claim();
-                },
-              ),
-            ListTile(
-              leading: Icon(urgent ? Icons.flag : Icons.outlined_flag, color: urgent ? placeDanger : placeInk),
-              title: Text(urgent ? 'إلغاء العاجل' : 'تعليمليم كعاجل'),
-              onTap: () {
-                Navigator.pop(context);
-                _setUrgent(!urgent);
-              },
-            ),
-            if (Session.can('inbox.note'))
-              ListTile(
-                leading: const Icon(Icons.edit_note_outlined),
-                title: const Text('إضافة ملاحظة داخلية'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _addNote();
-                },
-              ),
-            const SizedBox(height: 8),
-          ],
+              if (hasPhone) ...[
+                const SizedBox(height: 12),
+                TileGroup(
+                  children: [
+                    if (_canCall)
+                      TaskTile(
+                        icon: Icons.headset_mic_rounded,
+                        color: placeNavyHigh,
+                        title: 'مكالمة عبر التطبيق',
+                        onTap: () => run(sheet, _startCall),
+                      ),
+                    TaskTile(
+                      icon: Icons.phone_rounded,
+                      color: placeSuccess,
+                      title: 'اتصال هاتفي',
+                      subtitle: widget.contactPhone,
+                      onTap: () => run(sheet, _dialPhone),
+                    ),
+                    TaskTile(
+                      icon: Icons.chat_rounded,
+                      color: const Color(0xFF25D366),
+                      title: 'فتح في واتساب',
+                      onTap: () => run(sheet, _openWhatsApp),
+                    ),
+                    TaskTile(
+                      icon: Icons.copy_rounded,
+                      color: placeInk2,
+                      title: 'نسخ الرقم',
+                      onTap: () => run(sheet, _copyPhone),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -374,60 +443,154 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFECE5DD),
-      appBar: AppBar(
-        backgroundColor: placeInk,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(widget.contactName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
-            if (widget.contactPhone != null)
-              Text(widget.contactPhone!, textDirection: TextDirection.ltr, style: const TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w500)),
-          ],
-        ),
-        actions: [
-          if (Session.can('calls.outbound') || Session.can('calls.answer'))
-            IconButton(onPressed: _startCall, icon: const Icon(Icons.call_rounded)),
-          IconButton(onPressed: _showTools, icon: const Icon(Icons.more_vert_rounded), tooltip: 'أدوات'),
-        ],
-      ),
-      body: Column(
-        children: [
-          if (_ops?['priority']?.toString() == 'URGENT')
-            Material(
-              color: placeDanger.withValues(alpha: 0.12),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: Row(
+  PreferredSizeWidget _appBar() {
+    final phone = widget.contactPhone;
+    return AppBar(
+      backgroundColor: Colors.white,
+      titleSpacing: 0,
+      shape: const Border(bottom: BorderSide(color: placeLine)),
+      title: InkWell(
+        onTap: _showTools,
+        borderRadius: BorderRadius.circular(StaffRadius.sm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            children: [
+              ContactAvatar(name: widget.contactName, phone: phone, size: 40),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.flag, size: 16, color: placeDanger),
-                    SizedBox(width: 8),
-                    Text('محادثة عاجلة', style: TextStyle(color: placeDanger, fontWeight: FontWeight.w800)),
+                    Text(
+                      widget.contactName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 16, color: placeInk, height: 1.3),
+                    ),
+                    if (phone != null && phone.isNotEmpty)
+                      Text(
+                        phone,
+                        textDirection: TextDirection.ltr,
+                        style: const TextStyle(fontFamily: 'Montserrat', fontSize: 12, color: placeInk2, fontWeight: FontWeight.w600),
+                      ),
                   ],
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        if (_canCall)
+          IconButton(
+            onPressed: _startCall,
+            tooltip: 'مكالمة',
+            style: IconButton.styleFrom(backgroundColor: placeSuccess.withValues(alpha: .1)),
+            icon: const Icon(Icons.call_rounded, color: placeSuccess),
+          )
+        else if (phone != null && phone.isNotEmpty)
+          IconButton(
+            onPressed: _dialPhone,
+            tooltip: 'اتصال هاتفي',
+            icon: const Icon(Icons.phone_outlined),
+          ),
+        IconButton(onPressed: _showTools, icon: const Icon(Icons.more_vert_rounded), tooltip: 'أدوات المحادثة'),
+        const SizedBox(width: 4),
+      ],
+    );
+  }
+
+  /// شريط الحالة: الإسناد، الأولوية، حالة المحادثة.
+  Widget _statusStrip() {
+    final status = _ops?['status']?.toString();
+    final statusLabel = switch (status) {
+      'OPEN' => 'مفتوحة',
+      'PENDING' => 'معلّقة',
+      'RESOLVED' => 'محلولة',
+      'CLOSED' => 'مغلقة',
+      _ => null,
+    };
+    final statusColor = switch (status) {
+      'OPEN' => placeInfo,
+      'PENDING' => placeWarning,
+      _ => placeInk3,
+    };
+    final assigned = _assignedTo != null;
+    final canClaim = Session.can('inbox.reply') && !_assignedToMe && _primaryConversationId != null;
+    return Container(
+      width: double.infinity,
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(StaffSpace.page, 8, StaffSpace.page, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                if (_urgent) const StatusChip('عاجلة', color: placeDanger, dense: true),
+                if (_assignedToMe)
+                  const StatusChip('مسندة لك', color: placeSuccess, dense: true)
+                else if (assigned)
+                  const StatusChip('مسندة لزميل', color: placeInfo, dense: true)
+                else
+                  const StatusChip('غير مسندة', color: placeWarning, dense: true),
+                if (statusLabel != null) StatusChip(statusLabel, color: statusColor, dense: true),
+              ],
             ),
+          ),
+          if (canClaim)
+            TextButton.icon(
+              onPressed: _claim,
+              style: TextButton.styleFrom(minimumSize: const Size(0, 40), padding: const EdgeInsets.symmetric(horizontal: 10)),
+              icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+              label: const Text('استلام'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: placePaper,
+      appBar: _appBar(),
+      body: Column(
+        children: [
+          if (!_loading) _statusStrip(),
+          if (!_loading) const Divider(height: 1),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator())
+                ? const _ThreadSkeleton()
                 : ListView.builder(
                     controller: _scroll,
-                    padding: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.only(bottom: 12),
                     itemCount: _messages.length + 1,
                     itemBuilder: (context, index) {
                       if (index == 0) {
-                        return _CustomerContextCard(
-                          name: widget.contactName,
-                          phone: widget.contactPhone,
-                          stats: _stats,
-                          bookings: _bookings,
-                          staffNote: _ops?['staffNote']?.toString(),
-                          onCall: _startCall,
+                        return Column(
+                          children: [
+                            _CustomerContextCard(
+                              name: widget.contactName,
+                              phone: widget.contactPhone,
+                              stats: _stats,
+                              bookings: _bookings,
+                              staffNote: _ops?['staffNote']?.toString(),
+                              onCall: _startCall,
+                              onDial: _dialPhone,
+                              onWhatsApp: _openWhatsApp,
+                              onEditNote: Session.can('inbox.note') ? _addNote : null,
+                            ),
+                            if (_messages.isEmpty)
+                              const EmptyView(
+                                icon: Icons.chat_bubble_outline_rounded,
+                                title: 'لا رسائل بعد',
+                                subtitle: 'ابدأ المحادثة برسالة ترحيب أو رد سريع',
+                              ),
+                          ],
                         );
                       }
                       final msg = _messages[index - 1];
@@ -436,7 +599,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       final prev = index > 1 ? _messages[index - 2] : null;
                       DateTime? prevDt;
                       if (prev != null && prev['createdAt'] != null) {
-                        prevDt = DateTime.tryParse(prev['createdAt'] as String)?.toLocal();
+                        prevDt = DateTime.tryParse(prev['createdAt'].toString())?.toLocal();
                       }
                       final showDate = dt != null && (prevDt == null || prevDt.day != dt.day || prevDt.month != dt.month || prevDt.year != dt.year);
                       final showThread = prev != null &&
@@ -444,6 +607,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                           prev['conversationId'] != msg['conversationId'] &&
                           (msg['threadLabel']?.toString() ?? '').isNotEmpty;
                       return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           if (showDate) DateSeparator(label: dateSeparatorLabel(dt)),
                           if (showThread) ThreadSeparator(label: msg['threadLabel']?.toString() ?? ''),
@@ -460,10 +624,24 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           if (Session.can('inbox.reply'))
             ChatComposer(
               controller: _input,
-              enabled: true,
+              enabled: _primaryConversationId != null || _loading,
               onSend: () => _send(),
               onQuickReply: _send,
               onAttach: _attachImage,
+            )
+          else
+            Container(
+              width: double.infinity,
+              color: Colors.white,
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + MediaQuery.paddingOf(context).bottom),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.visibility_outlined, size: 18, color: placeInk3),
+                  SizedBox(width: 8),
+                  Text('عرض فقط — لا صلاحية للرد', style: TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.w700, color: placeInk2)),
+                ],
+              ),
             ),
         ],
       ),
@@ -471,6 +649,50 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   }
 }
 
+/// ملاحظة داخلية — مميّزة بلون ذهبي وقفل «للموظفين فقط».
+class _InternalNoteCard extends StatelessWidget {
+  const _InternalNoteCard({required this.note, this.onTap});
+
+  final String note;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return StaffCard(
+      onTap: onTap,
+      color: placeGoldSoft,
+      borderColor: placeGold.withValues(alpha: .45),
+      radius: StaffRadius.md,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(Icons.lock_outline_rounded, size: 18, color: placeBrass),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('ملاحظة داخلية · للموظفين فقط', style: TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.w900, color: placeBrass)),
+                const SizedBox(height: 2),
+                Text(note, style: const TextStyle(fontFamily: 'Cairo', fontSize: 13.5, fontWeight: FontWeight.w600, color: placeInk, height: 1.5)),
+              ],
+            ),
+          ),
+          if (onTap != null) ...[
+            const SizedBox(width: 6),
+            const Icon(Icons.edit_outlined, size: 17, color: placeBrass),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// بطاقة سياق الزبون أعلى المحادثة: إحصاءات، ملاحظة، حجوزات، وتواصل.
 class _CustomerContextCard extends StatefulWidget {
   const _CustomerContextCard({
     required this.name,
@@ -479,6 +701,9 @@ class _CustomerContextCard extends StatefulWidget {
     required this.bookings,
     this.staffNote,
     required this.onCall,
+    required this.onDial,
+    required this.onWhatsApp,
+    this.onEditNote,
   });
 
   final String name;
@@ -487,6 +712,9 @@ class _CustomerContextCard extends StatefulWidget {
   final List<dynamic> bookings;
   final String? staffNote;
   final VoidCallback onCall;
+  final VoidCallback onDial;
+  final VoidCallback onWhatsApp;
+  final VoidCallback? onEditNote;
 
   @override
   State<_CustomerContextCard> createState() => _CustomerContextCardState();
@@ -495,105 +723,323 @@ class _CustomerContextCard extends StatefulWidget {
 class _CustomerContextCardState extends State<_CustomerContextCard> {
   bool _expanded = true;
 
+  static Color _bookingColor(String? s) => switch (s) {
+        'CONFIRMED' => placeSuccess,
+        'COMPLETED' => placeInfo,
+        'CANCELLED' => placeDanger,
+        'AWAITING_PAYMENT' => placeWarning,
+        _ => placeBrass,
+      };
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: placeLine),
-        boxShadow: [BoxShadow(color: placeInk.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          InkWell(
-            onTap: () => setState(() => _expanded = !_expanded),
-            child: Row(
-              children: [
-                ContactAvatar(name: widget.name, phone: widget.phone, size: 48),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(widget.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-                      Text(
-                        'حجوزات: ${widget.stats?['bookingCount'] ?? 0} · ${formatIqd(widget.stats?['totalSpend'])}',
-                        style: const TextStyle(color: placeInk2, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(_expanded ? Icons.expand_less : Icons.expand_more, color: placeInk2),
-              ],
-            ),
-          ),
-          if (_expanded && widget.staffNote != null && widget.staffNote!.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: placeBrass.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text('ملاحظة: ${widget.staffNote}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-            ),
-          ],
-          if (_expanded && widget.bookings.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            const Divider(height: 1),
-            const SizedBox(height: 8),
-            for (final b in widget.bookings.take(3))
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
+    final hasPhone = widget.phone != null && widget.phone!.isNotEmpty;
+    final canCall = Session.can('calls.outbound') || Session.can('calls.answer');
+    final note = widget.staffNote;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(StaffRadius.lg),
+          border: Border.all(color: placeLine),
+          boxShadow: staffCardShadow,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            InkWell(
+              borderRadius: BorderRadius.circular(StaffRadius.lg),
+              onTap: () => setState(() => _expanded = !_expanded),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
                 child: Row(
                   children: [
-                    const Icon(Icons.home_work_outlined, size: 16, color: placeBrass),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '${(b as Map)['property']?['name'] ?? 'حجز'} · ${bookingStatusAr((b)['status']?.toString())}',
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                      ),
+                    const IconBox(icon: Icons.badge_outlined, color: placeNavyHigh, size: 36),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text('ملف الزبون', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 15, color: placeInk)),
+                    ),
+                    _StatPill(icon: Icons.event_available_rounded, value: '${widget.stats?['bookingCount'] ?? 0}', label: 'حجز'),
+                    const SizedBox(width: 6),
+                    AnimatedRotation(
+                      turns: _expanded ? .5 : 0,
+                      duration: const Duration(milliseconds: 180),
+                      child: const Icon(Icons.expand_more_rounded, color: placeInk2),
                     ),
                   ],
                 ),
               ),
+            ),
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 200),
+              crossFadeState: _expanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+              secondChild: const SizedBox(width: double.infinity),
+              firstChild: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _MiniKpi(label: 'حجوزات مؤكدة', value: '${widget.stats?['bookingCount'] ?? 0}', color: placeNavyHigh),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _MiniKpi(label: 'إجمالي الإنفاق', value: formatIqd(widget.stats?['totalSpend']), color: placeBrass),
+                        ),
+                      ],
+                    ),
+                    if (note != null && note.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      _InternalNoteCard(note: note, onTap: widget.onEditNote),
+                    ] else if (widget.onEditNote != null) ...[
+                      const SizedBox(height: 6),
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: TextButton.icon(
+                          onPressed: widget.onEditNote,
+                          icon: const Icon(Icons.add_comment_outlined, size: 18),
+                          label: const Text('إضافة ملاحظة داخلية'),
+                        ),
+                      ),
+                    ],
+                    if (widget.bookings.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      const Text('آخر الحجوزات', style: TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.w800, color: placeInk2)),
+                      const SizedBox(height: 6),
+                      for (final raw in widget.bookings.take(3))
+                        Builder(builder: (context) {
+                          final b = raw as Map;
+                          final status = b['status']?.toString();
+                          final start = DateTime.tryParse(b['startDate']?.toString() ?? '');
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 5),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.home_work_outlined, size: 18, color: placeInk3),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${(b['property'] as Map?)?['name'] ?? 'حجز'}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 13.5, fontWeight: FontWeight.w800, color: placeInk),
+                                      ),
+                                      if (start != null)
+                                        Text(
+                                          DateFormat('d MMMM', 'ar').format(start),
+                                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.w600, color: placeInk3),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                StatusChip(bookingStatusAr(status), color: _bookingColor(status), dense: true),
+                              ],
+                            ),
+                          );
+                        }),
+                    ],
+                    if (hasPhone || canCall) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          if (hasPhone)
+                            Expanded(
+                              child: _ContactButton(icon: Icons.phone_outlined, label: 'اتصال', color: placeInk, onTap: widget.onDial),
+                            ),
+                          if (hasPhone) ...[
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _ContactButton(icon: Icons.chat_outlined, label: 'واتساب', color: const Color(0xFF128C7E), onTap: widget.onWhatsApp),
+                            ),
+                          ],
+                          if (canCall) ...[
+                            if (hasPhone) const SizedBox(width: 8),
+                            Expanded(
+                              child: _ContactButton(icon: Icons.headset_mic_rounded, label: 'مكالمة', color: placeSuccess, filled: true, onTap: widget.onCall),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           ],
-          if (_expanded) const SizedBox(height: 8),
-          if (_expanded)
-          Row(
-            children: [
-              if (widget.phone != null)
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      final uri = Uri.parse('tel:${widget.phone}');
-                      if (await canLaunchUrl(uri)) await launchUrl(uri);
-                    },
-                    icon: const Icon(Icons.phone_outlined, size: 18),
-                    label: const Text('اتصال'),
-                  ),
-                ),
-              if (Session.can('calls.outbound') || Session.can('calls.answer')) ...[
-                const SizedBox(width: 8),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: widget.onCall,
-                    style: FilledButton.styleFrom(backgroundColor: placeSuccess),
-                    icon: const Icon(Icons.call, size: 18),
-                    label: const Text('مكالمة'),
-                  ),
-                ),
-              ],
-            ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatPill extends StatelessWidget {
+  const _StatPill({required this.icon, required this.value, required this.label});
+
+  final IconData icon;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: placeLineSoft, borderRadius: BorderRadius.circular(999)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: placeInk2),
+          const SizedBox(width: 4),
+          Text('$value $label', style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.w800, color: placeInk2)),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniKpi extends StatelessWidget {
+  const _MiniKpi({required this.label, required this.value, required this.color});
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(color: color.withValues(alpha: .06), borderRadius: BorderRadius.circular(StaffRadius.md)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.w700, color: placeInk2)),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(value, style: TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.w900, color: color)),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ContactButton extends StatelessWidget {
+  const _ContactButton({required this.icon, required this.label, required this.color, required this.onTap, this.filled = false});
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = filled
+        ? FilledButton.styleFrom(backgroundColor: color, padding: const EdgeInsets.symmetric(horizontal: 8))
+        : OutlinedButton.styleFrom(foregroundColor: color, padding: const EdgeInsets.symmetric(horizontal: 8));
+    final child = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 18),
+        const SizedBox(width: 6),
+        Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis)),
+      ],
+    );
+    return filled
+        ? FilledButton(onPressed: onTap, style: style, child: child)
+        : OutlinedButton(onPressed: onTap, style: style, child: child);
+  }
+}
+
+/// نموذج الملاحظة الداخلية.
+class _NoteForm extends StatefulWidget {
+  const _NoteForm({this.initial});
+
+  final String? initial;
+
+  @override
+  State<_NoteForm> createState() => _NoteFormState();
+}
+
+class _NoteFormState extends State<_NoteForm> {
+  late final _c = TextEditingController(text: widget.initial ?? '');
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(color: placeGoldSoft, borderRadius: BorderRadius.circular(StaffRadius.sm)),
+          child: const Row(
+            children: [
+              Icon(Icons.lock_outline_rounded, size: 16, color: placeBrass),
+              SizedBox(width: 6),
+              Expanded(
+                child: Text('تظهر للموظفين فقط — لا يراها الزبون', style: TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.w800, color: placeBrass)),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _c,
+          autofocus: true,
+          minLines: 3,
+          maxLines: 6,
+          decoration: const InputDecoration(hintText: 'اكتب الملاحظة…'),
+        ),
+        const SizedBox(height: 14),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _c,
+          builder: (context, v, _) => FilledButton.icon(
+            onPressed: v.text.trim().isEmpty ? null : () => Navigator.of(context).pop(_c.text.trim()),
+            icon: const Icon(Icons.check_rounded),
+            label: const Text('حفظ الملاحظة'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// هيكل تحميل للمحادثة.
+class _ThreadSkeleton extends StatelessWidget {
+  const _ThreadSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final w = MediaQuery.sizeOf(context).width;
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        const SkeletonBox(height: 64),
+        const SizedBox(height: 20),
+        for (var i = 0; i < 6; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Align(
+              alignment: i.isEven ? AlignmentDirectional.centerStart : AlignmentDirectional.centerEnd,
+              child: SkeletonBox(width: w * (i % 3 == 0 ? .62 : .45), height: i % 3 == 0 ? 58 : 42, radius: 18),
+            ),
+          ),
+      ],
     );
   }
 }

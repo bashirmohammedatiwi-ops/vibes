@@ -6,7 +6,7 @@ import '../../../core/format.dart';
 import '../../../core/session.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
-import '../../../widgets/ui.dart';
+import '../../../widgets/kit.dart';
 import 'booking_kit.dart';
 
 /// إدارة حجز واحد: التفاصيل الكاملة، تغيير الحالة، إعادة الجدولة، النزاع، والملاحظات الداخلية.
@@ -124,7 +124,14 @@ class _BookingManageScreenState extends State<BookingManageScreen> {
   // ─────────── النزاع ───────────
 
   Future<void> _openDispute() async {
-    final reason = await promptText(context, title: 'فتح نزاع — السبب', hint: 'مثال: الزبون يطالب باسترداد');
+    final reason = await showTextSheet(
+      context,
+      title: 'فتح نزاع',
+      label: 'سبب النزاع',
+      hint: 'مثال: الزبون يطالب باسترداد',
+      confirmLabel: 'فتح النزاع',
+      danger: true,
+    );
     if (reason == null || reason.trim().isEmpty || !mounted) return;
     await _run(
       () => Api.send('$_base/dispute', method: 'POST', body: {'reason': reason.trim()}),
@@ -198,28 +205,13 @@ class _BookingManageScreenState extends State<BookingManageScreen> {
   }
 
   Future<void> _editNote(Map note) async {
-    final controller = TextEditingController(text: note['content']?.toString() ?? '');
-    final text = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text('تعديل الملاحظة', style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 12),
-            StaffField(controller: controller, label: 'نص الملاحظة', maxLines: 5),
-            const SizedBox(height: 12),
-            FilledButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: const Text('حفظ')),
-          ],
-        ),
-      ),
+    final text = await showTextSheet(
+      context,
+      title: 'تعديل الملاحظة',
+      label: 'نص الملاحظة',
+      initial: note['content']?.toString() ?? '',
+      maxLines: 6,
     );
-    controller.dispose();
     if (text == null || !mounted) return;
     if (text.isEmpty) {
       showToast(context, 'الملاحظة فارغة', error: true);
@@ -254,28 +246,107 @@ class _BookingManageScreenState extends State<BookingManageScreen> {
 
   // ─────────── الواجهة ───────────
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(
-          title: const Text('إدارة الحجز'),
-          actions: [
-            if (_busy)
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+  /// كل الإجراءات المتاحة حسب الحالة والصلاحية.
+  List<_Act> _actionsFor(String? status) {
+    final acts = <_Act>[];
+    if (canWriteBookings) {
+      if (status == 'PENDING') {
+        acts.add(_Act(Icons.verified_rounded, 'تأكيد الحجز', () => _quickStatus('CONFIRMED', 'تأكيد الحجز'), primary: true));
+        acts.add(_Act(Icons.payments_outlined, 'طلب الدفع', () => _quickStatus('AWAITING_PAYMENT', 'طلب الدفع'), quick: true));
+      }
+      if (status == 'AWAITING_PAYMENT') {
+        acts.add(_Act(Icons.verified_rounded, 'تأكيد الدفع', () => _quickStatus('CONFIRMED', 'تأكيد الحجز'), primary: true));
+      }
+      if (status == 'CONFIRMED') {
+        acts.add(_Act(Icons.task_alt_rounded, 'تمت الزيارة', () => _quickStatus('COMPLETED', 'إغلاق الحجز كمكتمل'), primary: true));
+      }
+      acts.add(_Act(Icons.swap_horiz_rounded, 'تغيير الحالة', _changeStatus));
+      if (status != 'CANCELLED' && status != 'COMPLETED') {
+        acts.add(_Act(Icons.edit_calendar_rounded, 'إعادة جدولة', _reschedule));
+      }
+    }
+    if (Session.can('disputes.review')) {
+      if (status == 'DISPUTED') {
+        acts.add(_Act(Icons.gavel_rounded, 'حل النزاع', _resolveDispute, primary: true));
+      } else if (status != 'CANCELLED') {
+        acts.add(_Act(Icons.report_gmailerrorred_rounded, 'فتح نزاع', _openDispute, danger: true));
+      }
+    }
+    return acts;
+  }
+
+  Future<void> _moreSheet(List<_Act> acts) async {
+    final picked = await showStaffSheet<_Act>(
+      context,
+      title: 'إجراءات الحجز',
+      child: SingleChildScrollView(
+        child: TileGroup(
+          children: [
+            for (final a in acts)
+              TaskTile(
+                icon: a.icon,
+                color: a.danger ? placeDanger : (a.primary ? placeSuccess : placeInk),
+                title: a.label,
+                onTap: () => Navigator.pop(context, a),
               ),
-            IconButton(onPressed: _load, icon: const Icon(Icons.refresh_rounded), tooltip: 'تحديث'),
           ],
         ),
-        body: AsyncList(
-          loading: _loading,
-          error: _error,
-          isEmpty: _booking == null,
-          onRefresh: _load,
-          children: _booking == null ? const [] : _content(_booking!),
-        ),
+      ),
     );
+    if (picked != null && mounted) picked.onTap();
+  }
+
+  Widget? _bottomBar() {
+    final b = _booking;
+    if (b == null) return null;
+    final acts = _actionsFor(_status);
+    if (acts.isEmpty) return null;
+    final primary = acts.where((a) => a.primary).toList();
+    final quick = acts.where((a) => a.quick).toList();
+    final rest = acts.where((a) => !a.primary).toList();
+    return BookingActionBar(
+      children: [
+        if (rest.isNotEmpty)
+          BarButton(
+            label: primary.isEmpty ? 'إجراءات الحجز' : 'المزيد',
+            icon: Icons.more_horiz_rounded,
+            primary: primary.isEmpty,
+            busy: _busy && primary.isEmpty,
+            onPressed: () => _moreSheet(rest),
+          ),
+        if (quick.isNotEmpty) BarButton(label: quick.first.label, icon: quick.first.icon, primary: false, onPressed: _busy ? null : quick.first.onTap),
+        if (primary.isNotEmpty)
+          BarButton(label: primary.first.label, icon: primary.first.icon, busy: _busy, flex: 2, onPressed: primary.first.onTap),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final b = _booking;
+    final property = asMap(b?['property']);
+    final id = '${b?['id'] ?? widget.bookingId}';
+    final page = StaffPage(
+      title: property?['name']?.toString() ?? 'إدارة الحجز',
+      subtitle: '#${id.length > 8 ? id.substring(0, 8).toUpperCase() : id.toUpperCase()} · ${b == null ? 'جارٍ التحميل' : statusLabel(_status)}',
+      onRefresh: _load,
+      actions: [
+        if (_busy)
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: placeGold)),
+          ),
+      ],
+      slivers: _loading
+          ? const [
+              SliverToBoxAdapter(child: Pad(top: 4, child: SkeletonBox(height: 220))),
+              SkeletonSliver(count: 3, height: 130),
+            ]
+          : _error != null || b == null
+              ? [SliverToBoxAdapter(child: ErrorPanel(message: _error ?? 'الحجز غير موجود', onRetry: _load))]
+              : _content(b),
+    );
+    return withBottomBar(page, _loading ? null : _bottomBar());
   }
 
   List<Widget> _content(Map<String, dynamic> b) {
@@ -287,256 +358,306 @@ class _BookingManageScreenState extends State<BookingManageScreen> {
         ? asMap((property['media'] as List).first)
         : null;
     final status = _status;
-    final active = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED'].contains(status);
     final phone = guestPhone(b);
+    final canChat = Session.can('inbox.read') && guestUserId(b) != null;
     final discount = asNum(b['discountAmount']) ?? 0;
+    final sColor = statusColor(status);
 
     return [
-      // ── رأس ──
-      Container(
-        margin: const EdgeInsets.fromLTRB(16, 8, 16, 6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: placeLine),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (media != null)
-              SizedBox(
-                height: 140,
-                child: NetImage(url: mediaUrl((media['thumbnailUrl'] ?? media['url'])?.toString()), radius: 0),
-              ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+      // ── رأس: المكان والحالة والسعر ──
+      SliverToBoxAdapter(
+        child: Pad(
+          top: 4,
+          child: Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(StaffRadius.lg),
+              border: Border.all(color: placeLine),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (media != null)
+                  SizedBox(
+                    height: 150,
+                    child: NetImage(url: mediaUrl((media['thumbnailUrl'] ?? media['url'])?.toString()), radius: 0),
+                  ),
+                Container(
+                  color: sColor.withValues(alpha: .07),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  child: Row(
                     children: [
+                      IconBox(icon: statusIcon(status), color: sColor, size: 36, filled: true),
+                      const SizedBox(width: 10),
                       Expanded(
-                        child: Text(
-                          property?['name']?.toString() ?? 'حجز',
-                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 20, fontWeight: FontWeight.w900, color: placeInk),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(statusLabel(status), style: TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.w900, color: sColor)),
+                            Text(statusHint(status), style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w600, color: placeInk2)),
+                          ],
                         ),
-                      ),
-                      BookingStatusPill(status: status),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    [
-                      placeTypeLabel(property?['type']?.toString()),
-                      if (city?['nameAr'] != null) city!['nameAr'].toString(),
-                      if (province?['nameAr'] != null) province!['nameAr'].toString(),
-                    ].join(' · '),
-                    style: const TextStyle(fontFamily: 'Cairo', color: placeInk2, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      ShiftBadge(shift: b['shift']?.toString()),
-                      StatusPill(
-                        label: originLabel(b['origin']?.toString()),
-                        color: b['origin'] == 'EXTERNAL' ? placeShiftEvening : placeInk2,
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Clipboard.setData(ClipboardData(text: '${b['id']}'));
-                          showToast(context, 'نُسخ رقم الحجز');
-                        },
-                        child: StatusPill(
-                          label: '#${'${b['id']}'.substring(0, 8).toUpperCase()}',
-                          color: placeInk,
-                          icon: Icons.copy_rounded,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-
-      // ── إجراءات ──
-      if (canWriteBookings || Session.can('disputes.review')) _actions(status, active),
-
-      if (status == 'DISPUTED' && (b['disputeReason'] != null || b['disputeNote'] != null))
-        FormSection(
-          title: 'نزاع مفتوح',
-          icon: Icons.gavel_rounded,
-          children: [
-            if (b['disputeReason'] != null) InfoLine(icon: Icons.report_outlined, label: 'السبب', value: '${b['disputeReason']}'),
-            if (b['disputeNote'] != null) InfoLine(icon: Icons.notes_rounded, label: 'ملاحظة', value: '${b['disputeNote']}'),
-          ],
-        ),
-
-      FormSection(
-        title: 'الزبون',
-        icon: Icons.person_outline_rounded,
-        children: [
-          InfoLine(icon: Icons.badge_outlined, label: 'الاسم', value: guestName(b)),
-          InfoLine(
-            icon: Icons.phone_outlined,
-            label: 'الهاتف',
-            value: phone ?? '—',
-            ltr: true,
-            trailing: phone == null
-                ? null
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _IconAction(icon: Icons.copy_rounded, onTap: () {
-                        Clipboard.setData(ClipboardData(text: phone));
-                        showToast(context, 'نُسخ الرقم');
-                      }),
-                      _IconAction(icon: Icons.call_rounded, onTap: () => callPhone(context, phone)),
-                    ],
-                  ),
-          ),
-          InfoLine(icon: Icons.people_outline, label: 'الضيوف', value: '${b['guests'] ?? 1}'),
-        ],
-      ),
-
-      FormSection(
-        title: 'الموعد',
-        icon: Icons.event_note_outlined,
-        children: [
-          InfoLine(icon: Icons.event_outlined, label: 'التاريخ', value: fmtRange(b['startDate'], b['endDate'])),
-          InfoLine(icon: Icons.schedule_rounded, label: 'الشفت', value: shiftShort(b['shift']?.toString())),
-          InfoLine(icon: Icons.add_circle_outline_rounded, label: 'أُنشئ', value: fmtStamp(b['createdAt'])),
-          InfoLine(icon: Icons.update_rounded, label: 'آخر تحديث', value: fmtStamp(b['updatedAt'])),
-        ],
-      ),
-
-      FormSection(
-        title: 'المبلغ والدفع',
-        icon: Icons.payments_outlined,
-        children: [
-          InfoLine(icon: Icons.sell_outlined, label: 'الإجمالي', value: formatIqd(b['totalPrice'])),
-          if (discount > 0) InfoLine(icon: Icons.local_offer_outlined, label: 'الخصم', value: formatIqd(discount)),
-          if (payment == null)
-            const InfoLine(icon: Icons.receipt_long_outlined, label: 'الدفع', value: 'لا يوجد سجل دفع')
-          else ...[
-            InfoLine(
-              icon: Icons.receipt_long_outlined,
-              label: 'حالة الدفع',
-              value: paymentStatusAr(payment['status']?.toString()),
-              trailing: StatusPill(
-                label: paymentStatusAr(payment['status']?.toString()),
-                color: paymentStatusColor(payment['status']?.toString()),
-              ),
-            ),
-            InfoLine(icon: Icons.account_balance_wallet_outlined, label: 'الطريقة', value: paymentMethodAr(payment['method']?.toString())),
-            InfoLine(icon: Icons.attach_money_rounded, label: 'المبلغ', value: formatIqd(payment['amount'])),
-            if (payment['transactionRef'] != null)
-              InfoLine(icon: Icons.tag_rounded, label: 'المرجع', value: '${payment['transactionRef']}', ltr: true),
-            if ((payment['adminNote']?.toString() ?? '').isNotEmpty)
-              InfoLine(icon: Icons.sticky_note_2_outlined, label: 'ملاحظة الدفع', value: '${payment['adminNote']}'),
-            if ((payment['proofUrl']?.toString() ?? '').isNotEmpty)
-              GestureDetector(
-                onTap: () => _showProof(mediaUrl(payment['proofUrl'].toString())),
-                child: Container(
-                  height: 110,
-                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), border: Border.all(color: placeLine)),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      NetImage(url: mediaUrl(payment['proofUrl'].toString()), icon: Icons.receipt_outlined),
-                      const PositionedDirectional(
-                        bottom: 8,
-                        start: 8,
-                        child: StatusPill(label: 'إثبات الدفع', color: placeInk, icon: Icons.zoom_in_rounded),
                       ),
                     ],
                   ),
                 ),
-              ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(placeTypeIcon(property?['type']?.toString()), size: 18, color: placeBrass),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              [
+                                placeTypeLabel(property?['type']?.toString()),
+                                if (city?['nameAr'] != null) city!['nameAr'].toString(),
+                                if (province?['nameAr'] != null) province!['nameAr'].toString(),
+                              ].join(' · '),
+                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, color: placeInk2, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        fmtRange(b['startDate'], b['endDate']),
+                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 17, fontWeight: FontWeight.w900, color: placeInk),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          BookingShiftChip(shift: b['shift']?.toString(), short: false),
+                          StatusChip(
+                            originLabel(b['origin']?.toString()),
+                            color: b['origin'] == 'EXTERNAL' ? placeShiftEvening : placeInk2,
+                            dense: true,
+                          ),
+                          InkWell(
+                            borderRadius: BorderRadius.circular(999),
+                            onTap: () {
+                              Clipboard.setData(ClipboardData(text: '${b['id']}'));
+                              HapticFeedback.selectionClick();
+                              showToast(context, 'نُسخ رقم الحجز');
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(color: placePaper, borderRadius: BorderRadius.circular(999)),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.copy_rounded, size: 13, color: placeInk2),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '#${'${b['id']}'.length > 8 ? '${b['id']}'.substring(0, 8).toUpperCase() : b['id']}',
+                                    style: const TextStyle(fontFamily: 'Montserrat', fontSize: 11, fontWeight: FontWeight.w800, color: placeInk),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      const Divider(height: 1),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          const Text('الإجمالي', style: TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.w700, color: placeInk2)),
+                          const Spacer(),
+                          Text(formatIqd(b['totalPrice']), style: const TextStyle(fontFamily: 'Cairo', fontSize: 20, fontWeight: FontWeight.w900, color: placeInk)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+
+      // ── الزبون ──
+      SliverToBoxAdapter(
+        child: Pad(
+          child: StaffCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Avatar(guestName(b), size: 46),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(guestName(b), style: const TextStyle(fontFamily: 'Cairo', fontSize: 15.5, fontWeight: FontWeight.w900, color: placeInk)),
+                          if (phone != null)
+                            Text(phone, textDirection: TextDirection.ltr, style: const TextStyle(fontFamily: 'Montserrat', fontSize: 12.5, fontWeight: FontWeight.w700, color: placeInk2)),
+                        ],
+                      ),
+                    ),
+                    if (phone != null)
+                      RoundIconAction(
+                        icon: Icons.copy_rounded,
+                        tooltip: 'نسخ الرقم',
+                        color: placeInk2,
+                        onTap: () {
+                          Clipboard.setData(ClipboardData(text: phone));
+                          showToast(context, 'نُسخ الرقم');
+                        },
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ContactButton(
+                        icon: Icons.call_rounded,
+                        label: 'اتصال',
+                        color: placeSuccess,
+                        onTap: phone == null ? null : () => callPhone(context, phone),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _ContactButton(
+                        icon: Icons.chat_rounded,
+                        label: 'محادثة',
+                        color: placeInfo,
+                        onTap: canChat ? () => openGuestChat(context, b) : null,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _ContactButton(icon: Icons.people_alt_rounded, label: '${b['guests'] ?? 1} ضيف', color: placeInk2, onTap: null, info: true),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+
+      if (status == 'DISPUTED' && (b['disputeReason'] != null || b['disputeNote'] != null))
+        SliverToBoxAdapter(
+          child: BookingSection(
+            title: 'نزاع مفتوح',
+            icon: Icons.gavel_rounded,
+            color: placeDanger,
+            children: [
+              if (b['disputeReason'] != null) InfoLine(icon: Icons.report_outlined, label: 'السبب', value: '${b['disputeReason']}'),
+              if (b['disputeNote'] != null) InfoLine(icon: Icons.notes_rounded, label: 'ملاحظة', value: '${b['disputeNote']}'),
+            ],
+          ),
+        ),
+
+      SliverToBoxAdapter(
+        child: BookingSection(
+          title: 'الموعد',
+          icon: Icons.event_note_rounded,
+          color: placeInfo,
+          children: [
+            InfoLine(icon: Icons.event_outlined, label: 'التاريخ', value: fmtRange(b['startDate'], b['endDate'])),
+            InfoLine(icon: Icons.schedule_rounded, label: 'الشفت', value: shiftShort(b['shift']?.toString())),
+            InfoLine(icon: Icons.add_circle_outline_rounded, label: 'أُنشئ', value: fmtStamp(b['createdAt'])),
+            InfoLine(icon: Icons.update_rounded, label: 'آخر تحديث', value: fmtStamp(b['updatedAt'])),
           ],
-        ],
+        ),
+      ),
+
+      SliverToBoxAdapter(
+        child: BookingSection(
+          title: 'المبلغ والدفع',
+          icon: Icons.payments_rounded,
+          color: placeSuccess,
+          trailing: payment == null
+              ? null
+              : StatusChip(
+                  paymentStatusAr(payment['status']?.toString()),
+                  color: paymentStatusColor(payment['status']?.toString()),
+                  dense: true,
+                ),
+          children: [
+            InfoLine(icon: Icons.sell_outlined, label: 'الإجمالي', value: formatIqd(b['totalPrice'])),
+            if (discount > 0) InfoLine(icon: Icons.local_offer_outlined, label: 'الخصم', value: formatIqd(discount)),
+            if (payment == null)
+              const InfoLine(icon: Icons.receipt_long_outlined, label: 'الدفع', value: 'لا يوجد سجل دفع')
+            else ...[
+              InfoLine(icon: Icons.receipt_long_outlined, label: 'حالة الدفع', value: paymentStatusAr(payment['status']?.toString())),
+              InfoLine(icon: Icons.account_balance_wallet_outlined, label: 'الطريقة', value: paymentMethodAr(payment['method']?.toString())),
+              InfoLine(icon: Icons.attach_money_rounded, label: 'المبلغ', value: formatIqd(payment['amount'])),
+              if (payment['transactionRef'] != null)
+                InfoLine(icon: Icons.tag_rounded, label: 'المرجع', value: '${payment['transactionRef']}', ltr: true),
+              if ((payment['adminNote']?.toString() ?? '').isNotEmpty)
+                InfoLine(icon: Icons.sticky_note_2_outlined, label: 'ملاحظة الدفع', value: '${payment['adminNote']}'),
+              if ((payment['proofUrl']?.toString() ?? '').isNotEmpty)
+                GestureDetector(
+                  onTap: () => showImageViewer(context, mediaUrl(payment['proofUrl'].toString())),
+                  child: Container(
+                    height: 120,
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(StaffRadius.md), border: Border.all(color: placeLine)),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        NetImage(url: mediaUrl(payment['proofUrl'].toString()), icon: Icons.receipt_outlined, radius: 0),
+                        const PositionedDirectional(
+                          bottom: 8,
+                          start: 8,
+                          child: StatusPill(label: 'إثبات الدفع', color: placeInk, icon: Icons.zoom_in_rounded),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ],
+        ),
       ),
 
       if ((b['notes']?.toString() ?? '').trim().isNotEmpty)
-        FormSection(
-          title: 'ملاحظات الحجز',
-          subtitle: 'ملاحظات الزبون وملاحظات تغيير الحالة',
-          icon: Icons.notes_rounded,
-          children: [
-            Text('${b['notes']}', style: const TextStyle(fontFamily: 'Cairo', height: 1.6, fontWeight: FontWeight.w600)),
-          ],
+        SliverToBoxAdapter(
+          child: BookingSection(
+            title: 'ملاحظات الحجز',
+            subtitle: 'ملاحظات الزبون وملاحظات تغيير الحالة',
+            icon: Icons.notes_rounded,
+            color: placeInk2,
+            children: [
+              Text('${b['notes']}', style: const TextStyle(fontFamily: 'Cairo', height: 1.6, fontWeight: FontWeight.w600, color: placeInk)),
+            ],
+          ),
         ),
 
-      _notesSection(),
-      const SizedBox(height: 24),
+      SliverToBoxAdapter(child: _notesSection()),
     ];
   }
 
-  Widget _actions(String? status, bool active) {
-    final buttons = <Widget>[];
-    if (canWriteBookings) {
-      if (status == 'PENDING') {
-        buttons.add(_ActionButton(
-          icon: Icons.payments_outlined,
-          label: 'طلب الدفع',
-          onTap: () => _quickStatus('AWAITING_PAYMENT', 'طلب الدفع'),
-        ));
-        buttons.add(_ActionButton(
-          icon: Icons.verified_outlined,
-          label: 'تأكيد',
-          primary: true,
-          onTap: () => _quickStatus('CONFIRMED', 'تأكيد الحجز'),
-        ));
-      }
-      if (status == 'AWAITING_PAYMENT') {
-        buttons.add(_ActionButton(
-          icon: Icons.verified_outlined,
-          label: 'تأكيد الدفع',
-          primary: true,
-          onTap: () => _quickStatus('CONFIRMED', 'تأكيد الحجز'),
-        ));
-      }
-      if (status == 'CONFIRMED') {
-        buttons.add(_ActionButton(
-          icon: Icons.task_alt_rounded,
-          label: 'تمت الزيارة',
-          primary: true,
-          onTap: () => _quickStatus('COMPLETED', 'إغلاق الحجز كمكتمل'),
-        ));
-      }
-      buttons.add(_ActionButton(icon: Icons.swap_horiz_rounded, label: 'تغيير الحالة', onTap: _changeStatus));
-      if (status != 'CANCELLED' && status != 'COMPLETED') {
-        buttons.add(_ActionButton(icon: Icons.edit_calendar_outlined, label: 'إعادة جدولة', onTap: _reschedule));
-      }
-    }
-    if (Session.can('disputes.review')) {
-      if (status == 'DISPUTED') {
-        buttons.add(_ActionButton(icon: Icons.gavel_rounded, label: 'حل النزاع', primary: true, onTap: _resolveDispute));
-      } else if (status != 'CANCELLED') {
-        buttons.add(_ActionButton(icon: Icons.report_gmailerrorred_rounded, label: 'فتح نزاع', danger: true, onTap: _openDispute));
-      }
-    }
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-      child: Wrap(spacing: 8, runSpacing: 8, children: buttons),
-    );
-  }
-
   Widget _notesSection() {
-    return FormSection(
+    return BookingSection(
       title: 'الملاحظات الداخلية',
       subtitle: 'لا يراها الزبون — للتنسيق بين الفريق',
-      icon: Icons.forum_outlined,
+      icon: Icons.forum_rounded,
+      color: placeShiftEvening,
+      trailing: _notes.isEmpty ? null : CountBadge(_notes.length, color: placeShiftEvening),
       children: [
         if (_notesError != null)
-          Text(_notesError!, style: const TextStyle(color: placeDanger, fontFamily: 'Cairo'))
+          HintBanner(icon: Icons.error_outline_rounded, text: _notesError!, color: placeDanger)
         else if (_notes.isEmpty)
-          const Text('لا ملاحظات بعد — ابدأ أول ملاحظة', style: TextStyle(fontFamily: 'Cairo', color: placeInk2))
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 6),
+            child: Text('لا ملاحظات بعد — ابدأ أول ملاحظة', style: TextStyle(fontFamily: 'Cairo', color: placeInk3, fontWeight: FontWeight.w700)),
+          )
         else
           for (final note in _notes) _noteBubble(note),
         Row(
@@ -548,7 +669,7 @@ class _BookingManageScreenState extends State<BookingManageScreen> {
                 minLines: 1,
                 maxLines: 4,
                 textInputAction: TextInputAction.newline,
-                style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w600),
+                style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w600, color: placeInk),
                 decoration: const InputDecoration(hintText: 'اكتب ملاحظة داخلية…'),
               ),
             ),
@@ -557,7 +678,7 @@ class _BookingManageScreenState extends State<BookingManageScreen> {
               height: 52,
               width: 52,
               child: FilledButton(
-                style: FilledButton.styleFrom(padding: EdgeInsets.zero),
+                style: FilledButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(52, 52)),
                 onPressed: _sendingNote ? null : _addNote,
                 child: _sendingNote
                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
@@ -575,16 +696,19 @@ class _BookingManageScreenState extends State<BookingManageScreen> {
     final mine = note['authorId']?.toString() == Session.me['id']?.toString();
     final canEdit = _ownsNote(note);
     final canDelete = canEdit && canWriteBookings;
+    final authorName = mine ? 'أنت' : (author?['name']?.toString() ?? author?['phone']?.toString() ?? 'موظف');
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+      padding: const EdgeInsetsDirectional.fromSTEB(12, 10, 0, 10),
       decoration: BoxDecoration(
-        color: mine ? placeBrass.withValues(alpha: 0.08) : placePaper,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: mine ? placeBrass.withValues(alpha: 0.3) : placeLine),
+        color: mine ? placeGoldSoft : placePaper,
+        borderRadius: BorderRadius.circular(StaffRadius.md),
+        border: Border.all(color: mine ? placeGold.withValues(alpha: 0.35) : placeLineSoft),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Avatar(authorName, size: 30, color: mine ? placeBrass : placeNavyHigh),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -593,115 +717,89 @@ class _BookingManageScreenState extends State<BookingManageScreen> {
                   children: [
                     Flexible(
                       child: Text(
-                        mine ? 'أنت' : (author?['name']?.toString() ?? author?['phone']?.toString() ?? 'موظف'),
+                        authorName,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.w900, color: placeInk),
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    Text(fmtStamp(note['createdAt']), style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: placeInk2)),
                     if (note['isInternal'] == false) ...[
                       const SizedBox(width: 6),
-                      const StatusPill(label: 'عامة', color: placeShiftEvening),
+                      const StatusChip('عامة', color: placeShiftEvening, dense: true),
                     ],
                   ],
                 ),
+                Text(fmtStamp(note['createdAt']), style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.w600, color: placeInk3)),
                 const SizedBox(height: 4),
-                Text('${note['content'] ?? ''}', style: const TextStyle(fontFamily: 'Cairo', height: 1.5, fontWeight: FontWeight.w600)),
+                Text('${note['content'] ?? ''}', style: const TextStyle(fontFamily: 'Cairo', height: 1.5, fontWeight: FontWeight.w600, color: placeInk)),
               ],
             ),
           ),
           if (canEdit || canDelete)
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert_rounded, size: 18, color: placeInk2),
+              tooltip: 'خيارات',
+              icon: const Icon(Icons.more_vert_rounded, size: 20, color: placeInk2),
               onSelected: (v) => v == 'edit' ? _editNote(note) : _deleteNote(note),
               itemBuilder: (_) => [
                 if (canEdit) const PopupMenuItem(value: 'edit', child: Text('تعديل')),
                 if (canDelete) const PopupMenuItem(value: 'delete', child: Text('حذف', style: TextStyle(color: placeDanger))),
               ],
-            ),
+            )
+          else
+            const SizedBox(width: 12),
         ],
-      ),
-    );
-  }
-
-  void _showProof(String url) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.black,
-        insetPadding: const EdgeInsets.all(12),
-        child: Stack(
-          children: [
-            InteractiveViewer(
-              child: AspectRatio(aspectRatio: 3 / 4, child: NetImage(url: url, fit: BoxFit.contain, radius: 0)),
-            ),
-            PositionedDirectional(
-              top: 4,
-              end: 4,
-              child: IconButton(
-                onPressed: () => Navigator.pop(ctx),
-                icon: const Icon(Icons.close_rounded, color: Colors.white),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
 }
 
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.icon, required this.label, required this.onTap, this.primary = false, this.danger = false});
+class _Act {
+  const _Act(this.icon, this.label, this.onTap, {this.primary = false, this.danger = false, this.quick = false});
   final IconData icon;
   final String label;
   final VoidCallback onTap;
   final bool primary;
   final bool danger;
 
+  /// يظهر كزر ثانوي مباشر في الشريط السفلي (بجانب الرئيسي).
+  final bool quick;
+}
+
+/// زر تواصل مربّع (أيقونة فوق نص) بارتفاع 56.
+class _ContactButton extends StatelessWidget {
+  const _ContactButton({required this.icon, required this.label, required this.color, required this.onTap, this.info = false});
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback? onTap;
+  final bool info;
+
   @override
   Widget build(BuildContext context) {
-    final color = danger ? placeDanger : (primary ? Colors.white : placeInk);
+    final enabled = onTap != null || info;
+    final c = enabled ? color : placeInk3;
     return Material(
-      color: primary ? placeInk : Colors.white,
-      borderRadius: BorderRadius.circular(14),
+      color: c.withValues(alpha: .08),
+      borderRadius: BorderRadius.circular(StaffRadius.md),
       child: InkWell(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: primary ? placeInk : (danger ? placeDanger.withValues(alpha: 0.4) : placeLine)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+        borderRadius: BorderRadius.circular(StaffRadius.md),
+        onTap: onTap == null
+            ? null
+            : () {
+                HapticFeedback.selectionClick();
+                onTap!();
+              },
+        child: SizedBox(
+          height: 56,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 18, color: color),
-              const SizedBox(width: 6),
-              Text(label, style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, color: color)),
+              Icon(icon, size: 20, color: c),
+              const SizedBox(height: 2),
+              Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w800, color: c)),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _IconAction extends StatelessWidget {
-  const _IconAction({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Padding(padding: const EdgeInsets.all(4), child: Icon(icon, size: 18, color: placeBrass)),
     );
   }
 }
@@ -823,23 +921,43 @@ class _BookingRescheduleScreenState extends State<BookingRescheduleScreen> {
   Widget build(BuildContext context) {
     final property = asMap(_b['property']);
     final multiDayAllowed = _shift == 'FULL';
-    return Scaffold(
-      appBar: AppBar(title: const Text('إعادة جدولة')),
-      bottomNavigationBar: BottomActionBar(
-        label: 'حفظ الموعد الجديد',
-        busy: _saving,
-        onPressed: (_quoting || (_quote?['available'] == false)) ? null : _save,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.only(bottom: 24),
-        children: [
-          MaisonHeader(
-            title: property?['name']?.toString() ?? 'الحجز',
-            subtitle: 'الموعد الحالي: ${fmtRange(_b['startDate'], _b['endDate'])} · ${shiftShort(_b['shift']?.toString())}',
+    final page = StaffPage(
+      title: 'إعادة جدولة',
+      subtitle: property?['name']?.toString() ?? 'الحجز',
+      slivers: [
+        // الموعد الحالي
+        SliverToBoxAdapter(
+          child: Pad(
+            top: 4,
+            child: StaffCard(
+              color: placePaper,
+              borderColor: placeLine,
+              child: Row(
+                children: [
+                  const IconBox(icon: Icons.history_rounded, color: placeInk2, size: 38),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('الموعد الحالي', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w700, color: placeInk2)),
+                        Text(
+                          fmtRange(_b['startDate'], _b['endDate']),
+                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.w900, color: placeInk),
+                        ),
+                      ],
+                    ),
+                  ),
+                  BookingShiftChip(shift: _b['shift']?.toString()),
+                ],
+              ),
+            ),
           ),
-          FormSection(
+        ),
+        SliverToBoxAdapter(
+          child: BookingSection(
             title: 'الموعد الجديد',
-            icon: Icons.edit_calendar_outlined,
+            icon: Icons.edit_calendar_rounded,
             children: [
               DateField(
                 label: 'يوم البداية',
@@ -873,12 +991,13 @@ class _BookingRescheduleScreenState extends State<BookingRescheduleScreen> {
                 ),
               Text(
                 'من ${fmtDay(_start)} حتى ${fmtDay(_end.subtract(const Duration(days: 1)))}',
-                style: const TextStyle(fontFamily: 'Cairo', color: placeInk2, fontWeight: FontWeight.w700),
+                style: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5, color: placeInk2, fontWeight: FontWeight.w700),
               ),
             ],
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+        ),
+        SliverToBoxAdapter(
+          child: Pad(
             child: QuoteCard(
               quote: _quote,
               loading: _quoting,
@@ -886,12 +1005,30 @@ class _BookingRescheduleScreenState extends State<BookingRescheduleScreen> {
               compareTo: asNum(_b['totalPrice']),
             ),
           ),
-          FormSection(
+        ),
+        SliverToBoxAdapter(
+          child: BookingSection(
             title: 'ملاحظة',
-            icon: Icons.sticky_note_2_outlined,
+            icon: Icons.sticky_note_2_rounded,
+            color: placeInk2,
             children: [
               StaffField(controller: _note, label: 'سبب إعادة الجدولة (اختياري)', maxLines: 3),
             ],
+          ),
+        ),
+      ],
+    );
+    return withBottomBar(
+      page,
+      BookingActionBar(
+        children: [
+          BarButton(label: 'تراجع', primary: false, onPressed: _saving ? null : () => Navigator.pop(context)),
+          BarButton(
+            label: 'حفظ الموعد الجديد',
+            icon: Icons.check_rounded,
+            flex: 2,
+            busy: _saving,
+            onPressed: (_quoting || (_quote?['available'] == false)) ? null : _save,
           ),
         ],
       ),

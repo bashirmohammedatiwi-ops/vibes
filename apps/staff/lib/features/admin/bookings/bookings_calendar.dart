@@ -6,12 +6,13 @@ import '../../../core/api.dart';
 import '../../../core/shift.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
-import '../../../widgets/ui.dart';
+import '../../../widgets/kit.dart';
 import 'booking_kit.dart';
 import 'booking_manage.dart';
 import 'booking_wizard.dart';
 
 /// تقويم الحجوزات الشهري (`/api/admin/calendar`) — `bookings.read`.
+/// النقر على يوم يعرض حجوزاته وفتراته المحظورة أسفل الشبكة مباشرة.
 class BookingsCalendarScreen extends StatefulWidget {
   const BookingsCalendarScreen({super.key, this.initialProperty});
   final Map<String, dynamic>? initialProperty;
@@ -31,6 +32,7 @@ class _BookingsCalendarScreenState extends State<BookingsCalendarScreen> {
   static const _weekdays = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
 
   late DateTime _month;
+  DateTime? _selected;
   String _type = 'ALL';
   Map<String, dynamic>? _property;
   bool _loading = true;
@@ -45,6 +47,7 @@ class _BookingsCalendarScreenState extends State<BookingsCalendarScreen> {
     super.initState();
     final now = DateTime.now();
     _month = DateTime(now.year, now.month);
+    _selected = dayOnly(now);
     _property = widget.initialProperty;
     _load();
   }
@@ -100,16 +103,20 @@ class _BookingsCalendarScreenState extends State<BookingsCalendarScreen> {
     return map;
   }
 
-  void _shiftMonth(int delta) {
+  void _setMonth(DateTime month) {
     HapticFeedback.selectionClick();
+    final now = DateTime.now();
     setState(() {
-      _month = DateTime(_month.year, _month.month + delta);
+      _month = month;
+      _selected = (month.year == now.year && month.month == now.month) ? dayOnly(now) : null;
       _bookings = [];
       _blocked = [];
       _days = {};
     });
     _load();
   }
+
+  void _shiftMonth(int delta) => _setMonth(DateTime(_month.year, _month.month + delta));
 
   Future<void> _chooseProperty() async {
     final p = await pickProperty(context, approvedOnly: false);
@@ -123,205 +130,152 @@ class _BookingsCalendarScreenState extends State<BookingsCalendarScreen> {
     if (mounted) _load();
   }
 
-  void _openDay(DateTime day) {
-    final info = _days[isoDay(day)];
-    HapticFeedback.selectionClick();
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: placePaper,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
-      builder: (ctx) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.6,
-        maxChildSize: 0.92,
-        minChildSize: 0.35,
-        builder: (ctx, scroll) => ListView(
-          controller: scroll,
-          padding: const EdgeInsets.only(bottom: 24),
-          children: [
-            const SizedBox(height: 10),
-            Center(
-              child: Container(width: 40, height: 4, decoration: BoxDecoration(color: placeLine, borderRadius: BorderRadius.circular(4))),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 12, 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(fmtDay(day), style: const TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900)),
-                        Text(
-                          '${info?.total ?? 0} حجز · ${info?.blocked.length ?? 0} فترة محظورة',
-                          style: const TextStyle(fontFamily: 'Cairo', color: placeInk2, fontWeight: FontWeight.w700),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (canWriteBookings)
-                    FilledButton.icon(
-                      style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10)),
-                      onPressed: () async {
-                        Navigator.pop(ctx);
-                        await Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => NewBookingWizardScreen(
-                            initialDate: day,
-                            initialProperty: _property?['status'] == null || _property?['status'] == 'APPROVED' ? _property : null,
-                          ),
-                        ));
-                        if (mounted) _load();
-                      },
-                      icon: const Icon(Icons.add_rounded, size: 18),
-                      label: const Text('حجز'),
-                    ),
-                ],
-              ),
-            ),
-            if (info == null || (info.bookings.isEmpty && info.blocked.isEmpty))
-              const EmptyState(title: 'يوم فارغ', subtitle: 'لا حجوزات ولا فترات محظورة')
-            else ...[
-              for (final b in info.bookings)
-                BookingRowCard(
-                  row: b,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _openBooking('${b['id']}');
-                  },
-                ),
-              if (info.blocked.isNotEmpty) ...[
-                const SectionLabel('فترات محظورة'),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (final s in info.blocked)
-                        StatusPill(
-                          label: '${asMap(s['property'])?['name'] ?? 'مكان'} · ${shiftShort(s['shift']?.toString())}',
-                          color: placeDanger,
-                          icon: Icons.block_rounded,
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ],
-        ),
+  Future<void> _newBooking({DateTime? day}) async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => NewBookingWizardScreen(
+        initialDate: day,
+        initialProperty: day == null
+            ? null
+            : (_property?['status'] == null || _property?['status'] == 'APPROVED' ? _property : null),
       ),
-    );
+    ));
+    if (mounted) _load();
+  }
+
+  void _selectDay(DateTime day) {
+    HapticFeedback.selectionClick();
+    setState(() => _selected = day);
   }
 
   @override
   Widget build(BuildContext context) {
     final confirmed = _bookings.where((b) => b['status'] == 'CONFIRMED' || b['status'] == 'COMPLETED').length;
     final pending = _bookings.where((b) => b['status'] == 'PENDING' || b['status'] == 'AWAITING_PAYMENT').length;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('تقويم الحجوزات'),
-        actions: [
+    final now = DateTime.now();
+    final isThisMonth = _month.year == now.year && _month.month == now.month;
+    return StaffPage(
+      title: 'التقويم',
+      subtitle: 'الإشغال اليومي حسب الشفت',
+      onRefresh: _load,
+      actions: [
+        if (!isThisMonth)
           IconButton(
             tooltip: 'هذا الشهر',
-            onPressed: () {
-              final now = DateTime.now();
-              setState(() => _month = DateTime(now.year, now.month));
-              _load();
-            },
+            onPressed: () => _setMonth(DateTime(now.year, now.month)),
             icon: const Icon(Icons.today_rounded),
           ),
-        ],
-      ),
+      ],
       floatingActionButton: canWriteBookings
           ? FloatingActionButton.extended(
-              backgroundColor: placeInk,
-              foregroundColor: Colors.white,
-              onPressed: () async {
-                await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NewBookingWizardScreen()));
-                if (mounted) _load();
-              },
+              heroTag: 'calendar-new-booking',
+              onPressed: () => _newBooking(day: _selected),
               icon: const Icon(Icons.add_rounded),
-              label: const Text('حجز جديد'),
+              label: Text(_selected == null ? 'حجز جديد' : 'حجز ${fmtShortDay(_selected!)}'),
             )
           : null,
-      body: RefreshIndicator(
-        color: placeBrass,
-        onRefresh: _load,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(bottom: 96),
-          children: [
-            FilterChipsRow(
-              options: const ['ALL', 'FARM', 'HALL', 'DECORATION'],
-              selected: _type,
-              labelBuilder: (t) => t == 'ALL' ? 'كل الأنواع' : placeTypeLabel(t),
-              onSelected: (t) {
-                setState(() => _type = t);
-                _load();
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: InputChip(
-                avatar: const Icon(Icons.home_work_outlined, size: 18),
-                label: Text(_property == null ? 'كل الأماكن — اختر مكاناً' : '${_property!['name']}'),
-                onPressed: _chooseProperty,
-                onDeleted: _property == null
-                    ? null
-                    : () {
+      slivers: [
+        // ── فلاتر ──
+        SliverToBoxAdapter(
+          child: SegmentFilter<String>(
+            options: const ['ALL', 'FARM', 'HALL', 'DECORATION'],
+            value: _type,
+            labelOf: (t) => t == 'ALL' ? 'كل الأنواع' : placeTypeLabel(t),
+            onChanged: (t) {
+              setState(() => _type = t);
+              _load();
+            },
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Pad(
+            top: 6,
+            child: StaffCard(
+              onTap: _chooseProperty,
+              radius: StaffRadius.md,
+              padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 4, 4),
+              child: Row(
+                children: [
+                  Icon(Icons.home_work_rounded, size: 20, color: _property == null ? placeInk3 : placeBrass),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _property == null ? 'كل الأماكن — اضغط لاختيار مكان' : '${_property!['name']}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, color: _property == null ? placeInk2 : placeInk),
+                    ),
+                  ),
+                  if (_property != null)
+                    IconButton(
+                      tooltip: 'كل الأماكن',
+                      onPressed: () {
                         setState(() => _property = null);
                         _load();
                       },
-                backgroundColor: Colors.white,
-                side: const BorderSide(color: placeLine),
-                labelStyle: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800, color: placeInk),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
-              child: Row(
-                children: [
-                  IconButton(onPressed: () => _shiftMonth(-1), icon: const Icon(Icons.chevron_right_rounded)),
-                  Expanded(
-                    child: Text(
-                      DateFormat.yMMMM('ar').format(_month),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 17, fontWeight: FontWeight.w900),
-                    ),
-                  ),
-                  if (_loading && _bookings.isNotEmpty)
-                    const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                  IconButton(onPressed: () => _shiftMonth(1), icon: const Icon(Icons.chevron_left_rounded)),
+                      icon: const Icon(Icons.close_rounded, size: 20),
+                    )
+                  else
+                    const Padding(padding: EdgeInsets.all(12), child: Icon(Icons.expand_more_rounded, color: placeInk3)),
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Row(
-                children: [
-                  StatTile(label: 'حجوزات الشهر', value: '${_bookings.length}'),
-                  const SizedBox(width: 8),
-                  StatTile(label: 'مؤكدة', value: '$confirmed', accent: placeSuccess),
-                  const SizedBox(width: 8),
-                  StatTile(label: 'معلّقة', value: '$pending', accent: placeShiftMorning),
-                ],
-              ),
-            ),
-            if (_error != null)
-              ErrorPanel(message: _error!, onRetry: _load)
-            else if (_loading && _bookings.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(48),
-                child: Center(child: CircularProgressIndicator(color: placeBrass)),
-              )
-            else
-              _grid(),
-            _legend(),
-          ],
+          ),
         ),
-      ),
+        // ── الشهر + أرقام ──
+        SliverToBoxAdapter(
+          child: Pad(
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
+              decoration: BoxDecoration(gradient: placeNavyFill, borderRadius: BorderRadius.circular(StaffRadius.lg)),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      IconButton(
+                        tooltip: 'الشهر السابق',
+                        onPressed: () => _shiftMonth(-1),
+                        icon: const Icon(Icons.chevron_right_rounded, color: Colors.white),
+                      ),
+                      Expanded(
+                        child: Text(
+                          DateFormat.yMMMM('ar').format(_month),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontFamily: 'Cairo', fontSize: 17, fontWeight: FontWeight.w900, color: Colors.white),
+                        ),
+                      ),
+                      if (_loading && _bookings.isNotEmpty)
+                        const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: placeGold)),
+                      IconButton(
+                        tooltip: 'الشهر التالي',
+                        onPressed: () => _shiftMonth(1),
+                        icon: const Icon(Icons.chevron_left_rounded, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      _HeroNum(label: 'حجوزات الشهر', value: _bookings.length, dot: Colors.white54),
+                      _HeroNum(label: 'مؤكدة', value: confirmed, dot: const Color(0xFF34D399)),
+                      _HeroNum(label: 'معلّقة', value: pending, dot: const Color(0xFFFBBF24)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        // ── الشبكة ──
+        if (_error != null)
+          SliverToBoxAdapter(child: ErrorPanel(message: _error!, onRetry: _load))
+        else if (_loading && _bookings.isEmpty)
+          const SliverToBoxAdapter(child: Pad(child: SkeletonBox(height: 360)))
+        else ...[
+          SliverToBoxAdapter(child: Pad(child: _grid())),
+          SliverToBoxAdapter(child: _legend()),
+          ..._dayDetails(),
+        ],
+        const SliverToBoxAdapter(child: SizedBox(height: 72)),
+      ],
     );
   }
 
@@ -330,8 +284,9 @@ class _BookingsCalendarScreenState extends State<BookingsCalendarScreen> {
     final daysInMonth = DateTime(_month.year, _month.month + 1, 0).day;
     final leading = first.weekday % 7; // الأحد = 0
     final todayIso = isoDay(dayOnly(DateTime.now()));
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+    final selectedIso = _selected == null ? null : isoDay(_selected!);
+    return StaffCard(
+      padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
       child: Column(
         children: [
           Row(
@@ -339,20 +294,21 @@ class _BookingsCalendarScreenState extends State<BookingsCalendarScreen> {
               for (final d in _weekdays)
                 Expanded(
                   child: Center(
-                    child: Text(d, style: const TextStyle(fontFamily: 'Cairo', fontSize: 10.5, fontWeight: FontWeight.w800, color: placeInk2)),
+                    child: Text(d, style: const TextStyle(fontFamily: 'Cairo', fontSize: 10.5, fontWeight: FontWeight.w800, color: placeInk3)),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           GridView.builder(
             shrinkWrap: true,
+            padding: EdgeInsets.zero,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
-              mainAxisSpacing: 5,
-              crossAxisSpacing: 5,
-              childAspectRatio: 0.7,
+              mainAxisSpacing: 4,
+              crossAxisSpacing: 4,
+              childAspectRatio: 0.68,
             ),
             itemCount: leading + daysInMonth,
             itemBuilder: (context, i) {
@@ -363,8 +319,9 @@ class _BookingsCalendarScreenState extends State<BookingsCalendarScreen> {
                 day: date.day,
                 info: _days[iso],
                 today: iso == todayIso,
+                selected: iso == selectedIso,
                 past: iso.compareTo(todayIso) < 0,
-                onTap: () => _openDay(date),
+                onTap: () => _selectDay(date),
               );
             },
           ),
@@ -383,7 +340,7 @@ class _BookingsCalendarScreenState extends State<BookingsCalendarScreen> {
           ],
         );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.fromLTRB(StaffSpace.page, 0, StaffSpace.page, 4),
       child: Wrap(
         spacing: 14,
         runSpacing: 6,
@@ -396,13 +353,100 @@ class _BookingsCalendarScreenState extends State<BookingsCalendarScreen> {
       ),
     );
   }
+
+  List<Widget> _dayDetails() {
+    final day = _selected;
+    if (day == null) {
+      return const [
+        SliverToBoxAdapter(
+          child: EmptyView(icon: Icons.touch_app_rounded, title: 'اختر يوماً', subtitle: 'اضغط على أي يوم لعرض حجوزاته وفتراته المحظورة'),
+        ),
+      ];
+    }
+    final info = _days[isoDay(day)];
+    final empty = info == null || (info.bookings.isEmpty && info.blocked.isEmpty);
+    return [
+      SliverToBoxAdapter(
+        child: SectionHeader(
+          relativeDayLabel(day) == fmtDay(day) ? fmtDay(day) : '${relativeDayLabel(day)} · ${fmtShortDay(day)}',
+          subtitle: '${info?.total ?? 0} حجز · ${info?.blocked.length ?? 0} فترة محظورة',
+          count: info?.total,
+          actionLabel: canWriteBookings ? 'حجز في هذا اليوم' : null,
+          onAction: canWriteBookings ? () => _newBooking(day: day) : null,
+        ),
+      ),
+      if (empty)
+        const SliverToBoxAdapter(
+          child: EmptyView(icon: Icons.event_available_rounded, title: 'يوم فارغ', subtitle: 'لا حجوزات ولا فترات محظورة'),
+        )
+      else ...[
+        SliverList.builder(
+          itemCount: info.bookings.length,
+          itemBuilder: (_, i) => BookingRowCard(row: info.bookings[i], onTap: () => _openBooking('${info.bookings[i]['id']}')),
+        ),
+        if (info.blocked.isNotEmpty) ...[
+          const SliverToBoxAdapter(child: SectionHeader('فترات محظورة')),
+          SliverToBoxAdapter(
+            child: Pad(
+              child: TileGroup(
+                children: [
+                  for (final s in info.blocked)
+                    TaskTile(
+                      icon: Icons.block_rounded,
+                      color: placeDanger,
+                      title: '${asMap(s['property'])?['name'] ?? 'مكان'}',
+                      subtitle: [shiftShort(s['shift']?.toString()), if ((s['reason']?.toString() ?? '').isNotEmpty) '${s['reason']}'].join(' · '),
+                      trailing: const SizedBox.shrink(),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    ];
+  }
+}
+
+class _HeroNum extends StatelessWidget {
+  const _HeroNum({required this.label, required this.value, required this.dot});
+  final String label;
+  final int value;
+  final Color dot;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text('$value', style: const TextStyle(fontFamily: 'Montserrat', fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(width: 7, height: 7, decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: .72)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _DayCell extends StatelessWidget {
-  const _DayCell({required this.day, required this.info, required this.today, required this.past, required this.onTap});
+  const _DayCell({required this.day, required this.info, required this.today, required this.selected, required this.past, required this.onTap});
   final int day;
   final _DayInfo? info;
   final bool today;
+  final bool selected;
   final bool past;
   final VoidCallback onTap;
 
@@ -411,19 +455,20 @@ class _DayCell extends StatelessWidget {
     final i = info;
     final busy = i != null && i.total > 0;
     final blocked = i != null && i.blocked.isNotEmpty;
+    final bg = selected ? placeInk : (busy ? placeGoldSoft : (past ? placePaper : Colors.white));
     return Material(
-      color: busy ? placeBrass.withValues(alpha: 0.07) : Colors.white,
-      borderRadius: BorderRadius.circular(12),
+      color: bg,
+      borderRadius: BorderRadius.circular(StaffRadius.sm),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(StaffRadius.sm),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(StaffRadius.sm),
             border: Border.all(
-              color: today ? placeBrass : (blocked ? placeDanger.withValues(alpha: 0.45) : placeLine),
-              width: today ? 1.6 : 1,
+              color: selected ? placeInk : (today ? placeGold : (blocked ? placeDanger.withValues(alpha: 0.45) : placeLineSoft)),
+              width: today || selected ? 1.6 : 1,
             ),
           ),
           child: Column(
@@ -434,7 +479,7 @@ class _DayCell extends StatelessWidget {
                   fontFamily: 'Montserrat',
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
-                  color: past ? placeInk2.withValues(alpha: 0.55) : placeInk,
+                  color: selected ? Colors.white : (past ? placeInk3 : placeInk),
                 ),
               ),
               const SizedBox(height: 2),
@@ -452,7 +497,7 @@ class _DayCell extends StatelessWidget {
                               padding: const EdgeInsets.only(bottom: 2),
                               child: _ShiftCount(shift: s, count: i.shifts[s]!),
                             ),
-                        if (blocked) Icon(Icons.block_rounded, size: 13, color: placeDanger.withValues(alpha: 0.85)),
+                        if (blocked) Icon(Icons.block_rounded, size: 13, color: selected ? Colors.white : placeDanger.withValues(alpha: 0.85)),
                       ],
                     ),
                   ),
@@ -474,7 +519,7 @@ class _ShiftCount extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = shiftColor(shift);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(5)),
       child: Text(
         '${shiftBadgeChar(shift)}$count',

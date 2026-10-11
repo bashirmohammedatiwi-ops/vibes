@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'core/session.dart';
@@ -33,6 +34,13 @@ class StaffApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: buildStaffTheme(),
       locale: const Locale('ar'),
+      supportedLocales: const [Locale('ar'), Locale('en')],
+      // منتقيات التاريخ والوقت وكل نصوص Material بالعربية
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       builder: (context, child) => Directionality(textDirection: TextDirection.rtl, child: child ?? const SizedBox()),
       home: const Gate(),
     );
