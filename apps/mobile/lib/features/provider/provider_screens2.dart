@@ -23,6 +23,7 @@ import '../property/place_experience_ui.dart';
 import '../property/shift_calendar_ui.dart';
 import '../../shared/data/property_providers.dart';
 import '../../core/network/api_client.dart';
+import '../../core/perf/perf.dart';
 
 /// ═══════════════════════════════════════════════════════════
 /// نافذة المزوّد — التقويم، الممتلكات، الأرباح، الأسعار، الوسائط، التوفر
@@ -1034,7 +1035,7 @@ class ProviderPropertiesScreen extends ConsumerWidget {
                       itemCount: list.length,
                       itemBuilder: (context, i) => _ProviderPropertyCard(
                         property: list[i],
-                      ).animate(delay: Duration(milliseconds: i * 40)).fadeIn(),
+                      ).listEntrance(i),
                     ),
                   );
                 },

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 import 'package:go_router/go_router.dart';
 
@@ -12,6 +11,7 @@ import '../../shared/data/marketplace_providers.dart';
 import '../../shared/widgets/maison_chrome.dart';
 import '../../shared/widgets/property_card.dart';
 import '../../shared/widgets/vibes_widgets.dart';
+import '../../core/perf/perf.dart';
 
 /// قائمة المفضلة — الأماكن المحفوظة بحسابك
 class FavoritesScreen extends ConsumerWidget {
@@ -160,10 +160,7 @@ class FavoritesScreen extends ConsumerWidget {
                                         .read(favoritesProvider.notifier)
                                         .toggle(property),
                                   )
-                                  .animate(
-                                    delay: Duration(milliseconds: i * 40),
-                                  )
-                                  .fadeIn(),
+                                  .listEntrance(i),
                         );
                       },
                     ),

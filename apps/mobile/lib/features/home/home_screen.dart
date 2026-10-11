@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/perf/perf.dart';
 import '../../core/theme/world_theme.dart';
 import '../../core/utils/vibes_net_image.dart';
 import '../../shared/data/marketplace_providers.dart';
@@ -55,6 +56,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     _scroll.addListener(_onScroll);
+    PerfProbe.run(_scroll);
   }
 
   void _onScroll() {
@@ -3826,9 +3828,18 @@ class _RevealState extends State<_Reveal> with SingleTickerProviderStateMixin {
     curve: Curves.easeOutCubic,
   );
 
+  /// تُعرض حركة الظهور مرة واحدة في الجلسة — الأقسام تُبنى بكسل وتُعاد
+  /// إنشاؤها عند الرجوع إليها بالتمرير، فلا نعيد الحركة كل مرة.
+  static final _shown = <int>{};
+
   @override
   void initState() {
     super.initState();
+    if (_shown.contains(widget.order)) {
+      _c.value = 1;
+      return;
+    }
+    _shown.add(widget.order);
     Future.delayed(Duration(milliseconds: 90 * widget.order), () {
       if (mounted) _c.forward();
     });
@@ -3837,7 +3848,7 @@ class _RevealState extends State<_Reveal> with SingleTickerProviderStateMixin {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) _c.value = 1;
+    if (!Perf.animationsOn(context)) _c.value = 1;
   }
 
   @override

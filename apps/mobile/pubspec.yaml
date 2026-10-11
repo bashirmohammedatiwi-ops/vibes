@@ -1,7 +1,7 @@
 name: vibes
 description: VIBES — حجز المزارع وقاعات الأعراس وخدمات التزيين في العراق
 publish_to: 'none'
-version: 1.0.0+4
+version: 1.0.0+5
 
 environment:
   sdk: ^3.11.3
@@ -43,6 +43,7 @@ dependencies:
   table_calendar: ^3.1.1
   fl_chart: ^0.69.0
   connectivity_plus: ^7.3.1
+  flutter_displaymode: ^0.7.0
 
 dev_dependencies:
   flutter_test:

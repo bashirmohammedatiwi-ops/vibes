@@ -9,6 +9,7 @@ import 'package:vibes/core/notifications/firebase_placeholder.dart'
 import 'package:vibes/core/constants/map_constants.dart';
 import 'package:vibes/core/utils/data_saver.dart';
 import 'package:vibes/core/utils/error_guard.dart';
+import 'package:vibes/core/perf/perf.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,13 +18,16 @@ Future<void> main() async {
   ErrorGuard.init();
   // كاش صور أكبر — تطبيق غني بالصور: 400 صورة / 220MB
   // يقلل إعادة التحميل عند التنقل بين الشاشات بشكل ملموس.
+  // الصور تُفك بمقاس العرض الآن، فـ150MB تكفي ولا تضغط ذاكرة الأجهزة الضعيفة
   PaintingBinding.instance.imageCache.maximumSize = 400;
-  PaintingBinding.instance.imageCache.maximumSizeBytes = 220 << 20;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 150 << 20;
   // إبقاء الصور الحية عند ضغط الذاكرة — لا تنظيف مبكر.
   // (clearLiveImages دالة استدعاء وليست ضبطاً؛ الافتراضي يحفظ الحية أصلاً.)
   // بدء أسرع: تسخين DataSaver وتسجيل الجهاز بعد أول إطار —
   // لا يحجبا العرض الأولي بأي انتظار شبكة.
   unawaited(DataSaver.warm().then((_) => notifications.init()));
+  // معدل تحديث عالٍ (90/120Hz) + مراقبة أداء الجهاز للوضع الخفيف
+  unawaited(Perf.init());
 
   runApp(
     EasyLocalization(

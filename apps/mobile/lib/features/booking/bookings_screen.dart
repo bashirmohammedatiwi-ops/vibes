@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -15,6 +14,7 @@ import '../auth/auth_controller.dart';
 import 'booking_actions.dart';
 import 'booking_providers.dart';
 import 'review_sheet.dart';
+import '../../core/perf/perf.dart';
 
 /// ═══════════════════════════════════════════════════════════
 /// حجوزاتي — رأس بجوّ العالم وتبويبات بعدّادات، وبطاقات حجز
@@ -169,10 +169,7 @@ class _BookingsList extends ConsumerWidget {
             itemCount: filtered.length,
             itemBuilder: (context, i) => Padding(
               padding: const EdgeInsets.only(bottom: 14),
-              child: _BookingCard(booking: filtered[i])
-                  .animate(delay: Duration(milliseconds: 40 * i.clamp(0, 8)))
-                  .fadeIn(duration: 380.ms)
-                  .slideY(begin: .05, end: 0, curve: Curves.easeOutCubic),
+              child: _BookingCard(booking: filtered[i]).listEntrance(i),
             ),
           ),
         );

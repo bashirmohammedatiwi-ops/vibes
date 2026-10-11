@@ -14,6 +14,7 @@ import 'vibes_editorial.dart';
 import 'vibes_graphics.dart';
 import 'vibes_widgets.dart';
 import '../../features/home/home_sections.dart' show accentForType;
+import '../../core/perf/perf.dart';
 
 // ── بطاقات VIBES — أبعاد دقيقة، طبقات واضحة، لمسة تحريرية ──
 
@@ -418,13 +419,13 @@ class PropertyCard extends StatelessWidget {
             color: Colors.white,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: const Color(0xFFE4E9F0)),
-            boxShadow: const [
+            boxShadow: Perf.shadows(const [
               BoxShadow(
                 color: Color(0x12141C2B),
                 blurRadius: 16,
                 offset: Offset(0, 6),
               ),
-            ],
+            ]),
           ),
           clipBehavior: Clip.antiAlias,
           child: Material(

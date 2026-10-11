@@ -71,17 +71,18 @@ class MapHud extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // بلا ضبابية فوق الخريطة (تُعاد كل إطار أثناء تحريكها وتثقل الأجهزة)،
+    // لذا خلفية أكثف تحفظ وضوح النص.
     final shellColor = listSurface
-        ? Colors.white.withValues(alpha: 0.82)
-        : mapInk.withValues(alpha: 0.42);
+        ? Colors.white.withValues(alpha: 0.96)
+        : mapInk.withValues(alpha: 0.78);
     final shellBorder = listSurface
         ? mapLine
         : Colors.white.withValues(alpha: 0.28);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(18),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+      child: RepaintBoundary(
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: shellColor,
@@ -472,13 +473,12 @@ class MapControlDock extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+      child: RepaintBoundary(
         child: Container(
           width: 52,
           padding: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.88),
+            color: Colors.white.withValues(alpha: 0.97),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white.withValues(alpha: 0.65)),
             boxShadow: mapElev(),
@@ -1120,13 +1120,12 @@ class _MapCloseBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: ClipOval(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: RepaintBoundary(
           child: Container(
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.88),
+              color: Colors.white.withValues(alpha: 0.97),
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white),
             ),

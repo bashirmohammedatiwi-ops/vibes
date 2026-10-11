@@ -15,6 +15,7 @@ import 'home_sections.dart';
 import '../../shared/models/models.dart';
 import '../../shared/widgets/vibes_map.dart';
 import '../../shared/widgets/vibes_graphics.dart';
+import '../../core/perf/perf.dart';
 
 /// ═══════════════════════════════════════════════════════════
 /// أقسام الرئيسية — النظام التحريري v5 «الإتقان»
@@ -43,7 +44,7 @@ String _money(num v) {
   return buf.toString();
 }
 
-List<BoxShadow> _shadow({double o = 1}) => [
+List<BoxShadow> _shadow({double o = 1}) => Perf.shadows([
   BoxShadow(
     color: Color.fromRGBO(20, 28, 43, 0.05 * o),
     blurRadius: 8,
@@ -54,7 +55,7 @@ List<BoxShadow> _shadow({double o = 1}) => [
     blurRadius: 24,
     offset: const Offset(0, 10),
   ),
-];
+]);
 
 /// ── رأس القسم — عنوان تحريري: عمود نحاسي + كلمة أخيرة بلون النحاس.
 class SectionHead extends StatelessWidget {

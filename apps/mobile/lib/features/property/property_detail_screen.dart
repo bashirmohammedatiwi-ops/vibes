@@ -33,6 +33,7 @@ import 'share_card.dart';
 import '../../shared/widgets/maison_chrome.dart';
 import '../../shared/widgets/property_card.dart';
 import '../../shared/widgets/vibes_graphics.dart';
+import '../../core/perf/perf.dart';
 
 /// ═══════════════════════════════════════════════════════════
 /// صفحة المكان — بلون عالم المكان نفسه:
@@ -118,6 +119,7 @@ class _PropertyPageState extends ConsumerState<_PropertyPage> {
   void initState() {
     super.initState();
     _scroll.addListener(_track);
+    PerfProbe.run(_scroll, screen: 'property');
   }
 
   @override

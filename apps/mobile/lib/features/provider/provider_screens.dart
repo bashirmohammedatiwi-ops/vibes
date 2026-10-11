@@ -23,6 +23,7 @@ import 'provider_data.dart';
 import 'provider_scope.dart';
 import 'provider_ui.dart';
 import '../property/shift_calendar_ui.dart';
+import '../../core/perf/perf.dart';
 
 /// ═══════════════════════════════════════════════════════════
 /// نافذة المزوّد — الشاشات
@@ -1533,7 +1534,7 @@ class _ProviderBookingsScreenState
                         onChat: () => _openChat(items[i]),
                         onCall: () =>
                             startCall(ref, context, bookingId: items[i].id),
-                      ).animate(delay: Duration(milliseconds: i * 35)).fadeIn(),
+                      ).listEntrance(i, stepMs: 35),
                     ),
                   );
                 },
