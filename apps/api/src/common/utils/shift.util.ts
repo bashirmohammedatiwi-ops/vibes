@@ -154,3 +154,14 @@ export function formatShiftTimeRange(shift: ShiftType, times: ShiftTimes) {
       return `${times.fullShiftStart} – ${times.fullShiftEnd}`;
   }
 }
+
+const SHIFT_AR: Record<string, string> = { MORNING: 'الشفت الصباحي', EVENING: 'الشفت المسائي', FULL: 'اليوم الكامل' };
+
+/** وصف التعارض للمستخدم: أي يوم وأي شفت محجوز (بلا بيانات الحاجز). */
+export function conflictLabel(existing: { startDate: Date; endDate: Date; shift: ShiftType | string }) {
+  const first = dateKey(existing.startDate);
+  const lastDay = new Date(existing.endDate.getTime() - 86_400_000);
+  const last = dateKey(lastDay);
+  const days = first === last || lastDay <= existing.startDate ? first : `${first} → ${last}`;
+  return `${days} · ${SHIFT_AR[String(existing.shift)] ?? String(existing.shift)}`;
+}

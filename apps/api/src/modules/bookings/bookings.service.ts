@@ -5,7 +5,7 @@ import { CouponService } from '../../common/services/coupon.service';
 import { NotificationService } from '../../common/services/notification.service';
 import { MarketplaceLifecycleService } from '../marketplace/marketplace-lifecycle.service';
 import { calculateBookingTotal, resolveBookingShift, type PriceRuleLike } from '../../common/utils/pricing.util';
-import { bookingDaysConflict, resolveBookingMode } from '../../common/utils/shift.util';
+import { bookingDaysConflict, conflictLabel, resolveBookingMode } from '../../common/utils/shift.util';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface CreateBookingDto {
@@ -54,7 +54,7 @@ export class BookingsService {
 
     for (const existing of activeBookings) {
       if (bookingDaysConflict(start, end, shift, existing.startDate, existing.endDate, existing.shift)) {
-        throw new BadRequestException('هذه التواريخ أو الشفت محجوز');
+        throw new BadRequestException(`الموعد محجوز مسبقاً (${conflictLabel(existing)}) — اختر يوماً أو شفتاً آخر`);
       }
     }
 

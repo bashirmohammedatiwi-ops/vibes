@@ -6,7 +6,7 @@ import { NotificationService } from '../../common/services/notification.service'
 import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { PaginationService } from '../../common/services/query-helpers';
 import { calculateBookingTotal, resolveBookingShift, type PriceRuleLike } from '../../common/utils/pricing.util';
-import { bookingDaysConflict, resolveBookingMode } from '../../common/utils/shift.util';
+import { bookingDaysConflict, conflictLabel, resolveBookingMode } from '../../common/utils/shift.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   AdminBookingQuoteDto,
@@ -238,7 +238,10 @@ export class AdminBookingsService {
     const shift = await this.resolveShift(property, dto.shift ?? booking.shift);
     const availability = await this.checkAvailability(booking.propertyId, start, end, shift, id);
     if (!availability.available) {
-      throw new BadRequestException('هذه التواريخ أو الشفت محجوز');
+      const c = availability.conflict;
+      throw new BadRequestException(
+        `الموعد محجوز مسبقاً (${conflictLabel(c)}) — حجز #${c.id.slice(0, 8)}`,
+      );
     }
 
     const [rules, slots] = await Promise.all([
@@ -317,7 +320,10 @@ export class AdminBookingsService {
     const shift = await this.resolveShift(property, dto.shift);
     const availability = await this.checkAvailability(dto.propertyId, start, end, shift);
     if (!availability.available) {
-      throw new BadRequestException('هذه التواريخ أو الشفت محجوز');
+      const c = availability.conflict;
+      throw new BadRequestException(
+        `الموعد محجوز مسبقاً (${conflictLabel(c)}) — حجز #${c.id.slice(0, 8)}`,
+      );
     }
 
     const [rules, slots] = await Promise.all([

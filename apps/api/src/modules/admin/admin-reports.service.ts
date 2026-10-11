@@ -15,8 +15,8 @@ export class AdminReportsService {
    * booking lead time and top providers.
    */
   async analytics(from?: string, to?: string) {
-    const end = to ? new Date(`${to}T23:59:59.999Z`) : new Date();
-    const start = from ? new Date(from) : new Date(end.getTime() - 29 * 86_400_000);
+    const end = to ? new Date(`${to}T23:59:59.999+03:00`) : new Date();
+    const start = from ? iraqDayStart(from) : new Date(end.getTime() - 29 * 86_400_000);
     const spanDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86_400_000));
     const spanMs = end.getTime() - start.getTime();
     const prevStart = new Date(start.getTime() - spanMs);
@@ -162,8 +162,8 @@ export class AdminReportsService {
       from || to
         ? {
             createdAt: {
-              ...(from ? { gte: new Date(from) } : {}),
-              ...(to ? { lte: new Date(`${to}T23:59:59.999Z`) } : {}),
+              ...(from ? { gte: iraqDayStart(from) } : {}),
+              ...(to ? { lte: new Date(`${to}T23:59:59.999+03:00`) } : {}),
             },
           }
         : {};
@@ -305,8 +305,8 @@ export class AdminReportsService {
     if (query.propertyId) where.propertyId = query.propertyId;
     if (query.from || query.to) {
       where.createdAt = {};
-      if (query.from) where.createdAt.gte = new Date(query.from);
-      if (query.to) where.createdAt.lte = new Date(`${query.to}T23:59:59.999Z`);
+      if (query.from) where.createdAt.gte = iraqDayStart(query.from);
+      if (query.to) where.createdAt.lte = new Date(`${query.to}T23:59:59.999+03:00`);
     }
     if (query.q) {
       where.OR = [
@@ -367,8 +367,8 @@ export class AdminReportsService {
     if (query.hasProof === 'true') where.proofUrl = { not: null };
     if (query.from || query.to) {
       where.createdAt = {};
-      if (query.from) where.createdAt.gte = new Date(query.from);
-      if (query.to) where.createdAt.lte = new Date(`${query.to}T23:59:59.999Z`);
+      if (query.from) where.createdAt.gte = iraqDayStart(query.from);
+      if (query.to) where.createdAt.lte = new Date(`${query.to}T23:59:59.999+03:00`);
     }
     if (query.q) {
       where.OR = [
@@ -409,4 +409,9 @@ export class AdminReportsService {
 
     return [header, ...lines].join('\n');
   }
+}
+
+/** بداية اليوم بتوقيت العراق (UTC+3) لتاريخ بصيغة YYYY-MM-DD؛ غير ذلك يُحلَّل كما هو. */
+function iraqDayStart(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00+03:00`) : new Date(value);
 }

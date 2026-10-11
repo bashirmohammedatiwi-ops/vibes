@@ -33,8 +33,8 @@ export class AdminReviewsService {
     }
     if (query.from || query.to) {
       where.createdAt = {};
-      if (query.from) where.createdAt.gte = new Date(query.from);
-      if (query.to) where.createdAt.lte = new Date(`${query.to}T23:59:59.999Z`);
+      if (query.from) where.createdAt.gte = iraqDayStart(query.from);
+      if (query.to) where.createdAt.lte = new Date(`${query.to}T23:59:59.999+03:00`);
     }
 
     const [items, total] = await Promise.all([
@@ -128,4 +128,9 @@ export class AdminReviewsService {
     );
     return [header, ...lines].join('\n');
   }
+}
+
+/** بداية اليوم بتوقيت العراق (UTC+3) لتاريخ بصيغة YYYY-MM-DD؛ غير ذلك يُحلَّل كما هو. */
+function iraqDayStart(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00+03:00`) : new Date(value);
 }
