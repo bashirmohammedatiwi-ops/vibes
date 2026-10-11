@@ -277,7 +277,7 @@ class _InvoiceContent extends StatelessWidget {
                           const VibesLogo.mark(size: 30, color: Colors.white),
                           const SizedBox(width: 10),
                           const Text(
-                            'VIBEES',
+                            'VIBES',
                             style: TextStyle(
                               fontFamily: 'Montserrat',
                               fontSize: 15,

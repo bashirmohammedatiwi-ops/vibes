@@ -3659,7 +3659,7 @@ class _OccasionStep extends StatelessWidget {
                   ),
                   Text(
                     switch (count) {
-                      0 => 'قريباً على VIBEES',
+                      0 => 'قريباً على VIBES',
                       1 => 'مكان واحد متاح للحجز',
                       2 => 'مكانان متاحان للحجز',
                       _ => '${_placesCount(count)} متاحة للحجز',
@@ -3695,7 +3695,7 @@ class _OccasionStep extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════
-// لماذا VIBEES — شريط الثقة
+// لماذا VIBES — شريط الثقة
 // ═══════════════════════════════════════════════════════════
 
 class _TrustStrip extends StatelessWidget {
@@ -3717,7 +3717,7 @@ class _TrustStrip extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _Head('لماذا VIBEES', subtitle: 'احجز وأنت مطمئن'),
+        const _Head('لماذا VIBES', subtitle: 'احجز وأنت مطمئن'),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: AnimatedContainer(

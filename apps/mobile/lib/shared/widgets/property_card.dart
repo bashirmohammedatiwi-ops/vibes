@@ -15,7 +15,7 @@ import 'vibes_graphics.dart';
 import 'vibes_widgets.dart';
 import '../../features/home/home_sections.dart' show accentForType;
 
-// ── بطاقات VIBEES — أبعاد دقيقة، طبقات واضحة، لمسة تحريرية ──
+// ── بطاقات VIBES — أبعاد دقيقة، طبقات واضحة، لمسة تحريرية ──
 
 BorderRadius get _cardRadius => BorderRadius.circular(CardDims.radius);
 

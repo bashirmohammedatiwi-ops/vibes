@@ -11,16 +11,15 @@ import '../../core/theme/world_theme.dart';
 import '../../core/utils/data_warmup.dart';
 import '../../features/home/home_sections.dart';
 import '../../shared/widgets/maison_shapes.dart';
-import '../../shared/widgets/vibes_graphics.dart';
 import '../../shared/widgets/vibes_map.dart';
+import '../../shared/widgets/world_glyphs.dart';
 import 'auth_controller.dart';
 
 /// ═══════════════════════════════════════════════════════════
-/// الافتتاحية — مشهد سينمائي واحد مدته ~2.4 ثانية:
-///   ١. الليل يتنفس، وحلقة ضوء ترسم نفسها حول الشعار.
-///   ٢. الشعار يولد من الضوء، واسم الدار يتكشّف حرفاً حرفاً.
-///   ٣. السماء تعبر العوالم الثلاثة: نحاس المزارع ← ياقوت القاعات
-///      ← ورديّ التزيين، وكل عالم يضيء أيقونته أثناء عبوره.
+/// الافتتاحية — مشهد عاجيّ أنيق مدته ~2.4 ثانية:
+///   ١. حلقات ذهبية دقيقة تتفتح، ووهج العوالم الثلاثة يسبح بهدوء.
+///   ٢. الشعار يولد بلمعة ذهبية عابرة، واسم VIBES يتكشّف حرفاً حرفاً.
+///   ٣. أيقونات المزارع والقاعات والتزيين تدخل مداراً حول الشعار.
 /// البيانات تُسخَّن بالتوازي فتفتح الرئيسية بلا انتظار.
 /// ═══════════════════════════════════════════════════════════
 class SplashScreen extends ConsumerStatefulWidget {
@@ -101,32 +100,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     }
   }
 
-  /// لوحة السماء عبر الزمن: مزرعة → قاعة → تزيين.
-  WorldPalette _sky(double t) {
-    // الثلث الأول ثابت على النحاس ثم عبور متصل
-    final s = ((t - .30) / .70).clamp(0.0, 1.0);
-    if (s < .5) {
-      return WorldPalette.lerp(
-        WorldPalette.farm,
-        WorldPalette.hall,
-        Curves.easeInOut.transform(s * 2),
-      );
-    }
-    return WorldPalette.lerp(
-      WorldPalette.hall,
-      WorldPalette.decoration,
-      Curves.easeInOut.transform((s - .5) * 2),
-    );
-  }
-
-  /// أي عالم يضيء الآن.
-  int _activeWorld(double t) {
-    final s = ((t - .30) / .70).clamp(0.0, 1.0);
-    if (s < .30) return 0;
-    if (s < .72) return 1;
-    return 2;
-  }
-
   double _interval(
     double t,
     double a,
@@ -139,148 +112,152 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: overlayFor(darkBackground: true),
+      value: SystemUiOverlayStyle.dark.copyWith(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: _ivory,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
       child: Scaffold(
-        backgroundColor: WorldPalette.farm.night,
+        backgroundColor: _ivory,
         body: AnimatedBuilder(
           animation: _t,
           builder: (context, _) {
             final t = reduce ? 1.0 : _t.value;
-            final sky = _sky(t);
-            final ring = _interval(t, 0, .38);
-            final logo = _interval(t, .10, .42, Curves.easeOutBack);
-            final wordmark = _interval(t, .28, .60);
-            final tagline = _interval(t, .40, .70);
-            final worlds = _interval(t, .45, .80);
-            final active = _activeWorld(t);
+            final rings = _interval(t, 0, .55);
+            final logo = _interval(t, .06, .40, Curves.easeOutBack);
+            final shine = _interval(t, .30, .75, Curves.easeInOut);
+            final orbit = _interval(t, .28, .70);
+            final wordmark = _interval(t, .36, .70);
+            final tagline = _interval(t, .52, .82);
 
             return Stack(
               fit: StackFit.expand,
               children: [
                 const MapWarmup(),
-                // ── السماء ──
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        sky.nightHigh,
-                        sky.night,
-                        Color.lerp(sky.night, Colors.black, .45)!,
-                      ],
-                      stops: const [0, .55, 1],
-                    ),
-                  ),
-                ),
-                // ── هالة ضوء خلف الشعار ──
-                Positioned.fill(
-                  child: CustomPaint(
-                    painter: _HaloPainter(
-                      color: sky.accentLight,
-                      t: t,
-                      strength: ring,
-                    ),
-                  ),
-                ),
-                // ── نجوم/غبار ضوئي خافت ──
-                Positioned.fill(
-                  child: CustomPaint(
-                    painter: _DustPainter(t: t, color: sky.accentLight),
-                  ),
-                ),
+                // ── وهج العوالم الثلاثة يسبح بهدوء ──
+                Positioned.fill(child: CustomPaint(painter: _AuroraPainter(t))),
                 SafeArea(
                   child: Column(
                     children: [
                       const Spacer(flex: 5),
-                      // ── الشعار داخل حلقة الضوء ──
                       SizedBox(
-                        width: 196,
-                        height: 196,
+                        width: 260,
+                        height: 260,
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
+                            // حلقات ذهبية دقيقة تتفتح للخارج
                             CustomPaint(
-                              size: const Size.square(196),
-                              painter: _RingPainter(
-                                progress: ring,
-                                color: sky.accentLight,
+                              size: const Size.square(260),
+                              painter: _GuillochePainter(
+                                progress: rings,
                                 spin: t,
                               ),
                             ),
+                            // العوالم في مدار حول الشعار
+                            for (final s in HomeSection.values)
+                              _OrbitGlyph(
+                                section: s,
+                                t: t,
+                                appear: ((orbit - s.index * .18) / .64).clamp(
+                                  0.0,
+                                  1.0,
+                                ),
+                              ),
+                            // الشعار مع لمعة ذهبية عابرة
                             Opacity(
                               opacity: logo.clamp(0.0, 1.0),
                               child: Transform.scale(
-                                scale: .7 + .3 * logo,
-                                child: const VibesLogo.mark(
-                                  size: 84,
-                                  color: Colors.white,
+                                scale: .78 + .22 * logo,
+                                child: ShaderMask(
+                                  blendMode: BlendMode.srcATop,
+                                  shaderCallback: (r) => LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Colors.transparent,
+                                      _gold.withValues(alpha: .85),
+                                      Colors.transparent,
+                                    ],
+                                    stops: [
+                                      (shine * 1.6 - .5).clamp(0.0, 1.0),
+                                      (shine * 1.6 - .3).clamp(0.0, 1.0),
+                                      (shine * 1.6 - .1).clamp(0.0, 1.0),
+                                    ],
+                                  ).createShader(r),
+                                  child: const VibesLogo.brand(size: 92),
                                 ),
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 34),
-                      // ── اسم الدار يتكشّف حرفاً حرفاً ──
-                      _Wordmark(progress: wordmark, color: sky.accentLight),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 26),
+                      _Wordmark(progress: wordmark),
+                      const SizedBox(height: 12),
                       Opacity(
                         opacity: tagline,
                         child: Transform.translate(
                           offset: Offset(0, 8 * (1 - tagline)),
-                          child: Text(
-                            'مزارع · قاعات · تزيين — بلمسة واحدة',
+                          child: const Text(
+                            'مناسبتك تبدأ من هنا',
                             style: TextStyle(
                               fontFamily: 'Cairo',
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: .4,
-                              color: Colors.white.withValues(alpha: .72),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF5B6576),
                             ),
                           ),
                         ),
                       ),
                       const Spacer(flex: 4),
-                      // ── العوالم الثلاثة ──
                       Opacity(
-                        opacity: worlds,
-                        child: Transform.translate(
-                          offset: Offset(0, 18 * (1 - worlds)),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              for (final s in HomeSection.values) ...[
-                                if (s.index > 0)
-                                  Container(
-                                    width: 22,
-                                    height: 1,
-                                    color: Colors.white.withValues(alpha: .18),
+                        opacity: tagline,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            for (final s in HomeSection.values) ...[
+                              if (s.index > 0)
+                                Container(
+                                  width: 4,
+                                  height: 4,
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 10,
                                   ),
-                                _WorldBead(section: s, lit: s.index == active),
-                              ],
+                                  decoration: const BoxDecoration(
+                                    color: _gold,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              Text(
+                                s.label,
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: s.palette.accentDeep,
+                                ),
+                              ),
                             ],
-                          ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 40),
-                      // ── شريط تقدّم شعري ──
+                      const SizedBox(height: 18),
+                      // ── خيط تقدّم ذهبي ──
                       SizedBox(
                         width: 120,
-                        height: 2,
+                        height: 3,
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(2),
                           child: Stack(
                             children: [
-                              Container(
-                                color: Colors.white.withValues(alpha: .10),
-                              ),
+                              Container(color: const Color(0xFFEFE7D8)),
                               FractionallySizedBox(
                                 widthFactor: t,
                                 child: Container(
-                                  decoration: BoxDecoration(
+                                  decoration: const BoxDecoration(
                                     gradient: LinearGradient(
-                                      colors: [sky.accent, sky.accentLight],
+                                      colors: [_gold, Color(0xFF8D6324)],
                                     ),
                                   ),
                                 ),
@@ -289,7 +266,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                           ),
                         ),
                       ),
-                      const SizedBox(height: 36),
+                      const SizedBox(height: 34),
                     ],
                   ),
                 ),
@@ -302,13 +279,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 }
 
+const _ivory = Color(0xFFFFFDF9);
+const _gold = Color(0xFFC89844);
+const _navy = Color(0xFF1B3857);
+
 class _Wordmark extends StatelessWidget {
-  const _Wordmark({required this.progress, required this.color});
+  const _Wordmark({required this.progress});
 
   final double progress;
-  final Color color;
 
-  static const _letters = 'VIBEES';
+  static const _letters = 'VIBES';
 
   @override
   Widget build(BuildContext context) {
@@ -330,17 +310,17 @@ class _Wordmark extends StatelessWidget {
                 return Opacity(
                   opacity: e,
                   child: Transform.translate(
-                    offset: Offset(0, 14 * (1 - e)),
+                    offset: Offset(0, 12 * (1 - e)),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4.5),
+                      padding: const EdgeInsets.symmetric(horizontal: 7),
                       child: Text(
                         _letters[i],
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontFamily: 'Montserrat',
-                          fontSize: 34,
-                          fontWeight: FontWeight.w300,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w500,
                           height: 1,
-                          color: Color.lerp(Colors.white, color, .35),
+                          color: _navy,
                         ),
                       ),
                     ),
@@ -354,198 +334,144 @@ class _Wordmark extends StatelessWidget {
   }
 }
 
-class _WorldBead extends StatelessWidget {
-  const _WorldBead({required this.section, required this.lit});
+/// أيقونة عالم في دائرة بيضاء تدور ببطء على مدار الشعار.
+class _OrbitGlyph extends StatelessWidget {
+  const _OrbitGlyph({
+    required this.section,
+    required this.t,
+    required this.appear,
+  });
 
   final HomeSection section;
-  final bool lit;
+  final double t;
+  final double appear;
 
   @override
   Widget build(BuildContext context) {
     final p = section.palette;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 380),
-      curve: Curves.easeOutCubic,
-      padding: EdgeInsets.symmetric(horizontal: lit ? 16 : 12, vertical: 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        color: lit
-            ? p.accent.withValues(alpha: .28)
-            : Colors.white.withValues(alpha: .05),
-        border: Border.all(
-          color: lit
-              ? p.accentLight.withValues(alpha: .9)
-              : Colors.white.withValues(alpha: .14),
+    final e = Curves.easeOutBack.transform(appear);
+    final angle =
+        -math.pi / 2 + section.index * math.pi * 2 / 3 + t * math.pi * .35;
+    final r = 104 + 14 * (1 - appear);
+    return Transform.translate(
+      offset: Offset(math.cos(angle) * r, math.sin(angle) * r),
+      child: Opacity(
+        opacity: appear,
+        child: Transform.scale(
+          scale: .6 + .4 * e,
+          child: Container(
+            width: 46,
+            height: 46,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: p.accent.withValues(alpha: .25)),
+              boxShadow: [
+                BoxShadow(
+                  color: p.glow.withValues(alpha: .25),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: WorldGlyph(
+              section: section,
+              size: 30,
+              primary: p.accentDeep,
+              secondary: p.accent,
+            ),
+          ),
         ),
-        boxShadow: lit
-            ? [BoxShadow(color: p.glow.withValues(alpha: .5), blurRadius: 22)]
-            : const [],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          VibesCategoryIcon(
-            category: section.icon,
-            size: 16,
-            color: lit ? Colors.white : Colors.white.withValues(alpha: .55),
-          ),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-            child: lit
-                ? Padding(
-                    padding: const EdgeInsetsDirectional.only(start: 7),
-                    child: Text(
-                      section.label,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ],
       ),
     );
   }
 }
 
-/// حلقة ضوء ترسم نفسها ثم تدور ببطء، بذيل متلاشٍ.
-class _RingPainter extends CustomPainter {
-  _RingPainter({
-    required this.progress,
-    required this.color,
-    required this.spin,
-  });
+/// حلقات متحدة المركز رفيعة (طابع النقش الفاخر) تتفتح وتدور ببطء.
+class _GuillochePainter extends CustomPainter {
+  _GuillochePainter({required this.progress, required this.spin});
 
   final double progress;
-  final Color color;
   final double spin;
 
   @override
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
-    final r = size.width / 2 - 2;
-    final rect = Rect.fromCircle(center: c, radius: r);
-
-    // الحلقة الأساسية الخافتة
-    canvas.drawCircle(
-      c,
-      r,
-      Paint()
+    final maxR = size.width / 2;
+    for (var i = 0; i < 5; i++) {
+      final f = ((progress - i * .12) / .5).clamp(0.0, 1.0);
+      if (f <= 0) continue;
+      final r = maxR * (.44 + i * .13) * (.85 + .15 * f);
+      final paint = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..color = Colors.white.withValues(alpha: .08 * progress),
-    );
+        ..strokeWidth = i == 2 ? 1.1 : .7
+        ..color = _gold.withValues(alpha: (.30 - i * .045) * f);
+      if (i.isOdd) {
+        // حلقة منقّطة تدور
+        final dots = 48 + i * 12;
+        for (var k = 0; k < dots; k++) {
+          final a = k / dots * math.pi * 2 + spin * (i == 1 ? .8 : -.6);
+          canvas.drawCircle(
+            c + Offset(math.cos(a), math.sin(a)) * r,
+            .9,
+            Paint()..color = paint.color,
+          );
+        }
+      } else {
+        final sweep = math.pi * 2 * f;
+        canvas.drawArc(
+          Rect.fromCircle(center: c, radius: r),
+          -math.pi / 2 + spin * .5,
+          sweep,
+          false,
+          paint,
+        );
+      }
+    }
+  }
 
-    // قوس الضوء المتحرك
-    final sweep = math.pi * 2 * progress * .82;
-    final start = -math.pi / 2 + spin * math.pi * 1.2;
-    canvas.drawArc(
-      rect,
-      start,
-      sweep,
-      false,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.6
-        ..strokeCap = StrokeCap.round
-        ..shader = SweepGradient(
-          startAngle: start,
-          endAngle: start + math.max(sweep, .001),
-          colors: [color.withValues(alpha: 0), color.withValues(alpha: .95)],
-          transform: GradientRotation(0),
-        ).createShader(rect),
-    );
+  @override
+  bool shouldRepaint(_GuillochePainter old) =>
+      old.progress != progress || old.spin != spin;
+}
 
-    // رأس القوس — نقطة ضوء
-    if (progress > .05) {
-      final a = start + sweep;
-      final p = Offset(c.dx + r * math.cos(a), c.dy + r * math.sin(a));
-      canvas.drawCircle(p, 3, Paint()..color = color);
+/// وهج ناعم بألوان العوالم الثلاثة يتحرك ببطء على العاج.
+class _AuroraPainter extends CustomPainter {
+  _AuroraPainter(this.t);
+
+  final double t;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    final blobs = [
+      (
+        Offset(w * (.15 + .05 * math.sin(t * 4)), h * .22),
+        WorldPalette.farm.accent,
+      ),
+      (
+        Offset(w * (.88 - .05 * math.cos(t * 3)), h * .42),
+        WorldPalette.hall.accent,
+      ),
+      (
+        Offset(w * (.3 + .06 * math.sin(t * 3 + 1)), h * .8),
+        WorldPalette.decoration.accent,
+      ),
+    ];
+    for (final (c, color) in blobs) {
+      final r = w * .7;
       canvas.drawCircle(
-        p,
-        10,
+        c,
+        r,
         Paint()
-          ..color = color.withValues(alpha: .25)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+          ..shader = RadialGradient(
+            colors: [color.withValues(alpha: .13), color.withValues(alpha: 0)],
+          ).createShader(Rect.fromCircle(center: c, radius: r)),
       );
     }
   }
 
   @override
-  bool shouldRepaint(_RingPainter old) =>
-      old.progress != progress || old.color != color || old.spin != spin;
-}
-
-class _HaloPainter extends CustomPainter {
-  _HaloPainter({required this.color, required this.t, required this.strength});
-
-  final Color color;
-  final double t;
-  final double strength;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final c = Offset(size.width / 2, size.height * .40);
-    final r = size.width * (.75 + .05 * math.sin(t * math.pi * 2));
-    canvas.drawCircle(
-      c,
-      r,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [
-            color.withValues(alpha: .22 * strength),
-            color.withValues(alpha: .06 * strength),
-            color.withValues(alpha: 0),
-          ],
-          stops: const [0, .45, 1],
-        ).createShader(Rect.fromCircle(center: c, radius: r)),
-    );
-  }
-
-  @override
-  bool shouldRepaint(_HaloPainter old) =>
-      old.color != color || old.t != t || old.strength != strength;
-}
-
-/// غبار ضوئي — نقاط ثابتة المواقع تومض بأطوار مختلفة.
-class _DustPainter extends CustomPainter {
-  _DustPainter({required this.t, required this.color});
-
-  final double t;
-  final Color color;
-
-  static final _points = List.generate(36, (i) {
-    final r = math.Random(i * 7919 + 13);
-    return (
-      r.nextDouble(),
-      r.nextDouble(),
-      r.nextDouble(),
-      .6 + r.nextDouble() * 1.2,
-    );
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (final (x, y, phase, radius) in _points) {
-      final tw = (math.sin((t * 2 + phase) * math.pi * 2) + 1) / 2;
-      canvas.drawCircle(
-        Offset(x * size.width, y * size.height),
-        radius,
-        Paint()
-          ..color = Color.lerp(
-            Colors.white,
-            color,
-            .5,
-          )!.withValues(alpha: .08 + tw * .22),
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DustPainter old) => old.t != t || old.color != color;
+  bool shouldRepaint(_AuroraPainter old) => old.t != t;
 }

@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,13 +7,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/world_theme.dart';
 import '../../shared/widgets/maison_shapes.dart';
 import '../../shared/widgets/vibes_graphics.dart';
+import '../../shared/widgets/world_glyphs.dart';
 import '../home/home_sections.dart';
+import 'onboarding_scenes.dart';
 
 /// ═══════════════════════════════════════════════════════════
-/// الترحيب — ثلاث لوحات، لكل عالم سماؤه:
-/// السحب بين اللوحات يمزج الألوان لحظياً (لا قفزات)، الصورة داخل
-/// قوس معماري بعمق بارالاكس، والزر يقول «ابدأ بالمزارع/القاعات/…»
-/// فيفتح التطبيق مباشرة على العالم الذي أعجبك.
+/// الترحيب — ثلاث لوحات مرسومة بلا صور، لكل عالم مشهده الحيّ:
+/// غروب المزارع، قوس القاعة وثرياها، وكوشة التزيين وبالوناتها.
+/// السحب يمزج ألوان العوالم لحظياً وطبقات المشهد تتحرك بعمق،
+/// والزر «ابدأ بالمزارع/القاعات/…» يفتح التطبيق على العالم المختار.
 /// ═══════════════════════════════════════════════════════════
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -24,61 +25,58 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 }
 
 class _Slide {
-  const _Slide(
-    this.world,
-    this.image,
-    this.kicker,
-    this.title,
-    this.body,
-    this.points,
-  );
+  const _Slide(this.world, this.kicker, this.title, this.body, this.points);
   final HomeSection world;
-  final String image;
   final String kicker;
   final String title;
   final String body;
   final List<(IconData, String)> points;
 }
 
-class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
+const _ink = Color(0xFF0F1B2D);
+const _ink2 = Color(0xFF5B6576);
+
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
+    with SingleTickerProviderStateMixin {
   final _controller = PageController();
+  late final AnimationController _clock = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 7),
+  )..repeat();
   double _page = 0;
 
   static const _slides = [
     _Slide(
       HomeSection.farm,
-      'https://images.unsplash.com/photo-1519972064555-542444e71b54?w=1080&q=80',
       'المزارع',
       'يومٌ كامل\nتحت الشمس',
       'مسابح وجلسات عائلية وإطلالات خضراء — احجز شفتك الصباحي أو المسائي في ثوانٍ.',
       [
-        (Icons.wb_sunny_outlined, 'صباحي أو مسائي'),
-        (Icons.pool_outlined, 'مسابح وألعاب'),
-        (Icons.family_restroom_outlined, 'للعائلات'),
+        (Icons.wb_sunny_rounded, 'صباحي أو مسائي'),
+        (Icons.pool_rounded, 'مسابح وألعاب'),
+        (Icons.family_restroom_rounded, 'للعائلات'),
       ],
     ),
     _Slide(
       HomeSection.hall,
-      'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=1080&q=80',
       'القاعات',
       'ليلة العمر\nتستحق قاعة',
       'قاعات أعراس ومناسبات بجولات 360° وفيديو حقيقي — شاهدها كأنك فيها قبل أن تحجز.',
       [
         (Icons.threesixty_rounded, 'جولات 360°'),
-        (Icons.groups_2_outlined, 'سعات كبيرة'),
-        (Icons.verified_outlined, 'أسعار واضحة'),
+        (Icons.groups_2_rounded, 'سعات كبيرة'),
+        (Icons.verified_rounded, 'أسعار واضحة'),
       ],
     ),
     _Slide(
       HomeSection.decoration,
-      'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1080&q=80',
       'التزيين',
       'تفاصيل\nتصنع الفرح',
       'كوش وورد وإضاءة — فرق تزيين محترفة تحوّل مناسبتك إلى لوحة لا تُنسى.',
       [
-        (Icons.local_florist_outlined, 'ورد وكوش'),
-        (Icons.light_outlined, 'إضاءة'),
-        (Icons.auto_awesome_outlined, 'تصاميم خاصة'),
+        (Icons.local_florist_rounded, 'ورد وكوش'),
+        (Icons.light_rounded, 'إضاءة'),
+        (Icons.auto_awesome_rounded, 'تصاميم خاصة'),
       ],
     ),
   ];
@@ -94,6 +92,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   void dispose() {
     _controller.dispose();
+    _clock.dispose();
     super.dispose();
   }
 
@@ -120,7 +119,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   void _next() {
     HapticFeedback.selectionClick();
     _controller.nextPage(
-      duration: const Duration(milliseconds: 520),
+      duration: const Duration(milliseconds: 560),
       curve: Curves.easeInOutCubicEmphasized,
     );
   }
@@ -130,44 +129,27 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final p = _palette;
     final slide = _slides[_index];
     final isLast = _index == _slides.length - 1;
-    final size = MediaQuery.sizeOf(context);
+    final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: overlayFor(darkBackground: true),
+      value: SystemUiOverlayStyle.dark.copyWith(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.white,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
       child: Scaffold(
-        backgroundColor: p.night,
+        backgroundColor: Colors.white,
         body: Stack(
           fit: StackFit.expand,
           children: [
-            // ── السماء الممزوجة لحظياً ──
+            // ── خلفية فاتحة بلمسة لون العالم ──
             DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    p.nightHigh,
-                    p.night,
-                    Color.lerp(p.night, Colors.black, .5)!,
-                  ],
-                  stops: const [0, .5, 1],
-                ),
-              ),
-            ),
-            Positioned(
-              top: -size.width * .4,
-              left: -size.width * .2,
-              child: Container(
-                width: size.width * 1.2,
-                height: size.width * 1.2,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      p.accentLight.withValues(alpha: .30),
-                      p.accent.withValues(alpha: 0),
-                    ],
-                  ),
+                  colors: [p.canvasTint, p.canvas, Colors.white],
+                  stops: const [0, .45, 1],
                 ),
               ),
             ),
@@ -175,37 +157,73 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             PageView.builder(
               controller: _controller,
               itemCount: _slides.length,
-              itemBuilder: (context, i) =>
-                  _SlideView(slide: _slides[i], offset: _page - i),
+              itemBuilder: (context, i) => AnimatedBuilder(
+                animation: _clock,
+                builder: (context, _) => _SlideView(
+                  slide: _slides[i],
+                  offset: _page - i,
+                  t: reduce ? 0 : _clock.value,
+                ),
+              ),
             ),
             // ── الرأس: الشعار + تخطٍّ ──
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 12, 0),
-                child: Row(
-                  children: [
-                    const VibesLogo.mark(size: 30, color: Colors.white),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'VIBEES',
-                      style: TextStyle(
-                        fontFamily: 'Montserrat',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 3,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const Spacer(),
-                    if (!isLast)
-                      TextButton(
-                        onPressed: () => _start(slide.world),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white.withValues(alpha: .8),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 16, 0),
+                  child: Row(
+                    children: [
+                      const VibesLogo.brand(size: 28),
+                      const SizedBox(width: 9),
+                      const Text(
+                        'VIBES',
+                        style: TextStyle(
+                          fontFamily: 'Montserrat',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 4,
+                          color: _ink,
                         ),
-                        child: const Text('تخطٍّ'),
                       ),
-                  ],
+                      const Spacer(),
+                      AnimatedOpacity(
+                        duration: const Duration(milliseconds: 250),
+                        opacity: isLast ? 0 : 1,
+                        child: IgnorePointer(
+                          ignoring: isLast,
+                          child: PressScale(
+                            onTap: () => _start(slide.world),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: const Color(0xFFE6E8EC),
+                                ),
+                              ),
+                              child: const Text(
+                                'تخطٍّ',
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: _ink2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -217,12 +235,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               child: SafeArea(
                 top: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 18),
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           for (var i = 0; i < _slides.length; i++)
                             Builder(
@@ -232,25 +249,47 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                   1.0,
                                 );
                                 return Container(
-                                  margin: const EdgeInsets.symmetric(
-                                    horizontal: 3,
+                                  margin: const EdgeInsetsDirectional.only(
+                                    end: 6,
                                   ),
                                   width: 8 + 22 * d,
-                                  height: 6,
+                                  height: 8,
                                   decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(3),
-                                    color: Color.lerp(
-                                      Colors.white.withValues(alpha: .25),
-                                      p.accentLight,
-                                      d,
-                                    ),
+                                    borderRadius: BorderRadius.circular(4),
+                                    gradient: d > .05
+                                        ? LinearGradient(
+                                            colors: [
+                                              Color.lerp(
+                                                const Color(0xFFDDE0E5),
+                                                p.accent,
+                                                d,
+                                              )!,
+                                              Color.lerp(
+                                                const Color(0xFFDDE0E5),
+                                                p.accentDeep,
+                                                d,
+                                              )!,
+                                            ],
+                                          )
+                                        : null,
+                                    color: const Color(0xFFDDE0E5),
                                   ),
                                 );
                               },
                             ),
+                          const Spacer(),
+                          Text(
+                            '${_index + 1} / ${_slides.length}',
+                            style: const TextStyle(
+                              fontFamily: 'Montserrat',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: _ink2,
+                            ),
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 22),
+                      const SizedBox(height: 16),
                       Row(
                         children: [
                           Expanded(
@@ -267,13 +306,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      Text(
+                      const Text(
                         'يمكنك التنقّل بين العوالم الثلاثة في أي وقت',
                         style: TextStyle(
                           fontFamily: 'Cairo',
                           fontSize: 11.5,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white.withValues(alpha: .55),
+                          color: _ink2,
                         ),
                       ),
                     ],
@@ -289,100 +328,69 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 }
 
 class _SlideView extends StatelessWidget {
-  const _SlideView({required this.slide, required this.offset});
+  const _SlideView({
+    required this.slide,
+    required this.offset,
+    required this.t,
+  });
 
   final _Slide slide;
 
   /// -1..1 — موضع اللوحة بالنسبة للمركز (للبارالاكس).
   final double offset;
 
+  /// زمن حلقي لحركة المشهد.
+  final double t;
+
   @override
   Widget build(BuildContext context) {
     final p = slide.world.palette;
     final size = MediaQuery.sizeOf(context);
     final visible = (1 - offset.abs()).clamp(0.0, 1.0);
-    final archH = size.height * .44;
+    final sceneH = (size.height * .4).clamp(240.0, 380.0);
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 64, 24, 150),
+        padding: const EdgeInsets.fromLTRB(20, 62, 20, 150),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── الصورة داخل قوس معماري ──
+            // ── المشهد المرسوم ──
             Transform.translate(
-              offset: Offset(offset * 40, 0),
-              child: SizedBox(
-                height: archH,
-                width: double.infinity,
-                child: ClipPath(
-                  clipper: const _ArchClipper(),
+              offset: Offset(offset * 30, 0),
+              child: Transform.scale(
+                scale: 1 - .06 * offset.abs(),
+                child: Container(
+                  height: sceneH,
+                  width: double.infinity,
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(34),
+                    boxShadow: [
+                      BoxShadow(
+                        color: p.glow.withValues(alpha: .28),
+                        blurRadius: 34,
+                        offset: const Offset(0, 16),
+                      ),
+                    ],
+                  ),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Transform.translate(
-                        offset: Offset(offset * -90, 0),
-                        child: Transform.scale(
-                          scale: 1.18,
-                          child: CachedNetworkImage(
-                            imageUrl: slide.image,
-                            fit: BoxFit.cover,
-                            fadeInDuration: const Duration(milliseconds: 300),
-                            placeholder: (_, __) =>
-                                ColoredBox(color: p.nightHigh),
-                            errorWidget: (_, __, ___) =>
-                                ColoredBox(color: p.nightHigh),
-                          ),
+                      RepaintBoundary(
+                        child: CustomPaint(
+                          painter: onboardingScene(slide.world, t, offset),
                         ),
                       ),
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              p.night.withValues(alpha: .55),
-                            ],
-                            stops: const [.55, 1],
-                          ),
-                        ),
-                      ),
-                      // شارة العالم أسفل القوس
-                      Positioned(
-                        bottom: 16,
-                        right: 16,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
+                      // إطار داخلي رفيع يمنح المشهد طابع اللوحة
+                      Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: DecoratedBox(
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: .16),
-                            borderRadius: BorderRadius.circular(999),
+                            borderRadius: BorderRadius.circular(26),
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: .35),
+                              color: Colors.white.withValues(alpha: .45),
                             ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              VibesCategoryIcon(
-                                category: slide.world.icon,
-                                size: 15,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                slide.kicker,
-                                style: const TextStyle(
-                                  fontFamily: 'Cairo',
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
                           ),
                         ),
                       ),
@@ -391,46 +399,90 @@ class _SlideView extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 26),
-            // ── العنوان والنص ──
+            const SizedBox(height: 24),
+            // ── شارة العالم ──
             Opacity(
               opacity: visible,
               child: Transform.translate(
-                offset: Offset(offset * 70, 0),
-                child: Text(
-                  slide.title,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 36,
-                    fontWeight: FontWeight.w900,
-                    height: 1.15,
-                    color: Colors.white,
+                offset: Offset(offset * 50, 0),
+                child: Container(
+                  padding: const EdgeInsetsDirectional.fromSTEB(6, 5, 12, 5),
+                  decoration: BoxDecoration(
+                    color: p.accent.withValues(alpha: .09),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 26,
+                        height: 26,
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: WorldGlyph(
+                          section: slide.world,
+                          size: 20,
+                          primary: p.accentDeep,
+                          secondary: p.accent,
+                        ),
+                      ),
+                      const SizedBox(width: 7),
+                      Text(
+                        slide.kicker,
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w900,
+                          color: p.accentDeep,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
+            Opacity(
+              opacity: visible,
+              child: Transform.translate(
+                offset: Offset(offset * 80, 0),
+                child: Text(
+                  slide.title,
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    height: 1.2,
+                    color: _ink,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
             Opacity(
               opacity: visible,
               child: Transform.translate(
                 offset: Offset(offset * 110, 0),
                 child: Text(
                   slide.body,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: 'Cairo',
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
                     height: 1.7,
-                    color: Colors.white.withValues(alpha: .76),
+                    color: _ink2,
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             Opacity(
               opacity: visible,
               child: Transform.translate(
-                offset: Offset(offset * 150, 0),
+                offset: Offset(offset * 140, 0),
                 child: Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -438,28 +490,26 @@ class _SlideView extends StatelessWidget {
                     for (final (icon, label) in slide.points)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
+                          horizontal: 11,
                           vertical: 7,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: .08),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: p.accentLight.withValues(alpha: .35),
-                          ),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFEDEEF1)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(icon, size: 15, color: p.accentLight),
+                            Icon(icon, size: 15, color: p.accentDeep),
                             const SizedBox(width: 6),
                             Text(
                               label,
                               style: const TextStyle(
                                 fontFamily: 'Cairo',
                                 fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                color: _ink,
                               ),
                             ),
                           ],
@@ -474,37 +524,6 @@ class _SlideView extends StatelessWidget {
       ),
     );
   }
-}
-
-/// قوس معماري — أعلى نصف دائري وجوانب مستقيمة وقاعدة بزوايا ناعمة.
-class _ArchClipper extends CustomClipper<Path> {
-  const _ArchClipper();
-
-  @override
-  Path getClip(Size size) {
-    final r = size.width / 2;
-    const base = 22.0;
-    final archTop = r.clamp(0.0, size.height * .6);
-    return Path()
-      ..moveTo(0, archTop)
-      ..arcToPoint(
-        Offset(size.width, archTop),
-        radius: Radius.elliptical(r, archTop),
-      )
-      ..lineTo(size.width, size.height - base)
-      ..quadraticBezierTo(
-        size.width,
-        size.height,
-        size.width - base,
-        size.height,
-      )
-      ..lineTo(base, size.height)
-      ..quadraticBezierTo(0, size.height, 0, size.height - base)
-      ..close();
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
 class _GlowButton extends StatelessWidget {
@@ -575,13 +594,20 @@ class _RoundNext extends StatelessWidget {
         height: 58,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: .1),
-          border: Border.all(color: Colors.white.withValues(alpha: .3)),
+          color: Colors.white,
+          border: Border.all(color: const Color(0xFFE6E8EC)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: .05),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: const Icon(
-          Icons.chevron_right_rounded,
-          color: Colors.white,
-          size: 28,
+          Icons.arrow_forward_rounded,
+          color: Color(0xFF0F1B2D),
+          size: 24,
         ),
       ),
     );

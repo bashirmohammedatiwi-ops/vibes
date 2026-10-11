@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="launch_midnight">#0F2138</color>
+    <!-- خلفية الإطلاق العاجية — تطابق شاشة الافتتاح فلا وميض -->
+    <color name="launch_midnight">#FFFDF9</color>
 </resources>

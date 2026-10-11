@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- خلفية إطلاق ليلية تطابق شاشة الافتتاح — بلا وميض أبيض -->
+<!-- خلفية إطلاق عاجية تطابق شاشة الافتتاح — بلا وميض -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/launch_midnight" />
 </layer-list>

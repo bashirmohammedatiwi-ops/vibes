@@ -86,7 +86,7 @@ extension HomeSectionX on HomeSection {
   };
 
   String get spotlightsSubtitle => switch (this) {
-    HomeSection.farm => 'ضيافة مختارة من فريق VIBEES',
+    HomeSection.farm => 'ضيافة مختارة من فريق VIBES',
     HomeSection.hall => 'قاعات ليلة لا تُنسى',
     HomeSection.decoration => 'لمسات جاهزة لمناسبتك',
   };

@@ -585,7 +585,7 @@ class _MemberCard extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'عضو VIBEES',
+                            'عضو VIBES',
                             style: TextStyle(
                               fontFamily: 'Cairo',
                               fontSize: 11.5,

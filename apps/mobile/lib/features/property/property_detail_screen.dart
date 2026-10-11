@@ -706,7 +706,7 @@ class _TitleBlock extends StatelessWidget {
                   ),
                   if (p.featured)
                     _Tag(
-                      label: 'مختار من VIBEES',
+                      label: 'مختار من VIBES',
                       leading: Icon(
                         Icons.workspace_premium_rounded,
                         size: 14,
@@ -2594,7 +2594,7 @@ class _ReviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final world = context.world;
     final name = (review.userName ?? '').trim().isEmpty
-        ? 'ضيف VIBEES'
+        ? 'ضيف VIBES'
         : review.userName!.trim();
     final date = review.createdAt;
     return Container(

@@ -245,7 +245,7 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const EditorialEyebrow(
-                        label: 'ضيوف VIBEES',
+                        label: 'ضيوف VIBES',
                         accent: Vibes.coral,
                       ),
                       const SizedBox(height: 6),

@@ -305,7 +305,7 @@ class SectionHeader extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'VIBEES',
+                            'VIBES',
                             style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(
                                   color: bar,

@@ -221,7 +221,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   String get _kicker => switch (_phase) {
-    _PinPhase.phone => 'VIBEES',
+    _PinPhase.phone => 'VIBES',
     _PinPhase.create => 'خطوة ١ من ٢',
     _PinPhase.confirm => 'خطوة ٢ من ٢',
     _PinPhase.unlock => 'مرحباً بعودتك',
