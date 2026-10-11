@@ -16,6 +16,9 @@ async function bootstrap() {
     bufferLogs: true,
   });
   app.useLogger(app.get(Logger));
+  // خلف nginx: عنوان المستخدم الحقيقي من X-Forwarded-For — بدونه يرى الخادم
+  // كل المستخدمين بعنوان واحد فتتشارك حدود الطلبات (Throttler) بينهم جميعاً.
+  app.set('trust proxy', 1);
 
   const mediaRoot = process.env.MEDIA_ROOT ?? join(process.cwd(), 'uploads');
   if (!existsSync(mediaRoot)) {

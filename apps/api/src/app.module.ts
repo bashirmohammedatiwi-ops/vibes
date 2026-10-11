@@ -57,7 +57,8 @@ import { RedisModule } from './redis/redis.module';
         },
       }),
     }),
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    // لكل عنوان: شبكات الجوال (CGNAT) تجمع مستخدمين كثيرين خلف عنوان واحد
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 600 }]),
     ScheduleModule.forRoot(),
     PrismaModule,
     RedisModule,

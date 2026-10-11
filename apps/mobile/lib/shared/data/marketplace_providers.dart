@@ -7,6 +7,7 @@ import '../models/models.dart';
 final notificationsProvider = FutureProvider<List<AppNotification>>((
   ref,
 ) async {
+  if (!ref.watch(authControllerProvider).loggedIn) return const [];
   final client = ref.watch(apiClientProvider);
   final data = await client.get(
     '/api/notifications',
@@ -23,6 +24,7 @@ final notificationsProvider = FutureProvider<List<AppNotification>>((
 final conversationsProvider = FutureProvider<List<ConversationSummary>>((
   ref,
 ) async {
+  if (!ref.watch(authControllerProvider).loggedIn) return const [];
   final client = ref.watch(apiClientProvider);
   final data = await client.get('/api/conversations');
   return (data as List<dynamic>)
@@ -53,6 +55,7 @@ final chatMessagesProvider = FutureProvider.family<List<ChatMessage>, String>((
 });
 
 final offersProvider = FutureProvider<List<PriceOfferItem>>((ref) async {
+  if (!ref.watch(authControllerProvider).loggedIn) return const [];
   final client = ref.watch(apiClientProvider);
   final data = await client.get('/api/offers');
   return (data as List<dynamic>)
@@ -101,6 +104,7 @@ final followStatusProvider =
     });
 
 final conversationsUnreadProvider = FutureProvider<int>((ref) async {
+  if (!ref.watch(authControllerProvider).loggedIn) return 0;
   try {
     final data = await ref
         .watch(apiClientProvider)
@@ -113,6 +117,7 @@ final conversationsUnreadProvider = FutureProvider<int>((ref) async {
 });
 
 final notificationsUnreadProvider = FutureProvider<int>((ref) async {
+  if (!ref.watch(authControllerProvider).loggedIn) return 0;
   try {
     final data = await ref
         .watch(apiClientProvider)

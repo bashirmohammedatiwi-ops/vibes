@@ -92,6 +92,8 @@ class IncomingCallNotifier extends Notifier<IncomingCall?> {
 
   Future<void> _poll() async {
     if (_busy || !isAppResumed) return;
+    // ضيف أو جلسة منتهية — لا طلبات محمية (كانت تولّد 401 متكرراً)
+    if (!ref.read(authControllerProvider).loggedIn) return;
     _busy = true;
     try {
       final data = await ref.read(apiClientProvider).get('/api/calls/incoming');

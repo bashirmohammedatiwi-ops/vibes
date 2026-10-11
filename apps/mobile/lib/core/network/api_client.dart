@@ -138,9 +138,23 @@ class ApiClient {
   Future<_RefreshResult> _coordinatedRefresh() {
     final running = _refreshFuture;
     if (running != null) return running;
-    final f = _performRefresh().whenComplete(() => _refreshFuture = null);
+    final f = _refreshWithRetry().whenComplete(() => _refreshFuture = null);
     _refreshFuture = f;
     return f;
+  }
+
+  /// انقطاع لحظي أثناء التجديد لا يعني انتهاء الجلسة — نعيد المحاولة مرتين.
+  Future<_RefreshResult> _refreshWithRetry() async {
+    var result = await _performRefresh();
+    for (final wait in const [
+      Duration(milliseconds: 800),
+      Duration(seconds: 2),
+    ]) {
+      if (result != _RefreshResult.offline) break;
+      await Future<void>.delayed(wait);
+      result = await _performRefresh();
+    }
+    return result;
   }
 
   Future<_RefreshResult> _performRefresh() async {
@@ -207,6 +221,10 @@ class ApiClient {
 
   String _extractMessage(Response response) {
     final data = response.data;
+    // 401 لا يُعرض بنص الخادم («Unauthorized») — رسالة عربية واضحة
+    if (response.statusCode == 401) {
+      return 'انتهت الجلسة — سجّل الدخول من جديد';
+    }
     if (data is Map<String, dynamic>) {
       final message = data['message'];
       if (message is List && message.isNotEmpty) {
