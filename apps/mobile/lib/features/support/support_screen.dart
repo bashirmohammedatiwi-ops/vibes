@@ -27,19 +27,19 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
   static const _faq = [
     (
       'كيف أحجز مكاناً؟',
-      'اختر المكان ثم التاريخ والوقت المناسب واضغط تأكيد الحجز — سيتواصل معك المالك لتأكيد التفاصيل والدفع.'
+      'اختر المكان ثم التاريخ والوقت المناسب واضغط تأكيد الحجز — سيتواصل معك المالك لتأكيد التفاصيل والدفع.',
     ),
     (
       'ما طرق الدفع المتاحة؟',
-      'التحويل البنكي أو محافظ Zain Cash وQi Card — ارفع صورة الإيصال من صفحة الحجز بعد الدفع.'
+      'التحويل البنكي أو محافظ Zain Cash وQi Card — ارفع صورة الإيصال من صفحة الحجز بعد الدفع.',
     ),
     (
       'هل يمكنني إلغاء حجزي؟',
-      'قبل تأكيد المالك يمكنك الإلغاء مباشرة من صفحة الحجز. بعد التأكيد أرسل طلب إلغاء واسترداد من التفاصيل، وسيُحسب المبلغ وفق سياسة الإلغاء.'
+      'قبل تأكيد المالك يمكنك الإلغاء مباشرة من صفحة الحجز. بعد التأكيد أرسل طلب إلغاء واسترداد من التفاصيل، وسيُحسب المبلغ وفق سياسة الإلغاء.',
     ),
     (
-      'كيف أصبح مالكاً (مزوّداً)؟',
-      'سجّل برقم هاتفك ثم راسلنا على واتساب لتفعيل حساب المالك ورفع أماكنك.'
+      'أملك مزرعة أو قاعة، كيف أُديرها؟',
+      'راسل الدعم من التطبيق باسم المكان. بعد التأكد من الملكية يربط الفريق المكان بحسابك، وتظهر حجوزاته في بوابة أماكني.',
     ),
   ];
 
@@ -84,17 +84,14 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                 children: [
                   const SectionHeader('الأسئلة الشائعة'),
                   ..._faq.asMap().entries.map(
-                        (entry) => _FaqRow(
-                          question: entry.value.$1,
-                          answer: entry.value.$2,
-                        ),
-                      ),
+                    (entry) => _FaqRow(
+                      question: entry.value.$1,
+                      answer: entry.value.$2,
+                    ),
+                  ),
                   if (instructions.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    _FaqRow(
-                      question: 'كيف أدفع حجزي؟',
-                      answer: instructions,
-                    ),
+                    _FaqRow(question: 'كيف أدفع حجزي؟', answer: instructions),
                   ],
                   const SizedBox(height: 22),
                   const SectionHeader('تواصل معنا'),
@@ -108,14 +105,20 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                           color: Vibes.coral,
                           onTap: () => openSupportChat(context, ref),
                         ),
-                        Divider(height: 1, color: VibesTheme.hairlineOf(context)),
+                        Divider(
+                          height: 1,
+                          color: VibesTheme.hairlineOf(context),
+                        ),
                         _ContactRow(
                           icon: Icons.chat_bubble_outline_rounded,
                           label: 'واتساب — الأسرع رداً',
                           color: Vibes.teal,
                           onTap: () => _launch('https://wa.me/$phone'),
                         ),
-                        Divider(height: 1, color: VibesTheme.hairlineOf(context)),
+                        Divider(
+                          height: 1,
+                          color: VibesTheme.hairlineOf(context),
+                        ),
                         _ContactRow(
                           icon: Icons.call_outlined,
                           label: 'اتصال هاتفي',
@@ -131,91 +134,93 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                     child: Text(
                       _diagnostics ? 'إخفاء التفاصيل التقنية' : 'تفاصيل تقنية',
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: Vibes.inkTertiary,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        color: Vibes.inkTertiary,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   if (_diagnostics) ...[
-                  const SizedBox(height: 10),
-                  FolioPanel(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                    const SizedBox(height: 10),
+                    FolioPanel(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Text(
-                                _deviceId.isEmpty ? 'جاري التجهيز…' : _deviceId,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: VibesTheme.textTertiaryOf(context),
-                                      fontFeatures: const [
-                                        FontFeature.tabularFigures()
-                                      ],
-                                    ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    _deviceId.isEmpty
+                                        ? 'جاري التجهيز…'
+                                        : _deviceId,
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: VibesTheme.textTertiaryOf(
+                                            context,
+                                          ),
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
+                                        ),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: _deviceId.isEmpty
+                                      ? null
+                                      : () {
+                                          Clipboard.setData(
+                                            ClipboardData(text: _deviceId),
+                                          );
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('تم النسخ'),
+                                            ),
+                                          );
+                                        },
+                                  child: const Text('نسخ'),
+                                ),
+                              ],
+                            ),
+                            if (errors.isEmpty)
+                              Text(
+                                'لا أخطاء مسجلة — التطبيق يعمل بسلام',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: Vibes.success),
+                              )
+                            else ...[
+                              Text(
+                                'آخر الأخطاء (لإرسالها للفريق):',
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(fontWeight: FontWeight.w700),
                               ),
-                            ),
-                            TextButton(
-                              onPressed: _deviceId.isEmpty
-                                  ? null
-                                  : () {
-                                      Clipboard.setData(
-                                          ClipboardData(text: _deviceId));
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                            content: Text('تم النسخ')),
-                                      );
-                                    },
-                              child: const Text('نسخ'),
-                            ),
+                              const SizedBox(height: 6),
+                              ...errors
+                                  .take(3)
+                                  .map(
+                                    (e) => Text(
+                                      e,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: VibesTheme.textTertiaryOf(
+                                              context,
+                                            ),
+                                            fontFamily: 'monospace',
+                                            fontSize: 10,
+                                          ),
+                                    ),
+                                  ),
+                            ],
                           ],
                         ),
-                        if (errors.isEmpty)
-                          Text(
-                            'لا أخطاء مسجلة — التطبيق يعمل بسلام',
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Vibes.success,
-                                    ),
-                          )
-                        else ...[
-                          Text(
-                            'آخر الأخطاء (لإرسالها للفريق):',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                          const SizedBox(height: 6),
-                          ...errors.take(3).map(
-                                (e) => Text(
-                                  e,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .labelSmall
-                                      ?.copyWith(
-                                        color:
-                                            VibesTheme.textTertiaryOf(context),
-                                        fontFamily: 'monospace',
-                                        fontSize: 10,
-                                      ),
-                                ),
-                              ),
-                        ],
-                      ],
+                      ),
                     ),
-                    ),
-                  ),
                   ],
                 ],
               ),
@@ -244,14 +249,18 @@ class _FaqRow extends StatelessWidget {
         collapsedIconColor: VibesTheme.textTertiaryOf(context),
         title: Row(
           children: [
-            const SizedBox(width: 3, height: 16, child: ColoredBox(color: Vibes.teal)),
+            const SizedBox(
+              width: 3,
+              height: 16,
+              child: ColoredBox(color: Vibes.teal),
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 question,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -262,9 +271,9 @@ class _FaqRow extends StatelessWidget {
             child: Text(
               answer,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    height: 1.8,
-                    color: VibesTheme.textSecondaryOf(context),
-                  ),
+                height: 1.8,
+                color: VibesTheme.textSecondaryOf(context),
+              ),
             ),
           ),
         ],
@@ -299,9 +308,9 @@ class _ContactRow extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
               ),
             ),
             Icon(

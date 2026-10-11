@@ -29,11 +29,16 @@ export class AdminOpsService {
     const { page, pageSize, skip, take } = this.pagination.parse(query.page, query.pageSize);
     const where: Prisma.ConversationWhereInput = {};
     if (query.kind) where.kind = query.kind as never;
+    if (query.status) where.status = query.status as never;
+    if (query.priority) where.priority = query.priority as never;
+    if (query.assignedToId) where.assignedToId = query.assignedToId;
     if (query.q) {
       where.OR = [
         { booking: { property: { name: { contains: query.q, mode: 'insensitive' } } } },
         { booking: { user: { phone: { contains: query.q } } } },
         { booking: { user: { name: { contains: query.q, mode: 'insensitive' } } } },
+        { participants: { some: { user: { phone: { contains: query.q } } } } },
+        { messages: { some: { body: { contains: query.q, mode: 'insensitive' } } } },
       ];
     }
     const [items, total] = await Promise.all([
@@ -48,17 +53,81 @@ export class AdminOpsService {
               user: { select: { name: true, phone: true } },
             },
           },
-          participants: { include: { user: { select: { name: true, phone: true, role: true } } } },
+          participants: { include: { user: { select: { id: true, name: true, phone: true, role: true } } } },
+          assignedTo: { select: { id: true, name: true } },
+          property: { select: { name: true } },
+          guest: { select: { id: true, name: true, phone: true } },
           _count: { select: { messages: true } },
           messages: { orderBy: { createdAt: 'desc' }, take: 1 },
         },
-        orderBy: { updatedAt: 'desc' },
+        orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
         skip,
         take,
       }),
       this.prisma.conversation.count({ where }),
     ]);
     return this.pagination.wrap(items, total, page, pageSize);
+  }
+
+  /// تحديث حالة/إسناد/أولوية محادثة — من لوحة الفريق أو تطبيق الموظفين
+  async updateConversationOps(
+    id: string,
+    dto: {
+      status?: string;
+      priority?: string;
+      assignedToId?: string | null;
+      staffNote?: string;
+    },
+  ) {
+    const conversation = await this.prisma.conversation.findUnique({ where: { id } });
+    if (!conversation) throw new NotFoundException('المحادثة غير موجودة');
+    if (dto.assignedToId) {
+      const assignee = await this.prisma.user.findUnique({
+        where: { id: dto.assignedToId },
+        select: { role: true },
+      });
+      if (!assignee || (assignee.role !== 'ADMIN' && assignee.role !== 'STAFF')) {
+        throw new BadRequestException('المسنِد له يجب أن يكون من الفريق');
+      }
+    }
+    return this.prisma.conversation.update({
+      where: { id },
+      data: {
+        ...(dto.status ? { status: dto.status as never } : {}),
+        ...(dto.priority ? { priority: dto.priority as never } : {}),
+        ...(dto.assignedToId !== undefined ? { assignedToId: dto.assignedToId } : {}),
+        ...(dto.staffNote !== undefined ? { staffNote: dto.staffNote } : {}),
+      },
+      include: { assignedTo: { select: { id: true, name: true } } },
+    });
+  }
+
+  /// سجل مكالمات محادثة — للوحة الفريق
+  async conversationCalls(id: string) {
+    return this.prisma.callSession.findMany({
+      where: { conversationId: id },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        startedAt: true,
+        endedAt: true,
+        caller: { select: { name: true, phone: true } },
+        callee: { select: { name: true, phone: true } },
+      },
+    });
+  }
+
+  /// زملاء الفريق القابلون للإسناد
+  async staffMembers() {
+    return this.prisma.user.findMany({
+      where: { role: { in: ['ADMIN', 'STAFF'] } },
+      select: { id: true, name: true, phone: true, role: true },
+      orderBy: { name: 'asc' },
+      take: 50,
+    });
   }
 
   async conversationMessages(id: string, query: Record<string, string | undefined>) {

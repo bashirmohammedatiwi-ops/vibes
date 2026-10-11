@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { MAPBOX_TILE_OPTIONS, mapboxTileUrl } from "@/lib/mapbox";
 
 type MapProperty = {
   id: string;
@@ -37,10 +38,7 @@ export function PropertiesMap({
         : ([33.3152, 44.3661] as [number, number]);
 
       const map = L.map(containerRef.current, { center, zoom: properties.length ? 7 : 6 });
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap",
-        maxZoom: 19,
-      }).addTo(map);
+      L.tileLayer(mapboxTileUrl(), MAPBOX_TILE_OPTIONS).addTo(map);
 
       mapRef.current = map;
     }

@@ -28,6 +28,23 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // أداء وحجم: معالجات ARM64 الحديثة فقط — يستبعد x86/armeabi
+        // (يخفض APK من ~190MB إلى ~90MB بلا أي تأثير على الهواتف الحقيقية)
+        ndk {
+            abiFilters.clear()
+            abiFilters.add("arm64-v8a")
+        }
+    }
+
+    // استبعاد مكتبات المعالجات غير المستخدمة من حزم AAR (Mapbox/WebRTC/Rive)
+    packaging {
+        jniLibs {
+            excludes += listOf(
+                "lib/x86/**",
+                "lib/x86_64/**",
+                "lib/armeabi-v7a/**",
+            )
+        }
     }
 
     buildTypes {

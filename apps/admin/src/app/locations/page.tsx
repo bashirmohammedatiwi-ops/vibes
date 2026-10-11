@@ -11,7 +11,8 @@ import { PageShell } from "@/components/page-shell";
 import { PageToolbar } from "@/components/ui/page-toolbar";
 import { AdminOnly } from "@/components/admin-only";
 import { useToast } from "@/components/ui/toast";
-import { api, isAdmin } from "@/lib/api";
+import { SimpleUpload } from "@/components/simple-upload";
+import { api, isAdmin, uploadFiles } from "@/lib/api";
 import type { Province } from "@/lib/types";
 
 function slugify(text: string) {
@@ -36,6 +37,7 @@ export default function LocationsPage() {
   const [renameTarget, setRenameTarget] = useState<{ type: "province" | "city"; id: string; name: string } | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [q, setQ] = useState("");
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   async function load() {
     setProvinces(await api<Province[]>("/api/admin/locations/provinces"));
@@ -82,6 +84,27 @@ export default function LocationsPage() {
       toast(err instanceof Error ? err.message : "تعذر الإضافة", "error");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function uploadProvinceImage(province: Province, file: File) {
+    setUploadingId(province.id);
+    try {
+      const media = await uploadFiles<{ url: string }>("/api/media/upload", "file", [file]);
+      await api(`/api/admin/locations/provinces/${province.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          nameAr: province.nameAr,
+          nameEn: province.nameAr,
+          imageUrl: media.url,
+        }),
+      });
+      toast("تم حفظ صورة المحافظة");
+      await load();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "تعذر رفع الصورة", "error");
+    } finally {
+      setUploadingId(null);
     }
   }
 
@@ -218,6 +241,23 @@ export default function LocationsPage() {
                   )}
                 </div>
                 <div className="mt-1 text-xs text-muted">{p.cities.length} مدينة</div>
+                {admin && (
+                  <div className="mt-3">
+                    <SimpleUpload
+                      label={p.imageUrl ? "تغيير صورة المحافظة" : "رفع صورة المحافظة"}
+                      hint="تظهر في الصفحة الرئيسية"
+                      uploading={uploadingId === p.id}
+                      previewUrl={p.imageUrl}
+                      onFiles={(files) => {
+                        const file = files[0];
+                        if (file) void uploadProvinceImage(p, file);
+                      }}
+                    />
+                  </div>
+                )}
+                {!admin && p.imageUrl && (
+                  <img src={p.imageUrl} alt={p.nameAr} className="mt-3 h-24 w-full rounded-xl object-cover" />
+                )}
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {p.cities.map((c) => (
                     <span key={c.id} className="city-tag">

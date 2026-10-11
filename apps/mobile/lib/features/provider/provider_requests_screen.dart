@@ -7,6 +7,9 @@ import '../../core/theme/app_theme.dart';
 import '../../shared/data/marketplace_providers.dart';
 import '../../shared/widgets/maison_chrome.dart';
 import '../../shared/widgets/vibes_widgets.dart';
+import '../../shared/widgets/world_ui.dart';
+import '../../core/theme/world_theme.dart';
+import 'provider_ui.dart';
 
 class ProviderRequestsScreen extends ConsumerWidget {
   const ProviderRequestsScreen({super.key});
@@ -40,7 +43,7 @@ class ProviderRequestsScreen extends ConsumerWidget {
         context: context,
         title: 'الموافقة على الإلغاء',
         message:
-            'سيُلغى الحجز فوراً. إن وُجد دفع مؤكد يبقى الاسترداد المالي لمراجعة فريق VIBEES.',
+            'سيُلغى الحجز فوراً. إن وُجد دفع مؤكد يبقى الاسترداد المالي لمراجعة فريق VIBES.',
         confirmLabel: 'موافقة',
         cancelLabel: 'تراجع',
       );
@@ -70,7 +73,9 @@ class ProviderRequestsScreen extends ConsumerWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(maisonError(e))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(maisonError(e))));
     }
   }
 
@@ -78,7 +83,8 @@ class ProviderRequestsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final requests = ref.watch(bookingRequestsProvider);
     return Scaffold(
-      body: MaisonWash(
+      backgroundColor: WorldPalette.owner.canvas,
+      body: OwnerPortalCanvas(
         child: Column(
           children: [
             MaisonPageHeader(
@@ -90,11 +96,11 @@ class ProviderRequestsScreen extends ConsumerWidget {
                 loading: () => ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
                   children: const [
-                    ShimmerBox(height: 110, radius: VibesRadius.lg),
+                    WorldSkeleton(height: 110, radius: 20),
                     SizedBox(height: 10),
-                    ShimmerBox(height: 110, radius: VibesRadius.lg),
+                    WorldSkeleton(height: 110, radius: 20),
                     SizedBox(height: 10),
-                    ShimmerBox(height: 110, radius: VibesRadius.lg),
+                    WorldSkeleton(height: 110, radius: 20),
                   ],
                 ),
                 error: (e, _) => ErrorCanvas(
@@ -109,7 +115,7 @@ class ProviderRequestsScreen extends ConsumerWidget {
                     ...value.refunds.map((row) => (kind: 'استرداد', row: row)),
                   ];
                   if (items.isEmpty) {
-                    return const EmptyCanvas(
+                    return const WorldEmpty(
                       icon: Icons.assignment_outlined,
                       title: 'لا طلبات معلّقة',
                       subtitle:
@@ -117,7 +123,7 @@ class ProviderRequestsScreen extends ConsumerWidget {
                     );
                   }
                   return RefreshIndicator(
-                    color: Vibes.coral,
+                    color: ownerNavy,
                     onRefresh: () async =>
                         ref.invalidate(bookingRequestsProvider),
                     child: ListView.separated(
@@ -231,7 +237,7 @@ class ProviderRequestsScreen extends ConsumerWidget {
                               ] else if (!isCancel && pending) ...[
                                 const SizedBox(height: 8),
                                 Text(
-                                  'الاسترداد المالي يراجعه فريق VIBEES',
+                                  'الاسترداد المالي يراجعه فريق VIBES',
                                   style: Theme.of(context).textTheme.labelSmall,
                                 ),
                               ],

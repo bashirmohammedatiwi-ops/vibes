@@ -13,6 +13,7 @@ import '../features/booking/booking_detail_screen.dart';
 import '../features/booking/booking_invoice_screen.dart';
 import '../features/booking/bookings_screen.dart';
 import '../features/discovery/reels_screen.dart';
+import '../features/provider/provider_ui.dart' show OwnerTheme;
 import '../features/home/home_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/property/property_detail_screen.dart';
@@ -32,12 +33,15 @@ import '../features/booking/invoices_screen.dart';
 import '../features/map/map_screen.dart';
 import '../features/compare/compare_feature.dart';
 import '../features/provider/provider_shell.dart';
-import '../features/provider/provider_add_property_screen.dart';
+import '../features/provider/provider_booking_detail_screen.dart';
+import '../features/provider/provider_account_screen.dart';
 import '../features/provider/provider_requests_screen.dart';
 import '../features/provider/provider_profile_screen.dart';
 import '../features/provider/owner_gate_screen.dart';
 import '../features/concierge/nadeem_screen.dart';
 import '../shared/widgets/app_shell.dart';
+import '../shared/widgets/property_world_theme.dart';
+import '../core/app_mode/app_mode_controller.dart';
 
 /// التصفح الحر. الدخول يُطلب عند إتمام الحجز أو من الملف، أو للمسارات الخاصة.
 bool _guestPath(String location) {
@@ -70,6 +74,7 @@ bool _guestPath(String location) {
 }
 
 /// انتقالات موحدة: قياسي fade+slide، تفاصيل hero+fade
+/// (مدد قصيرة محسّنة: استجابة فورية مع بقاء الإحساس الفاخر)
 CustomTransitionPage<T> _fadeSlide<T>({
   required Widget child,
   required GoRouterState state,
@@ -77,11 +82,14 @@ CustomTransitionPage<T> _fadeSlide<T>({
   return CustomTransitionPage<T>(
     key: state.pageKey,
     child: child,
-    transitionDuration: VibesMotion.slow,
-    reverseTransitionDuration: VibesMotion.base,
+    transitionDuration: const Duration(milliseconds: 220),
+    reverseTransitionDuration: const Duration(milliseconds: 160),
     transitionsBuilder: (context, animation, secondary, child) =>
         FadeTransition(
-          opacity: CurvedAnimation(parent: animation, curve: VibesMotion.curve),
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          ),
           child: SlideTransition(
             position:
                 Tween<Offset>(
@@ -100,6 +108,7 @@ CustomTransitionPage<T> _fadeSlide<T>({
 final appRouterProvider = Provider<GoRouter>((ref) {
   // متابعة حالة المصادقة لإعادة التوجيه تلقائياً
   ref.listen<AuthState>(authControllerProvider, (_, __) {});
+  ref.listen<AppExperienceMode>(appModeProvider, (_, __) {});
 
   return GoRouter(
     initialLocation: '/',
@@ -118,10 +127,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (location == '/login' || location == '/onboarding') {
-        return auth.isProvider ? '/provider' : '/home';
+        if (!auth.isProvider) return '/home';
+        return providerBrowsingAsGuestFromRef(ref) ? '/home' : '/provider';
       }
 
-      // المزوّد يعيش في نافذته — إلا المسارات المشتركة
+      final browsingAsGuest =
+          auth.isProvider && providerBrowsingAsGuestFromRef(ref);
+
+      // المزوّد في وضع الضيف — يتصفح التطبيق العادي بحرية
+      if (browsingAsGuest) {
+        const guestShell = ['/home', '/explore', '/bookings', '/profile'];
+        if (location.startsWith('/provider')) {
+          return guestShell.contains(location) ? null : '/home';
+        }
+        if (location.startsWith('/owner')) {
+          return '/home';
+        }
+        return null;
+      }
+
+      // المزوّد في بوابة المالك — المسارات المشتركة فقط خارج /provider
       const sharedWithProvider = [
         '/property',
         '/book',
@@ -138,6 +163,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         '/providers',
         '/experiences',
         '/nadeem',
+        '/support',
+        '/search',
+        '/map',
+        '/compare',
+        '/favorites',
       ];
       if (auth.isProvider && location.startsWith('/owner')) {
         return '/provider';
@@ -217,14 +247,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/property/:id',
-        builder: (context, state) =>
-            PropertyDetailScreen(id: state.pathParameters['id']!),
+        builder: (context, state) => PropertyWorldTheme(
+          propertyId: state.pathParameters['id']!,
+          child: PropertyDetailScreen(id: state.pathParameters['id']!),
+        ),
       ),
       GoRoute(
         path: '/book/:id',
-        builder: (context, state) => BookingFlowScreen(
+        builder: (context, state) => PropertyWorldTheme(
           propertyId: state.pathParameters['id']!,
-          initialDate: state.uri.queryParameters['date'],
+          child: BookingFlowScreen(
+            propertyId: state.pathParameters['id']!,
+            initialDate: state.uri.queryParameters['date'],
+            initialShift: state.uri.queryParameters['shift'],
+          ),
         ),
       ),
       GoRoute(
@@ -270,6 +306,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           child: ChatScreen(
             conversationId: state.pathParameters['id']!,
             incomingCallId: state.uri.queryParameters['call'],
+            payHintBookingId: state.uri.queryParameters['pay'],
           ),
         ),
       ),
@@ -333,9 +370,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/providers/:id',
         pageBuilder: (context, state) => _fadeSlide(
           state: state,
-          child: ProviderProfileScreen(
-            providerId: state.pathParameters['id']!,
-          ),
+          child: ProviderProfileScreen(providerId: state.pathParameters['id']!),
         ),
       ),
       GoRoute(
@@ -345,8 +380,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/map',
-        pageBuilder: (context, state) =>
-            _fadeSlide(state: state, child: const MapScreen()),
+        pageBuilder: (context, state) => _fadeSlide(
+          state: state,
+          child: MapScreen(
+            initialType: state.uri.queryParameters['type'],
+            initialPropertyId: state.uri.queryParameters['id'],
+          ),
+        ),
       ),
       GoRoute(
         path: '/compare',
@@ -355,8 +395,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/owner',
-        pageBuilder: (context, state) =>
-            _fadeSlide(state: state, child: const OwnerGateScreen()),
+        pageBuilder: (context, state) => _fadeSlide(
+          state: state,
+          child: const OwnerTheme(child: OwnerGateScreen()),
+        ),
       ),
 
       // نافذة المزوّد
@@ -398,34 +440,55 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(
+        path: '/provider/account',
+        pageBuilder: (context, state) => _fadeSlide(
+          state: state,
+          child: const OwnerTheme(child: ProviderAccountScreen()),
+        ),
+      ),
+      GoRoute(
+        path: '/provider/bookings/:id',
+        pageBuilder: (context, state) => _fadeSlide(
+          state: state,
+          child: OwnerTheme(
+            child: ProviderBookingDetailScreen(
+              bookingId: state.pathParameters['id']!,
+            ),
+          ),
+        ),
+      ),
+      GoRoute(
         path: '/provider/earnings',
-        builder: (context, state) => const ProviderEarningsScreen(),
+        builder: (context, state) =>
+            const OwnerTheme(child: ProviderEarningsScreen()),
       ),
       GoRoute(
         path: '/provider/requests',
         pageBuilder: (context, state) => _fadeSlide(
           state: state,
-          child: const ProviderRequestsScreen(),
+          child: const OwnerTheme(child: ProviderRequestsScreen()),
+        ),
+      ),
+      GoRoute(path: '/provider/properties/new', redirect: (_, __) => '/owner'),
+      GoRoute(
+        path: '/provider/properties/:id/pricing',
+        builder: (context, state) => OwnerTheme(
+          child: ProviderPricingScreen(propertyId: state.pathParameters['id']!),
         ),
       ),
       GoRoute(
-        path: '/provider/properties/new',
-        builder: (context, state) => const ProviderAddPropertyScreen(),
-      ),
-      GoRoute(
-        path: '/provider/properties/:id/pricing',
-        builder: (context, state) =>
-            ProviderPricingScreen(propertyId: state.pathParameters['id']!),
-      ),
-      GoRoute(
         path: '/provider/properties/:id/media',
-        builder: (context, state) =>
-            ProviderMediaScreen(propertyId: state.pathParameters['id']!),
+        builder: (context, state) => OwnerTheme(
+          child: ProviderMediaScreen(propertyId: state.pathParameters['id']!),
+        ),
       ),
       GoRoute(
         path: '/provider/properties/:id/availability',
-        builder: (context, state) =>
-            ProviderAvailabilityScreen(propertyId: state.pathParameters['id']!),
+        builder: (context, state) => OwnerTheme(
+          child: ProviderAvailabilityScreen(
+            propertyId: state.pathParameters['id']!,
+          ),
+        ),
       ),
     ],
   );

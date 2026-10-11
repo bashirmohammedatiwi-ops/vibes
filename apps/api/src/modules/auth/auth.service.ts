@@ -18,6 +18,9 @@ interface RequestMeta {
   userAgent?: string;
 }
 
+/** How long a just-rotated refresh token may still be exchanged (concurrent refreshes). */
+const REFRESH_ROTATION_GRACE_MS = 60_000;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -160,8 +163,24 @@ export class AuthService {
 
     const tokenHash = this.hashToken(refreshToken);
     const stored = await this.prisma.refreshToken.findUnique({ where: { tokenHash } });
-    if (!stored || stored.revokedAt || stored.expiresAt < new Date() || stored.userId !== payload.sub) {
+    if (!stored || stored.userId !== payload.sub) {
       throw new UnauthorizedException('رمز التحديث غير صالح أو تم إلغاؤه');
+    }
+
+    const now = Date.now();
+    if (stored.revokedAt) {
+      // Rotation grace: a mobile client often fires several requests at once
+      // when its access token expires, and they may all present the same
+      // refresh token. A token rotated moments ago (expiresAt is pulled in to
+      // revokedAt + grace on rotation; logout leaves it untouched) may be
+      // reused inside that window instead of logging the user out.
+      const revokedAt = stored.revokedAt.getTime();
+      const rotated = stored.expiresAt.getTime() - revokedAt <= REFRESH_ROTATION_GRACE_MS + 1000;
+      if (!rotated || now - revokedAt > REFRESH_ROTATION_GRACE_MS) {
+        throw new UnauthorizedException('رمز التحديث غير صالح أو تم إلغاؤه');
+      }
+    } else if (stored.expiresAt.getTime() < now) {
+      throw new UnauthorizedException('رمز التحديث منتهي');
     }
 
     const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
@@ -169,11 +188,13 @@ export class AuthService {
       throw new UnauthorizedException();
     }
 
-    // Rotate: revoke the used refresh token so it can't be replayed.
-    await this.prisma.refreshToken.update({
-      where: { id: stored.id },
-      data: { revokedAt: new Date() },
-    });
+    if (!stored.revokedAt) {
+      // Rotate: revoke the used refresh token so it can't be replayed later.
+      await this.prisma.refreshToken.update({
+        where: { id: stored.id },
+        data: { revokedAt: new Date(now), expiresAt: new Date(now + REFRESH_ROTATION_GRACE_MS) },
+      });
+    }
 
     return this.issueTokens(user.id, user.phone, user.role, user.name, meta);
   }
@@ -224,11 +245,11 @@ export class AuthService {
     meta: RequestMeta = {},
   ) {
     const payload = { sub: id, phone, role, jti: randomUUID() };
-    const refreshExpiresIn = this.config.get<string>('JWT_REFRESH_EXPIRES_IN', '30d');
+    const refreshExpiresIn = this.config.get<string>('JWT_REFRESH_EXPIRES_IN', '90d');
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(payload, {
         secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
-        expiresIn: this.config.get<string>('JWT_ACCESS_EXPIRES_IN', '15m'),
+        expiresIn: this.config.get<string>('JWT_ACCESS_EXPIRES_IN', '1h'),
       }),
       this.jwt.signAsync(
         { sub: id, jti: randomUUID() },

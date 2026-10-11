@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { MAPBOX_TILE_OPTIONS, mapboxTileUrl } from "@/lib/mapbox";
 
 type Props = {
   latitude: number;
@@ -30,10 +31,7 @@ export function MapPicker({ latitude, longitude, onChange, height = "280px" }: P
         scrollWheelZoom: true,
       });
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap",
-        maxZoom: 19,
-      }).addTo(map);
+      L.tileLayer(mapboxTileUrl(), MAPBOX_TILE_OPTIONS).addTo(map);
 
       const icon = L.icon({
         iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",

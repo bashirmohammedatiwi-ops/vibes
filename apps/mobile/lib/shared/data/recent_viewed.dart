@@ -45,5 +45,5 @@ class RecentViewedController extends StateNotifier<List<Property>> {
 
 final recentViewedProvider =
     StateNotifierProvider<RecentViewedController, List<Property>>(
-  (ref) => RecentViewedController(),
-);
+      (ref) => RecentViewedController(),
+    );

@@ -1,105 +1,144 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-/// =============================================================
-/// VIBES — الهوية الرسمية
-/// Sapphire وMidnight وBrass، مع لغة تحريرية مستلهمة من رمز V + S.
-/// =============================================================
+/// =====================================================================
+/// VIBES — الهوية البصرية الرسمية (NEW VIBES VISUAL IDENTITY)
+/// ─────────────────────────────────────────────────────────────────────
+/// اللوحة الرسمية:
+///   BRASS      #C89844  — لون التوقيع: الأزرار، التمييز، الأسعار
+///   SAPPHIRE   #1B3857  — الأزرق الملكي: الروابط، الحالات النشطة
+///   MIDNIGHT   #0F2138  — الليلي الفاخر: الهيرو، السبلاش، الوضع الليلي
+///   DYNAMIC BK #1E1E1E  — حبر النصوص
+///   MAPPLE     #ED5477  — لمسة نادرة: المفضلة والتنبيهات العاجلة
+///   EMPTINESS  #F4F4F4  — أسطح صامتة
+///   MILK JUG   #FAF7F0  — الخلفية الدافئة
+/// الخط الرسمي: Montserrat للاتينية، Cairo بديل Avenir Arabic للعربية.
+/// التسلسل: عناوين Black → متن Medium → ثانوي Light.
+/// =====================================================================
 
-abstract final class Vibes {
-  static const Color canvas = Color(0xFFFAF7F0); // Milk Jug
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceMuted = Color(0xFFF4F4F4); // Emptiness
-  static const Color hairline = Color(0xFFD9DDE1);
-  static const Color hairlineStrong = Color(0xFFBFC6CE);
-  static const Color champagne = Color(0xFFF1ECE2);
+/// لوحة الهوية الرسمية — أسماء الهوية نفسها
+abstract final class Brand {
+  static const Color brass = Color(0xFFC89844);
+  static const Color brassSoft = Color(0xFFC69741);
+  static const Color brassLight = Color(0xFFE0B568);
+  static const Color brassPale = Color(0xFFF5EBD8);
+  static const Color brassDeep = Color(0xFF8D6324);
 
-  static const Color ink = Color(0xFF1E1E1E); // Dynamic Black
-  static const Color inkSecondary = Color(0xFF4B5563);
-  static const Color inkTertiary = Color(0xFF7B8490);
+  static const Color sapphire = Color(0xFF1B3857);
+  static const Color sapphireLight = Color(0xFF315879);
+  static const Color sapphirePale = Color(0xFFE5ECF3);
 
-  // حافظنا على الأسماء القديمة لتجنب كسر الشاشات، لكن قيمها هي الهوية الرسمية.
-  static const Color coral = Color(0xFF1B3857); // Sapphire
-  static const Color coralBright = Color(0xFF315879);
-  static const Color coralMint = Color(0xFFE5ECF3);
-  static const Color coralSoft = Color(0x141B3857);
-  static const Color onCoral = Color(0xFFFAF7F0);
+  static const Color midnight = Color(0xFF0F2138);
+  static const Color midnightHigh = Color(0xFF162C46);
 
-  static const Color teal = Color(0xFFC89844); // Brass
-  static const Color tealBright = Color(0xFFE0B568);
-  static const Color tealMint = Color(0xFFF5EBD8);
-  static const Color onTeal = Color(0xFFFFFFFF);
+  static const Color ink = Color(0xFF1E1E1E);
   static const Color mapple = Color(0xFFED5477);
+  static const Color emptiness = Color(0xFFF4F4F4);
+  static const Color milkJug = Color(0xFFFAF7F0);
+}
 
-  static const Color honey = Color(0xFFC69741);
-  static const Color honeyDeep = Color(0xFF8D6324);
-  static const Color honeyMint = Color(0xFFF5EBD8);
+/// نظام الألوان التطبيقي — الأسماء التاريخية بقيم الهوية الرسمية.
+abstract final class Vibes {
+  static const Color canvas = Color(0xFFFFFFFF); // أبيض نقي
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color surfaceMuted = Brand.emptiness; // Emptiness
+  static const Color hairline = Color(0xFFE3DDD1);
+  static const Color hairlineStrong = Color(0xFFCFC7B8);
+  static const Color champagne = Color(0xFFF3EDDF);
 
-  static const Color success = Color(0xFF0D9488);
-  static const Color warning = Color(0xFFE8A317);
-  static const Color danger = Color(0xFFD6453D);
-  static const Color info = Color(0xFF2C6BAA);
+  static const Color ink = Brand.ink; // Dynamic Black
+  static const Color inkSecondary = Color(0xFF565D68);
+  static const Color inkTertiary = Color(0xFF8A9099);
+
+  // أزرق ملكي — روابط وحالات نشطة وأسطح ثقة.
+  static const Color coral = Brand.sapphire; // Sapphire
+  static const Color coralBright = Brand.sapphireLight;
+  static const Color coralMint = Brand.sapphirePale;
+  static const Color coralSoft = Color(0x141B3857);
+  static const Color onCoral = Brand.milkJug;
+
+  // نحاس — لون التوقيع: أزرار وتمييز وأسعار.
+  static const Color teal = Brand.brass; // Brass
+  static const Color tealBright = Brand.brassLight;
+  static const Color tealMint = Brand.brassPale;
+  static const Color onTeal = Brand.midnight; // حبر ليلي فوق النحاس
+
+  static const Color mapple = Brand.mapple;
+
+  static const Color honey = Brand.brassSoft;
+  static const Color honeyDeep = Brand.brassDeep;
+  static const Color honeyMint = Brand.brassPale;
+
+  static const Color success = Color(0xFF2E7D5B);
+  static const Color warning = Color(0xFFB97E12);
+  static const Color danger = Color(0xFFC2402F);
+  static const Color info = Brand.sapphireLight;
 
   static const List<BoxShadow> card = [
-    BoxShadow(color: Color(0x121B3857), blurRadius: 24, offset: Offset(0, 10)),
-    BoxShadow(color: Color(0x071B3857), blurRadius: 3, offset: Offset(0, 1)),
+    BoxShadow(color: Color(0x0F0F2138), blurRadius: 20, offset: Offset(0, 8)),
+    BoxShadow(color: Color(0x060F2138), blurRadius: 2, offset: Offset(0, 1)),
   ];
   static const List<BoxShadow> floating = [
-    BoxShadow(color: Color(0x211B3857), blurRadius: 28, offset: Offset(0, 12)),
-    BoxShadow(color: Color(0x0D1B3857), blurRadius: 4, offset: Offset(0, 1)),
+    BoxShadow(color: Color(0x1A0F2138), blurRadius: 30, offset: Offset(0, 14)),
+    BoxShadow(color: Color(0x0A0F2138), blurRadius: 4, offset: Offset(0, 1)),
   ];
 
   static const LinearGradient coralFill = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF315879), coral],
+    colors: [Brand.sapphireLight, Brand.sapphire],
   );
+
+  /// تدرج النحاس — شامبانيا إلى نحاس بلمعة حريرية.
   static const LinearGradient tealFill = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFE0B568), teal],
+    colors: [Brand.brassLight, Brand.brass],
   );
+
+  /// تدرج ليلي فاخر — منتصف الليل إلى السبور.
+  static const LinearGradient midnightFill = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Brand.midnightHigh, Brand.midnight],
+  );
+
   static const LinearGradient ivoryWash = LinearGradient(
     begin: Alignment.topRight,
     end: Alignment.bottomLeft,
-    colors: [Color(0xFFFFFFFF), canvas, Color(0xFFF3F0E9)],
+    colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF), Color(0xFFFFFFFF)],
   );
 }
 
 abstract final class VibesDark {
-  static const Color canvas = Color(0xFF0B1828);
-  static const Color surface = Color(0xFF13263C);
-  static const Color surfaceMuted = Color(0xFF1A314C);
-  static const Color hairline = Color(0xFF2A4460);
-  static const Color hairlineStrong = Color(0xFF3E5C78);
-  static const Color champagne = Color(0xFF16283E);
+  static const Color canvas = Color(0xFF0A1626);
+  static const Color surface = Color(0xFF11233A);
+  static const Color surfaceMuted = Color(0xFF18304C);
+  static const Color hairline = Color(0xFF24405F);
+  static const Color hairlineStrong = Color(0xFF3A5A7D);
+  static const Color champagne = Color(0xFF152A44);
 
   static const Color ink = Color(0xFFF6F1E6);
-  static const Color inkSecondary = Color(0xFFC9D4E0);
-  static const Color inkTertiary = Color(0xFF8FA0B3);
+  static const Color inkSecondary = Color(0xFFC7D2DF);
+  static const Color inkTertiary = Color(0xFF8CA0B5);
 
-  /// ياقوت مرفوع للقراءة على منتصف الليل — ليس لون الأزرار.
-  static const Color coral = Color(0xFFD5E3F0);
+  /// نص مميز ليلاً — أزرق فاتح مقروء.
+  static const Color coral = Color(0xFFD9E5F1);
   static const Color coralBright = Color(0xFF8FB4D4);
   static const Color coralMint = Color(0x332C6BAA);
-  static const Color onCoral = Color(0xFF0B1828);
+  static const Color onCoral = Color(0xFF0A1626);
 
-  static const Color teal = Color(0xFFE0B568);
+  static const Color teal = Brand.brassLight; // نحاس مرفوع للقراءة ليلاً
   static const Color tealBright = Color(0xFFF0D7A4);
-  static const Color honey = Color(0xFFC89844);
+  static const Color honey = Brand.brass;
 
   static const LinearGradient nightWash = LinearGradient(
     begin: Alignment.topRight,
     end: Alignment.bottomLeft,
-    colors: [Color(0xFF1A3350), Color(0xFF0F2138), Color(0xFF081422)],
+    colors: [Color(0xFF17304E), Brand.midnight, Color(0xFF071120)],
   );
 
-  static const LinearGradient buttonFill = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFE8C98A), Color(0xFFC89844)],
-  );
+  static const LinearGradient buttonFill = Vibes.tealFill;
 
   static const List<BoxShadow> card = [
     BoxShadow(color: Color(0x80000000), blurRadius: 22, offset: Offset(0, 10)),
@@ -111,6 +150,7 @@ abstract final class VibesDark {
   ];
 }
 
+/// لون حسب نوع العقار — مزرعة نحاس، قاعة أزرق ملكي، التزيين نحاس فاتح.
 abstract final class TypeColors {
   static Color of(String type) {
     return switch (type.toUpperCase()) {
@@ -183,13 +223,13 @@ abstract final class PorcelainColors {
 }
 
 abstract final class GoldColors {
-  static const Color gold = Vibes.coral;
-  static const Color goldLight = Vibes.coralBright;
-  static const Color goldDeep = Vibes.coral;
-  static const Color goldSoft = Vibes.coralSoft;
-  static const Color onGold = Vibes.onCoral;
-  static const LinearGradient gradient = Vibes.coralFill;
-  static const LinearGradient textGradient = Vibes.coralFill;
+  static const Color gold = Vibes.teal;
+  static const Color goldLight = Vibes.tealBright;
+  static const Color goldDeep = Vibes.honeyDeep;
+  static const Color goldSoft = Vibes.tealMint;
+  static const Color onGold = Vibes.onTeal;
+  static const LinearGradient gradient = Vibes.tealFill;
+  static const LinearGradient textGradient = Vibes.tealFill;
 }
 
 abstract final class SemanticColors {
@@ -221,32 +261,20 @@ abstract final class VibesRadius {
   static const double xxl = 28;
   static const double pill = 999;
 
-  /// إطار Folio الموحّد — قطع معماري خفيف بلا كبسولات
-  static const BorderRadius folio = BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(12),
-    bottomRight: Radius.circular(8),
-    bottomLeft: Radius.circular(10),
-  );
+  /// قص موحّد — 12 للأسطح و8 للشارات، بلا زوايا معمارية غير متساوية.
+  static const BorderRadius folio = BorderRadius.all(Radius.circular(12));
 
-  static const BorderRadius folioCompact = BorderRadius.only(
-    topLeft: Radius.circular(5),
-    topRight: Radius.circular(8),
-    bottomRight: Radius.circular(5),
-    bottomLeft: Radius.circular(7),
-  );
+  static const BorderRadius folioCompact = BorderRadius.all(Radius.circular(8));
 
   static const RoundedRectangleBorder folioShape = RoundedRectangleBorder(
     borderRadius: folio,
   );
 
-  static const BorderRadius folioSheet = BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(12),
+  static const BorderRadius folioSheet = BorderRadius.vertical(
+    top: Radius.circular(16),
   );
 
-  /// مستطيل معماري — زاوية علوية يمنى أحدّ من الباقي
-  static RoundedRectangleBorder card([double r = 18]) =>
+  static RoundedRectangleBorder card([double r = 12]) =>
       const RoundedRectangleBorder(borderRadius: folio);
 }
 
@@ -255,7 +283,58 @@ abstract final class VibesMotion {
   static const Duration base = Duration(milliseconds: 240);
   static const Duration slow = Duration(milliseconds: 380);
   static const Curve curve = Curves.easeOutCubic;
+  static const Curve emphasized = Curves.easeInOutCubicEmphasized;
   static const Duration stagger = Duration(milliseconds: 40);
+}
+
+/// انتقال صفحات الهوية — عمق ثلاثي الطبقات بتحويلات فقط (60fps):
+/// الصفحة الداخلة تصعد بمنحنى emphasized، والخارجة تتلاشى وتتراجع
+/// قليلاً للوراء — إحساس تكدس ورقي حقيقي بدل انزلاق مسطح.
+class VibesPageTransition extends PageTransitionsBuilder {
+  const VibesPageTransition();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    // الدخول: صعود ناعم بتسارع مركّز — أرقى منحنيات Material.
+    final curvedIn = CurvedAnimation(
+      parent: animation,
+      curve: VibesMotion.emphasized,
+      reverseCurve: Curves.easeInCubic,
+    );
+
+    // الخروج (عندما تدخل صفحة فوقها): تراجع خفيف وتلاشٍ.
+    final curvedOut = CurvedAnimation(
+      parent: secondaryAnimation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+
+    return FadeTransition(
+      opacity: curvedIn,
+      child: SlideTransition(
+        position: Tween(
+          begin: const Offset(0, 0.030),
+          end: Offset.zero,
+        ).animate(curvedIn),
+        child: SlideTransition(
+          position: Tween(
+            begin: Offset.zero,
+            end: const Offset(0, -0.024),
+          ).animate(curvedOut),
+          child: FadeTransition(
+            opacity: Tween(begin: 1.0, end: 0.55).animate(curvedOut),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class VibesTheme {
@@ -279,15 +358,15 @@ class VibesTheme {
   static Color accentOf(BuildContext c) =>
       isDark(c) ? VibesDark.coral : Vibes.coral;
 
-  /// علامة الهوية المقروءة: ياقوت على الورق، حليب ياقوتي على الليل.
+  /// لون الهوية المقروء: أزرق ملكي على الورق، أزرق فاتح على الليل.
   static Color brandOf(BuildContext c) =>
       isDark(c) ? VibesDark.coral : Vibes.coral;
 
-  /// لون الزر الممتلئ: ياقوت نهاراً، نحاس ليلاً.
-  static Color actionOf(BuildContext c) => isDark(c) ? Vibes.teal : Vibes.coral;
+  /// لون الزر الممتلئ: نحاس دائماً — لون التوقيع.
+  static Color actionOf(BuildContext c) => Vibes.teal;
 
   static Color onActionOf(BuildContext c) =>
-      isDark(c) ? VibesDark.onCoral : Vibes.onCoral;
+      isDark(c) ? VibesDark.onCoral : Vibes.onTeal;
 
   static Color hairlineStrongOf(BuildContext c) =>
       isDark(c) ? VibesDark.hairlineStrong : Vibes.hairlineStrong;
@@ -302,14 +381,14 @@ class VibesTheme {
       isDark(c) ? VibesDark.nightWash : Vibes.ivoryWash;
 
   static LinearGradient buttonOf(BuildContext c) =>
-      isDark(c) ? VibesDark.buttonFill : Vibes.coralFill;
+      isDark(c) ? VibesDark.buttonFill : Vibes.tealFill;
 
   /// Cairo للنص العربي حتى تبقى الحروف متصلة. Montserrat احتياط للاتيني
-  /// والأرقام إلى أن تُوفَّر ملفات Avenir Arabic المرخّصة.
+  /// والأرقام إلى أن تُوفَّر ملفات Avenir Arabic المرخّصة.
+  /// التسلسل الرسمي: عناوين Black (900) — متن Medium — ثانوي عادي.
   static TextTheme _text(TextTheme base) {
-    final cairo = GoogleFonts.cairoTextTheme(base);
-    final latin = GoogleFonts.montserrat().fontFamily;
-    final fallback = <String>[?latin];
+    final cairo = base.apply(fontFamily: 'Cairo');
+    const fallback = <String>['Montserrat'];
 
     TextStyle? face(
       TextStyle? style, {
@@ -328,39 +407,39 @@ class VibesTheme {
     return cairo.copyWith(
       displayLarge: face(
         cairo.displayLarge,
-        weight: FontWeight.w800,
-        height: 1.15,
+        weight: FontWeight.w900,
+        height: 1.1,
       ),
       displayMedium: face(
         cairo.displayMedium,
-        weight: FontWeight.w800,
-        height: 1.18,
+        weight: FontWeight.w900,
+        height: 1.12,
       ),
       displaySmall: face(
         cairo.displaySmall,
-        weight: FontWeight.w800,
-        height: 1.2,
+        weight: FontWeight.w900,
+        height: 1.15,
       ),
       headlineMedium: face(
         cairo.headlineMedium,
-        weight: FontWeight.w800,
-        height: 1.25,
+        weight: FontWeight.w900,
+        height: 1.2,
       ),
       headlineSmall: face(
         cairo.headlineSmall,
-        weight: FontWeight.w800,
-        height: 1.28,
+        weight: FontWeight.w900,
+        height: 1.25,
       ),
-      titleLarge: face(cairo.titleLarge, weight: FontWeight.w800),
+      titleLarge: face(cairo.titleLarge, weight: FontWeight.w800, height: 1.25),
       titleMedium: face(
         cairo.titleMedium,
         weight: FontWeight.w700,
         height: 1.4,
       ),
       titleSmall: face(cairo.titleSmall, weight: FontWeight.w700, height: 1.4),
-      bodyLarge: face(cairo.bodyLarge, height: 1.6),
-      bodyMedium: face(cairo.bodyMedium, height: 1.65),
-      bodySmall: face(cairo.bodySmall, height: 1.55),
+      bodyLarge: face(cairo.bodyLarge, weight: FontWeight.w500, height: 1.6),
+      bodyMedium: face(cairo.bodyMedium, weight: FontWeight.w500, height: 1.65),
+      bodySmall: face(cairo.bodySmall, weight: FontWeight.w500, height: 1.55),
       labelLarge: face(cairo.labelLarge, weight: FontWeight.w700),
       labelMedium: face(cairo.labelMedium, weight: FontWeight.w700),
       labelSmall: face(cairo.labelSmall, weight: FontWeight.w700),
@@ -380,11 +459,20 @@ class VibesTheme {
       scaffoldBackgroundColor: Vibes.canvas,
       textTheme: text,
       primaryTextTheme: text,
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: VibesPageTransition(),
+          TargetPlatform.iOS: VibesPageTransition(),
+          TargetPlatform.macOS: VibesPageTransition(),
+          TargetPlatform.windows: VibesPageTransition(),
+          TargetPlatform.linux: VibesPageTransition(),
+        },
+      ),
       colorScheme: const ColorScheme.light(
-        primary: Vibes.coral,
-        onPrimary: Vibes.onCoral,
-        secondary: Vibes.teal,
-        onSecondary: Vibes.onTeal,
+        primary: Vibes.teal,
+        onPrimary: Vibes.onTeal,
+        secondary: Vibes.coral,
+        onSecondary: Vibes.onCoral,
         surface: Vibes.surface,
         onSurface: Vibes.ink,
         surfaceContainerHighest: Vibes.surfaceMuted,
@@ -400,7 +488,7 @@ class VibesTheme {
         scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: text.titleLarge?.copyWith(
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w900,
           color: Vibes.ink,
         ),
         iconTheme: const IconThemeData(color: Vibes.ink),
@@ -413,7 +501,7 @@ class VibesTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        indicatorColor: Vibes.coralMint,
+        indicatorColor: Vibes.tealMint,
         height: 68,
         elevation: 0,
         labelTextStyle: WidgetStatePropertyAll(
@@ -433,8 +521,18 @@ class VibesTheme {
         showDragHandle: false,
         shape: RoundedRectangleBorder(borderRadius: VibesRadius.folioSheet),
       ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: Vibes.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(borderRadius: VibesRadius.folio),
+        elevation: 6,
+        textStyle: text.labelLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: Vibes.ink,
+        ),
+      ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: Vibes.ink,
+        backgroundColor: Brand.midnight,
         contentTextStyle: text.bodyMedium?.copyWith(color: Vibes.canvas),
         behavior: SnackBarBehavior.floating,
         shape: const RoundedRectangleBorder(borderRadius: VibesRadius.folio),
@@ -445,8 +543,8 @@ class VibesTheme {
         shape: const RoundedRectangleBorder(borderRadius: VibesRadius.folio),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: Vibes.coral,
-        foregroundColor: Vibes.onCoral,
+        backgroundColor: Vibes.teal,
+        foregroundColor: Vibes.onTeal,
         elevation: 8,
         shape: RoundedRectangleBorder(borderRadius: VibesRadius.folio),
       ),
@@ -467,7 +565,7 @@ class VibesTheme {
         prefixIconColor: Vibes.inkTertiary,
         errorStyle: text.bodySmall?.copyWith(color: Vibes.danger),
         floatingLabelStyle: text.bodySmall?.copyWith(
-          color: Vibes.coral,
+          color: Vibes.teal,
           fontWeight: FontWeight.w800,
         ),
         labelStyle: text.labelMedium?.copyWith(
@@ -477,17 +575,17 @@ class VibesTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: Vibes.coral,
-          foregroundColor: Vibes.onCoral,
-          minimumSize: const Size.fromHeight(56),
+          backgroundColor: Vibes.teal,
+          foregroundColor: Vibes.onTeal,
+          minimumSize: const Size.fromHeight(48),
           textStyle: text.titleSmall?.copyWith(fontWeight: FontWeight.w800),
           shape: const RoundedRectangleBorder(borderRadius: VibesRadius.folio),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: Vibes.ink,
-          minimumSize: const Size.fromHeight(56),
+          foregroundColor: Brand.midnight,
+          minimumSize: const Size.fromHeight(48),
           side: const BorderSide(color: Vibes.hairlineStrong),
           shape: const RoundedRectangleBorder(borderRadius: VibesRadius.folio),
         ),
@@ -505,25 +603,25 @@ class VibesTheme {
         shape: const RoundedRectangleBorder(borderRadius: VibesRadius.folio),
       ),
       tabBarTheme: TabBarThemeData(
-        labelColor: Vibes.coral,
+        labelColor: Vibes.teal,
         unselectedLabelColor: Vibes.inkTertiary,
-        indicatorColor: Vibes.coral,
+        indicatorColor: Vibes.teal,
         dividerColor: Vibes.hairline,
         labelStyle: text.titleSmall?.copyWith(fontWeight: FontWeight.w800),
         unselectedLabelStyle: text.titleSmall,
       ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: Vibes.coral,
-        linearTrackColor: Vibes.coralMint,
+        color: Vibes.teal,
+        linearTrackColor: Vibes.tealMint,
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
           (s) =>
-              s.contains(WidgetState.selected) ? Colors.white : Vibes.surface,
+              s.contains(WidgetState.selected) ? Vibes.onTeal : Vibes.surface,
         ),
         trackColor: WidgetStateProperty.resolveWith(
           (s) => s.contains(WidgetState.selected)
-              ? Vibes.coral
+              ? Vibes.teal
               : Vibes.hairlineStrong,
         ),
       ),
@@ -544,6 +642,15 @@ class VibesTheme {
       textTheme: text,
       primaryTextTheme: text,
       iconTheme: const IconThemeData(color: VibesDark.ink),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: VibesPageTransition(),
+          TargetPlatform.iOS: VibesPageTransition(),
+          TargetPlatform.macOS: VibesPageTransition(),
+          TargetPlatform.windows: VibesPageTransition(),
+          TargetPlatform.linux: VibesPageTransition(),
+        },
+      ),
       colorScheme: const ColorScheme.dark(
         primary: Vibes.teal,
         onPrimary: VibesDark.onCoral,
@@ -570,7 +677,7 @@ class VibesTheme {
           systemNavigationBarIconBrightness: Brightness.light,
         ),
         titleTextStyle: text.titleLarge?.copyWith(
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w900,
           color: VibesDark.ink,
         ),
         iconTheme: const IconThemeData(color: VibesDark.ink),
@@ -586,6 +693,16 @@ class VibesTheme {
         modalBackgroundColor: VibesDark.surface,
         showDragHandle: false,
         shape: RoundedRectangleBorder(borderRadius: VibesRadius.folioSheet),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: VibesDark.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(borderRadius: VibesRadius.folio),
+        elevation: 6,
+        textStyle: text.labelLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: VibesDark.ink,
+        ),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: VibesDark.surfaceMuted,
@@ -614,7 +731,7 @@ class VibesTheme {
         ),
         border: border(VibesDark.hairlineStrong),
         enabledBorder: border(VibesDark.hairlineStrong),
-        focusedBorder: border(VibesDark.teal, 1.4),
+        focusedBorder: border(Vibes.teal, 1.4),
         errorBorder: border(Vibes.danger),
         focusedErrorBorder: border(Vibes.danger, 1.4),
         suffixIconColor: VibesDark.teal,
@@ -629,7 +746,7 @@ class VibesTheme {
         style: FilledButton.styleFrom(
           backgroundColor: Vibes.teal,
           foregroundColor: VibesDark.onCoral,
-          minimumSize: const Size.fromHeight(56),
+          minimumSize: const Size.fromHeight(48),
           textStyle: text.titleSmall?.copyWith(fontWeight: FontWeight.w800),
           shape: const RoundedRectangleBorder(borderRadius: VibesRadius.folio),
         ),
@@ -637,14 +754,14 @@ class VibesTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: VibesDark.ink,
-          minimumSize: const Size.fromHeight(56),
+          minimumSize: const Size.fromHeight(48),
           side: const BorderSide(color: VibesDark.hairlineStrong),
           shape: const RoundedRectangleBorder(borderRadius: VibesRadius.folio),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: VibesDark.tealBright,
+          foregroundColor: Vibes.tealBright,
           textStyle: text.titleSmall?.copyWith(fontWeight: FontWeight.w800),
         ),
       ),
@@ -671,7 +788,7 @@ class VibesTheme {
         ),
       ),
       tabBarTheme: TabBarThemeData(
-        labelColor: VibesDark.tealBright,
+        labelColor: Vibes.tealBright,
         unselectedLabelColor: VibesDark.inkTertiary,
         indicatorColor: Vibes.teal,
         dividerColor: VibesDark.hairline,

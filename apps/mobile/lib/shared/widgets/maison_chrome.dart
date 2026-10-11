@@ -3,8 +3,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/world_theme.dart';
 import '../../core/utils/vibes_net_image.dart';
 import 'maison_shapes.dart';
+import 'vibes_graphics.dart';
 import 'vibes_widgets.dart';
 
 /// شريحة فلتر هندسية — بلا كبسولات مبالغ فيها
@@ -22,103 +24,115 @@ class MaisonChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final p = context.world;
+    return PressScale(
       onTap: onTap,
       child: AnimatedContainer(
         duration: VibesMotion.base,
         curve: VibesMotion.curve,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: ShapeDecoration(
-          color: VibesTheme.surfaceOf(context),
-          shape: RoundedRectangleBorder(
-            borderRadius: Folio.chrome,
-            side: BorderSide(
-              color: active
-                  ? Vibes.teal.withValues(alpha: .45)
-                  : VibesTheme.hairlineOf(context),
-            ),
-          ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          gradient: active ? p.fill : null,
+          color: active ? null : const Color(0xFFF4F5F7),
+          borderRadius: BorderRadius.circular(999),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (active) ...[
-              Container(width: 3, height: 3, color: Vibes.teal),
-              const SizedBox(width: 7),
-            ],
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: active
-                    ? VibesTheme.textPrimaryOf(context)
-                    : VibesTheme.textSecondaryOf(context),
-              ),
-            ),
-          ],
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 12.5,
+            fontWeight: FontWeight.w800,
+            color: active ? p.onAccent : VibesTheme.textSecondaryOf(context),
+            height: 1.2,
+          ),
         ),
       ),
     );
   }
 }
 
-/// تبويبات تحريرية بخط سفلي واضح
+/// تبويبات كapsule — مؤشر متحرك مثل مبدّل العوالم
 class MaisonSegmented extends StatelessWidget {
   const MaisonSegmented({
     super.key,
     required this.labels,
     required this.index,
     required this.onChanged,
+    this.accent,
   });
 
   final List<String> labels;
   final int index;
   final ValueChanged<int> onChanged;
+  final Color? accent;
 
   @override
   Widget build(BuildContext context) {
+    final bar = accent ?? Vibes.teal;
     return DecoratedBox(
       decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: VibesTheme.hairlineOf(context)),
-        ),
+        color: VibesTheme.surfaceOf(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: VibesTheme.hairlineOf(context)),
       ),
-      child: Row(
-        children: [
-          for (var i = 0; i < labels.length; i++)
-            Expanded(
-              child: GestureDetector(
-                onTap: () => onChanged(i),
-                behavior: HitTestBehavior.opaque,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final tabW = constraints.maxWidth / labels.length;
+            return SizedBox(
+              height: 40,
+              child: Stack(
+                children: [
+                  AnimatedPositionedDirectional(
+                    duration: VibesMotion.base,
+                    curve: Curves.easeOutCubic,
+                    start: index * tabW,
+                    width: tabW,
+                    top: 0,
+                    bottom: 0,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: bar,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Row(
                     children: [
-                      Text(
-                        labels[i],
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: i == index
-                                  ? VibesTheme.brandOf(context)
-                                  : VibesTheme.textTertiaryOf(context),
+                      for (var i = 0; i < labels.length; i++)
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => onChanged(i),
+                            behavior: HitTestBehavior.opaque,
+                            child: Center(
+                              child: AnimatedDefaultTextStyle(
+                                duration: VibesMotion.fast,
+                                style: Theme.of(context).textTheme.labelMedium!
+                                    .copyWith(
+                                      fontWeight: FontWeight.w800,
+                                      color: i == index
+                                          ? Colors.white
+                                          : VibesTheme.textSecondaryOf(context),
+                                    ),
+                                child: Text(
+                                  labels[i],
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
                             ),
-                      ),
-                      const SizedBox(height: 8),
-                      AnimatedContainer(
-                        duration: VibesMotion.fast,
-                        height: 1.5,
-                        width: double.infinity,
-                        color: i == index ? Vibes.teal : Colors.transparent,
-                      ),
+                          ),
+                        ),
                     ],
                   ),
-                ),
+                ],
               ),
-            ),
-        ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -151,7 +165,7 @@ class MaisonGlassIcon extends StatelessWidget {
             margin: const EdgeInsets.all(6),
             decoration: ShapeDecoration(
               color: active
-                  ? Vibes.coral.withValues(alpha: .78)
+                  ? Vibes.mapple.withValues(alpha: .82)
                   : Colors.white.withValues(alpha: .2),
               shape: RoundedRectangleBorder(
                 borderRadius: Folio.radius,
@@ -212,87 +226,14 @@ class MaisonWash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = VibesTheme.isDark(context);
-    return RepaintBoundary(
-      child: DecoratedBox(
-        decoration: BoxDecoration(gradient: VibesTheme.washOf(context)),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            IgnorePointer(
-              child: CustomPaint(
-                painter: dark
-                    ? const _NightPaperPainter()
-                    : _VibesPaperPainter(
-                        ink: Vibes.coral.withValues(alpha: .055),
-                        copper: Vibes.teal.withValues(alpha: .07),
-                      ),
-              ),
-            ),
-            child,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _VibesPaperPainter extends CustomPainter {
-  const _VibesPaperPainter({required this.ink, required this.copper});
-
-  final Color ink;
-  final Color copper;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final thinInk = Paint()
-      ..color = ink
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    final fineCopper = Paint()
-      ..color = copper
-      ..strokeWidth = 1;
-
-    // شعار V هندسي خافت — بلا شبكة تزيينية.
-    final mark = Path()
-      ..moveTo(size.width * .61, -18)
-      ..lineTo(size.width * .74, -18)
-      ..lineTo(size.width * .55, size.height * .30)
-      ..lineTo(size.width * .46, size.height * .30)
-      ..close();
-    canvas.drawPath(mark, Paint()..color = ink);
-    canvas.drawPath(mark, thinInk);
-
-    final lowerMark = Path()
-      ..moveTo(-20, size.height * .76)
-      ..lineTo(60, size.height * .76)
-      ..lineTo(14, size.height + 20)
-      ..lineTo(-20, size.height + 20)
-      ..close();
-    canvas.drawPath(lowerMark, Paint()..color = copper);
-
-    // علامات تسجيل دقيقة تكرر لغة المطبوعات.
-    for (final point in [
-      Offset(size.width - 26, 94),
-      Offset(30, size.height - 140),
-      Offset(size.width - 52, size.height - 40),
-    ]) {
-      final diamond = Path()
-        ..moveTo(point.dx, point.dy - 4)
-        ..lineTo(point.dx + 4, point.dy)
-        ..lineTo(point.dx, point.dy + 4)
-        ..lineTo(point.dx - 4, point.dy)
-        ..close();
-      canvas.drawPath(diamond, fineCopper);
+    if (VibesTheme.isDark(context)) {
+      return ColoredBox(color: VibesDark.canvas, child: child);
     }
+    return ColoredBox(color: context.world.canvas, child: child);
   }
-
-  @override
-  bool shouldRepaint(covariant _VibesPaperPainter oldDelegate) =>
-      oldDelegate.ink != ink || oldDelegate.copper != copper;
 }
 
-/// ترويسة صفحة تحريرية — عنوان + خط نحاسي + رجوع اختياري
+/// ترويسة صفحة — شريط لوني + عنوان + رجوع اختياري
 class MaisonPageHeader extends StatelessWidget {
   const MaisonPageHeader({
     super.key,
@@ -301,6 +242,7 @@ class MaisonPageHeader extends StatelessWidget {
     this.onBack,
     this.trailing,
     this.safe = true,
+    this.accent,
   });
 
   final String title;
@@ -308,52 +250,133 @@ class MaisonPageHeader extends StatelessWidget {
   final VoidCallback? onBack;
   final Widget? trailing;
   final bool safe;
+  final Color? accent;
 
   @override
   Widget build(BuildContext context) {
+    final p = context.world;
+    final tint = accent ?? p.accentDeep;
     final row = Padding(
-      padding: EdgeInsets.fromLTRB(onBack != null ? 8 : 20, 12, 16, 10),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (onBack != null)
-            IconButton(
-              onPressed: onBack,
-              icon: const Icon(Icons.arrow_back_rounded),
+          if (onBack != null) ...[
+            PressScale(
+              onTap: onBack,
+              child: Container(
+                width: 42,
+                height: 42,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFFF2F3F5),
+                ),
+                child: const Icon(
+                  Icons.arrow_back_rounded,
+                  size: 20,
+                  color: Vibes.ink,
+                ),
+              ),
             ),
+            const SizedBox(width: 12),
+          ] else
+            const SizedBox(width: 4),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                if (kicker != null) ...[
-                  MaisonKicker(kicker!),
-                  const SizedBox(height: 8),
-                ],
+                if (kicker != null)
+                  Text(
+                    kicker!,
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: tint,
+                      height: 1.3,
+                    ),
+                  ),
                 Text(
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: VibesTheme.textPrimaryOf(context),
+                    height: 1.25,
+                    letterSpacing: -.2,
                   ),
                 ),
               ],
             ),
           ),
-          if (trailing == null) ...[
-            const SizedBox(width: 10),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: const ArcFlourish(width: 28),
-            ),
-          ] else ...[
-            const SizedBox(width: 8),
-            trailing!,
-          ],
+          if (trailing != null) ...[const SizedBox(width: 8), trailing!],
         ],
       ),
     );
     return safe ? SafeArea(bottom: false, child: row) : row;
+  }
+}
+
+/// بطاقة قائمة موحّدة — زوايا 18، شريط لوني اختياري
+class SurfaceListCard extends StatelessWidget {
+  const SurfaceListCard({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.accent,
+    this.highlighted = false,
+    this.padding = const EdgeInsets.all(14),
+  });
+
+  final Widget child;
+  final VoidCallback? onTap;
+  final Color? accent;
+  final bool highlighted;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final bar = accent ?? context.world.accent;
+    final radius = BorderRadius.circular(18);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: radius,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: highlighted
+                ? bar.withValues(alpha: 0.08)
+                : VibesTheme.surfaceOf(context),
+            borderRadius: radius,
+            border: Border.all(
+              color: highlighted
+                  ? bar.withValues(alpha: 0.28)
+                  : context.world.accent.withValues(alpha: .10),
+            ),
+            boxShadow: VibesTheme.cardOf(context),
+          ),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (accent != null)
+                  SizedBox(
+                    width: 4,
+                    child: DecoratedBox(decoration: BoxDecoration(color: bar)),
+                  ),
+                Expanded(
+                  child: Padding(padding: padding, child: child),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -365,22 +388,29 @@ class MaisonMenuGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FolioPanel(
-      shadows: VibesTheme.cardOf(context),
-      child: Column(
-        children: [
-          for (var i = 0; i < children.length; i++) ...[
-            children[i],
-            if (i < children.length - 1)
-              Padding(
-                padding: const EdgeInsetsDirectional.only(start: 52),
-                child: Divider(
-                  height: 1,
-                  color: VibesTheme.hairlineOf(context),
+    final p = context.world;
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: VibesTheme.surfaceOf(context),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: p.accent.withValues(alpha: .10)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .03), blurRadius: 14, offset: const Offset(0, 5))],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: Column(
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              children[i],
+              if (i < children.length - 1)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(start: 64),
+                  child: Divider(height: 1, color: p.accent.withValues(alpha: .08)),
                 ),
-              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -403,28 +433,32 @@ class MaisonMenuRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.world;
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: VibesTheme.brandOf(context)),
-            const SizedBox(width: 14),
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(color: p.accentFaint, borderRadius: BorderRadius.circular(12)),
+              child: Icon(icon, size: 20, color: p.accentDeep),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 label,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w800,
+                  color: VibesTheme.textPrimaryOf(context),
+                ),
               ),
             ),
-            trailing ??
-                Icon(
-                  Icons.chevron_left_rounded,
-                  color: VibesTheme.textTertiaryOf(context),
-                  size: 20,
-                ),
+            trailing ?? Icon(Icons.chevron_left_rounded, color: p.accentDeep.withValues(alpha: .6), size: 20),
           ],
         ),
       ),
@@ -449,15 +483,15 @@ class MaisonIconWell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = color ?? VibesTheme.brandOf(context);
-    return FolioPanel(
-      color: background ?? VibesTheme.surfaceOf(context),
-      borderColor: VibesTheme.hairlineOf(context),
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: Icon(icon, size: size * 0.42, color: tint),
+    final tint = color ?? context.world.accentDeep;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: background ?? context.world.accentFaint,
+        borderRadius: BorderRadius.circular(size * .32),
       ),
+      child: Icon(icon, size: size * 0.46, color: tint),
     );
   }
 }
@@ -516,34 +550,43 @@ class MaisonSoftChip extends StatelessWidget {
   }
 }
 
-/// تسمية تحريرية صغيرة بتتبع حروف — فوق العناوين والحقول
+/// تسمية — شارة pill أنيقة فوق العناوين
 class MaisonKicker extends StatelessWidget {
   const MaisonKicker(
     this.label, {
     super.key,
-    this.color = Vibes.teal,
+    Color? color,
     this.light = false,
-  });
+  }) : _color = color;
 
   final String label;
-  final Color color;
+  final Color? _color;
   final bool light;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(width: 3, height: 3, color: color),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: light ? Colors.white70 : color,
-            fontWeight: FontWeight.w800,
-          ),
+    final color = _color ?? context.world.accentDeep;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: light
+            ? Colors.white.withValues(alpha: 0.14)
+            : color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: light
+              ? Colors.white.withValues(alpha: 0.28)
+              : color.withValues(alpha: 0.0),
         ),
-      ],
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: light ? Colors.white.withValues(alpha: 0.92) : color,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.2,
+        ),
+      ),
     );
   }
 }
@@ -568,16 +611,14 @@ class MaisonNightWash extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            const IgnorePointer(
-              child: CustomPaint(painter: _NightPaperPainter()),
-            ),
             const Positioned(
-              top: -40,
-              left: -20,
-              child: VibesLogo.mark(
-                size: 220,
-                color: Colors.white,
-                opacity: .10,
+              top: -20,
+              left: -10,
+              child: IgnorePointer(
+                child: Opacity(
+                  opacity: 0.08,
+                  child: VibesLogo.mark(size: 220, color: Colors.white),
+                ),
               ),
             ),
             Positioned.fill(child: child),
@@ -586,71 +627,6 @@ class MaisonNightWash extends StatelessWidget {
       ),
     );
   }
-}
-
-class _NightPaperPainter extends CustomPainter {
-  const _NightPaperPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final margin = Paint()
-      ..color = const Color(0x18F6F1E6)
-      ..strokeWidth = 1;
-    final brass = Paint()
-      ..color = const Color(0x55C89844)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.1;
-
-    canvas.drawLine(Offset(18, 0), Offset(18, size.height), margin);
-    canvas.drawLine(
-      Offset(size.width - 18, 0),
-      Offset(size.width - 18, size.height),
-      margin,
-    );
-
-    final v = Path()
-      ..moveTo(size.width * .58, -24)
-      ..lineTo(size.width * .78, -24)
-      ..lineTo(size.width * .52, size.height * .34)
-      ..lineTo(size.width * .38, size.height * .34)
-      ..close();
-    canvas.drawPath(v, Paint()..color = const Color(0x14F6F1E6));
-    canvas.drawPath(v, brass);
-
-    final lower = Path()
-      ..moveTo(-28, size.height * .78)
-      ..lineTo(72, size.height * .78)
-      ..lineTo(18, size.height + 28)
-      ..lineTo(-28, size.height + 28)
-      ..close();
-    canvas.drawPath(lower, Paint()..color = const Color(0x18C89844));
-
-    void bracket(Offset origin, {required bool flipX, required bool flipY}) {
-      final dx = flipX ? -1.0 : 1.0;
-      final dy = flipY ? -1.0 : 1.0;
-      final path = Path()
-        ..moveTo(origin.dx + 16 * dx, origin.dy)
-        ..lineTo(origin.dx, origin.dy)
-        ..lineTo(origin.dx, origin.dy + 16 * dy);
-      canvas.drawPath(path, brass);
-      canvas.drawRect(
-        Rect.fromCenter(center: origin, width: 2.5, height: 2.5),
-        Paint()..color = const Color(0x99E0B568),
-      );
-    }
-
-    bracket(const Offset(28, 72), flipX: false, flipY: false);
-    bracket(Offset(size.width - 28, 108), flipX: true, flipY: false);
-    bracket(Offset(36, size.height - 120), flipX: false, flipY: true);
-    bracket(
-      Offset(size.width - 32, size.height - 48),
-      flipX: true,
-      flipY: true,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// لوحة دعوة ترسو من الأسفل — بديل بطاقة SaaS العائمة
@@ -666,8 +642,8 @@ class MaisonInviteDock extends StatelessWidget {
         color: VibesTheme.canvasOf(context),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(8),
-            topRight: Radius.circular(18),
+            topLeft: Radius.circular(2),
+            topRight: Radius.circular(2),
           ),
         ),
         shadows: VibesTheme.floatOf(context),
@@ -794,6 +770,26 @@ class MaisonField extends StatelessWidget {
 
 String maisonError(Object error) {
   final text = error.toString().trim();
+
+  // أخطاء الشبكة — رسائل مفهومة تحدد المشكلة والسبيل.
+  final lower = text.toLowerCase();
+  if (lower.contains('socketexception') ||
+      lower.contains('connection refused') ||
+      lower.contains('connection reset') ||
+      lower.contains('network is unreachable') ||
+      lower.contains('failed host lookup') ||
+      lower.contains('name or service not known') ||
+      lower.contains('connection timed out') ||
+      lower.contains('timed out') ||
+      lower.contains('err_name_not_resolved') ||
+      lower.contains('err_internet_disconnected') ||
+      lower.contains('err_connection_refused')) {
+    return 'لا اتصال بالإنترنت — تحقق من الشبكة وحاول مجدداً';
+  }
+  if (lower.contains('handshake') || lower.contains('certificate')) {
+    return 'تعذّر تأمين الاتصال بالخادم — حاول لاحقاً';
+  }
+
   if (text.isEmpty) return 'تعذّر إكمال الطلب. حاول مرة أخرى.';
   if (text.contains('Exception') || text.contains('Error:')) {
     return 'تعذّر إكمال الطلب. حاول مرة أخرى.';
@@ -826,10 +822,7 @@ Future<T?> showMaisonSheet<T>({
             top: false,
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: [
-                const MaisonSheetHandle(),
-                child,
-              ],
+              children: [const MaisonSheetHandle(), child],
             ),
           ),
         ),
@@ -917,9 +910,10 @@ Future<bool> showMaisonConfirm({
       return FadeTransition(
         opacity: anim,
         child: ScaleTransition(
-          scale: Tween<double>(begin: 0.97, end: 1).animate(
-            CurvedAnimation(parent: anim, curve: VibesMotion.curve),
-          ),
+          scale: Tween<double>(
+            begin: 0.97,
+            end: 1,
+          ).animate(CurvedAnimation(parent: anim, curve: VibesMotion.curve)),
           child: child,
         ),
       );
@@ -976,10 +970,7 @@ Future<String?> showMaisonPrompt({
                       ),
                     ],
                     const SizedBox(height: 16),
-                    MaisonField(
-                      label: hint ?? 'النص',
-                      controller: controller,
-                    ),
+                    MaisonField(label: hint ?? 'النص', controller: controller),
                     const SizedBox(height: 18),
                     Row(
                       children: [

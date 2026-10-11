@@ -226,7 +226,7 @@ export default function BannersPage() {
           <div key={banner.id} className="banner-card">
             <div className="aspect-[21/9] bg-surface">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={banner.imageUrl} alt={banner.title} className="h-full w-full object-cover" />
+              <img src={banner.imageUrl} alt={banner.title} className="h-full w-full object-cover" loading="lazy" decoding="async" />
             </div>
             <div className="p-4">
               <div className="flex items-start justify-between gap-2">

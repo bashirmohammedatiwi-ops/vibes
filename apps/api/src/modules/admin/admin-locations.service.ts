@@ -91,11 +91,19 @@ export class AdminLocationsService {
     return { deleted: true };
   }
 
-  async updateProvince(user: AuthUser, id: string, data: { nameAr: string; nameEn?: string }) {
+  async updateProvince(
+    user: AuthUser,
+    id: string,
+    data: { nameAr: string; nameEn?: string; imageUrl?: string | null },
+  ) {
     await this.ensureProvince(id);
     const province = await this.prisma.province.update({
       where: { id },
-      data: { nameAr: data.nameAr, nameEn: data.nameEn ?? data.nameAr },
+      data: {
+        nameAr: data.nameAr,
+        nameEn: data.nameEn ?? data.nameAr,
+        ...(data.imageUrl !== undefined ? { imageUrl: data.imageUrl || null } : {}),
+      },
     });
     await this.activity.log({
       userId: user.id,

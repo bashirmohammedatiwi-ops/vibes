@@ -1,0 +1,3 @@
+// انسخ هذا الملف إلى mapbox_token.dart وضع رمز Mapbox العام (pk.…).
+// mapbox_token.dart مستثنى من Git حتى لا يُرفع الرمز.
+const kMapboxPublicToken = 'pk.YOUR_PUBLIC_TOKEN';

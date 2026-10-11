@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/models.dart';
+import 'place_experience_ui.dart';
+import 'shift_calendar_ui.dart';
 import '../../shared/widgets/maison_chrome.dart';
 import '../../shared/widgets/maison_shapes.dart';
 
@@ -15,13 +17,23 @@ class AvailabilityCalendar extends StatelessWidget {
     required this.days,
     required this.selectedShift,
     this.onDayTap,
+    this.hybridMarkers = true,
   });
 
   final List<DayPricing> days;
   final ShiftType selectedShift;
   final ValueChanged<DayPricing>? onDayTap;
+  final bool hybridMarkers;
 
-  static const _weekdayLabels = ['أحد', 'إثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت'];
+  static const _weekdayLabels = [
+    'أحد',
+    'إثن',
+    'ثلا',
+    'أرب',
+    'خمي',
+    'جمع',
+    'سبت',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -35,72 +47,80 @@ class AvailabilityCalendar extends StatelessWidget {
     }
 
     return Column(
-      children: months.entries.map((month) {
-        final list = month.value;
-        final first = list.first.date;
-        final title = _monthTitle(first);
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: PlaceShiftLegendRow(includeSelection: false),
+        ),
+        ...months.entries.map((month) {
+          final list = month.value;
+          final first = list.first.date;
+          final title = _monthTitle(first);
 
-        // إزاحة أول يوم حسب موقع الاثنين-first grid: نجعل الأحد أولاً
-        final leading = (first.weekday % 7);
+          // إزاحة أول يوم حسب موقع الاثنين-first grid: نجعل الأحد أولاً
+          final leading = (first.weekday % 7);
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  MaisonKicker(title),
-                  const SizedBox(height: 6),
-                  Text(
-                    '${first.year}',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    MaisonKicker(title),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${first.year}',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Row(
-              children: _weekdayLabels
-                  .map((d) => Expanded(
+              Row(
+                children: _weekdayLabels
+                    .map(
+                      (d) => Expanded(
                         child: Center(
                           child: Text(
                             d,
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
+                            style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(
                                   color: VibesTheme.textTertiaryOf(context),
                                   fontWeight: FontWeight.w600,
                                 ),
                           ),
                         ),
-                      ))
-                  .toList(),
-            ),
-            const SizedBox(height: 6),
-            GridView.count(
-              crossAxisCount: 7,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
-              childAspectRatio: .82,
-              children: [
-                for (var i = 0; i < leading; i++) const SizedBox.shrink(),
-                for (final day in list) _DayCell(
-                  day: day,
-                  shift: selectedShift,
-                  onTap: onDayTap != null ? () => onDayTap!(day) : null,
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-          ],
-        );
-      }).toList(),
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: 6),
+              GridView.count(
+                crossAxisCount: 7,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 6,
+                crossAxisSpacing: 6,
+                childAspectRatio: .82,
+                children: [
+                  for (var i = 0; i < leading; i++) const SizedBox.shrink(),
+                  for (final day in list)
+                    _DayCell(
+                      day: day,
+                      shift: selectedShift,
+                      hybridMarkers: hybridMarkers,
+                      onTap: onDayTap != null ? () => onDayTap!(day) : null,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 18),
+            ],
+          );
+        }).toList(),
+      ],
     );
   }
 
@@ -117,23 +137,32 @@ class AvailabilityCalendar extends StatelessWidget {
       'أيلول',
       'تشرين الأول',
       'تشرين الثاني',
-      'كانون الأول'
+      'كانون الأول',
     ];
     return months[d.month - 1];
   }
 }
 
 class _DayCell extends StatelessWidget {
-  const _DayCell({required this.day, required this.shift, this.onTap});
+  const _DayCell({
+    required this.day,
+    required this.shift,
+    required this.hybridMarkers,
+    this.onTap,
+  });
 
   final DayPricing day;
   final ShiftType shift;
+  final bool hybridMarkers;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final disabled = day.isPast || day.isBlocked || day.isBooked;
+    final shiftTaken = day.isShiftOccupied(shift);
+    final disabled = day.isPast || day.isBlocked || shiftTaken;
     final price = day.priceFor(shift);
+    final accent = placeShiftColor(shift);
+    final occupancy = day.calendarOccupancyMarkers(hybrid: hybridMarkers);
 
     final weekend =
         day.date.weekday == DateTime.friday ||
@@ -152,13 +181,13 @@ class _DayCell extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: Folio.compact,
             side: BorderSide(
-              color: day.isBooked
-                  ? Vibes.danger.withValues(alpha: .35)
+              color: shiftTaken
+                  ? accent.withValues(alpha: .55)
                   : disabled
                   ? VibesTheme.hairlineOf(context)
                   : weekend
                   ? Vibes.teal.withValues(alpha: .45)
-                  : VibesTheme.hairlineOf(context),
+                  : accent.withValues(alpha: .28),
             ),
           ),
         ),
@@ -170,38 +199,45 @@ class _DayCell extends StatelessWidget {
               Text(
                 '${day.date.day}',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: VibesTheme.textPrimaryOf(context),
-                    ),
+                  fontWeight: FontWeight.w800,
+                  color: VibesTheme.textPrimaryOf(context),
+                ),
               ),
               const SizedBox(height: 2),
               if (disabled)
-                Icon(
-                  day.isBooked ? Icons.event_busy_rounded : Icons.block_rounded,
-                  size: 12,
-                  color: VibesTheme.textTertiaryOf(context),
-                )
+                day.occupiedShifts.isNotEmpty
+                    ? PlaceShiftOccupancyDots(
+                        day: day,
+                        hybrid: hybridMarkers,
+                        size: 4,
+                      )
+                    : Icon(
+                        Icons.block_rounded,
+                        size: 12,
+                        color: VibesTheme.textTertiaryOf(context),
+                      )
               else
                 Text(
-                  _shortPrice(price),
+                  placeFullPrice(price),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Vibes.teal,
+                    color: accent,
                     fontWeight: FontWeight.w800,
-                    height: 1.1,
+                    height: 1.05,
+                    fontSize: 8,
                   ),
-                  maxLines: 1,
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
                   overflow: TextOverflow.ellipsis,
+                ),
+              if (occupancy.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(3, 2, 3, 0),
+                  child: PlaceShiftStripeRow(shifts: occupancy, height: 2.5),
                 ),
             ],
           ),
         ),
       ),
     );
-  }
-
-  String _shortPrice(num v) {
-    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}م';
-    if (v >= 1000) return '${(v / 1000).round()}k';
-    return '$v';
   }
 }

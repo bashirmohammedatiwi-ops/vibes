@@ -8,7 +8,11 @@ import '../auth/auth_controller.dart';
 final myBookingsProvider = FutureProvider<List<Booking>>((ref) async {
   if (!ref.watch(authControllerProvider).loggedIn) return const [];
   final client = ref.watch(apiClientProvider);
-  final data = await client.get('/api/bookings');
+  // scope=mine: حجوزاتي كضيف حتى لو كان الحساب مزوّداً يتصفح كزبون
+  final data = await client.get(
+    '/api/bookings',
+    queryParameters: {'scope': 'mine'},
+  );
   return (data as List<dynamic>)
       .whereType<Map<String, dynamic>>()
       .map(Booking.fromJson)
@@ -16,8 +20,10 @@ final myBookingsProvider = FutureProvider<List<Booking>>((ref) async {
 });
 
 /// تفاصيل حجز واحد
-final bookingDetailProvider =
-    FutureProvider.family<Booking, String>((ref, id) async {
+final bookingDetailProvider = FutureProvider.family<Booking, String>((
+  ref,
+  id,
+) async {
   final client = ref.watch(apiClientProvider);
   final data = await client.get('/api/bookings/$id');
   return Booking.fromJson(data as Map<String, dynamic>);

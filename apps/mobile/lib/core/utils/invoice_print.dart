@@ -9,7 +9,7 @@ Future<void> printInvoiceHtml(
   ApiClient client, {
   required String path,
   required String fallbackText,
-  String subject = 'فاتورة VIBEES',
+  String subject = 'فاتورة VIBES',
 }) async {
   final handle = preparePrintWindow();
   try {
@@ -23,7 +23,9 @@ Future<void> printInvoiceHtml(
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('تم تجهيز نص الفاتورة — احفظها PDF من الطباعة في المتصفح إن أمكن'),
+        content: Text(
+          'تم تجهيز نص الفاتورة — احفظها PDF من الطباعة في المتصفح إن أمكن',
+        ),
       ),
     );
   } catch (e) {

@@ -57,6 +57,24 @@ export class AdminOpsController {
     return this.ops.openSupportForCustomer(user, dto.userId);
   }
 
+  @Patch('conversations/:id/ops')
+  updateConversationOps(
+    @Param('id') id: string,
+    @Body() dto: { status?: string; priority?: string; assignedToId?: string | null; staffNote?: string },
+  ) {
+    return this.ops.updateConversationOps(id, dto);
+  }
+
+  @Get('conversations/:id/calls')
+  conversationCalls(@Param('id') id: string) {
+    return this.ops.conversationCalls(id);
+  }
+
+  @Get('conversations/staff')
+  staffMembers() {
+    return this.ops.staffMembers();
+  }
+
   @Get('conversations/:id/messages')
   conversationMessages(
     @Param('id') id: string,

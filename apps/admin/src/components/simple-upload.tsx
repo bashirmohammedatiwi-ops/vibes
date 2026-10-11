@@ -55,7 +55,7 @@ export function SimpleUpload({
       {previewUrl ? (
         <div className="space-y-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={previewUrl} alt="" className="mx-auto max-h-40 rounded-lg object-contain" />
+          <img src={previewUrl} alt="" className="mx-auto max-h-40 rounded-lg object-contain" loading="lazy" decoding="async" />
           <Button type="button" variant="ghost" disabled={uploading} onClick={() => inputRef.current?.click()}>
             {uploading ? "جاري الرفع..." : "تغيير الصورة"}
           </Button>

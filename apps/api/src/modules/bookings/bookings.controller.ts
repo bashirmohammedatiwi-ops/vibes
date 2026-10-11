@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, NotFoundException, Param, Patch, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, NotFoundException, Param, Patch, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiProperty, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
 import { BookingStatus, ShiftType, UserRole } from '@prisma/client';
@@ -158,8 +158,10 @@ export class BookingsController {
   }
 
   @Get()
-  list(@CurrentUser() user: AuthUser) {
-    return this.bookings.list(user);
+  list(@CurrentUser() user: AuthUser, @Query('scope') scope?: string) {
+    // scope=mine: the signed-in user's own bookings as a guest, even for
+    // providers/staff browsing in customer mode.
+    return this.bookings.list(user, scope === 'mine');
   }
 
   @Post(':id/cancel')

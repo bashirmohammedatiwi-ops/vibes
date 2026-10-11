@@ -47,7 +47,9 @@ export function cropFilter(ratio: string): string | null {
 
 function scaleFor(spec: RenditionSpec): string {
   // Width stays even for h264 chroma subsampling; height auto-preserves the ratio.
-  return `scale=-2:'min(ih,${spec.maxHeight ?? 1080})':force_original_aspect_ratio=decrease`;
+  // force_divisible_by=2 يضمن أبعاداً زوجية — بدونها قد ينتج عرضاً فردياً
+  // (مثل 405x720 للفيديو العمودي 9:16) ويرفض libx264 الترميز.
+  return `scale=-2:'min(ih,${spec.maxHeight ?? 1080})':force_original_aspect_ratio=decrease:force_divisible_by=2`;
 }
 
 function run(args: string[]) {
@@ -83,7 +85,9 @@ export class FfmpegTranscodeDriver implements TranscodeDriver {
   async probe(inputPath: string): Promise<VideoProbe> {
     const { stdout } = await exec(
       'ffprobe',
-      ['-v', 'error', '-selectStreams', 'v:0', '-showEntries', 'stream=width,height,duration', '-of', 'json', inputPath],
+      // ملاحظة: خيارات ffprobe snake_case — الصيغة camelCase تُرفض
+      // من ffprobe (خطأ "Option not found") وتفشل كل المعالجة.
+      ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height,duration', '-of', 'json', inputPath],
       { timeout: 60_000 },
     );
     const parsed = JSON.parse(stdout) as { streams?: Array<{ width?: number; height?: number; duration?: string }> };
@@ -96,7 +100,7 @@ export class FfmpegTranscodeDriver implements TranscodeDriver {
       // Some containers report duration on the format level instead of the stream.
       const format = await exec(
         'ffprobe',
-        ['-v', 'error', '-showEntries', 'format=duration', '-of', 'json', inputPath],
+        ['-v', 'error', '-show_entries', 'format=duration', '-of', 'json', inputPath],
         { timeout: 60_000 },
       );
       durationSec = Number((JSON.parse(format.stdout) as { format?: { duration?: string } }).format?.duration ?? 0);

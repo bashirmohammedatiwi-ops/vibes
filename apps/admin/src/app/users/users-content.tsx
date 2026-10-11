@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -30,6 +30,7 @@ import { normalizeIraqiPhone } from "@/components/phone-actions";
 
 export function UsersContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { toast } = useToast();
   const { exportCsv, exporting } = useCsvExport();
   const [data, setData] = useState<Paginated<UserRecord> | null>(null);
@@ -146,6 +147,19 @@ export function UsersContent() {
     }
   }
 
+  // فتح/استئناف محادثة دعم مع العميل — ينتقل مباشرة للكونسول
+  async function openSupportChat(user: { id: string; role: string }) {
+    try {
+      const conversation = await api<{ id: string }>("/api/admin/conversations/support", {
+        method: "POST",
+        body: JSON.stringify({ userId: user.id }),
+      });
+      router.push(`/conversations?open=${conversation.id}`);
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "تعذر فتح المحادثة", "error");
+    }
+  }
+
   return (
     <PageShell>
       <PageHeader
@@ -192,7 +206,7 @@ export function UsersContent() {
           {(data?.items ?? []).map((user) => (
             <ListRow
               key={user.id}
-              onClick={() => window.location.assign(`/users/${user.id}`)}
+              onClick={() => router.push(`/users/${user.id}`)}
               title={<Link href={`/users/${user.id}`} className="text-accent">{user.name ?? user.phone}</Link>}
               subtitle={`${USER_ROLE_LABELS[user.role] ?? user.role} · ${user._count?.bookings ?? 0} حجز`}
               badge={<Badge variant={user.isActive ? "success" : "danger"}>{user.isActive ? "نشط" : "معطّل"}</Badge>}
@@ -254,6 +268,11 @@ export function UsersContent() {
                 cell: (user) => (
                   <div className="flex flex-wrap gap-1">
                     <Link href={`/users/${user.id}`}><Button variant="ghost" className="px-2 py-1 text-xs">تفاصيل</Button></Link>
+                    {user.role === "GUEST" && (
+                      <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => openSupportChat(user)}>
+                        💬 محادثة
+                      </Button>
+                    )}
                     {admin && (
                       <>
                         <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => toggleActive(user)}>

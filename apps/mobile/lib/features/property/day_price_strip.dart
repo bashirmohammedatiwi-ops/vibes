@@ -1,6 +1,8 @@
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/world_theme.dart';
 import '../../shared/models/models.dart';
 import '../../shared/widgets/maison_shapes.dart';
 import '../../shared/widgets/vibes_widgets.dart';
@@ -16,7 +18,15 @@ class DayPriceStrip extends StatelessWidget {
   final List<DayPricing> days;
   final ShiftType? selectedShift;
 
-  static const _weekdayLabels = ['أحد', 'إثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت'];
+  static const _weekdayLabels = [
+    'أحد',
+    'إثن',
+    'ثلا',
+    'أرب',
+    'خمي',
+    'جمع',
+    'سبت',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -30,65 +40,76 @@ class DayPriceStrip extends StatelessWidget {
         itemCount: days.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
+          final accent = context.world.accent;
           final day = days[i];
           final shift = selectedShift ?? ShiftType.full;
           final price = day.priceFor(shift);
 
           final disabled = day.isPast || day.isBlocked || day.isBooked;
-          final weekend = day.date.weekday == DateTime.friday ||
+          final weekend =
+              day.date.weekday == DateTime.friday ||
               day.date.weekday == DateTime.saturday;
 
-          return FolioPanel(
+          final cell = FolioPanel(
             radius: Folio.compact,
             color: disabled
                 ? VibesTheme.surfaceOf(context)
                 : weekend
-                    ? Vibes.tealMint
-                    : VibesTheme.surfaceOf(context),
+                ? context.world.accentFaint
+                : VibesTheme.surfaceOf(context),
             borderColor: disabled
                 ? VibesTheme.hairlineOf(context)
-                : weekend
-                    ? Vibes.teal.withValues(alpha: .45)
-                    : VibesTheme.hairlineOf(context),
-            child: Container(
-            width: 62,
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Opacity(
-              opacity: disabled ? .45 : 1,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    _weekdayLabels[day.date.weekday % 7],
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: VibesTheme.textTertiaryOf(context),
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${day.date.day}',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: VibesTheme.textPrimaryOf(context),
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${PriceText.format(price)}',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: disabled
-                              ? VibesTheme.textTertiaryOf(context)
-                              : Vibes.teal,
-                          fontWeight: FontWeight.w700,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                  ),
-                ],
+                : accent.withValues(alpha: weekend ? .5 : .35),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Opacity(
+                opacity: disabled ? .45 : 1,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _weekdayLabels[day.date.weekday % 7],
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: VibesTheme.textTertiaryOf(context),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${day.date.day}',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: VibesTheme.textPrimaryOf(context),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      PriceText.format(price),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: disabled
+                            ? VibesTheme.textTertiaryOf(context)
+                            : accent,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            ),
           );
+          final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+          if (i < 8 && !reduce) {
+            return cell
+                .animate(delay: Duration(milliseconds: 60 * i))
+                .fadeIn(duration: VibesMotion.slow)
+                .slideX(
+                  begin: .08,
+                  end: 0,
+                  duration: VibesMotion.slow,
+                  curve: VibesMotion.curve,
+                );
+          }
+          return cell;
         },
       ),
     );

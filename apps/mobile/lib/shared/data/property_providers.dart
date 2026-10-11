@@ -107,13 +107,17 @@ final propertyDetailProvider = FutureProvider.family<Property, String>((
   return Property.fromJson(data as Map<String, dynamic>);
 });
 
-final similarPropertiesProvider =
-    FutureProvider.family<List<Property>, String>((ref, id) async {
-  final client = ref.watch(apiClientProvider);
-  final data = await client.get('/api/properties/$id/similar');
-  final list = data is List ? data : (data['items'] as List<dynamic>? ?? []);
-  return list.whereType<Map<String, dynamic>>().map(Property.fromJson).toList();
-});
+final similarPropertiesProvider = FutureProvider.family<List<Property>, String>(
+  (ref, id) async {
+    final client = ref.watch(apiClientProvider);
+    final data = await client.get('/api/properties/$id/similar');
+    final list = data is List ? data : (data['items'] as List<dynamic>? ?? []);
+    return list
+        .whereType<Map<String, dynamic>>()
+        .map(Property.fromJson)
+        .toList();
+  },
+);
 
 /// التوفر + الأسعار اليومية لشهر معين
 final availabilityProvider =
@@ -157,34 +161,104 @@ final availabilityProvider =
       );
     });
 
-/// تغذية الريلز — فيديوهات عمودية بالأماكن
-final reelsProvider = FutureProvider<List<ReelItem>>((ref) async {
-  ref.keepAlive();
-  final client = ref.watch(apiClientProvider);
-
-  List<dynamic> items;
-  try {
-    final data = await client.get('/api/reels') as Map<String, dynamic>;
-    items = data['items'] as List<dynamic>? ?? [];
-    final reels = items
-        .whereType<Map<String, dynamic>>()
-        .map(ReelItem.fromJson)
-        .toList();
-    if (reels.isNotEmpty) return reels;
-  } catch (_) {
-    // نحاول المسار الاحتياطي أدناه
+/// تغذية الريلز — فيديوهات عمودية بالأماكن، مع ترقيم صفحات لانهائي:
+/// تجلب دفعة أولى، وتحمّل المزيد تلقائياً قرب النهاية (cursor-based).
+class ReelsFeedController extends StateNotifier<AsyncValue<List<ReelItem>>> {
+  ReelsFeedController(this._client) : super(const AsyncValue.loading()) {
+    loadInitial();
   }
 
-  // احتياط — نبنيها محلياً من الأماكن ذات الفيديو
-  final properties = await fetchProperties(client, pageSize: 30);
-  final reels = <ReelItem>[];
-  for (final p in properties) {
-    for (final m in p.media.where((m) => m.isVideo)) {
-      reels.add(ReelItem(media: m, property: p));
+  final ApiClient _client;
+  String? _nextCursor;
+  bool _loadingMore = false;
+  bool _reachedEnd = false;
+  List<ReelItem> _fallbackItems = const [];
+
+  Future<void> loadInitial() async {
+    _nextCursor = null;
+    _reachedEnd = false;
+    state = const AsyncValue.loading();
+    try {
+      final data = await _client.get('/api/reels') as Map<String, dynamic>;
+      final items = data['items'] as List<dynamic>? ?? [];
+      final reels = items
+          .whereType<Map<String, dynamic>>()
+          .map(ReelItem.fromJson)
+          .where((r) => r.media.kind == MediaKind.reel)
+          .toList();
+      _nextCursor = data['nextCursor'] as String?;
+      _reachedEnd = _nextCursor == null;
+      if (reels.isNotEmpty) {
+        state = AsyncValue.data(reels);
+        return;
+      }
+    } catch (_) {
+      // نحاول المسار الاحتياطي أدناه
+    }
+
+    // احتياط — نبنيها محلياً من الأماكن ذات الفيديو
+    try {
+      final properties = await fetchProperties(_client, pageSize: 30);
+      final reels = <ReelItem>[];
+      for (final p in properties) {
+        for (final m in p.media.where((m) => m.kind == MediaKind.reel)) {
+          reels.add(ReelItem(media: m, property: p));
+        }
+      }
+      _fallbackItems = reels;
+      _reachedEnd = true;
+      state = AsyncValue.data(reels);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
     }
   }
-  return reels;
-});
+
+  /// يُستدعى قرب نهاية القائمة — يجلب الدفعة التالية بصمت.
+  Future<void> loadMore() async {
+    if (_loadingMore || _reachedEnd) return;
+    final current = state.valueOrNull;
+    if (current == null) return;
+    // في وضع الاحتياط لا يوجد cursor — لا مزيد
+    if (_fallbackItems.isNotEmpty) {
+      _reachedEnd = true;
+      return;
+    }
+    _loadingMore = true;
+    try {
+      final data =
+          await _client.get('/api/reels?cursor=$_nextCursor')
+              as Map<String, dynamic>;
+      final items = data['items'] as List<dynamic>? ?? [];
+      final more = items
+          .whereType<Map<String, dynamic>>()
+          .map(ReelItem.fromJson)
+          .where((r) => r.media.kind == MediaKind.reel)
+          .toList();
+      _nextCursor = data['nextCursor'] as String?;
+      _reachedEnd = _nextCursor == null || more.isEmpty;
+      // dedupe بالوسيط id — لا تكرار عند تداخل الدفعات
+      final seen = current.map((r) => r.media.id).toSet();
+      state = AsyncValue.data([
+        ...current,
+        ...more.where((r) => seen.add(r.media.id)),
+      ]);
+    } catch (_) {
+      // فشل صامت — المحاولة القادمة عند الاقتراب مجدداً
+    } finally {
+      _loadingMore = false;
+    }
+  }
+
+  Future<void> refresh() => loadInitial();
+}
+
+final reelsProvider =
+    StateNotifierProvider<ReelsFeedController, AsyncValue<List<ReelItem>>>((
+      ref,
+    ) {
+      final client = ref.watch(apiClientProvider);
+      return ReelsFeedController(client);
+    });
 
 /// ═════ المفضلة ═════
 
@@ -274,12 +348,14 @@ class CityOption {
     required this.nameAr,
     required this.provinceName,
     this.provinceSlug,
+    this.provinceImageUrl,
   });
 
   final String id;
   final String nameAr;
   final String provinceName;
   final String? provinceSlug;
+  final String? provinceImageUrl;
 
   String get label => '$nameAr · $provinceName';
 }
@@ -293,6 +369,10 @@ final locationsProvider = FutureProvider<List<CityOption>>((ref) async {
       in (data as List<dynamic>).whereType<Map<String, dynamic>>()) {
     final provinceName = '${province['nameAr'] ?? ''}';
     final provinceSlug = province['slug'] as String?;
+    final rawImage = province['imageUrl'];
+    final provinceImageUrl = rawImage is String && rawImage.isNotEmpty
+        ? rawImage
+        : null;
     for (final city
         in (province['cities'] as List<dynamic>? ?? [])
             .whereType<Map<String, dynamic>>()) {
@@ -302,6 +382,7 @@ final locationsProvider = FutureProvider<List<CityOption>>((ref) async {
           nameAr: '${city['nameAr'] ?? ''}',
           provinceName: provinceName,
           provinceSlug: provinceSlug,
+          provinceImageUrl: provinceImageUrl,
         ),
       );
     }

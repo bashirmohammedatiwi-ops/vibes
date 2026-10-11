@@ -1,8 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { MediaStatus, MediaType } from '@prisma/client';
 import { diskStorage } from 'multer';
+import { execFile } from 'child_process';
 import { existsSync, mkdirSync, unlinkSync } from 'fs';
 import { basename, extname, join } from 'path';
+import { promisify } from 'util';
 import { v4 as uuid } from 'uuid';
 import { ActivityLogService } from '../../common/services/activity-log.service';
 import { CacheService } from '../../common/services/cache.service';
@@ -57,6 +59,7 @@ export class AdminMediaService {
     propertyId: string,
     file: Express.Multer.File,
     targetRatio?: string,
+    kind?: string,
   ) {
     await this.ensureProperty(propertyId);
 
@@ -64,11 +67,28 @@ export class AdminMediaService {
     const isPrimary = count === 0;
     const isVideo = file.mimetype.startsWith('video');
 
+    // جولة 360° — صورة بانورامية استوائية (2:1) تُعرض بعارض غامر بالتطبيق
+    const isPanorama = kind === 'panorama';
+    if (isPanorama && isVideo) {
+      throw new BadRequestException('صورة 360° يجب أن تكون صورة لا فيديو');
+    }
+
+    // REEL = فيديو مُعلَم من الفريق كمحتوى «استكشف» (ريل عمودي).
+    // الفيديو العادي يبقى VIDEO — يُعرض في صفحة المكان فقط.
+    const isReel = kind === 'reel' && isVideo;
+
     const media = await this.prisma.media.create({
       data: {
         propertyId,
         uploadedById: user.id,
-        type: isVideo ? MediaType.VIDEO : MediaType.IMAGE,
+        type: isPanorama
+          ? MediaType.PANORAMA
+          : isReel
+            ? MediaType.REEL
+            : isVideo
+              ? MediaType.VIDEO
+              : MediaType.IMAGE,
+        aspectRatio: isPanorama ? '2:1' : undefined,
         url: this.publicUrl(file.filename),
         mimeType: file.mimetype,
         fileSizeBytes: BigInt(file.size),
@@ -79,6 +99,14 @@ export class AdminMediaService {
         altText: basename(file.originalname, file.originalname.includes('.') ? `.${file.originalname.split('.').pop()}` : ''),
       },
     });
+
+    if (!isVideo && !isPanorama) {
+      try {
+        await writeDisplaySizes(file.filename);
+      } catch {
+        /* النسخة الكاملة تبقى متاحة إن تعذّر التصغير */
+      }
+    }
 
     if (isVideo) {
       await this.jobs.enqueue('process-video', {
@@ -223,6 +251,25 @@ export class AdminMediaService {
 
   saveUploadedFile(file: Express.Multer.File) {
     return this.publicUrl(file.filename);
+  }
+}
+
+/** نسخ عرض للبطاقات والبنر — التطبيق يطلب /media/w480 و /media/w960. */
+export async function writeDisplaySizes(filename: string) {
+  const root = process.env.MEDIA_ROOT ?? './uploads';
+  const input = join(root, filename);
+  if (!existsSync(input)) return;
+  const exec = promisify(execFile);
+  for (const width of [480, 960]) {
+    const dir = join(root, `w${width}`);
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    const output = join(dir, filename);
+    if (existsSync(output)) continue;
+    await exec(
+      'ffmpeg',
+      ['-y', '-loglevel', 'error', '-i', input, '-vf', `scale=${width}:-2`, '-q:v', width === 480 ? '6' : '5', output],
+      { timeout: 20000 },
+    );
   }
 }
 

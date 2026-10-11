@@ -5,12 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/network/api_client.dart';
+import '../../shared/models/models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/data/marketplace_providers.dart';
 import '../../shared/widgets/maison_chrome.dart';
-import '../../shared/widgets/maison_shapes.dart';
 import '../../shared/widgets/vibes_widgets.dart';
+import '../../core/theme/world_theme.dart';
+import '../../shared/widgets/world_ui.dart';
 import '../../core/utils/vibes_net_image.dart';
+import '../auth/auth_controller.dart';
+import 'call_screen.dart';
 
 Future<void> openSupportChat(BuildContext context, WidgetRef ref) async {
   try {
@@ -23,8 +27,24 @@ Future<void> openSupportChat(BuildContext context, WidgetRef ref) async {
     context.push('/chat/$id');
   } catch (e) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(maisonError(e))));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(maisonError(e))));
   }
+}
+
+bool _isMineBy(String? myId, ConversationSummary c) =>
+    myId != null && c.lastMessageSenderId == myId;
+
+String _relative(DateTime at) {
+  final diff = DateTime.now().difference(at);
+  if (diff.inMinutes < 1) return 'الآن';
+  if (diff.inMinutes < 60) return '${diff.inMinutes} د';
+  if (diff.inHours < 24) return '${diff.inHours} س';
+  final days = diff.inDays;
+  if (days == 1) return 'أمس';
+  if (days < 7) return '$days أيام';
+  return '${at.day}/${at.month}';
 }
 
 class ConversationsScreen extends ConsumerStatefulWidget {
@@ -70,6 +90,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
   @override
   Widget build(BuildContext context) {
     final list = ref.watch(conversationsProvider);
+    final myId = ref.watch(authControllerProvider).user?.id;
     return Scaffold(
       body: MaisonWash(
         child: Column(
@@ -93,7 +114,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                     icon: const Icon(Icons.done_all_rounded),
                   ),
                   IconButton(
-                    tooltip: 'دعم VIBEES',
+                    tooltip: 'دعم VIBES',
                     onPressed: () => openSupportChat(context, ref),
                     icon: const Icon(Icons.support_agent_rounded),
                   ),
@@ -105,11 +126,11 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                 loading: () => ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
                   children: const [
-                    ShimmerBox(height: 86, radius: VibesRadius.md),
+                    WorldSkeleton(height: 86, radius: 20),
                     SizedBox(height: 10),
-                    ShimmerBox(height: 86, radius: VibesRadius.md),
+                    WorldSkeleton(height: 86, radius: 20),
                     SizedBox(height: 10),
-                    ShimmerBox(height: 86, radius: VibesRadius.md),
+                    WorldSkeleton(height: 86, radius: 20),
                   ],
                 ),
                 error: (e, _) => ErrorCanvas(
@@ -118,20 +139,18 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                 ),
                 data: (items) {
                   if (items.isEmpty) {
-                    return EmptyCanvas(
-                      icon: Icons.forum_outlined,
-                      title: 'لا رسائل بعد',
-                      subtitle: 'ستظهر هنا محادثات حجوزاتك مع المالك',
-                      action: VibesButton(
-                        label: 'راسل الدعم',
-                        small: true,
-                        expanded: false,
-                        onPressed: () => openSupportChat(context, ref),
+                    return Center(
+                      child: WorldEmpty(
+                        icon: Icons.forum_outlined,
+                        title: 'لا رسائل بعد',
+                        subtitle: 'ستظهر هنا محادثات حجوزاتك مع المضيفين',
+                        actionLabel: 'راسل الدعم',
+                        onAction: () => openSupportChat(context, ref),
                       ),
                     );
                   }
                   return RefreshIndicator(
-                    color: Vibes.teal,
+                    color: context.world.accent,
                     onRefresh: () async =>
                         ref.invalidate(conversationsProvider),
                     child: ListView.separated(
@@ -143,25 +162,57 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                       separatorBuilder: (_, __) => const SizedBox(height: 10),
                       itemBuilder: (context, i) {
                         final c = items[i];
-                        return FolioPanel(
-                          railColor: c.unread > 0 ? Vibes.teal : null,
-                          shadows: Vibes.card,
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () => context.push('/chat/${c.id}'),
-                              customBorder: Folio.shape,
-                              child: Padding(
-                                padding: const EdgeInsets.all(14),
-                                child: Row(
+                        return SurfaceListCard(
+                          accent: c.unread > 0 ? context.world.accent : null,
+                          highlighted: c.unread > 0,
+                          onTap: () => context.push('/chat/${c.id}'),
+                          child: Row(
                             children: [
-                              MaisonIconWell(
-                                icon: c.kind == 'SUPPORT'
-                                    ? Icons.support_agent_rounded
-                                    : Icons.chat_bubble_outline_rounded,
-                                color: Vibes.coral,
-                                background: Vibes.surface,
-                                size: 44,
+                              // أفاتار بحلقة نحاسية للغير مقروء
+                              Container(
+                                width: 52,
+                                height: 52,
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: c.unread > 0
+                                      ? context.world.fill
+                                      : null,
+                                  border: c.unread > 0
+                                      ? null
+                                      : Border.all(
+                                          color: context.world.accent
+                                              .withValues(alpha: .15),
+                                        ),
+                                ),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: context.world.canvasTint,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: c.kind == 'SUPPORT'
+                                      ? Icon(
+                                          Icons.support_agent_rounded,
+                                          color: context.world.accentDeep,
+                                          size: 24,
+                                        )
+                                      : Text(
+                                          c.title.trim().isEmpty
+                                              ? 'م'
+                                              : c.title.trim().substring(0, 1),
+                                          style: TextStyle(
+                                            fontFamily: 'Cairo',
+                                            fontSize: 19,
+                                            fontWeight: FontWeight.w900,
+                                            color: context.world.accentDeep,
+                                          ),
+                                        ),
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -184,34 +235,104 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                                             .textTheme
                                             .labelSmall
                                             ?.copyWith(
-                                              color: Vibes.teal,
-                                              fontWeight: FontWeight.w700,
+                                              color: context.world.accentDeep,
+                                              fontWeight: FontWeight.w800,
                                             ),
                                       ),
-                                    if (c.lastMessage != null)
+                                    if (c.updatedAt != null)
                                       Text(
-                                        c.lastMessage!,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                        _relative(c.updatedAt!),
                                         style: Theme.of(context)
                                             .textTheme
-                                            .bodySmall
+                                            .labelSmall
                                             ?.copyWith(
                                               color: VibesTheme.textTertiaryOf(
                                                 context,
                                               ),
+                                              fontSize: 10,
                                             ),
+                                      ),
+                                    if (c.lastMessage != null)
+                                      Row(
+                                        children: [
+                                          // اتجاه المكالمة في سطر المعاينة
+                                          if (c.lastMessageKind == 'CALL') ...[
+                                            Icon(
+                                              Icons.call_rounded,
+                                              size: 12,
+                                              color:
+                                                  (c.lastMessage ?? '')
+                                                      .contains('لم يُرد')
+                                                  ? SemanticColors.danger
+                                                  : context.world.accentDeep,
+                                            ),
+                                            const SizedBox(width: 4),
+                                          ],
+                                          if (_isMineBy(myId, c) &&
+                                              c.lastMessageKind != 'CALL') ...[
+                                            Text(
+                                              'أنت: ',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                    color: context
+                                                        .world
+                                                        .accentDeep,
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                            ),
+                                          ],
+                                          Expanded(
+                                            child: Text(
+                                              c.lastMessage!,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                    color:
+                                                        VibesTheme.textTertiaryOf(
+                                                          context,
+                                                        ),
+                                                  ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                   ],
                                 ),
                               ),
+                              // اتصال مباشر من القائمة — بلا فتح المحادثة
+                              GestureDetector(
+                                onTap: () => startCall(
+                                  ref,
+                                  context,
+                                  conversationId: c.id,
+                                ),
+                                child: Container(
+                                  width: 38,
+                                  height: 38,
+                                  margin: const EdgeInsetsDirectional.only(
+                                    end: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: context.world.accentFaint,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.call_rounded,
+                                    size: 18,
+                                    color: context.world.accentDeep,
+                                  ),
+                                ),
+                              ),
                               if (c.unread > 0)
                                 DecoratedBox(
-                                  decoration: const ShapeDecoration(
-                                    color: Vibes.coral,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: Folio.compact,
-                                    ),
+                                  decoration: BoxDecoration(
+                                    gradient: context.world.fill,
+                                    borderRadius: BorderRadius.circular(999),
                                   ),
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -220,8 +341,9 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                                     ),
                                     child: Text(
                                       '${c.unread}',
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      style: TextStyle(
+                                        fontFamily: 'Montserrat',
+                                        color: context.world.onAccent,
                                         fontSize: 11,
                                         fontWeight: FontWeight.w800,
                                       ),
@@ -229,9 +351,6 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                                   ),
                                 ),
                             ],
-                          ),
-                              ),
-                            ),
                           ),
                         );
                       },

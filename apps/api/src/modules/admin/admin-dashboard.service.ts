@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BookingStatus, ConversationKind, KycStatus, PaymentStatus, PropertyStatus, RequestStatus, OfferStatus, SocialPostStatus } from '@prisma/client';
+import { BookingStatus, CallStatus, ConversationKind, ConversationStatus, KycStatus, PaymentStatus, PropertyStatus, RequestStatus, OfferStatus, SocialPostStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -86,10 +86,7 @@ export class AdminDashboardService {
       this.prisma.priceOffer.count({ where: { status: OfferStatus.PENDING } }),
       this.prisma.socialPost.count({ where: { status: SocialPostStatus.REPORTED } }),
       this.prisma.conversation.count({
-        where: {
-          kind: ConversationKind.SUPPORT,
-          updatedAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
-        },
+        where: { status: ConversationStatus.OPEN },
       }),
     ]);
 
@@ -99,7 +96,15 @@ export class AdminDashboardService {
       provinceMap.set(key, (provinceMap.get(key) ?? 0) + 1);
     }
 
+    const missedCallsToday = await this.prisma.callSession.count({
+      where: {
+        status: CallStatus.MISSED,
+        createdAt: { gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()) },
+      },
+    });
+
     return {
+      missedCallsToday,
       users,
       properties,
       bookings,

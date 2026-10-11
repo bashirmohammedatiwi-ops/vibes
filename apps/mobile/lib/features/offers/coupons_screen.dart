@@ -48,7 +48,7 @@ class CouponsScreen extends ConsumerWidget {
                     );
                   }
                   return RefreshIndicator(
-                    color: Vibes.coral,
+                    color: Vibes.teal,
                     onRefresh: () async =>
                         ref.invalidate(publicCouponsProvider),
                     child: ListView.separated(
@@ -118,8 +118,8 @@ class _CouponCard extends StatelessWidget {
                     ),
                     const Spacer(),
                     FolioPanel(
-                      color: VibesDark.canvas,
-                      borderColor: Colors.transparent,
+                      color: Brand.brassPale,
+                      borderColor: Vibes.hairline,
                       radius: Folio.compact,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
@@ -130,7 +130,8 @@ class _CouponCard extends StatelessWidget {
                           coupon.code,
                           style: Theme.of(context).textTheme.labelMedium
                               ?.copyWith(
-                                color: Vibes.canvas,
+                                color: Vibes.ink,
+                                fontFamily: 'Montserrat',
                                 letterSpacing: 1.2,
                                 fontWeight: FontWeight.w800,
                               ),

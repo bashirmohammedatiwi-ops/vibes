@@ -87,6 +87,7 @@ export type Province = {
   id: string;
   nameAr: string;
   slug: string;
+  imageUrl?: string | null;
   cities: City[];
 };
 
@@ -119,6 +120,7 @@ export type MediaRendition = {
 export type MediaItem = {
   id: string;
   url: string;
+  hlsUrl?: string | null;
   type: string;
   status?: MediaStatus;
   isPrimary: boolean;
@@ -215,6 +217,7 @@ export type DashboardStats = {
   pendingOffers?: number;
   pendingSocialReports?: number;
   pendingSupport?: number;
+  missedCallsToday?: number;
   recentBookings: Array<{
     id: string;
     status: string;

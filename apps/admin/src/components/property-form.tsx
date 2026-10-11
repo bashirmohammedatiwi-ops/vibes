@@ -351,6 +351,18 @@ export function PropertyForm({ initial, onSaved, submitLabel = "حفظ" }: Props
             </Select>
           </div>
         )}
+        <label className="field-checkbox md:col-span-2 rounded-xl border border-line bg-surface px-4 py-3">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-line accent-brand"
+            checked={form.featured}
+            onChange={(e) => update("featured", e.target.checked)}
+          />
+          <span>
+            <span className="font-bold">أماكن مختارة</span>
+            <span className="mt-0.5 block text-xs text-muted">يظهر في البطاقات المتراكبة أعلى الصفحة الرئيسية. المكان لازم يكون منشوراً.</span>
+          </span>
+        </label>
       </section>
       </DetailCard>
 
@@ -423,15 +435,6 @@ export function PropertyForm({ initial, onSaved, submitLabel = "حفظ" }: Props
             <Label htmlFor="tags">وسوم</Label>
             <Input id="tags" value={form.tags} onChange={(e) => update("tags", e.target.value)} placeholder="عائلي، VIP" />
           </div>
-          <label className="field-checkbox md:col-span-2">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-line accent-brand"
-              checked={form.featured}
-              onChange={(e) => update("featured", e.target.checked)}
-            />
-            <span>إظهار هذا المكان في الصفحة الرئيسية للتطبيق</span>
-          </label>
           <div className="md:col-span-2">
             <Label>الموقع على الخريطة</Label>
             <p className="mb-2 text-xs text-muted">انقر على الخريطة أو اسحب الدبوس لتحديد الإحداثيات</p>

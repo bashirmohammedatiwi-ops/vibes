@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,22 +8,31 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/world_theme.dart';
 import '../../shared/data/property_providers.dart';
 import '../../shared/models/models.dart';
-import '../../shared/widgets/maison_chrome.dart';
 import '../../shared/widgets/maison_shapes.dart';
-import '../../shared/widgets/property_card.dart';
-import '../../shared/widgets/vibes_widgets.dart';
+import '../../shared/widgets/vibes_graphics.dart';
+import '../../shared/widgets/world_glyphs.dart';
+import '../../shared/widgets/world_ui.dart';
+import '../home/home_sections.dart';
 
-/// نديم — رفيق الاختيار. يسأل سؤالاً واحداً في كل صفحة ثم يعرض ما يليق.
+/// ═══════════════════════════════════════════════════════════
+/// نديم — مخطّط المناسبات. محادثة حيّة لا استبيان:
+///   • نديم يكتب ويتفاعل مع كل إجابة، وإجاباتك فقاعات بلون العالم
+///     (المسها لتعدّلها).
+///   • لكل سؤال أداة خاصة: بطاقات مصوّرة للمناسبة، أيقونات العوالم،
+///     عدّاد ضيوف بحشد يكبر أمامك، سماء الصباح والمساء للتوقيت،
+///     وميزانية فوق رسم حيّ لأسعار الأماكن الحقيقية.
+///   • النتيجة: خطة مناسبتك وبطاقات بحلقة تطابق وأسباب الاختيار.
+/// ═══════════════════════════════════════════════════════════
+
 class NadeemScreen extends ConsumerStatefulWidget {
   const NadeemScreen({super.key});
 
   @override
   ConsumerState<NadeemScreen> createState() => _NadeemScreenState();
 }
-
-enum _Phase { intro, question, results }
 
 enum _Occasion { wedding, engagement, birthday, family, work, other }
 
@@ -42,8 +54,9 @@ class _Answers {
     if (type != null) return type;
     if (typeOpen) {
       return switch (occasion) {
-        _Occasion.wedding || _Occasion.engagement || _Occasion.work =>
-          PropertyType.hall,
+        _Occasion.wedding ||
+        _Occasion.engagement ||
+        _Occasion.work => PropertyType.hall,
         _Occasion.birthday || _Occasion.family => PropertyType.farm,
         _ => null,
       };
@@ -60,102 +73,249 @@ class _Answers {
     _Occasion.other => 'مناسبة خاصة',
     null => 'مناسبتك',
   };
+}
 
-  String get summary {
-    final bits = <String>[occasionLabel];
-    if (type != null) {
-      bits.add(switch (type!) {
-        PropertyType.farm => 'مزرعة',
-        PropertyType.hall => 'قاعة',
-        PropertyType.decoration => 'تزيين',
-      });
-    }
-    if (provinceName != null) bits.add(provinceName!);
-    if (guestsLabel != null) bits.add(guestsLabel!);
-    if (shift != null) {
-      bits.add(switch (shift!) {
-        _Shift.full => 'يوم كامل',
-        _Shift.morning => 'صباح',
-        _Shift.evening => 'مساء',
-        _Shift.flex => 'توقيت مرن',
-      });
-    }
-    if (budgetOpen) {
-      bits.add('ميزانية مفتوحة');
-    } else if (maxPrice != null) {
-      bits.add('حتى ${PriceText.format(maxPrice!)}');
-    }
-    return bits.join(' · ');
-  }
+/// رسالة في المحادثة.
+class _Msg {
+  const _Msg.nadeem(this.text) : mine = false, step = null, results = false;
+  const _Msg.mine(this.text, this.step) : mine = true, results = false;
+  const _Msg.results() : mine = false, text = '', step = null, results = true;
+
+  final bool mine;
+  final String text;
+  final int? step;
+  final bool results;
+}
+
+class _Scored {
+  const _Scored(
+    this.property,
+    this.score, {
+    required this.reasons,
+    required this.precise,
+  });
+
+  final Property property;
+  final int score;
+  final List<String> reasons;
+  final bool precise;
 }
 
 class _NadeemScreenState extends ConsumerState<NadeemScreen> {
-  _Phase _phase = _Phase.intro;
-  int _step = 0;
   final _answers = _Answers();
+  final _thread = <_Msg>[];
+  final _scroll = ScrollController();
+
+  /// الخطوة المعروضة أداتها في الأسفل — ‎-1 حين لا شيء.
+  int _step = -1;
+  bool _typing = false;
+  bool _thinking = false;
   List<_Scored>? _matches;
-  bool _loading = false;
+  List<Property> _decorPicks = const [];
   String? _error;
+  int _session = 0;
 
   static const _total = 6;
 
-  void _back() {
-    HapticFeedback.selectionClick();
-    if (_phase == _Phase.results) {
-      setState(() {
-        _phase = _Phase.question;
-        _step = _total - 1;
-        _matches = null;
-        _error = null;
-      });
-      return;
-    }
-    if (_phase == _Phase.question && _step > 0) {
-      setState(() => _step -= 1);
-      return;
-    }
-    if (_phase == _Phase.question) {
-      setState(() => _phase = _Phase.intro);
-      return;
-    }
-    if (context.canPop()) context.pop();
+  @override
+  void initState() {
+    super.initState();
+    _opening();
   }
 
-  Future<void> _pickAndAdvance(VoidCallback apply) async {
-    HapticFeedback.selectionClick();
-    setState(apply);
-    await Future<void>.delayed(const Duration(milliseconds: 220));
-    if (!mounted) return;
-    if (_step < _total - 1) {
-      setState(() => _step += 1);
-    } else {
-      await _finish();
-    }
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
   }
 
-  Future<void> _finish() async {
+  // ── المحادثة ──
+
+  Future<void> _opening() async {
+    final s = _session;
+    await _say('أهلاً بك، أنا نديم ✨', s, delay: 500);
+    await _say(
+      'سأساعدك تختار المكان المثالي لمناسبتك — بست خطوات خفيفة.',
+      s,
+      delay: 900,
+    );
+    await _ask(0, s);
+  }
+
+  Future<void> _say(String text, int session, {int delay = 650}) async {
+    if (!mounted || session != _session) return;
+    setState(() => _typing = true);
+    _toBottom();
+    await Future<void>.delayed(Duration(milliseconds: delay));
+    if (!mounted || session != _session) return;
     setState(() {
-      _phase = _Phase.results;
-      _loading = true;
-      _error = null;
-      _matches = null;
+      _typing = false;
+      _thread.add(_Msg.nadeem(text));
     });
+    _toBottom();
+  }
+
+  Future<void> _ask(int step, int session) async {
+    await _say(_question(step), session);
+    if (!mounted || session != _session) return;
+    setState(() => _step = step);
+    _toBottom();
+  }
+
+  String _question(int step) => switch (step) {
+    0 => 'ما المناسبة التي تخطّط لها؟',
+    1 => 'أي مكان يليق بها؟',
+    2 => 'في أي محافظة؟',
+    3 => 'كم ضيفاً تتوقع تقريباً؟',
+    4 => 'متى تفضّل وقت المناسبة؟',
+    _ => 'وأخيراً — كم تحب أن تكون ميزانيتك لليوم؟',
+  };
+
+  String _reaction(int step) => switch (step) {
+    0 => switch (_answers.occasion) {
+      _Occasion.wedding => 'ألف مبروك! ليلة العمر تستحق الأفضل 💍',
+      _Occasion.engagement => 'مبارك مقدّماً! بداية جميلة تستحق مكاناً دافئاً.',
+      _Occasion.birthday => 'رائع! سنجعلها حفلة لا تُنسى 🎂',
+      _Occasion.family => 'جميل — الأهل يستحقون يوماً هادئاً ومريحاً.',
+      _Occasion.work => 'ممتاز، سأبحث عن مكان أنيق ومنظّم.',
+      _ => 'حسناً، أخبرني بالمزيد وسأقرأ بين السطور.',
+    },
+    1 =>
+      _answers.typeOpen
+          ? 'اترك الأمر لي — سأختار ما يناسب مناسبتك.'
+          : 'اختيار موفّق.',
+    2 =>
+      _answers.provinceName == null
+          ? 'سأبحث في كل العراق.'
+          : 'تمام، سأركّز على ${_answers.provinceName}.',
+    3 => 'وصلت — سأستبعد ما لا يتسع لضيوفك.',
+    4 => 'حلو، سأراعي التوقيت.',
+    _ => '',
+  };
+
+  Future<void> _answer(int step, String label, VoidCallback apply) async {
+    HapticFeedback.selectionClick();
+    final s = _session;
+    setState(() {
+      apply();
+      _step = -1;
+      _thread.add(_Msg.mine(label, step));
+    });
+    _toBottom();
+    if (step < _total - 1) {
+      final r = _reaction(step);
+      if (r.isNotEmpty) await _say(r, s, delay: 520);
+      await _ask(step + 1, s);
+    } else {
+      await _finish(s);
+    }
+  }
+
+  /// لمس إجابة سابقة — يعود إلى سؤالها ويقصّ ما بعده.
+  void _editFrom(int step) {
+    HapticFeedback.selectionClick();
+    final i = _thread.indexWhere((m) => m.mine && m.step == step);
+    if (i < 0) return;
+    setState(() {
+      _session++;
+      _thread.removeRange(i, _thread.length);
+      _typing = false;
+      _thinking = false;
+      _matches = null;
+      _error = null;
+      _step = step;
+    });
+    _toBottom();
+  }
+
+  void _restart() {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _session++;
+      _thread.clear();
+      _step = -1;
+      _typing = false;
+      _thinking = false;
+      _matches = null;
+      _error = null;
+      _answers
+        ..occasion = null
+        ..type = null
+        ..typeOpen = false
+        ..provinceSlug = null
+        ..provinceName = null
+        ..minCapacity = null
+        ..guestsLabel = null
+        ..maxPrice = null
+        ..budgetOpen = false
+        ..shift = null;
+    });
+    _opening();
+  }
+
+  void _toBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scroll.hasClients) return;
+      _scroll.animateTo(
+        _scroll.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  // ── الاختيار ──
+
+  Future<void> _finish(int session) async {
+    await _say('ممتاز! دعني أقرأ الأماكن لأجلك…', session, delay: 500);
+    if (!mounted || session != _session) return;
+    setState(() {
+      _thinking = true;
+      _error = null;
+    });
+    _toBottom();
     try {
       final client = ref.read(apiClientProvider);
-      final type = _answers.type;
-      final scored = await _collectMatches(client, type);
-      if (!mounted) return;
+      final results = await Future.wait([
+        _collectMatches(client, _answers.type),
+        Future<void>.delayed(const Duration(milliseconds: 1400)),
+      ]);
+      var decor = const <Property>[];
+      final wantsDecor =
+          (_answers.occasion == _Occasion.wedding ||
+              _answers.occasion == _Occasion.engagement ||
+              _answers.occasion == _Occasion.birthday) &&
+          _answers.impliedType != PropertyType.decoration;
+      if (wantsDecor) {
+        decor = (await fetchProperties(
+          client,
+          type: 'DECORATION',
+          province: _answers.provinceSlug,
+          sort: 'rating',
+        )).take(6).toList();
+        if (decor.isEmpty)
+          decor = (await fetchProperties(
+            client,
+            type: 'DECORATION',
+            sort: 'rating',
+          )).take(6).toList();
+      }
+      if (!mounted || session != _session) return;
+      HapticFeedback.mediumImpact();
       setState(() {
-        _matches = scored;
-        _loading = false;
+        _thinking = false;
+        _matches = results.first as List<_Scored>;
+        _decorPicks = decor;
+        _thread.add(const _Msg.results());
       });
-    } catch (e) {
-      if (!mounted) return;
+    } catch (_) {
+      if (!mounted || session != _session) return;
       setState(() {
-        _loading = false;
-        _error = 'تعذّر على نديم إكمال الاختيار. حاول مرة أخرى.';
+        _thinking = false;
+        _error = 'تعذّر عليّ إكمال البحث الآن — تحقّق من الاتصال وحاول مجدداً.';
       });
     }
+    _toBottom();
   }
 
   Future<List<_Scored>> _collectMatches(
@@ -169,10 +329,8 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
             PropertyType.hall => 'HALL',
             PropertyType.decoration => 'DECORATION',
           };
-
     final seen = <String>{};
-    var pool = <Property>[];
-
+    final pool = <Property>[];
     Future<void> pull({String? type, String? province, String? sort}) async {
       final extra = await fetchProperties(
         client,
@@ -187,28 +345,23 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
     }
 
     await pull(type: typeKey, province: _answers.provinceSlug);
-    if (pool.length < 8) {
-      await pull(type: typeKey, sort: 'featured');
-    }
-    if (pool.length < 8 && _answers.provinceSlug != null) {
+    if (pool.length < 8) await pull(type: typeKey, sort: 'featured');
+    if (pool.length < 8 && _answers.provinceSlug != null)
       await pull(province: _answers.provinceSlug);
-    }
-    if (pool.isEmpty) {
-      await pull(sort: 'featured');
-    }
+    if (pool.isEmpty) await pull(sort: 'featured');
 
-    final ranked = pool
-        .map(
-          (p) => _Scored(
-            p,
-            _score(p),
-            _reason(p),
-            precise: _precise(p),
-          ),
-        )
-        .toList()
-      ..sort((a, b) => b.score.compareTo(a.score));
-
+    final ranked =
+        pool
+            .map(
+              (p) => _Scored(
+                p,
+                _score(p),
+                reasons: _reasons(p),
+                precise: _precise(p),
+              ),
+            )
+            .toList()
+          ..sort((a, b) => b.score.compareTo(a.score));
     final strong = ranked.where((m) => m.score >= 18).toList();
     return (strong.isNotEmpty ? strong : ranked).take(10).toList();
   }
@@ -216,7 +369,8 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
   bool _precise(Property p) {
     final typeOk = _answers.type == null || p.type == _answers.type;
     final cityOk =
-        _answers.provinceName == null || p.provinceName == _answers.provinceName;
+        _answers.provinceName == null ||
+        p.provinceName == _answers.provinceName;
     final capOk =
         _answers.minCapacity == null || p.capacity >= _answers.minCapacity!;
     return typeOk && cityOk && capOk;
@@ -225,21 +379,14 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
   int _score(Property p) {
     var s = 0;
     final preferred = _answers.impliedType;
-    if (preferred != null) {
-      s += p.type == preferred ? 40 : -12;
-    }
+    if (preferred != null) s += p.type == preferred ? 40 : -12;
     final province = _answers.provinceName;
-    if (province != null) {
-      s += p.provinceName == province ? 28 : -10;
-    }
+    if (province != null) s += p.provinceName == province ? 28 : -10;
     final minCap = _answers.minCapacity;
-    if (minCap != null) {
-      s += p.capacity >= minCap ? 22 : -24;
-    }
+    if (minCap != null) s += p.capacity >= minCap ? 22 : -24;
     final maxPrice = _answers.maxPrice;
-    if (maxPrice != null && !_answers.budgetOpen) {
-      s += p.pricePerDay <= maxPrice ? 18 : -20;
-    }
+    if (maxPrice != null && !_answers.budgetOpen)
+      s += _fromPrice(p) <= maxPrice ? 18 : -20;
     switch (_answers.shift) {
       case _Shift.morning:
         if (p.priceMorningShift != null) s += 12;
@@ -259,940 +406,2058 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
     return s;
   }
 
-  String _reason(Property p) {
-    final bits = <String>[p.typeLabelAr];
-    final place = p.cityName ?? p.provinceName;
-    if (place != null && place.isNotEmpty) bits.add(place);
-    if (p.capacity > 0) bits.add('يتسع لـ ${p.capacity}');
-    bits.add('${PriceText.format(p.pricePerDay)} لليوم');
-    return bits.join(' · ');
+  /// نسبة التطابق المعروضة — من الدرجة إلى 55..99٪.
+  int _matchPercent(int score) =>
+      (55 + (score.clamp(-20, 110) + 20) / 130 * 44).round().clamp(55, 99);
+
+  List<String> _reasons(Property p) {
+    final r = <String>[];
+    if (_answers.provinceName != null &&
+        p.provinceName == _answers.provinceName)
+      r.add('في ${p.provinceName}');
+    if (_answers.minCapacity != null && p.capacity >= _answers.minCapacity!)
+      r.add('يتسع لـ ${p.capacity}');
+    if (_answers.maxPrice != null &&
+        !_answers.budgetOpen &&
+        _fromPrice(p) <= _answers.maxPrice!) {
+      r.add('ضمن ميزانيتك');
+    }
+    if (_answers.shift == _Shift.evening && p.priceEveningShift != null)
+      r.add('شفت مسائي');
+    if (_answers.shift == _Shift.morning && p.priceMorningShift != null)
+      r.add('شفت صباحي');
+    if (p.ratingCount > 0 && p.ratingAvg >= 4.5)
+      r.add('تقييم ${p.ratingAvg.toStringAsFixed(1)}');
+    if (p.featured) r.add('مختار');
+    return r.take(3).toList();
   }
 
-  void _restart() {
-    HapticFeedback.selectionClick();
-    setState(() {
-      _phase = _Phase.intro;
-      _step = 0;
-      _answers
-        ..occasion = null
-        ..type = null
-        ..typeOpen = false
-        ..provinceSlug = null
-        ..provinceName = null
-        ..minCapacity = null
-        ..guestsLabel = null
-        ..maxPrice = null
-        ..budgetOpen = false
-        ..shift = null;
-      _matches = null;
-      _error = null;
-    });
+  // ── البناء ──
+
+  WorldPalette get _palette => switch (_answers.impliedType) {
+    PropertyType.farm => WorldPalette.farm,
+    PropertyType.hall => WorldPalette.hall,
+    PropertyType.decoration => WorldPalette.decoration,
+    null => context.world,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final p = _palette;
+    return AnimatedTheme(
+      duration: const Duration(milliseconds: 500),
+      data: applyWorld(Theme.of(context), p),
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: overlayFor(darkBackground: false),
+        child: Scaffold(
+          backgroundColor: p.canvas,
+          body: Column(
+            children: [
+              _TopBar(
+                typing: _typing || _thinking,
+                progress: _progress,
+                onBack: () =>
+                    context.canPop() ? context.pop() : context.go('/home'),
+                onRestart: _restart,
+              ),
+              Expanded(
+                child: ListView(
+                  controller: _scroll,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                  children: [
+                    for (var i = 0; i < _thread.length; i++)
+                      _message(_thread[i], i),
+                    if (_typing) const _TypingBubble(),
+                    if (_thinking) _ThinkingCard(palette: p),
+                    if (_error != null) _errorCard(),
+                  ],
+                ),
+              ),
+              _composer(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  double get _progress {
+    final answered = _thread.where((m) => m.mine).length;
+    return (answered / _total).clamp(0.0, 1.0);
+  }
+
+  Widget _message(_Msg m, int index) {
+    if (m.results) return _results();
+    final showAvatar =
+        !m.mine &&
+        (index == _thread.length - 1 ||
+            _thread[index + 1].mine ||
+            _thread[index + 1].results);
+    return _Bubble(
+      key: ValueKey('msg-$index-${m.text}'),
+      text: m.text,
+      mine: m.mine,
+      showAvatar: showAvatar,
+      onTap: m.mine && m.step != null && !_thinking
+          ? () => _editFrom(m.step!)
+          : null,
+    );
+  }
+
+  Widget _errorCard() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF2F2),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              _error!,
+              style: const TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFB91C1C),
+              ),
+            ),
+            const SizedBox(height: 10),
+            WorldGhostButton(
+              label: 'حاول مجدداً',
+              icon: Icons.refresh_rounded,
+              height: 44,
+              onTap: () => _finish(_session),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── أدوات الإجابة ──
+
+  Widget _composer() {
+    final bottom = MediaQuery.paddingOf(context).bottom;
+    final Widget? body = switch (_step) {
+      0 => _OccasionPicker(
+        onPick: (o, label) => _answer(0, label, () => _answers.occasion = o),
+      ),
+      1 => _TypePicker(
+        onPick: (t, label) => _answer(1, label, () {
+          _answers.type = t;
+          _answers.typeOpen = t == null;
+        }),
+      ),
+      2 => _ProvincePicker(
+        type: _answers.impliedType,
+        onPick: (slug, name) => _answer(2, name ?? 'أي مكان في العراق', () {
+          _answers.provinceSlug = slug;
+          _answers.provinceName = name;
+        }),
+      ),
+      3 => _GuestDial(
+        onDone: (n) => _answer(3, 'حوالي $n ضيف', () {
+          _answers.minCapacity = n;
+          _answers.guestsLabel = 'حوالي $n ضيف';
+        }),
+      ),
+      4 => _DayPicker(
+        onPick: (s, label) => _answer(4, label, () => _answers.shift = s),
+      ),
+      5 => _BudgetPicker(
+        type: _answers.impliedType,
+        onDone: (max) => _answer(
+          5,
+          max == null ? 'الميزانية مفتوحة' : 'حتى ${_money(max)} د.ع',
+          () {
+            _answers.budgetOpen = max == null;
+            _answers.maxPrice = max;
+          },
+        ),
+      ),
+      _ => null,
+    };
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeOutCubic,
+      alignment: Alignment.bottomCenter,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 380),
+        switchInCurve: Curves.easeOutCubic,
+        transitionBuilder: (child, anim) => FadeTransition(
+          opacity: anim,
+          child: SlideTransition(
+            position: Tween(
+              begin: const Offset(0, .12),
+              end: Offset.zero,
+            ).animate(anim),
+            child: child,
+          ),
+        ),
+        child: body == null
+            ? SizedBox(key: const ValueKey('none'), height: bottom)
+            : Container(
+                key: ValueKey('step-$_step'),
+                width: double.infinity,
+                padding: EdgeInsets.fromLTRB(16, 14, 16, 14 + bottom),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: .08),
+                      blurRadius: 30,
+                      offset: const Offset(0, -8),
+                    ),
+                  ],
+                ),
+                child: body,
+              ),
+      ),
+    );
+  }
+
+  // ── النتائج ──
+
+  Widget _results() {
+    final p = _palette;
+    final list = _matches ?? const <_Scored>[];
+    final width = MediaQuery.sizeOf(context).width;
+    final card = (width * .78).clamp(260.0, 360.0);
+    final chips = <(int, IconData, String)>[
+      (0, Icons.celebration_rounded, _answers.occasionLabel),
+      if (_answers.type != null)
+        (1, Icons.home_work_rounded, _typeLabel(_answers.type!))
+      else
+        (1, Icons.auto_awesome_rounded, 'نديم يختار'),
+      (2, Icons.location_on_rounded, _answers.provinceName ?? 'كل العراق'),
+      if (_answers.minCapacity != null)
+        (3, Icons.groups_rounded, '${_answers.minCapacity} ضيف'),
+      if (_answers.shift != null)
+        (4, Icons.schedule_rounded, _shiftLabel(_answers.shift!)),
+      (
+        5,
+        Icons.payments_rounded,
+        _answers.budgetOpen || _answers.maxPrice == null
+            ? 'مفتوحة'
+            : 'حتى ${_money(_answers.maxPrice!)}',
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // خطة المناسبة
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: [
+                  Color.lerp(p.accent, p.accentDeep, .2)!,
+                  p.accentDeep,
+                  Color.lerp(p.accentDeep, p.night, .5)!,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: p.glowShadow,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const VibesLogo.mark(size: 28, color: Colors.white),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'خطة ${_answers.occasionLabel}',
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      list.isEmpty ? '' : '${list.length} اقتراح',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white.withValues(alpha: .8),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final c in chips)
+                      PressScale(
+                        onTap: () => _editFrom(c.$1),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: .15),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: .25),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(c.$2, size: 13, color: Colors.white),
+                              const SizedBox(width: 4),
+                              Text(
+                                c.$3,
+                                style: const TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'المس أي بند لتعديله',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withValues(alpha: .65),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          _Bubble(
+            text: list.isEmpty
+                ? 'لم أجد مطابقة دقيقة الآن — جرّب توسيع الميزانية أو تغيير المحافظة.'
+                : list.first.precise
+                ? 'هذه أفضل الأماكن لمناسبتك، مرتّبة حسب التطابق 👇'
+                : 'لم أجد تطابقاً كاملاً، لكن هذه الأقرب لما طلبت 👇',
+            mine: false,
+            showAvatar: true,
+          ),
+          if (list.isNotEmpty)
+            SizedBox(
+              height: card * .62 + 172,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                clipBehavior: Clip.none,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                itemCount: list.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 12),
+                itemBuilder: (context, i) => _MatchCard(
+                  scored: list[i],
+                  width: card,
+                  percent: _matchPercent(list[i].score),
+                  best: i == 0,
+                ),
+              ),
+            ),
+          if (_decorPicks.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const _Bubble(
+              text: 'ولتكتمل الصورة — فرق تزيين تليق بمناسبتك 🌸',
+              mine: false,
+              showAvatar: true,
+            ),
+            SizedBox(
+              height: 92,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                itemCount: _decorPicks.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 10),
+                itemBuilder: (context, i) =>
+                    _MiniPlace(property: _decorPicks[i]),
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: WorldGhostButton(
+                  label: 'من جديد',
+                  icon: Icons.refresh_rounded,
+                  height: 48,
+                  onTap: _restart,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: WorldButton(
+                  label: 'كل النتائج',
+                  icon: Icons.search_rounded,
+                  height: 48,
+                  onTap: () {
+                    final t = _answers.impliedType;
+                    final type = t == null
+                        ? ''
+                        : 'type=${t.name.toUpperCase()}';
+                    final prov = _answers.provinceSlug == null
+                        ? ''
+                        : 'province=${_answers.provinceSlug}';
+                    context.push(
+                      '/search?${[type, prov].where((e) => e.isNotEmpty).join('&')}',
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// أدوات مساعدة
+// ═══════════════════════════════════════════════════════════
+
+num _fromPrice(Property p) {
+  final prices = <num>[
+    p.pricePerDay,
+    if (p.priceMorningShift != null) p.priceMorningShift!,
+    if (p.priceEveningShift != null) p.priceEveningShift!,
+  ].where((v) => v > 0).toList()..sort();
+  return prices.isEmpty ? p.pricePerDay : prices.first;
+}
+
+String _money(num v) {
+  if (v >= 1000000) {
+    final m = v / 1000000;
+    return '${m == m.roundToDouble() ? m.toInt() : m.toStringAsFixed(1)} مليون';
+  }
+  if (v >= 1000) return '${(v / 1000).round()} ألف';
+  return formatIqdShort(v);
+}
+
+String _typeLabel(PropertyType t) => switch (t) {
+  PropertyType.farm => 'مزرعة',
+  PropertyType.hall => 'قاعة',
+  PropertyType.decoration => 'تزيين',
+};
+
+String _shiftLabel(_Shift s) => switch (s) {
+  _Shift.full => 'يوم كامل',
+  _Shift.morning => 'صباحاً',
+  _Shift.evening => 'مساءً',
+  _Shift.flex => 'توقيت مرن',
+};
+
+// ═══════════════════════════════════════════════════════════
+// الرأس
+// ═══════════════════════════════════════════════════════════
+
+class _TopBar extends StatelessWidget {
+  const _TopBar({
+    required this.typing,
+    required this.progress,
+    required this.onBack,
+    required this.onRestart,
+  });
+
+  final bool typing;
+  final double progress;
+  final VoidCallback onBack;
+  final VoidCallback onRestart;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.world;
+    final top = MediaQuery.paddingOf(context).top;
+    return Container(
+      padding: EdgeInsets.fromLTRB(14, top + 8, 14, 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              _Round(icon: Icons.arrow_back_rounded, onTap: onBack),
+              const SizedBox(width: 10),
+              const _Orb(size: 44),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'نديم',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        color: Vibes.ink,
+                        height: 1.2,
+                      ),
+                    ),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: Text(
+                        typing ? 'يكتب…' : 'مخطّط مناسبتك الشخصي',
+                        key: ValueKey(typing),
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: typing ? p.accentDeep : Vibes.inkTertiary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _Round(icon: Icons.refresh_rounded, onTap: onRestart),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(end: progress),
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeOutCubic,
+              builder: (context, v, _) => LinearProgressIndicator(
+                value: v,
+                minHeight: 3,
+                backgroundColor: const Color(0xFFF0F1F3),
+                valueColor: AlwaysStoppedAnimation(p.accent),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Round extends StatelessWidget {
+  const _Round({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return PressScale(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF2F3F5),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, size: 20, color: Vibes.ink),
+      ),
+    );
+  }
+}
+
+/// كرة نديم — تدرّج العالم بحلقة ضوء تدور ببطء والشعار في المنتصف.
+class _Orb extends StatefulWidget {
+  const _Orb({required this.size});
+
+  final double size;
+
+  @override
+  State<_Orb> createState() => _OrbState();
+}
+
+class _OrbState extends State<_Orb> with SingleTickerProviderStateMixin {
+  late final AnimationController _spin = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 6),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final night = _phase != _Phase.results;
-    return Scaffold(
-      backgroundColor: night ? VibesDark.canvas : Vibes.canvas,
-      body: night
-          ? MaisonNightWash(child: SafeArea(child: _nightBody()))
-          : MaisonWash(child: SafeArea(child: _resultsBody())),
-    );
-  }
-
-  Widget _nightBody() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 4, 16, 0),
-          child: Row(
-            children: [
-              IconButton(
-                onPressed: _back,
-                icon: Icon(
-                  _phase == _Phase.intro
-                      ? Icons.close_rounded
-                      : Icons.arrow_back_rounded,
-                  color: Colors.white,
+    final p = context.world;
+    final s = widget.size;
+    return SizedBox(
+      width: s,
+      height: s,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          RotationTransition(
+            turns: _spin,
+            child: Container(
+              width: s,
+              height: s,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: SweepGradient(
+                  colors: [
+                    p.accentLight,
+                    p.accent,
+                    p.accentDeep,
+                    p.accentLight,
+                  ],
                 ),
               ),
-              const Spacer(),
-              const CrestSeal(size: 22, color: Vibes.tealBright),
-            ],
+            ),
           ),
-        ),
-        Expanded(
-          child: AnimatedSwitcher(
-            duration: VibesMotion.slow,
-            switchInCurve: VibesMotion.curve,
-            switchOutCurve: Curves.easeIn,
-            transitionBuilder: (child, animation) {
-              final offset = Tween<Offset>(
-                begin: const Offset(0.06, 0),
-                end: Offset.zero,
-              ).animate(animation);
-              return FadeTransition(
-                opacity: animation,
-                child: SlideTransition(position: offset, child: child),
-              );
-            },
-            child: _phase == _Phase.intro
-                ? KeyedSubtree(key: const ValueKey('intro'), child: _intro())
-                : KeyedSubtree(
-                    key: ValueKey('q-$_step'),
-                    child: _questionPage(),
-                  ),
+          Container(
+            width: s - 5,
+            height: s - 5,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [p.accent, p.accentDeep],
+              ),
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(s * .22),
+              child: const VibesLogo.mark(color: Colors.white),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
+}
 
-  Widget _intro() {
-    const program = [
-      ('01', 'المناسبة'),
-      ('02', 'المكان'),
-      ('03', 'المدينة'),
-      ('04', 'الضيوف'),
-      ('05', 'الوقت'),
-      ('06', 'الميزانية'),
-    ];
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+// ═══════════════════════════════════════════════════════════
+// الفقاعات
+// ═══════════════════════════════════════════════════════════
+
+class _Bubble extends StatelessWidget {
+  const _Bubble({
+    super.key,
+    required this.text,
+    required this.mine,
+    this.showAvatar = false,
+    this.onTap,
+  });
+
+  final String text;
+  final bool mine;
+  final bool showAvatar;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.world;
+    final bubble = Container(
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.sizeOf(context).width * .74,
+      ),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      decoration: BoxDecoration(
+        gradient: mine ? p.fill : null,
+        color: mine ? null : Colors.white,
+        borderRadius: BorderRadiusDirectional.only(
+          topStart: const Radius.circular(20),
+          topEnd: const Radius.circular(20),
+          bottomStart: Radius.circular(mine ? 20 : 6),
+          bottomEnd: Radius.circular(mine ? 6 : 20),
+        ),
+        border: mine ? null : Border.all(color: const Color(0xFFEDEEF1)),
+        boxShadow: [
+          BoxShadow(
+            color: mine
+                ? p.glow.withValues(alpha: .25)
+                : Colors.black.withValues(alpha: .04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Spacer(),
-          const MaisonKicker('رفيق المناسبة', light: true),
-          const SizedBox(height: 12),
-          Text(
-            'نديم',
-            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+          Flexible(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 14.5,
+                fontWeight: mine ? FontWeight.w800 : FontWeight.w600,
+                color: mine ? p.onAccent : Vibes.ink,
+                height: 1.55,
+              ),
+            ),
+          ),
+          if (mine && onTap != null) ...[
+            const SizedBox(width: 6),
+            Icon(
+              Icons.edit_rounded,
+              size: 13,
+              color: p.onAccent.withValues(alpha: .7),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 360),
+      curve: Curves.easeOutCubic,
+      builder: (context, t, child) => Opacity(
+        opacity: t,
+        child: Transform.translate(
+          offset: Offset(0, (1 - t) * 10),
+          child: child,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          mainAxisAlignment: mine
+              ? MainAxisAlignment.end
+              : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (!mine) ...[
+              SizedBox(
+                width: 30,
+                child: showAvatar ? const _Orb(size: 30) : null,
+              ),
+              const SizedBox(width: 8),
+            ],
+            GestureDetector(onTap: onTap, child: bubble),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TypingBubble extends StatefulWidget {
+  const _TypingBubble();
+
+  @override
+  State<_TypingBubble> createState() => _TypingBubbleState();
+}
+
+class _TypingBubbleState extends State<_TypingBubble>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.world;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          const _Orb(size: 30),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
               color: Colors.white,
-              fontWeight: FontWeight.w800,
-              height: 1.05,
+              borderRadius: const BorderRadiusDirectional.only(
+                topStart: Radius.circular(20),
+                topEnd: Radius.circular(20),
+                bottomStart: Radius.circular(6),
+                bottomEnd: Radius.circular(20),
+              ),
+              border: Border.all(color: const Color(0xFFEDEEF1)),
             ),
-          ),
-          const SizedBox(height: 8),
-          const ArcFlourish(width: 42, color: Vibes.tealBright),
-          const SizedBox(height: 18),
-          Text(
-            'سؤال واحد في كل صفحة. يقرأ نديم ذوقك ثم يعرض الأماكن الجاهزة للحجز.',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Colors.white.withValues(alpha: .82),
-              height: 1.65,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 22),
-          FolioPanel(
-            color: Colors.white.withValues(alpha: .05),
-            borderColor: Colors.white.withValues(alpha: .12),
-            radius: Folio.chrome,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-              child: Column(
+            child: AnimatedBuilder(
+              animation: _c,
+              builder: (context, _) => Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  for (var i = 0; i < program.length; i++) ...[
-                    Row(
-                      children: [
-                        Text(
-                          program[i].$1,
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: Vibes.tealBright,
-                                fontWeight: FontWeight.w800,
-                                fontFeatures: const [FontFeature.tabularFigures()],
-                              ),
+                  for (var i = 0; i < 3; i++) ...[
+                    if (i > 0) const SizedBox(width: 5),
+                    Transform.translate(
+                      offset: Offset(
+                        0,
+                        -3 *
+                            math
+                                .sin(((_c.value - i * .18) % 1) * math.pi)
+                                .clamp(0, 1),
+                      ),
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: Color.lerp(p.accentLight, p.accentDeep, i / 2),
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            program[i].$2,
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                    if (i < program.length - 1) const SizedBox(height: 9),
                   ],
                 ],
               ),
             ),
           ),
-          const Spacer(),
-          VibesButton(
-            label: 'ابدأ الجلسة',
-            icon: Icons.auto_awesome_rounded,
-            onPressed: () {
-              HapticFeedback.mediumImpact();
-              setState(() => _phase = _Phase.question);
-            },
-          ),
         ],
       ),
     );
   }
+}
 
-  Widget _questionPage() {
+/// بطاقة «أقرأ الأماكن» — كرة تتنفس وحلقات تتسع.
+class _ThinkingCard extends StatefulWidget {
+  const _ThinkingCard({required this.palette});
+
+  final WorldPalette palette;
+
+  @override
+  State<_ThinkingCard> createState() => _ThinkingCardState();
+}
+
+class _ThinkingCardState extends State<_ThinkingCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1600),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.palette;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 8, 22, 20),
+      padding: const EdgeInsets.symmetric(vertical: 18),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _StepThread(current: _step, total: _total),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(child: MaisonKicker(_stepKicker, light: true)),
-              Text(
-                '${(_step + 1).toString().padLeft(2, '0')} / ${_total.toString().padLeft(2, '0')}',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Vibes.tealBright,
-                  fontWeight: FontWeight.w800,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+          SizedBox(
+            width: 120,
+            height: 120,
+            child: AnimatedBuilder(
+              animation: _c,
+              builder: (context, _) => Stack(
+                alignment: Alignment.center,
+                children: [
+                  for (var i = 0; i < 2; i++)
+                    Builder(
+                      builder: (context) {
+                        final t = (_c.value + i * .5) % 1;
+                        return Opacity(
+                          opacity: (1 - t) * .5,
+                          child: Container(
+                            width: 60 + 60 * t,
+                            height: 60 + 60 * t,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: p.accent, width: 2),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  const _Orb(size: 60),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            _stepTitle,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              height: 1.25,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            _stepHint,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.white.withValues(alpha: .68),
-              height: 1.55,
+            'أطابق مناسبتك مع الأماكن المتاحة…',
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: p.accentDeep,
             ),
           ),
-          const SizedBox(height: 22),
-          Expanded(child: _stepOptions()),
         ],
       ),
     );
   }
+}
 
-  String get _stepKicker => switch (_step) {
-    0 => 'السؤال الأول',
-    1 => 'السؤال الثاني',
-    2 => 'السؤال الثالث',
-    3 => 'السؤال الرابع',
-    4 => 'السؤال الخامس',
-    _ => 'السؤال الأخير',
-  };
+// ═══════════════════════════════════════════════════════════
+// المناسبة — بطاقات بأيقونة متدرّجة
+// ═══════════════════════════════════════════════════════════
 
-  String get _stepTitle => switch (_step) {
-    0 => 'ما المناسبة التي تخطط لها؟',
-    1 => 'أي نوع مكان يليق بها؟',
-    2 => 'أين تقيم المناسبة؟',
-    3 => 'كم عدد الضيوف تقريباً؟',
-    4 => 'كيف تفضّل التوقيت؟',
-    _ => 'ما سقفك لليوم؟',
-  };
+class _OccasionPicker extends StatelessWidget {
+  const _OccasionPicker({required this.onPick});
 
-  String get _stepHint => switch (_step) {
-    0 => 'نديم يستخدم المناسبة ليضيّق الذوق لا ليحصر الخيارات.',
-    1 => 'إن لم تحسم الأمر، اترك الاختيار لنديم.',
-    2 => 'المحافظة تقرّب الأماكن الجاهزة فعلاً للحجز.',
-    3 => 'السعة المعروضة هي الحد الأدنى الذي يناسبك.',
-    4 => 'اليوم الكامل أو الشفت — حسب طبيعة المكان.',
-    _ => 'السعر لليوم الواحد، بلا مفاجآت لاحقاً.',
-  };
+  final void Function(_Occasion, String) onPick;
 
-  Widget _stepOptions() {
-    return switch (_step) {
-      0 => _optionList([
-        _Choice(
-          'زفاف',
-          'ليلة تُختار بعناية',
-          Icons.favorite_border_rounded,
-          selected: _answers.occasion == _Occasion.wedding,
-          onTap: () => _pickAndAdvance(
-            () => _answers.occasion = _Occasion.wedding,
-          ),
-        ),
-        _Choice(
-          'خطوبة',
-          'احتفاء أقرب وأدفأ',
-          Icons.auto_awesome_outlined,
-          selected: _answers.occasion == _Occasion.engagement,
-          onTap: () => _pickAndAdvance(
-            () => _answers.occasion = _Occasion.engagement,
-          ),
-        ),
-        _Choice(
-          'عيد ميلاد',
-          'جلسة خفيفة أو حفلة',
-          Icons.cake_outlined,
-          selected: _answers.occasion == _Occasion.birthday,
-          onTap: () => _pickAndAdvance(
-            () => _answers.occasion = _Occasion.birthday,
-          ),
-        ),
-        _Choice(
-          'جلسة أهل',
-          'عزيمة أو استراحة',
-          Icons.groups_outlined,
-          selected: _answers.occasion == _Occasion.family,
-          onTap: () => _pickAndAdvance(
-            () => _answers.occasion = _Occasion.family,
-          ),
-        ),
-        _Choice(
-          'عمل أو مؤتمر',
-          'لقاء رسمي أو إطلاق',
-          Icons.work_outline_rounded,
-          selected: _answers.occasion == _Occasion.work,
-          onTap: () => _pickAndAdvance(() => _answers.occasion = _Occasion.work),
-        ),
-        _Choice(
-          'أخرى',
-          'دع نديم يقرأ بين السطور',
-          Icons.more_horiz_rounded,
-          selected: _answers.occasion == _Occasion.other,
-          onTap: () =>
-              _pickAndAdvance(() => _answers.occasion = _Occasion.other),
-        ),
-      ]),
-      1 => _optionList([
-        _Choice(
-          'مزرعة',
-          'هواء ومساحة وهناء',
-          Icons.grass_rounded,
-          selected: _answers.type == PropertyType.farm,
-          onTap: () => _pickAndAdvance(() {
-            _answers.type = PropertyType.farm;
-            _answers.typeOpen = false;
-          }),
-        ),
-        _Choice(
-          'قاعة',
-          'حضور أوضح واحتفاء أوسع',
-          Icons.meeting_room_outlined,
-          selected: _answers.type == PropertyType.hall,
-          onTap: () => _pickAndAdvance(() {
-            _answers.type = PropertyType.hall;
-            _answers.typeOpen = false;
-          }),
-        ),
-        _Choice(
-          'تزيين',
-          'تجهيز المكان كما يجب',
-          Icons.auto_fix_high_outlined,
-          selected: _answers.type == PropertyType.decoration,
-          onTap: () => _pickAndAdvance(() {
-            _answers.type = PropertyType.decoration;
-            _answers.typeOpen = false;
-          }),
-        ),
-        _Choice(
-          'دع النديم يقرر',
-          'يختار وفق مناسبتك',
-          Icons.explore_outlined,
-          selected: _answers.typeOpen,
-          onTap: () => _pickAndAdvance(() {
-            _answers.type = null;
-            _answers.typeOpen = true;
-          }),
-        ),
-      ]),
-      2 => _cityOptions(),
-      3 => _optionList([
-        _Choice(
-          'حتى 50',
-          'جلسة حميمة',
-          Icons.person_outline_rounded,
-          selected: _answers.minCapacity == 20,
-          onTap: () => _pickAndAdvance(() {
-            _answers.minCapacity = 20;
-            _answers.guestsLabel = 'حتى 50 ضيفاً';
-          }),
-        ),
-        _Choice(
-          'حتى 100',
-          'عزيمة متوسطة',
-          Icons.group_outlined,
-          selected: _answers.minCapacity == 50,
-          onTap: () => _pickAndAdvance(() {
-            _answers.minCapacity = 50;
-            _answers.guestsLabel = 'حتى 100 ضيف';
-          }),
-        ),
-        _Choice(
-          'حتى 200',
-          'حضور أوضح',
-          Icons.groups_outlined,
-          selected: _answers.minCapacity == 100,
-          onTap: () => _pickAndAdvance(() {
-            _answers.minCapacity = 100;
-            _answers.guestsLabel = 'حتى 200 ضيف';
-          }),
-        ),
-        _Choice(
-          'حتى 400',
-          'مناسبة كبيرة',
-          Icons.apartment_outlined,
-          selected: _answers.minCapacity == 200,
-          onTap: () => _pickAndAdvance(() {
-            _answers.minCapacity = 200;
-            _answers.guestsLabel = 'حتى 400 ضيف';
-          }),
-        ),
-        _Choice(
-          'أكثر من 400',
-          'سعة استثنائية',
-          Icons.domain_outlined,
-          selected: _answers.minCapacity == 400,
-          onTap: () => _pickAndAdvance(() {
-            _answers.minCapacity = 400;
-            _answers.guestsLabel = 'أكثر من 400 ضيف';
-          }),
-        ),
-      ]),
-      4 => _optionList([
-        _Choice(
-          'يوم كامل',
-          'من الصباح حتى المساء',
-          Icons.calendar_today_outlined,
-          selected: _answers.shift == _Shift.full,
-          onTap: () => _pickAndAdvance(() => _answers.shift = _Shift.full),
-        ),
-        _Choice(
-          'شفت صباحي',
-          'أخف وأهدأ',
-          Icons.wb_sunny_outlined,
-          selected: _answers.shift == _Shift.morning,
-          onTap: () => _pickAndAdvance(() => _answers.shift = _Shift.morning),
-        ),
-        _Choice(
-          'شفت مسائي',
-          'حضور أوضح ليلاً',
-          Icons.nights_stay_outlined,
-          selected: _answers.shift == _Shift.evening,
-          onTap: () => _pickAndAdvance(() => _answers.shift = _Shift.evening),
-        ),
-        _Choice(
-          'مرن',
-          'حسب ما يناسب المكان',
-          Icons.all_inclusive_rounded,
-          selected: _answers.shift == _Shift.flex,
-          onTap: () => _pickAndAdvance(() => _answers.shift = _Shift.flex),
-        ),
-      ]),
-      _ => _optionList([
-        _Choice(
-          'حتى 250 ألف',
-          'اختيار عملي',
-          Icons.payments_outlined,
-          selected: _answers.maxPrice == 250000,
-          onTap: () => _pickAndAdvance(() {
-            _answers.maxPrice = 250000;
-            _answers.budgetOpen = false;
-          }),
-        ),
-        _Choice(
-          'حتى 500 ألف',
-          'وسط أنيق',
-          Icons.account_balance_wallet_outlined,
-          selected: _answers.maxPrice == 500000,
-          onTap: () => _pickAndAdvance(() {
-            _answers.maxPrice = 500000;
-            _answers.budgetOpen = false;
-          }),
-        ),
-        _Choice(
-          'حتى مليون',
-          'سقف أوسع',
-          Icons.workspace_premium_outlined,
-          selected: _answers.maxPrice == 1000000,
-          onTap: () => _pickAndAdvance(() {
-            _answers.maxPrice = 1000000;
-            _answers.budgetOpen = false;
-          }),
-        ),
-        _Choice(
-          'مفتوح',
-          'الجودة أولاً',
-          Icons.all_inclusive_rounded,
-          selected: _answers.budgetOpen,
-          onTap: () => _pickAndAdvance(() {
-            _answers.maxPrice = null;
-            _answers.budgetOpen = true;
-          }),
-        ),
-      ]),
-    };
-  }
-
-  Widget _cityOptions() {
-    final locations = ref.watch(locationsProvider);
-    return locations.when(
-      loading: () => const Center(child: ThreadProgress(width: 120)),
-      error: (_, __) => _optionList(_fallbackCities()),
-      data: (cities) {
-        final unique = <String, ({String name, String slug})>{};
-        for (final city in cities) {
-          final slug = city.provinceSlug;
-          if (slug != null &&
-              slug.isNotEmpty &&
-              city.provinceName.isNotEmpty) {
-            unique[slug] = (name: city.provinceName, slug: slug);
-          }
-        }
-        const featured = [
-          'baghdad',
-          'basra',
-          'erbil',
-          'najaf',
-          'karbala',
-          'nineveh',
-        ];
-        final provinces = unique.values.toList()
-          ..sort((a, b) {
-            final ai = featured.indexOf(a.slug);
-            final bi = featured.indexOf(b.slug);
-            if (ai >= 0 || bi >= 0) {
-              if (ai < 0) return 1;
-              if (bi < 0) return -1;
-              return ai.compareTo(bi);
-            }
-            return a.name.compareTo(b.name);
-          });
-        final choices = [
-          ...provinces.map(
-            (p) => _Choice(
-              p.name,
-              'أماكن هذه المحافظة',
-              Icons.location_on_outlined,
-              selected: _answers.provinceSlug == p.slug,
-              onTap: () => _pickAndAdvance(() {
-                _answers.provinceSlug = p.slug;
-                _answers.provinceName = p.name;
-              }),
-            ),
-          ),
-          _Choice(
-            'مرن — كل العراق',
-            'دع نديم يوسّع النظر',
-            Icons.public_outlined,
-            selected: false,
-            onTap: () => _pickAndAdvance(() {
-              _answers.provinceSlug = null;
-              _answers.provinceName = null;
-            }),
-          ),
-        ];
-        return _optionList(choices);
-      },
-    );
-  }
-
-  List<_Choice> _fallbackCities() {
-    const fallback = [
-      ('بغداد', 'baghdad'),
-      ('البصرة', 'basra'),
-      ('أربيل', 'erbil'),
-      ('النجف', 'najaf'),
-      ('كربلاء', 'karbala'),
-      ('نينوى', 'nineveh'),
-    ];
-    return [
-      ...fallback.map(
-        (p) => _Choice(
-          p.$1,
-          'أماكن هذه المحافظة',
-          Icons.location_on_outlined,
-          selected: _answers.provinceSlug == p.$2,
-          onTap: () => _pickAndAdvance(() {
-            _answers.provinceSlug = p.$2;
-            _answers.provinceName = p.$1;
-          }),
-        ),
+  @override
+  Widget build(BuildContext context) {
+    const items = [
+      (
+        _Occasion.wedding,
+        'زفاف',
+        'ليلة العمر',
+        Icons.diamond_outlined,
+        HomeSection.hall,
       ),
-      _Choice(
-        'مرن — كل العراق',
-        'دع نديم يوسّع النظر',
-        Icons.public_outlined,
-        selected: false,
-        onTap: () => _pickAndAdvance(() {
-          _answers.provinceSlug = null;
-          _answers.provinceName = null;
-        }),
+      (
+        _Occasion.engagement,
+        'خطوبة',
+        'بداية الحكاية',
+        Icons.volunteer_activism_outlined,
+        HomeSection.decoration,
+      ),
+      (
+        _Occasion.birthday,
+        'عيد ميلاد',
+        'فرحة وزينة',
+        Icons.cake_outlined,
+        HomeSection.decoration,
+      ),
+      (
+        _Occasion.family,
+        'جلسة أهل',
+        'يوم دافئ',
+        Icons.family_restroom_rounded,
+        HomeSection.farm,
+      ),
+      (
+        _Occasion.work,
+        'عمل',
+        'لقاء رسمي',
+        Icons.work_outline_rounded,
+        HomeSection.hall,
+      ),
+      (
+        _Occasion.other,
+        'أخرى',
+        'فاجئني',
+        Icons.auto_awesome_outlined,
+        HomeSection.farm,
       ),
     ];
-  }
-
-  Widget _optionList(List<_Choice> choices) {
-    return ListView.separated(
-      physics: const BouncingScrollPhysics(),
-      itemCount: choices.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (_, i) {
-        final choice = choices[i];
-        return _Choice(
-          choice.title,
-          choice.subtitle,
-          choice.icon,
-          selected: choice.selected,
-          onTap: choice.onTap,
-          index: i,
-        );
-      },
-    );
-  }
-
-  Widget _resultsBody() {
-    final stamps = _answers.summary.split(' · ').where((s) => s.isNotEmpty);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return GridView.count(
+      crossAxisCount: 3,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: .95,
       children: [
-        MaisonPageHeader(
-          title: 'اختيار نديم',
-          kicker: 'يليق بك',
-          onBack: _back,
-          trailing: TextButton(
-            onPressed: _restart,
-            child: const Text('جلسة جديدة'),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-          child: FolioPanel(
-            color: VibesDark.canvas,
-            borderColor: Vibes.teal.withValues(alpha: .45),
-            railColor: Vibes.teal,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        for (final it in items)
+          PressScale(
+            onTap: () => onPick(it.$1, it.$2),
+            child: Container(
+              decoration: BoxDecoration(
+                color: it.$5.palette.canvas,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: it.$5.palette.accent.withValues(alpha: .18),
+                ),
+              ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const MaisonKicker('قراءتك', light: true),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final stamp in stamps) _ResultStamp(stamp),
-                    ],
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      gradient: it.$5.palette.fill,
+                      shape: BoxShape.circle,
+                      boxShadow: it.$5.palette.glowShadow,
+                    ),
+                    child: Icon(it.$4, color: it.$5.palette.onAccent, size: 22),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    it.$2,
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      color: Vibes.ink,
+                      height: 1.2,
+                    ),
+                  ),
+                  Text(
+                    it.$3,
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: Vibes.inkTertiary,
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-        ),
-        Expanded(child: _resultsList()),
       ],
     );
   }
-
-  Widget _resultsList() {
-    if (_loading) {
-      return const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ThreadProgress(width: 140),
-            SizedBox(height: 16),
-            Text('نديم يرتّب ما يناسبك…'),
-          ],
-        ),
-      );
-    }
-    if (_error != null) {
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(_error!, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            VibesButton(label: 'أعِد المحاولة', onPressed: _finish),
-          ],
-        ),
-      );
-    }
-    final matches = _matches ?? const <_Scored>[];
-    final preciseCount = matches.where((m) => m.precise).length;
-    if (matches.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CrestSeal(size: 36, color: Vibes.teal),
-            const SizedBox(height: 16),
-            Text(
-              'لم يجد نديم مكاناً يطابق هذه القراءة تماماً.',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 12),
-            VibesButton(label: 'عدّل الإجابات', onPressed: _back),
-          ],
-        ),
-      );
-    }
-    return ListView.separated(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
-      itemCount: matches.length + 1,
-      separatorBuilder: (_, __) => const SizedBox(height: 14),
-      itemBuilder: (context, i) {
-        if (i == 0) {
-          final title = preciseCount == 0
-              ? 'أقرب ما وجد نديم لهذه القراءة'
-              : matches.length == 1
-              ? 'مكان واحد يليق بهذه القراءة'
-              : '$preciseCount من ${matches.length} أماكن تليق بك';
-          return Text(
-            title,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: VibesTheme.textSecondaryOf(context),
-              fontWeight: FontWeight.w700,
-            ),
-          );
-        }
-        final match = matches[i - 1];
-        return _MatchTile(rank: i, match: match);
-      },
-    );
-  }
 }
 
-class _Scored {
-  const _Scored(this.property, this.score, this.reason, {this.precise = true});
-  final Property property;
-  final int score;
-  final String reason;
-  final bool precise;
-}
+// ═══════════════════════════════════════════════════════════
+// نوع المكان — أيقونات العوالم المرسومة
+// ═══════════════════════════════════════════════════════════
 
-class _MatchTile extends StatelessWidget {
-  const _MatchTile({required this.rank, required this.match});
+class _TypePicker extends ConsumerWidget {
+  const _TypePicker({required this.onPick});
 
-  final int rank;
-  final _Scored match;
+  final void Function(PropertyType?, String) onPick;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final all =
+        ref.watch(propertiesProvider(null)).valueOrNull ?? const <Property>[];
+    const items = [
+      (PropertyType.farm, HomeSection.farm),
+      (PropertyType.hall, HomeSection.hall),
+      (PropertyType.decoration, HomeSection.decoration),
+    ];
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Row(
           children: [
-            Text(
-              rank.toString().padLeft(2, '0'),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Vibes.teal,
-                fontWeight: FontWeight.w800,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-            const SizedBox(width: 10),
-            const ArcFlourish(width: 22, color: Vibes.tealBright),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                match.precise
-                    ? 'اختيار دقيق · ${match.reason}'
-                    : 'اقتراح قريب · ${match.reason}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: match.precise
-                      ? Vibes.coral
-                      : VibesTheme.textTertiaryOf(context),
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        PropertyCard(
-          property: match.property,
-          heroEnabled: false,
-          heroNamespace: 'nadeem',
-        ),
-      ],
-    );
-  }
-}
-
-class _StepThread extends StatelessWidget {
-  const _StepThread({required this.current, required this.total});
-
-  final int current;
-  final int total;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (var i = 0; i < total; i++) ...[
-          Expanded(
-            child: AnimatedContainer(
-              duration: VibesMotion.fast,
-              height: 2,
-              color: i <= current
-                  ? Vibes.teal
-                  : Colors.white.withValues(alpha: .18),
-            ),
-          ),
-          if (i < total - 1) const SizedBox(width: 6),
-        ],
-      ],
-    );
-  }
-}
-
-class _ResultStamp extends StatelessWidget {
-  const _ResultStamp(this.label);
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: ShapeDecoration(
-        color: Colors.white.withValues(alpha: .06),
-        shape: RoundedRectangleBorder(
-          borderRadius: Folio.chrome,
-          side: BorderSide(color: Colors.white.withValues(alpha: .14)),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: Colors.white.withValues(alpha: .9),
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Choice extends StatelessWidget {
-  const _Choice(
-    this.title,
-    this.subtitle,
-    this.icon, {
-    required this.selected,
-    required this.onTap,
-    this.index = 0,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-  final int index;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: VibesMotion.fast,
-        curve: VibesMotion.curve,
-        decoration: ShapeDecoration(
-          color: selected
-              ? const Color(0xFF1E3A56)
-              : Colors.white.withValues(alpha: .05),
-          shape: RoundedRectangleBorder(
-            borderRadius: Folio.radius,
-            side: BorderSide(
-              color: selected
-                  ? Vibes.teal.withValues(alpha: .75)
-                  : Colors.white.withValues(alpha: .12),
-            ),
-          ),
-        ),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SizedBox(
-                width: 3,
-                child: ColoredBox(
-                  color: selected ? Vibes.teal : Colors.transparent,
-                ),
-              ),
+            for (final it in items) ...[
+              if (it.$1 != PropertyType.farm) const SizedBox(width: 10),
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 13, 12, 13),
-                  child: Row(
-                    children: [
-                      Text(
-                        (index + 1).toString().padLeft(2, '0'),
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: selected
-                              ? Vibes.tealBright
-                              : Colors.white.withValues(alpha: .38),
-                          fontWeight: FontWeight.w800,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
+                child: PressScale(
+                  onTap: () => onPick(it.$1, it.$2.label),
+                  child: Container(
+                    height: 116,
+                    decoration: BoxDecoration(
+                      color: it.$2.palette.canvas,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: it.$2.palette.accent.withValues(alpha: .2),
                       ),
-                      const SizedBox(width: 12),
-                      Icon(
-                        icon,
-                        color: selected ? Vibes.tealBright : Colors.white70,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              title,
-                              style: Theme.of(context).textTheme.titleSmall
-                                  ?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              subtitle,
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(
-                                    color: Colors.white.withValues(alpha: .62),
-                                  ),
-                            ),
-                          ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        WorldGlyph(
+                          section: it.$2,
+                          size: 44,
+                          primary: it.$2.palette.accentDeep,
+                          secondary: it.$2.palette.accentLight,
                         ),
-                      ),
-                      if (selected)
-                        const Icon(
-                          Icons.check_rounded,
-                          color: Vibes.tealBright,
-                          size: 18,
+                        const SizedBox(height: 6),
+                        Text(
+                          it.$2.label,
+                          style: const TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: Vibes.ink,
+                          ),
                         ),
-                    ],
+                        Text(
+                          '${all.where((p) => p.type == it.$1).length} مكان',
+                          style: const TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Vibes.inkTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ],
+          ],
+        ),
+        const SizedBox(height: 10),
+        _SoftLink(
+          icon: Icons.auto_awesome_rounded,
+          label: 'لست متأكداً — اختر لي يا نديم',
+          onTap: () => onPick(null, 'اختر لي يا نديم'),
+        ),
+      ],
+    );
+  }
+}
+
+class _SoftLink extends StatelessWidget {
+  const _SoftLink({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.world;
+    return PressScale(
+      onTap: onTap,
+      child: Container(
+        height: 46,
+        decoration: BoxDecoration(
+          color: p.accentFaint,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 17, color: p.accentDeep),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 13.5,
+                fontWeight: FontWeight.w800,
+                color: p.accentDeep,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// المحافظة — بطاقات بأعداد الأماكن
+// ═══════════════════════════════════════════════════════════
+
+class _ProvincePicker extends ConsumerWidget {
+  const _ProvincePicker({required this.type, required this.onPick});
+
+  final PropertyType? type;
+  final void Function(String?, String?) onPick;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.world;
+    final cities =
+        ref.watch(locationsProvider).valueOrNull ?? const <CityOption>[];
+    final props =
+        ref.watch(propertiesProvider(null)).valueOrNull ?? const <Property>[];
+    final provinces = <String, ({String name, String slug})>{};
+    for (final c in cities) {
+      final slug = c.provinceSlug;
+      if (slug != null && slug.isNotEmpty && c.provinceName.isNotEmpty)
+        provinces[slug] = (name: c.provinceName, slug: slug);
+    }
+    int count(String name) => props
+        .where(
+          (x) => x.provinceName == name && (type == null || x.type == type),
+        )
+        .length;
+    final list = provinces.values.toList()
+      ..sort((a, b) => count(b.name).compareTo(count(a.name)));
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 200),
+          child: SingleChildScrollView(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final pr in list)
+                  PressScale(
+                    onTap: () => onPick(pr.slug, pr.name),
+                    child: Container(
+                      padding: const EdgeInsetsDirectional.fromSTEB(
+                        12,
+                        9,
+                        10,
+                        9,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF6F7F9),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.location_on_rounded,
+                            size: 16,
+                            color: p.accentDeep,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            pr.name,
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: Vibes.ink,
+                            ),
+                          ),
+                          if (count(pr.name) > 0) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: p.accentSoft,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                '${count(pr.name)}',
+                                style: TextStyle(
+                                  fontFamily: 'Montserrat',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: p.accentDeep,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
+        ),
+        const SizedBox(height: 10),
+        _SoftLink(
+          icon: Icons.public_rounded,
+          label: 'أي مكان في العراق',
+          onTap: () => onPick(null, null),
+        ),
+      ],
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// الضيوف — رقم كبير وحشد يكبر أمامك
+// ═══════════════════════════════════════════════════════════
+
+class _GuestDial extends StatefulWidget {
+  const _GuestDial({required this.onDone});
+
+  final ValueChanged<int> onDone;
+
+  @override
+  State<_GuestDial> createState() => _GuestDialState();
+}
+
+class _GuestDialState extends State<_GuestDial> {
+  double _t = .25;
+
+  /// منحنى غير خطي — دقة أكبر للأعداد الصغيرة.
+  int get _guests {
+    final raw = 10 + (1000 - 10) * math.pow(_t, 2);
+    final step = raw < 100 ? 5 : (raw < 300 ? 10 : 50);
+    return (raw / step).round() * step;
+  }
+
+  String get _scale {
+    final g = _guests;
+    if (g <= 30) return 'جلسة حميمة';
+    if (g <= 80) return 'عزيمة عائلية';
+    if (g <= 200) return 'حفل متوسط';
+    if (g <= 450) return 'مناسبة كبيرة';
+    return 'حدث ضخم';
+  }
+
+  void _nudge(int delta) {
+    HapticFeedback.selectionClick();
+    final target = (_guests + delta).clamp(10, 1000);
+    setState(() => _t = math.sqrt((target - 10) / 990));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.world;
+    final people = (_guests / 25).ceil().clamp(1, 28);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            _StepBtn(
+              icon: Icons.remove_rounded,
+              onTap: () => _nudge(_guests > 300 ? -50 : -10),
+            ),
+            Expanded(
+              child: Column(
+                children: [
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(end: _guests.toDouble()),
+                    duration: const Duration(milliseconds: 260),
+                    builder: (context, v, _) => Text(
+                      '${v.round()}',
+                      style: const TextStyle(
+                        fontFamily: 'Montserrat',
+                        fontSize: 48,
+                        fontWeight: FontWeight.w800,
+                        color: Vibes.ink,
+                        height: 1.05,
+                      ),
+                    ),
+                  ),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: Text(
+                      'ضيف · $_scale',
+                      key: ValueKey(_scale),
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: p.accentDeep,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _StepBtn(
+              icon: Icons.add_rounded,
+              onTap: () => _nudge(_guests >= 300 ? 50 : 10),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        // الحشد
+        SizedBox(
+          height: 30,
+          child: Center(
+            child: Wrap(
+              spacing: 1,
+              children: [
+                for (var i = 0; i < people; i++)
+                  TweenAnimationBuilder<double>(
+                    key: ValueKey(i),
+                    tween: Tween(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 260),
+                    builder: (context, v, child) =>
+                        Transform.scale(scale: v, child: child),
+                    child: Icon(
+                      Icons.person_rounded,
+                      size: 22,
+                      color: Color.lerp(p.accentLight, p.accentDeep, i / 28),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            trackHeight: 6,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12),
+          ),
+          child: Slider(
+            value: _t,
+            onChanged: (v) {
+              final before = _guests;
+              setState(() => _t = v);
+              if (_guests != before) HapticFeedback.selectionClick();
+            },
+          ),
+        ),
+        const SizedBox(height: 4),
+        WorldButton(
+          label: 'تمام — $_guests ضيف',
+          icon: Icons.check_rounded,
+          height: 52,
+          onTap: () => widget.onDone(_guests),
+        ),
+      ],
+    );
+  }
+}
+
+class _StepBtn extends StatelessWidget {
+  const _StepBtn({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.world;
+    return PressScale(
+      onTap: onTap,
+      child: Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: p.accent.withValues(alpha: .3)),
+        ),
+        child: Icon(icon, color: p.accentDeep, size: 24),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// التوقيت — سماء الصباح والمساء
+// ═══════════════════════════════════════════════════════════
+
+class _DayPicker extends StatelessWidget {
+  const _DayPicker({required this.onPick});
+
+  final void Function(_Shift, String) onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget sky({
+      required List<Color> colors,
+      required IconData icon,
+      required Color iconColor,
+      required String title,
+      required String sub,
+      required bool dark,
+      required VoidCallback onTap,
+    }) => Expanded(
+      child: PressScale(
+        onTap: onTap,
+        child: Container(
+          height: 132,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: colors,
+            ),
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: colors.last.withValues(alpha: .35),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 34, color: iconColor),
+              const Spacer(),
+              Text(
+                title,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  color: dark ? Colors.white : Vibes.ink,
+                ),
+              ),
+              Text(
+                sub,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: dark
+                      ? Colors.white.withValues(alpha: .75)
+                      : Vibes.inkSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            sky(
+              colors: const [Color(0xFFFFF4D6), Color(0xFFFFD98A)],
+              icon: Icons.wb_sunny_rounded,
+              iconColor: const Color(0xFFF59E0B),
+              title: 'صباحاً',
+              sub: 'شمس وهواء',
+              dark: false,
+              onTap: () => onPick(_Shift.morning, 'صباحاً'),
+            ),
+            const SizedBox(width: 8),
+            sky(
+              colors: const [Color(0xFF3B4A7A), Color(0xFF151B33)],
+              icon: Icons.nightlight_round,
+              iconColor: const Color(0xFFFDE68A),
+              title: 'مساءً',
+              sub: 'أضواء وسهر',
+              dark: true,
+              onTap: () => onPick(_Shift.evening, 'مساءً'),
+            ),
+            const SizedBox(width: 8),
+            sky(
+              colors: const [
+                Color(0xFFFFD98A),
+                Color(0xFF6D5BBA),
+                Color(0xFF151B33),
+              ],
+              icon: Icons.brightness_6_rounded,
+              iconColor: Colors.white,
+              title: 'يوم كامل',
+              sub: 'من الصبح لليل',
+              dark: true,
+              onTap: () => onPick(_Shift.full, 'يوم كامل'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        _SoftLink(
+          icon: Icons.schedule_rounded,
+          label: 'التوقيت مرن عندي',
+          onTap: () => onPick(_Shift.flex, 'التوقيت مرن'),
+        ),
+      ],
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// الميزانية — رسم حيّ لأسعار الأماكن الحقيقية
+// ═══════════════════════════════════════════════════════════
+
+class _BudgetPicker extends ConsumerStatefulWidget {
+  const _BudgetPicker({required this.type, required this.onDone});
+
+  final PropertyType? type;
+  final ValueChanged<num?> onDone;
+
+  @override
+  ConsumerState<_BudgetPicker> createState() => _BudgetPickerState();
+}
+
+class _BudgetPickerState extends ConsumerState<_BudgetPicker> {
+  double _t = .55;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.world;
+    final all =
+        ref.watch(propertiesProvider(null)).valueOrNull ?? const <Property>[];
+    var prices =
+        all
+            .where((x) => widget.type == null || x.type == widget.type)
+            .map(_fromPrice)
+            .where((v) => v > 0)
+            .toList()
+          ..sort();
+    if (prices.isEmpty) prices = [50000, 2000000];
+    final lo = (prices.first * .8 / 10000).floor() * 10000.0;
+    final hi = (prices.last * 1.05 / 10000).ceil() * 10000.0;
+    final value = ((lo + (hi - lo) * _t) / 10000).round() * 10000;
+    final within = prices.where((v) => v <= value).length;
+
+    const bins = 16;
+    final counts = List<int>.filled(bins, 0);
+    for (final v in prices) {
+      final i = (((v - lo) / (hi - lo)) * bins).floor().clamp(0, bins - 1);
+      counts[i]++;
+    }
+    final peak = counts.reduce(math.max).clamp(1, 1 << 30);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              'حتى ',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: Vibes.inkSecondary,
+              ),
+            ),
+            Text(
+              formatIqdShort(value),
+              style: const TextStyle(
+                fontFamily: 'Montserrat',
+                fontSize: 30,
+                fontWeight: FontWeight.w800,
+                color: Vibes.ink,
+                height: 1.1,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'د.ع',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: p.accentDeep,
+              ),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: p.accentFaint,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                within == 0
+                    ? 'لا أماكن بعد'
+                    : '$within ${within == 1 ? 'مكان' : 'أماكن'} ضمنها',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: p.accentDeep,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // الرسم البياني
+        SizedBox(
+          height: 64,
+          child: Row(
+            textDirection: TextDirection.ltr,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              for (var i = 0; i < bins; i++) ...[
+                if (i > 0) const SizedBox(width: 3),
+                Expanded(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    height: 6 + 58 * counts[i] / peak,
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(4),
+                      ),
+                      gradient: (i + .5) / bins <= _t
+                          ? LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: [p.accentDeep, p.accentLight],
+                            )
+                          : null,
+                      color: (i + .5) / bins <= _t
+                          ? null
+                          : const Color(0xFFE9EBEE),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 4,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12),
+            ),
+            child: Slider(
+              value: _t,
+              onChanged: (v) {
+                final before = within;
+                setState(() => _t = v);
+                final after = prices
+                    .where(
+                      (x) =>
+                          x <= ((lo + (hi - lo) * v) / 10000).round() * 10000,
+                    )
+                    .length;
+                if (after != before) HapticFeedback.selectionClick();
+              },
+            ),
+          ),
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: WorldGhostButton(
+                label: 'مفتوحة',
+                icon: Icons.all_inclusive_rounded,
+                height: 50,
+                onTap: () => widget.onDone(null),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: WorldButton(
+                label: 'اعرض النتائج',
+                icon: Icons.auto_awesome_rounded,
+                height: 50,
+                onTap: () => widget.onDone(value),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// بطاقات النتائج
+// ═══════════════════════════════════════════════════════════
+
+class _MatchCard extends StatelessWidget {
+  const _MatchCard({
+    required this.scored,
+    required this.width,
+    required this.percent,
+    required this.best,
+  });
+
+  final _Scored scored;
+  final double width;
+  final int percent;
+  final bool best;
+
+  @override
+  Widget build(BuildContext context) {
+    final prop = scored.property;
+    final p = WorldPalette.forType(prop.type.name);
+    final imageH = width * .62;
+    return PressScale(
+      onTap: () => context.push('/property/${prop.id}'),
+      child: Container(
+        width: width,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: best ? p.accent : const Color(0xFFEDEEF1),
+            width: best ? 1.6 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: p.glow.withValues(alpha: best ? .25 : .10),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: imageH,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  PropertyCover(
+                    property: prop,
+                    iconSize: 40,
+                    memCacheWidth: 720,
+                  ),
+                  if (best)
+                    PositionedDirectional(
+                      top: 10,
+                      start: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: p.fill,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          'اختيار نديم الأول',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w900,
+                            color: p.onAccent,
+                          ),
+                        ),
+                      ),
+                    ),
+                  PositionedDirectional(
+                    top: 8,
+                    end: 8,
+                    child: _MatchRing(percent: percent, color: p.accent),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    prop.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w900,
+                      color: Vibes.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      for (final r in scored.reasons)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.check_circle_rounded,
+                              size: 13,
+                              color: p.accent,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              r,
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: Vibes.inkSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text(
+                        formatIqdShort(_fromPrice(prop)),
+                        style: const TextStyle(
+                          fontFamily: 'Montserrat',
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Vibes.ink,
+                        ),
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        'د.ع',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: p.accentDeep,
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: p.fill,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          'احجز',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w900,
+                            color: p.onAccent,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// حلقة نسبة التطابق — تمتلئ عند الظهور.
+class _MatchRing extends StatelessWidget {
+  const _MatchRing({required this.percent, required this.color});
+
+  final int percent;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 50,
+      height: 50,
+      padding: const EdgeInsets.all(3),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+      ),
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: percent / 100),
+        duration: const Duration(milliseconds: 900),
+        curve: Curves.easeOutCubic,
+        builder: (context, v, _) => Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox.expand(
+              child: CircularProgressIndicator(
+                value: v,
+                strokeWidth: 3.5,
+                backgroundColor: const Color(0xFFEFF0F2),
+                valueColor: AlwaysStoppedAnimation(color),
+              ),
+            ),
+            Text(
+              '${(v * 100).round()}٪',
+              style: const TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 11.5,
+                fontWeight: FontWeight.w900,
+                color: Vibes.ink,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniPlace extends StatelessWidget {
+  const _MiniPlace({required this.property});
+
+  final Property property;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = WorldPalette.forType(property.type.name);
+    return PressScale(
+      onTap: () => context.push('/property/${property.id}'),
+      child: Container(
+        width: 230,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: p.accent.withValues(alpha: .18)),
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: SizedBox(
+                width: 72,
+                height: 76,
+                child: PropertyCover(property: property, iconSize: 22),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    property.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w900,
+                      color: Vibes.ink,
+                    ),
+                  ),
+                  Text(
+                    property.cityName ?? property.provinceName ?? '',
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: Vibes.inkTertiary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${formatIqdShort(_fromPrice(property))} د.ع',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: p.accentDeep,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

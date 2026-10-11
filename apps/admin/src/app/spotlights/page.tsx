@@ -204,7 +204,7 @@ export default function SpotlightsPage() {
           <div key={item.id} className="banner-card">
             <div className="aspect-[21/9] bg-surface">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={item.imageUrl} alt={item.title || item.property?.name || ""} className="h-full w-full object-cover" />
+              <img src={item.imageUrl} alt={item.title || item.property?.name || ""} className="h-full w-full object-cover" loading="lazy" decoding="async" />
             </div>
             <div className="p-4">
               <div className="flex items-start justify-between gap-2">

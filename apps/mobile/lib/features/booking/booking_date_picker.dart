@@ -1,11 +1,15 @@
+import '../../core/theme/world_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../core/theme/app_theme.dart';
 import '../../shared/models/models.dart';
-import '../../shared/widgets/maison_chrome.dart';
-import '../../shared/widgets/maison_shapes.dart';
-import '../../shared/widgets/vibes_widgets.dart';
+import '../property/place_experience_ui.dart';
+import '../property/shift_calendar_ui.dart';
+
+/// ═══════════════════════════════════════════════════════════
+/// لوحة اختيار التاريخ — نفس لغة تصميم لوحة الشفتات:
+/// أبيض نظيف، حبر عميق، أسعار كاملة، توفر واضح.
+/// ═══════════════════════════════════════════════════════════
 
 class BookingDateSelection {
   const BookingDateSelection({
@@ -21,6 +25,9 @@ class BookingDateSelection {
   int get days => endExclusive.difference(start).inDays;
 }
 
+/// يوم واحد (صباحي/مسائي/يوم كامل ليوم واحد) أو نطاق (يوم كامل متعدد).
+enum BookingDatePickMode { singleDay, range }
+
 Future<BookingDateSelection?> showBookingDatePicker({
   required BuildContext context,
   required String propertyName,
@@ -28,42 +35,69 @@ Future<BookingDateSelection?> showBookingDatePicker({
   required ShiftType shift,
   DateTime? initialStart,
   DateTime? initialEndExclusive,
+  BookingDatePickMode? mode,
 }) {
+  final resolvedMode =
+      mode ??
+      (shift == ShiftType.full
+          ? BookingDatePickMode.range
+          : BookingDatePickMode.singleDay);
   return showModalBottomSheet<BookingDateSelection>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (_) => _BookingDatePickerSheet(
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (ctx) => BookingDatePickerPanel(
       propertyName: propertyName,
       availability: availability,
       shift: shift,
       initialStart: initialStart,
       initialEndExclusive: initialEndExclusive,
+      mode: resolvedMode,
+      embedded: false,
+      onConfirm: (selection) => Navigator.pop(ctx, selection),
+      onCancel: () => Navigator.pop(ctx),
     ),
   );
 }
 
-class _BookingDatePickerSheet extends StatefulWidget {
-  const _BookingDatePickerSheet({
+/// تقويم الحجز — يُستخدم كـ sheet أو مضمّناً داخل معالج الحجز.
+class BookingDatePickerPanel extends StatefulWidget {
+  const BookingDatePickerPanel({
+    super.key,
     required this.propertyName,
     required this.availability,
     required this.shift,
+    required this.mode,
+    required this.onConfirm,
+    this.onCancel,
     this.initialStart,
     this.initialEndExclusive,
+    this.embedded = false,
+    this.autoConfirmSingleDay = false,
   });
 
   final String propertyName;
   final AvailabilityData availability;
   final ShiftType shift;
+  final BookingDatePickMode mode;
+  final ValueChanged<BookingDateSelection> onConfirm;
+  final VoidCallback? onCancel;
   final DateTime? initialStart;
   final DateTime? initialEndExclusive;
+  final bool embedded;
+
+  /// في الوضع المضمّن: بعد اختيار يوم واحد يُعتمد مباشرة.
+  final bool autoConfirmSingleDay;
 
   @override
-  State<_BookingDatePickerSheet> createState() =>
-      _BookingDatePickerSheetState();
+  State<BookingDatePickerPanel> createState() => _BookingDatePickerPanelState();
 }
 
-class _BookingDatePickerSheetState extends State<_BookingDatePickerSheet> {
+class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
   DateTime? _start;
   DateTime? _endInclusive;
   bool _awaitingRangeEnd = false;
@@ -94,13 +128,20 @@ class _BookingDatePickerSheetState extends State<_BookingDatePickerSheet> {
     'السبت',
   ];
 
+  bool get _singleDay => widget.mode == BookingDatePickMode.singleDay;
+
   @override
   void initState() {
     super.initState();
     _start = _dateOnly(widget.initialStart);
     final initialEnd = widget.initialEndExclusive;
-    if (initialEnd != null && _start != null) {
-      _endInclusive = _dateOnly(initialEnd.subtract(const Duration(days: 1)));
+    if (_start != null) {
+      if (_singleDay) {
+        _endInclusive = _start;
+        _awaitingRangeEnd = false;
+      } else if (initialEnd != null) {
+        _endInclusive = _dateOnly(initialEnd.subtract(const Duration(days: 1)));
+      }
     }
   }
 
@@ -138,12 +179,16 @@ class _BookingDatePickerSheetState extends State<_BookingDatePickerSheet> {
     if (pricing == null ||
         pricing.isPast ||
         pricing.isBlocked ||
-        pricing.isBooked ||
+        pricing.isShiftOccupied(widget.shift) ||
         pricing.priceFor(widget.shift) <= 0) {
       return true;
     }
     return widget.availability.isBlocked(date, widget.shift);
   }
+
+  bool get _hybridCalendar =>
+      widget.availability.bookingMode == BookingMode.hybrid ||
+      widget.availability.bookingMode == BookingMode.shifts;
 
   bool _rangeIsAvailable(DateTime start, DateTime endInclusive) {
     final map = _byDate;
@@ -163,6 +208,14 @@ class _BookingDatePickerSheetState extends State<_BookingDatePickerSheet> {
 
     setState(() {
       _error = null;
+      // صباحي / مسائي / يوم كامل ليوم واحد: ضغطة واحدة تكفي
+      if (_singleDay) {
+        _start = date;
+        _endInclusive = date;
+        _awaitingRangeEnd = false;
+        _maybeAutoConfirm();
+        return;
+      }
       if (_start == null || !_awaitingRangeEnd || date.isBefore(_start!)) {
         _start = date;
         _endInclusive = date;
@@ -200,6 +253,10 @@ class _BookingDatePickerSheetState extends State<_BookingDatePickerSheet> {
     }
 
     if (pick == _QuickPick.twoDays) {
+      if (_singleDay) {
+        setState(() => _error = 'هذه الفترة يوم واحد فقط');
+        return;
+      }
       for (final day in available) {
         final start = _dateOnly(day.date)!;
         if (_rangeIsAvailable(start, start.add(const Duration(days: 1)))) {
@@ -232,6 +289,7 @@ class _BookingDatePickerSheetState extends State<_BookingDatePickerSheet> {
       _awaitingRangeEnd = false;
       _error = null;
     });
+    _maybeAutoConfirm();
   }
 
   num get _estimatedTotal {
@@ -256,8 +314,7 @@ class _BookingDatePickerSheetState extends State<_BookingDatePickerSheet> {
   void _confirm() {
     if (_start == null || _endInclusive == null) return;
     HapticFeedback.mediumImpact();
-    Navigator.pop(
-      context,
+    widget.onConfirm(
       BookingDateSelection(
         start: _start!,
         endExclusive: _endInclusive!.add(const Duration(days: 1)),
@@ -266,146 +323,248 @@ class _BookingDatePickerSheetState extends State<_BookingDatePickerSheet> {
     );
   }
 
+  void _maybeAutoConfirm() {
+    if (!widget.autoConfirmSingleDay || !_singleDay) return;
+    if (_start != null && _endInclusive != null && !_awaitingRangeEnd) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _confirm();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final groups = _monthGroups;
-    final height = MediaQuery.sizeOf(context).height * .92;
+    final embedded = widget.embedded;
+    final height = MediaQuery.sizeOf(context).height * (embedded ? .72 : .92);
 
-    return SizedBox(
-      height: height.clamp(620, 820),
-      child: Column(
-        children: [
-          const MaisonSheetHandle(),
+    final panel = Column(
+      children: [
+        if (!embedded) ...[
+          const SizedBox(height: 10),
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: placeLine,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+        ],
+        if (!embedded)
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+            padding: const EdgeInsets.fromLTRB(20, 12, 12, 0),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const MaisonIconWell(
-                  icon: Icons.calendar_month_outlined,
-                  size: 46,
-                  color: Vibes.coral,
-                ),
-                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'اختر موعدك',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        _singleDay ? 'اختر اليوم' : 'اختر مدة الإقامة',
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 17,
                           fontWeight: FontWeight.w900,
+                          color: placeInk,
                         ),
                       ),
+                      const SizedBox(height: 2),
                       Text(
-                        widget.propertyName,
-                        maxLines: 1,
+                        '${widget.propertyName} · ${_shiftHintLabel()}',
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: VibesTheme.textTertiaryOf(context),
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: placeInk2,
                         ),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded),
+                  onPressed: widget.onCancel,
+                  icon: const Icon(Icons.close_rounded, color: placeInk2),
                 ),
               ],
             ),
           ),
-          SizedBox(
-            height: 42,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              children: [
-                _QuickDateChip(
-                  label: 'أقرب موعد',
-                  icon: Icons.bolt_rounded,
-                  onTap: () => _pickQuick(_QuickPick.nearest),
+        if (embedded)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(
+                _shiftHintLabel(),
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: placeInk2,
                 ),
+              ),
+            ),
+          ),
+
+        // اختصارات سريعة — نفس أسلوب رقائق لوحة الشفتات
+        SizedBox(
+          height: 38,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            children: [
+              _QuickChip(
+                label: 'أقرب موعد متاح',
+                icon: Icons.bolt_rounded,
+                onTap: () => _pickQuick(_QuickPick.nearest),
+              ),
+              const SizedBox(width: 8),
+              _QuickChip(
+                label: 'عطلة نهاية الأسبوع',
+                icon: Icons.weekend_outlined,
+                onTap: () => _pickQuick(_QuickPick.weekend),
+              ),
+              if (!_singleDay) ...[
                 const SizedBox(width: 8),
-                _QuickDateChip(
-                  label: 'نهاية الأسبوع',
-                  icon: Icons.weekend_outlined,
-                  onTap: () => _pickQuick(_QuickPick.weekend),
-                ),
-                const SizedBox(width: 8),
-                _QuickDateChip(
-                  label: 'يومان',
+                _QuickChip(
+                  label: 'يومان متصلان',
                   icon: Icons.date_range_outlined,
                   onTap: () => _pickQuick(_QuickPick.twoDays),
                 ),
               ],
-            ),
+            ],
           ),
-          const SizedBox(height: 12),
-          const _CalendarLegend(),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 9,
-                ),
-                decoration: ShapeDecoration(
-                  color: SemanticColors.danger.withValues(alpha: .08),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: Folio.compact,
-                  ),
-                ),
-                child: Text(
-                  _error!,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: SemanticColors.danger,
-                    fontWeight: FontWeight.w700,
-                  ),
+        ),
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: PlaceShiftLegendRow(
+            includeSelection: true,
+            includeUnavailable: true,
+          ),
+        ),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: const Color(0xFFB45309).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                _error!,
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFB45309),
                 ),
               ),
             ),
-          Expanded(
-            child: groups.isEmpty
-                ? const EmptyCanvas(
-                    icon: Icons.event_busy_outlined,
-                    title: 'لا مواعيد متاحة',
-                    subtitle: 'جرّب لاحقاً أو تواصل مع المالك',
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-                    itemCount: groups.length,
-                    separatorBuilder: (_, __) => const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 18),
-                      child: Divider(),
-                    ),
-                    itemBuilder: (context, index) {
-                      final group = groups[index];
-                      return _MonthCalendar(
-                        month: group.month,
-                        days: group.days,
-                        shift: widget.shift,
-                        availability: widget.availability,
-                        start: _start,
-                        endInclusive: _endInclusive,
-                        onSelect: _select,
-                      );
-                    },
-                  ),
           ),
-          _SelectionSummary(
+        Expanded(
+          child: groups.isEmpty
+              ? const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.event_busy_outlined,
+                        size: 44,
+                        color: placeLine,
+                      ),
+                      SizedBox(height: 10),
+                      Text(
+                        'لا مواعيد متاحة',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                          color: placeInk2,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'جرّب لاحقاً أو تواصل مع المضيف',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: placeInk2,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+                  itemCount: groups.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 22),
+                  itemBuilder: (context, index) {
+                    final group = groups[index];
+                    return _MonthCalendar(
+                      month: group.month,
+                      days: group.days,
+                      shift: widget.shift,
+                      hybridMarkers: _hybridCalendar,
+                      availability: widget.availability,
+                      start: _start,
+                      endInclusive: _endInclusive,
+                      onSelect: _select,
+                    );
+                  },
+                ),
+        ),
+        if (!widget.autoConfirmSingleDay || !_singleDay)
+          _SummaryBar(
             start: _start,
             endInclusive: _endInclusive,
             days: _selectedDays,
             total: _estimatedTotal,
+            awaitingEnd: _awaitingRangeEnd,
+            singleDay: _singleDay,
             dateLabel: _longDate,
             onConfirm: _confirm,
+          )
+        else if (_start != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+            child: Text(
+              'تم اختيار ${_longDate(_start!)} · متابعة…',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+                color: placeInk2,
+              ),
+            ),
           ),
-        ],
-      ),
+      ],
     );
+
+    if (embedded) return panel;
+    return SizedBox(height: height.clamp(620, 820), child: panel);
+  }
+
+  String _shiftHintLabel() {
+    final period = switch (widget.shift) {
+      ShiftType.morning => 'الفترة الصباحية',
+      ShiftType.evening => 'الفترة المسائية',
+      ShiftType.full => 'اليوم الكامل',
+    };
+    if (_singleDay) {
+      return widget.shift == ShiftType.evening
+          ? '$period · المغادرة تلقائياً في اليوم التالي'
+          : '$period · يوم واحد · المغادرة اليوم التالي';
+    }
+    return '$period · اختر أول وآخر يوم';
   }
 
   String _longDate(DateTime date) =>
@@ -422,8 +581,8 @@ class _BookingDatePickerSheetState extends State<_BookingDatePickerSheet> {
 
 enum _QuickPick { nearest, weekend, twoDays }
 
-class _QuickDateChip extends StatelessWidget {
-  const _QuickDateChip({
+class _QuickChip extends StatelessWidget {
+  const _QuickChip({
     required this.label,
     required this.icon,
     required this.onTap,
@@ -435,94 +594,38 @@ class _QuickDateChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      customBorder: const RoundedRectangleBorder(borderRadius: Folio.compact),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: ShapeDecoration(
-          color: VibesTheme.surfaceOf(context),
-          shape: RoundedRectangleBorder(
-            borderRadius: Folio.compact,
-            side: BorderSide(color: VibesTheme.hairlineOf(context)),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 15, color: Vibes.teal),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CalendarLegend extends StatelessWidget {
-  const _CalendarLegend();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          _LegendItem(
-            color: VibesTheme.actionOf(context),
-            label: 'اختيارك',
-          ),
-          const SizedBox(width: 14),
-          _LegendItem(
-            color: VibesTheme.surfaceOf(context),
-            border: VibesTheme.hairlineStrongOf(context),
-            label: 'متاح',
-          ),
-          const SizedBox(width: 14),
-          _LegendItem(
-            color: VibesTheme.surfaceHighOf(context),
-            label: 'غير متاح',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LegendItem extends StatelessWidget {
-  const _LegendItem({required this.color, required this.label, this.border});
-
-  final Color color;
-  final Color? border;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
+    return Material(
+      color: placePaper,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: color,
-            borderRadius: Folio.compact,
-            border: border == null ? null : Border.all(color: border!),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: placeLine),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.bolt_rounded, size: 14, color: placeBrass),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: placeInk,
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 5),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: VibesTheme.textTertiaryOf(context),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -532,6 +635,7 @@ class _MonthCalendar extends StatelessWidget {
     required this.month,
     required this.days,
     required this.shift,
+    required this.hybridMarkers,
     required this.availability,
     required this.start,
     required this.endInclusive,
@@ -541,6 +645,7 @@ class _MonthCalendar extends StatelessWidget {
   final DateTime month;
   final List<DayPricing> days;
   final ShiftType shift;
+  final bool hybridMarkers;
   final AvailabilityData availability;
   final DateTime? start;
   final DateTime? endInclusive;
@@ -580,19 +685,30 @@ class _MonthCalendar extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // اسم الشهر — مسطرة نحاسية مثل ترويسات المكان
         Row(
           children: [
-            Container(width: 3, height: 22, color: Vibes.coral),
-            const SizedBox(width: 10),
+            Container(
+              width: 3,
+              height: 16,
+              decoration: BoxDecoration(
+                color: placeBrass,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 8),
             Text(
               '${_months[month.month - 1]} ${month.year}',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+              style: const TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 14.5,
+                fontWeight: FontWeight.w900,
+                color: placeInk,
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
         Row(
           children: [
             for (final label in _weekdayShort)
@@ -600,10 +716,11 @@ class _MonthCalendar extends StatelessWidget {
                 child: Text(
                   label,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: VibesTheme.textTertiaryOf(context),
-                    fontWeight: FontWeight.w700,
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
                     fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: placeInk2,
                   ),
                 ),
               ),
@@ -617,7 +734,7 @@ class _MonthCalendar extends StatelessWidget {
             crossAxisCount: 7,
             mainAxisSpacing: 5,
             crossAxisSpacing: 5,
-            childAspectRatio: .76,
+            childAspectRatio: .82,
           ),
           itemCount: leading + monthLength,
           itemBuilder: (context, index) {
@@ -629,7 +746,7 @@ class _MonthCalendar extends StatelessWidget {
                 pricing == null ||
                 pricing.isPast ||
                 pricing.isBlocked ||
-                pricing.isBooked ||
+                pricing.isShiftOccupied(shift) ||
                 pricing.priceFor(shift) <= 0 ||
                 availability.isBlocked(date, shift);
             final isStart = _sameDate(date, start);
@@ -640,10 +757,11 @@ class _MonthCalendar extends StatelessWidget {
                 date.isAfter(start!) &&
                 date.isBefore(endInclusive!);
 
-            return _BookingDayCell(
+            return _DayCell(
               date: date,
               pricing: pricing,
               shift: shift,
+              hybridMarkers: hybridMarkers,
               disabled: disabled,
               selected: isStart || isEnd,
               inRange: inRange,
@@ -662,11 +780,12 @@ class _MonthCalendar extends StatelessWidget {
       value.day == other.day;
 }
 
-class _BookingDayCell extends StatelessWidget {
-  const _BookingDayCell({
+class _DayCell extends StatelessWidget {
+  const _DayCell({
     required this.date,
     required this.pricing,
     required this.shift,
+    required this.hybridMarkers,
     required this.disabled,
     required this.selected,
     required this.inRange,
@@ -676,6 +795,7 @@ class _BookingDayCell extends StatelessWidget {
   final DateTime date;
   final DayPricing? pricing;
   final ShiftType shift;
+  final bool hybridMarkers;
   final bool disabled;
   final bool selected;
   final bool inRange;
@@ -683,65 +803,106 @@ class _BookingDayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final weekend =
+        date.weekday == DateTime.friday || date.weekday == DateTime.saturday;
+
+    final accent = placeShiftColor(shift);
+    final occupancy =
+        pricing?.calendarOccupancyMarkers(hybrid: hybridMarkers) ??
+        const <ShiftType>[];
+    final showStripe = !selected && occupancy.isNotEmpty;
+
     return InkWell(
       onTap: disabled ? null : onTap,
-      customBorder: const RoundedRectangleBorder(borderRadius: Folio.compact),
+      borderRadius: BorderRadius.circular(10),
       child: AnimatedContainer(
-        duration: VibesMotion.fast,
-        decoration: ShapeDecoration(
+        duration: const Duration(milliseconds: 150),
+        decoration: BoxDecoration(
           color: selected
-              ? VibesTheme.actionOf(context)
+              ? accent
               : inRange
-              ? (VibesTheme.isDark(context)
-                    ? VibesDark.coralMint
-                    : Vibes.coralMint)
+              ? accent.withValues(alpha: .08)
               : disabled
-              ? VibesTheme.surfaceHighOf(context).withValues(alpha: .65)
-              : VibesTheme.surfaceOf(context),
-          shape: RoundedRectangleBorder(
-            borderRadius: Folio.compact,
-            side: BorderSide(
-              color: selected
-                  ? VibesTheme.actionOf(context)
-                  : inRange
-                  ? Vibes.teal.withValues(alpha: .28)
-                  : VibesTheme.hairlineOf(context),
-            ),
+              ? const Color(0xFFF3F5F8)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected
+                ? accent
+                : inRange
+                ? accent.withValues(alpha: .35)
+                : !disabled
+                ? accent.withValues(alpha: .22)
+                : placeLine,
+            width: selected ? 1.4 : 1,
           ),
         ),
         child: Opacity(
-          opacity: disabled ? .38 : 1,
+          opacity: disabled ? .42 : 1,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 '${date.day}',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                style: TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontSize: 12.5,
+                  fontWeight: selected ? FontWeight.w900 : FontWeight.w800,
                   color: selected
-                      ? VibesTheme.onActionOf(context)
-                      : VibesTheme.textPrimaryOf(context),
-                  fontWeight: FontWeight.w900,
+                      ? Colors.white
+                      : weekend
+                      ? placeBrass
+                      : placeInk,
                 ),
               ),
               const SizedBox(height: 2),
               if (disabled)
-                Icon(
-                  pricing?.isBooked == true
-                      ? Icons.lock_outline_rounded
-                      : Icons.remove_rounded,
-                  size: 10,
-                  color: selected
-                      ? VibesTheme.onActionOf(context)
-                      : VibesTheme.textTertiaryOf(context),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (pricing != null && pricing!.occupiedShifts.isNotEmpty)
+                      PlaceShiftOccupancyDots(
+                        day: pricing!,
+                        hybrid: hybridMarkers,
+                        onDark: selected,
+                        size: 4,
+                      )
+                    else
+                      Icon(
+                        Icons.remove_rounded,
+                        size: 9,
+                        color: selected ? Colors.white70 : placeInk2,
+                      ),
+                  ],
                 )
               else
-                Text(
-                  _shortPrice(pricing!.priceFor(shift)),
-                  maxLines: 1,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: selected ? Colors.white70 : Vibes.teal,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 9,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: Text(
+                      placeFullPrice(pricing!.priceFor(shift)),
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontFamily: 'Montserrat',
+                        fontSize: 8,
+                        fontWeight: FontWeight.w800,
+                        color: selected
+                            ? Colors.white.withValues(alpha: .85)
+                            : weekend
+                            ? placeBrass
+                            : placeInk2,
+                      ),
+                    ),
+                  ),
+                ),
+              if (showStripe)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 3, 4, 0),
+                  child: PlaceShiftStripeRow(
+                    shifts: occupancy,
+                    height: 2.5,
+                    onDark: false,
                   ),
                 ),
             ],
@@ -750,22 +911,16 @@ class _BookingDayCell extends StatelessWidget {
       ),
     );
   }
-
-  String _shortPrice(num value) {
-    if (value >= 1000000) {
-      return '${(value / 1000000).toStringAsFixed(1)}م';
-    }
-    if (value >= 1000) return '${(value / 1000).round()}أ';
-    return '$value';
-  }
 }
 
-class _SelectionSummary extends StatelessWidget {
-  const _SelectionSummary({
+class _SummaryBar extends StatelessWidget {
+  const _SummaryBar({
     required this.start,
     required this.endInclusive,
     required this.days,
     required this.total,
+    required this.awaitingEnd,
+    required this.singleDay,
     required this.dateLabel,
     required this.onConfirm,
   });
@@ -774,20 +929,23 @@ class _SelectionSummary extends StatelessWidget {
   final DateTime? endInclusive;
   final int days;
   final num total;
+  final bool awaitingEnd;
+  final bool singleDay;
   final String Function(DateTime date) dateLabel;
   final VoidCallback onConfirm;
 
   @override
   Widget build(BuildContext context) {
-    final ready = start != null && endInclusive != null;
+    final ready = start != null && endInclusive != null && !awaitingEnd;
+    final departure = start?.add(const Duration(days: 1));
 
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: VibesTheme.surfaceOf(context),
-        border: Border(top: BorderSide(color: VibesTheme.hairlineOf(context))),
-        boxShadow: const [
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: placeLine)),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x101B3857),
+            color: Color(0x14141C2B),
             blurRadius: 20,
             offset: Offset(0, -6),
           ),
@@ -796,7 +954,7 @@ class _SelectionSummary extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -808,34 +966,65 @@ class _SelectionSummary extends StatelessWidget {
                       children: [
                         Text(
                           ready
-                              ? days == 1
+                              ? (singleDay || days == 1
                                     ? dateLabel(start!)
-                                    : '${dateLabel(start!)} — ${dateLabel(endInclusive!)}'
-                              : 'اختر اليوم الأول',
+                                    : '${dateLabel(start!)} — ${dateLabel(endInclusive!)}')
+                              : (awaitingEnd
+                                    ? 'اختر يوم المغادرة'
+                                    : (singleDay
+                                          ? 'اضغط يوماً واحداً'
+                                          : 'اختر يوم الوصول')),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(fontWeight: FontWeight.w800),
+                          style: const TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: placeInk,
+                          ),
                         ),
                         if (ready)
                           Text(
-                            '$days ${days == 1 ? 'يوم' : 'أيام'} · سعر تقديري',
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: VibesTheme.textTertiaryOf(context),
-                                ),
+                            singleDay || days == 1
+                                ? 'مغادرة ${dateLabel(departure!)} · تلقائي'
+                                : '$days أيام · سعر تقديري قبل الكوبون',
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              color: placeInk2,
+                            ),
                           ),
                       ],
                     ),
                   ),
-                  if (ready) PriceText(total, compact: true),
+                  if (ready) PlaceFullPriceText(total, size: 18),
                 ],
               ),
-              const SizedBox(height: 11),
-              VibesButton(
-                label: ready ? 'اعتماد الموعد' : 'اختر موعداً للمتابعة',
-                icon: Icons.arrow_back_rounded,
-                onPressed: ready ? onConfirm : null,
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: context.world.accentDeep,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: context.world.accentDeep
+                        .withValues(alpha: .25),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: ready ? onConfirm : null,
+                  child: Text(
+                    ready ? 'اعتماد الموعد' : 'اختر موعداً للمتابعة',
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

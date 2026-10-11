@@ -168,6 +168,34 @@ export class AdminController {
     return this.bookings.list(query);
   }
 
+  @Get('providers/claims')
+  listPlaceClaims(@Query('status') status?: string) {
+    return this.providerLifecycle.listClaims(status);
+  }
+
+  @Patch('providers/claims/:id/approve')
+  approvePlaceClaim(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.providerLifecycle.approveClaim(user, id);
+  }
+
+  @Patch('providers/claims/:id/reject')
+  rejectPlaceClaim(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.providerLifecycle.rejectClaim(user, id);
+  }
+
+  @Post('providers/link')
+  linkProviderPlace(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: { userId: string; propertyId: string; conversationId?: string },
+  ) {
+    return this.providerLifecycle.linkPlaceForUser(
+      user,
+      dto.userId,
+      dto.propertyId,
+      dto.conversationId,
+    );
+  }
+
   @Get('providers')
   listProviders(@Query() query: Record<string, string>) {
     return this.providers.list(query);
@@ -774,6 +802,7 @@ export class AdminController {
       properties: {
         file: { type: 'string', format: 'binary' },
         targetRatio: { type: 'string', enum: ['auto', '16:9', '9:16', '1:1', '4:3'] },
+        kind: { type: 'string', enum: ['media', 'panorama'], description: 'panorama لرفع صورة 360°' },
       },
     },
   })
@@ -788,8 +817,9 @@ export class AdminController {
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
     @Body('targetRatio') targetRatio?: string,
+    @Body('kind') kind?: string,
   ) {
-    return this.media.uploadForProperty(user, id, file, targetRatio);
+    return this.media.uploadForProperty(user, id, file, targetRatio, kind);
   }
 
   @Post('properties/:id/media/bulk')
@@ -805,10 +835,11 @@ export class AdminController {
     @Param('id') id: string,
     @UploadedFiles() files: Express.Multer.File[],
     @Body('targetRatio') targetRatio?: string,
+    @Body('kind') kind?: string,
   ) {
     const results = [];
     for (const file of files ?? []) {
-      results.push(await this.media.uploadForProperty(user, id, file, targetRatio));
+      results.push(await this.media.uploadForProperty(user, id, file, targetRatio, kind));
     }
     return results;
   }

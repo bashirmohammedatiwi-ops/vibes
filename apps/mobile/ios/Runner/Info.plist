@@ -63,9 +63,15 @@
 	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
+		<!-- المرحلة الحالية: مكالمات LiveKit عبر ws://IP:6002 (بدون دومين/شهادة).
+		     ATS لا يدعم استثناء نطاق لعناوين IP حرفياً (NSExceptionDomains
+		     لأسماء نطاقات فقط)، لذا نسمح مؤقتاً بالحمولات غير المشفرة مع
+		     منع الوصول للشبكة المحلية. عند الانتقال إلى wss://rtc.example.com
+		     احذف NSAllowsArbitraryLoads بالكامل واستبدله بـ:
+		     <dict><key>NSAllowsLocalNetworking</key><true/></dict> -->
 		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>

@@ -67,7 +67,16 @@ export class ProviderPortalService {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
-    const [propertyCount, activeBookings, pendingBookings, monthAgg, upcoming, followersCount, pendingOffers, coverage] =
+    const tomorrowStart = new Date();
+    tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+    tomorrowStart.setHours(0, 0, 0, 0);
+    const tomorrowEnd = new Date(tomorrowStart);
+    tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
+
+    const nextMonth = new Date(monthStart);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+    const [propertyCount, activeBookings, pendingBookings, monthAgg, upcoming, followersCount, pendingOffers, coverage, monthByShiftRows, tomorrowBookings] =
       await Promise.all([
       this.prisma.property.count({ where: { providerId: provider.id } }),
       this.prisma.booking.count({
@@ -96,7 +105,39 @@ export class ProviderPortalService {
         where: { providerId: provider.id, status: OfferStatus.PENDING },
       }),
       this.coverage(provider.id),
+      this.prisma.booking.groupBy({
+        by: ['shift'],
+        where: {
+          property: { providerId: provider.id },
+          status: { in: [BookingStatus.CONFIRMED, BookingStatus.COMPLETED] },
+          startDate: { gte: monthStart, lt: nextMonth },
+        },
+        _sum: { totalPrice: true },
+        _count: true,
+      }),
+      this.prisma.booking.findMany({
+        where: {
+          property: { providerId: provider.id },
+          status: { in: ACTIVE_STATUSES },
+          startDate: { gte: tomorrowStart, lt: tomorrowEnd },
+        },
+        include: { property: { select: { name: true } }, user: { select: { name: true, phone: true } } },
+        orderBy: { startDate: 'asc' },
+        take: 12,
+      }),
     ]);
+
+    const monthByShift: Record<ShiftType, { revenue: number; bookings: number }> = {
+      [ShiftType.MORNING]: { revenue: 0, bookings: 0 },
+      [ShiftType.EVENING]: { revenue: 0, bookings: 0 },
+      [ShiftType.FULL]: { revenue: 0, bookings: 0 },
+    };
+    for (const row of monthByShiftRows) {
+      monthByShift[row.shift] = {
+        revenue: Number(row._sum.totalPrice ?? 0),
+        bookings: row._count,
+      };
+    }
 
     return {
       propertyCount,
@@ -104,7 +145,9 @@ export class ProviderPortalService {
       pendingBookings,
       monthRevenue: monthAgg._sum.totalPrice ?? 0,
       monthBookings: monthAgg._count,
+      monthByShift,
       upcoming,
+      tomorrowBookings,
       followersCount,
       pendingOffers,
       coverage,

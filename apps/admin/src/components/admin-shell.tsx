@@ -60,6 +60,7 @@ const sections: Array<{ title: string; links: NavLink[] }> = [
     links: [
       { href: "/providers", label: "المزودون" },
       { href: "/users", label: "المستخدمون", adminOnly: true },
+      { href: "/staff", label: "الموظفون", adminOnly: true },
       { href: "/locations", label: "المدن", adminOnly: true },
     ],
   },

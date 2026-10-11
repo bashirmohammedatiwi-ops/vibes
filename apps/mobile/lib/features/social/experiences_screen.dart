@@ -9,6 +9,7 @@ import '../../shared/data/marketplace_providers.dart';
 import '../../shared/models/models.dart';
 import '../../shared/widgets/maison_chrome.dart';
 import '../../shared/widgets/maison_shapes.dart';
+import '../../shared/widgets/vibes_editorial.dart';
 import '../../shared/widgets/vibes_widgets.dart';
 
 class ExperiencesScreen extends ConsumerStatefulWidget {
@@ -186,7 +187,7 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
             });
           }
           return RefreshIndicator(
-            color: Vibes.coral,
+            color: Vibes.teal,
             onRefresh: () async {
               ref.invalidate(experiencesProvider);
               ref.invalidate(followingExperiencesProvider);
@@ -236,10 +237,28 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
           )
         else
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-            child: Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: chip,
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const EditorialEyebrow(
+                        label: 'ضيوف VIBEES',
+                        accent: Vibes.coral,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'تجارب حقيقية',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w900),
+                      ),
+                    ],
+                  ),
+                ),
+                chip,
+              ],
             ),
           ),
         feedBody,
@@ -270,45 +289,60 @@ class _ExperienceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FolioPanel(
-      color: VibesTheme.surfaceOf(context),
-      borderColor: featured
-          ? Vibes.teal.withValues(alpha: .45)
-          : VibesTheme.hairlineOf(context),
-      shadows: Vibes.card,
-      railColor: featured ? Vibes.teal : null,
+    final accent = featured ? Vibes.teal : Vibes.coral;
+    return Container(
+      decoration: editorialCardShell(context, accent: accent),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (post.mediaUrls.isNotEmpty)
-            ClipPath(
-              clipper: const ShapeBorderClipper(shape: Folio.shape),
+            GestureDetector(
+              onDoubleTap: onLike,
               child: VibesNetImage(
                 url: post.mediaUrls.first,
-                height: 210,
+                height: 220,
                 width: double.infinity,
               ),
             ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const MaisonIconWell(icon: Icons.person_rounded, size: 36),
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.person_rounded,
+                        size: 20,
+                        color: accent,
+                      ),
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            post.authorName ?? 'ضيف VIBEES',
+                            post.authorName ?? 'ضيف VIBES',
                             style: Theme.of(context).textTheme.labelLarge
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
-                          const SizedBox(height: 4),
-                          const ArcFlourish(width: 22),
+                          Text(
+                            'تجربة ضيف',
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: VibesTheme.textTertiaryOf(context),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
                         ],
                       ),
                     ),

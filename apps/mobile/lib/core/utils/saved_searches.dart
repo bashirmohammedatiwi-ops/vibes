@@ -34,22 +34,18 @@ class SavedSearch {
       sort == null;
 
   String get signature => [
-        query.trim(),
-        type ?? '',
-        province ?? '',
-        cityId ?? '',
-        '$capacity',
-        '$minPrice',
-        '$maxPrice',
-        sort ?? '',
-      ].join('|');
+    query.trim(),
+    type ?? '',
+    province ?? '',
+    cityId ?? '',
+    '$capacity',
+    '$minPrice',
+    '$maxPrice',
+    sort ?? '',
+  ].join('|');
 
   String get label {
-    const types = {
-      'FARM': 'مزارع',
-      'HALL': 'قاعات',
-      'DECORATION': 'تزيين',
-    };
+    const types = {'FARM': 'مزارع', 'HALL': 'قاعات', 'DECORATION': 'تزيين'};
     final parts = <String>[
       if (query.trim().isNotEmpty) query.trim(),
       ?types[type],
@@ -60,26 +56,26 @@ class SavedSearch {
   }
 
   Map<String, dynamic> toJson() => {
-        'query': query,
-        'type': type,
-        'province': province,
-        'cityId': cityId,
-        'capacity': capacity,
-        'minPrice': minPrice,
-        'maxPrice': maxPrice,
-        'sort': sort,
-      };
+    'query': query,
+    'type': type,
+    'province': province,
+    'cityId': cityId,
+    'capacity': capacity,
+    'minPrice': minPrice,
+    'maxPrice': maxPrice,
+    'sort': sort,
+  };
 
   factory SavedSearch.fromJson(Map<String, dynamic> j) => SavedSearch(
-        query: j['query'] as String? ?? '',
-        type: j['type'] as String?,
-        province: j['province'] as String?,
-        cityId: j['cityId'] as String?,
-        capacity: (j['capacity'] as num?)?.toInt() ?? 0,
-        minPrice: j['minPrice'] as num? ?? 0,
-        maxPrice: j['maxPrice'] as num? ?? 0,
-        sort: j['sort'] as String?,
-      );
+    query: j['query'] as String? ?? '',
+    type: j['type'] as String?,
+    province: j['province'] as String?,
+    cityId: j['cityId'] as String?,
+    capacity: (j['capacity'] as num?)?.toInt() ?? 0,
+    minPrice: j['minPrice'] as num? ?? 0,
+    maxPrice: j['maxPrice'] as num? ?? 0,
+    sort: j['sort'] as String?,
+  );
 }
 
 class SavedSearchStore {
@@ -116,8 +112,9 @@ class SavedSearchStore {
   }
 
   static Future<List<SavedSearch>> remove(String signature) async {
-    final next =
-        (await load()).where((item) => item.signature != signature).toList();
+    final next = (await load())
+        .where((item) => item.signature != signature)
+        .toList();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
       _key,

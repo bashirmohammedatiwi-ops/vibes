@@ -4,14 +4,21 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { KycStatus, Prisma, PropertyStatus, UserRole } from '@prisma/client';
+import { KycStatus, Prisma, PropertyStatus, ShiftType, UserRole } from '@prisma/client';
 import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { AmenitySyncService } from '../../common/services/amenity-sync.service';
 import { CacheService } from '../../common/services/cache.service';
 import { NotificationService } from '../../common/services/notification.service';
 import { PaginationService, PropertyQueryBuilder } from '../../common/services/query-helpers';
 import { resolveDayPricing, type PriceRuleLike, type PropertyPricing } from '../../common/utils/pricing.util';
-import { dateKey, eachDay, resolveBookingMode, resolveShiftTimes, shiftsRequiredForBooking } from '../../common/utils/shift.util';
+import {
+  dateKey,
+  eachDay,
+  FARM_SHIFTS,
+  resolveBookingMode,
+  resolveShiftTimes,
+  shiftsConflict,
+} from '../../common/utils/shift.util';
 import { uniqueSlug } from '../../common/utils/slug.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePropertyDto, UpdatePropertyDto } from './dto/create-property.dto';
@@ -482,19 +489,46 @@ export class PropertiesService {
     const bookingDays = new Set(
       bookings.flatMap((b) => eachDay(new Date(b.startDate), new Date(b.endDate)).map(dateKey)),
     );
-    const blockedDays = new Set(
-      slots.filter((slot) => !slot.isAvailable).map((slot) => dateKey(slot.date)),
-    );
+
+    const bookedShiftsByDay = new Map<string, Set<ShiftType>>();
+    for (const booking of bookings) {
+      for (const d of eachDay(new Date(booking.startDate), new Date(booking.endDate))) {
+        const key = dateKey(d);
+        const set = bookedShiftsByDay.get(key) ?? new Set<ShiftType>();
+        set.add(booking.shift);
+        bookedShiftsByDay.set(key, set);
+      }
+    }
+
+    const blockedShiftsByDay = new Map<string, Set<ShiftType>>();
+    for (const slot of slots) {
+      if (slot.isAvailable) continue;
+      const key = dateKey(slot.date);
+      const set = blockedShiftsByDay.get(key) ?? new Set<ShiftType>();
+      set.add(slot.shift);
+      blockedShiftsByDay.set(key, set);
+    }
+
+    const blockedDays = new Set(blockedShiftsByDay.keys());
 
     const dayPrices = eachDay(start, end).map((day) => {
       const pricing = resolveDayPricing(property as PropertyPricing, rules as PriceRuleLike[], day);
       const key = dateKey(day);
+      const bookedShifts = [...(bookedShiftsByDay.get(key) ?? [])];
+      const blockedShifts = [...(blockedShiftsByDay.get(key) ?? [])];
+      const bookableShifts = FARM_SHIFTS.filter((shift) => {
+        const slotBlocked = blockedShifts.some((blocked) => shiftsConflict(shift, blocked));
+        const shiftBooked = bookedShifts.some((booked) => shiftsConflict(shift, booked));
+        return !slotBlocked && !shiftBooked;
+      });
       return {
         date: key,
         prices: { full: pricing.full, morning: pricing.morning, evening: pricing.evening },
         isBooked: bookingDays.has(key),
         isBlocked: blockedDays.has(key),
-        bookableShifts: shiftsRequiredForBooking('FULL').filter((shift) => !blockedDays.has(key)),
+        bookedShifts,
+        blockedShifts,
+        bookableShifts,
       };
     });
 

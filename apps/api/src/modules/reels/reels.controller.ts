@@ -4,7 +4,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /**
- * تغذية الريلز — فيديوهات عمودية (9:16) للأماكن المنشورة.
+ * تغذية الريلز — فيديوهات «الريلز» المرفوعة من لوحة التحكم للأماكن المنشورة.
  * تجميع الوسائط الجاهزة مع سياق مكانها في استجابة واحدة.
  */
 @ApiTags('reels')
@@ -20,7 +20,9 @@ export class ReelsController {
     const mediaRows = await this.prisma.media.findMany({
       where: {
         status: 'READY',
-        type: { in: ['VIDEO', 'REEL'] },
+        // الاستكشاف يعرض فقط ما رُفع من لوحة التحكم في خانة «الريلز»
+        // (النوع REEL) — الفيديو العادي يبقى لمعرض صفحة المكان.
+        type: 'REEL',
         property: { status: 'APPROVED' },
         propertyId: { not: null },
       },

@@ -21,7 +21,14 @@ async function bootstrap() {
   if (!existsSync(mediaRoot)) {
     mkdirSync(mediaRoot, { recursive: true });
   }
-  app.useStaticAssets(mediaRoot, { prefix: '/media/' });
+  // أسماء ملفات الوسائط UUID فريدة — تخزين دائم آمن يُسرّع إعادة التحميل
+  // في المتصفح والتطبيق معاً بلا أي إعادة تنزيل.
+  app.useStaticAssets(mediaRoot, {
+    prefix: '/media/',
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    },
+  });
 
   app.use(
     helmet({

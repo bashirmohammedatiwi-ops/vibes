@@ -25,15 +25,30 @@ class AuthState {
   bool get isStaff => user?.isStaff ?? false;
 
   AuthState copyWith({bool? loggedIn, bool? ready, User? user}) => AuthState(
-        loggedIn: loggedIn ?? this.loggedIn,
-        ready: ready ?? this.ready,
-        user: user ?? this.user,
-      );
+    loggedIn: loggedIn ?? this.loggedIn,
+    ready: ready ?? this.ready,
+    user: user ?? this.user,
+  );
 }
 
 class AuthController extends StateNotifier<AuthState> {
   AuthController(this._client, this._tokens) : super(const AuthState()) {
+    sessionExpiredSignal.addListener(_onSessionExpired);
     _restore();
+  }
+
+  @override
+  void dispose() {
+    sessionExpiredSignal.removeListener(_onSessionExpired);
+    super.dispose();
+  }
+
+  /// رفض الخادم رمز التحديث نهائياً — خروج نظيف (يظهر زر تسجيل الدخول)
+  /// بدل بقاء الواجهة «مسجّلة» وكل الطلبات تعود Unauthorized.
+  Future<void> _onSessionExpired() async {
+    if (!state.loggedIn) return;
+    await _cacheUser(null);
+    if (mounted) state = const AuthState(ready: true);
   }
 
   final ApiClient _client;
@@ -49,14 +64,15 @@ class AuthController extends StateNotifier<AuthState> {
     try {
       final me = await _client.get('/api/users/me');
       final user = User.fromJson(me as Map<String, dynamic>);
-      state = AuthState(
-        loggedIn: true,
-        ready: true,
-        user: user,
-      );
+      state = AuthState(loggedIn: true, ready: true, user: user);
       await _cacheUser(user);
       await _registerDevice();
     } catch (_) {
+      final stillHasAccess = await _tokens.readAccess();
+      if (stillHasAccess == null || stillHasAccess.isEmpty) {
+        state = const AuthState(ready: true);
+        return;
+      }
       state = AuthState(
         loggedIn: true,
         ready: true,
@@ -94,10 +110,9 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   Future<void> loginWithPin(String phone, String pin) async {
-    final data = await _client.post(
-      '/api/auth/pin',
-      body: {'phone': phone, 'pin': pin},
-    ) as Map<String, dynamic>;
+    final data =
+        await _client.post('/api/auth/pin', body: {'phone': phone, 'pin': pin})
+            as Map<String, dynamic>;
 
     await _tokens.saveTokens(
       access: data['accessToken'] as String,
@@ -119,12 +134,17 @@ class AuthController extends StateNotifier<AuthState> {
   Future<void> _registerDevice() async {
     try {
       final token = await diagnosticDeviceId();
-      await _client.post('/api/devices', body: {
-        'token': token,
-        'platform': kIsWeb
-            ? 'web'
-            : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android'),
-      });
+      await _client.post(
+        '/api/devices',
+        body: {
+          'token': token,
+          'platform': kIsWeb
+              ? 'web'
+              : (defaultTargetPlatform == TargetPlatform.iOS
+                    ? 'ios'
+                    : 'android'),
+        },
+      );
     } catch (_) {}
   }
 
@@ -142,7 +162,13 @@ class AuthController extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     try {
-      await _client.post('/api/auth/logout');
+      final refresh = await _tokens.readRefresh();
+      await _client.post(
+        '/api/auth/logout',
+        body: {
+          if (refresh != null && refresh.isNotEmpty) 'refreshToken': refresh,
+        },
+      );
     } catch (_) {
       // أفضل جهد — نكمل الخروج محلياً
     }
@@ -163,8 +189,7 @@ class AuthController extends StateNotifier<AuthState> {
   }
 }
 
-final authControllerProvider =
-    StateNotifierProvider<AuthController, AuthState>(
+final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
   (ref) => AuthController(
     ref.watch(apiClientProvider),
     ref.watch(tokenStorageProvider),
@@ -201,7 +226,8 @@ class PrefsController extends StateNotifier<PrefsState> {
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
     state = PrefsState(
-      darkMode: prefs.getBool('darkMode') ?? false, // الفاتح الدافئ هو الافتراضي
+      darkMode:
+          prefs.getBool('darkMode') ?? false, // الفاتح الدافئ هو الافتراضي
       localeCode: prefs.getString('locale') ?? 'ar',
       dataSaver: prefs.getBool('dataSaver') ?? false,
     );
@@ -230,8 +256,8 @@ class PrefsController extends StateNotifier<PrefsState> {
 
 final prefsControllerProvider =
     StateNotifierProvider<PrefsController, PrefsState>(
-  (ref) => PrefsController(),
-);
+      (ref) => PrefsController(),
+    );
 
 /// إعدادات المنصة العامة (أوقات الشفت الافتراضية، الدفع...)
 final appSettingsProvider = FutureProvider<AppSettings>((ref) async {

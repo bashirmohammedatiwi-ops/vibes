@@ -37,9 +37,9 @@ class CollectionDetailScreen extends ConsumerWidget {
           children: [
             Text(
               'تعديل القائمة',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 16),
             MaisonField(label: 'الاسم', controller: name),
@@ -192,7 +192,7 @@ class CollectionDetailScreen extends ConsumerWidget {
                             break;
                           case 'share':
                             await Share.share(
-                              'قائمة ${collection.name} على VIBEES\n'
+                              'قائمة ${collection.name} على VIBES\n'
                               'افتحها من التطبيق عبر /collections/${collection.id}\n'
                               '${collection.items.map((e) => e.property.name).join('\n')}',
                             );

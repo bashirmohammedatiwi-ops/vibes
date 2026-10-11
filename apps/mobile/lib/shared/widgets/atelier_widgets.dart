@@ -114,7 +114,7 @@ class AtelierGlassButton extends StatelessWidget {
             height: size,
             decoration: ShapeDecoration(
               color: active
-                  ? Vibes.coral.withValues(alpha: .72)
+                  ? Vibes.mapple.withValues(alpha: .78)
                   : Colors.white.withValues(alpha: .18),
               shape: RoundedRectangleBorder(
                 borderRadius: Folio.radius,
@@ -159,7 +159,7 @@ class AtelierSection extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Container(width: 3, height: 18, color: Vibes.coral),
+                    Container(width: 3, height: 18, color: Vibes.teal),
                     const SizedBox(width: 10),
                     Text(
                       title,
@@ -175,9 +175,9 @@ class AtelierSection extends StatelessWidget {
                     padding: const EdgeInsetsDirectional.only(start: 14),
                     child: Text(
                       subtitle!,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Vibes.inkTertiary,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Vibes.inkTertiary),
                     ),
                   ),
                 ],
@@ -190,8 +190,8 @@ class AtelierSection extends StatelessWidget {
               child: Text(
                 actionLabel!,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Vibes.coral,
-                  fontWeight: FontWeight.w700,
+                  color: Vibes.teal,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),

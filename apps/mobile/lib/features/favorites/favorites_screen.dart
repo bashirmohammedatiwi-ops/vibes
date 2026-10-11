@@ -5,11 +5,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/world_theme.dart';
 import '../../core/network/api_client.dart';
 import '../../shared/data/property_providers.dart';
 import '../../shared/data/marketplace_providers.dart';
 import '../../shared/widgets/maison_chrome.dart';
-import '../../shared/widgets/maison_shapes.dart';
 import '../../shared/widgets/property_card.dart';
 import '../../shared/widgets/vibes_widgets.dart';
 
@@ -66,7 +66,7 @@ class FavoritesScreen extends ConsumerWidget {
                   }
 
                   return RefreshIndicator(
-                    color: Vibes.coral,
+                    color: context.world.accent,
                     onRefresh: () async {
                       await ref.read(favoritesProvider.notifier).refresh();
                       ref.invalidate(collectionsProvider);
@@ -117,12 +117,9 @@ class FavoritesScreen extends ConsumerWidget {
                                 if (publicLists.isNotEmpty) ...[
                                   if (collections.isNotEmpty)
                                     const SizedBox(height: 12),
-                                  Text(
+                                  SectionHeader(
                                     'قوائم عامة',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelMedium
-                                        ?.copyWith(fontWeight: FontWeight.w800),
+                                    accent: context.world.accent,
                                   ),
                                   const SizedBox(height: 8),
                                   SizedBox(
@@ -194,9 +191,9 @@ Future<void> _createCollection(BuildContext context, WidgetRef ref) async {
         children: [
           Text(
             'قائمة جديدة',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 16),
           MaisonField(label: 'اسم القائمة', controller: name),
@@ -247,7 +244,9 @@ Future<void> _createCollection(BuildContext context, WidgetRef ref) async {
     }
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(maisonError(e))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(maisonError(e))));
     }
   }
 }
@@ -272,47 +271,53 @@ class _CollectionChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
-        width: 168,
-        child: FolioPanel(
-          borderColor: Vibes.teal.withValues(alpha: .22),
-          railColor: Vibes.teal,
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Row(
-              children: [
-                MaisonThumb(
+        width: 172,
+        height: 86,
+        child: SurfaceListCard(
+          accent: context.world.accent,
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: MaisonThumb(
                   url: coverUrl,
-                  size: 42,
+                  size: 44,
                   fallback: const Icon(
                     Icons.bookmark_outline_rounded,
                     size: 18,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
                       ),
-                      const Spacer(),
-                      Text(
-                        subtitle == null || subtitle!.isEmpty
-                            ? '$count مكان'
-                            : '$count · $subtitle',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle == null || subtitle!.isEmpty
+                          ? '$count مكان'
+                          : '$count · $subtitle',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: VibesTheme.textTertiaryOf(context),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

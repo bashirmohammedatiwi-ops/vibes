@@ -16,7 +16,7 @@ import { JwtStrategy } from './jwt.strategy';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.getOrThrow<string>('JWT_ACCESS_SECRET'),
-        signOptions: { expiresIn: config.get<string>('JWT_ACCESS_EXPIRES_IN', '15m') },
+        signOptions: { expiresIn: config.get<string>('JWT_ACCESS_EXPIRES_IN', '1h') },
       }),
     }),
     JobsModule,

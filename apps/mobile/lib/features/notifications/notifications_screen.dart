@@ -7,8 +7,10 @@ import '../../core/theme/app_theme.dart';
 import '../../shared/data/marketplace_providers.dart';
 import '../../shared/models/models.dart';
 import '../../shared/widgets/maison_chrome.dart';
-import '../../shared/widgets/maison_shapes.dart';
 import '../../shared/widgets/vibes_widgets.dart';
+import '../../core/theme/world_theme.dart';
+import '../../shared/widgets/vibes_graphics.dart';
+import '../../shared/widgets/world_ui.dart';
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
@@ -21,6 +23,15 @@ class NotificationsScreen extends ConsumerWidget {
     if (diff.inHours < 24) return 'قبل ${diff.inHours} ساعة';
     return 'قبل ${diff.inDays} يوم';
   }
+
+  Color _typeColor(String type) => switch (type) {
+    'PAYMENT' || 'REFUND' => Vibes.success,
+    'MESSAGE' => Vibes.coral,
+    'OFFER' => const Color(0xFFD97706),
+    'INVOICE' => Vibes.info,
+    'SOCIAL' => Vibes.mapple,
+    _ => const Color(0xFF6B7280),
+  };
 
   IconData _icon(String type) => switch (type) {
     'PAYMENT' => Icons.payments_outlined,
@@ -84,15 +95,44 @@ class NotificationsScreen extends ConsumerWidget {
               title: 'الإشعارات',
               kicker: 'آخر المستجدات',
               onBack: () => context.pop(),
-              trailing: TextButton(
-                onPressed: () async {
+              trailing: PressScale(
+                onTap: () async {
                   await ref
                       .read(apiClientProvider)
                       .patch('/api/notifications/read');
                   ref.invalidate(notificationsProvider);
                   ref.invalidate(notificationsUnreadProvider);
                 },
-                child: const Text('قراءة الكل'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: context.world.accentFaint,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.done_all_rounded,
+                        size: 16,
+                        color: context.world.accentDeep,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'قراءة الكل',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: context.world.accentDeep,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
             Expanded(
@@ -100,11 +140,11 @@ class NotificationsScreen extends ConsumerWidget {
                 loading: () => ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
                   children: const [
-                    ShimmerBox(height: 82, radius: VibesRadius.md),
+                    WorldSkeleton(height: 82, radius: 20),
                     SizedBox(height: 10),
-                    ShimmerBox(height: 82, radius: VibesRadius.md),
+                    WorldSkeleton(height: 82, radius: 20),
                     SizedBox(height: 10),
-                    ShimmerBox(height: 82, radius: VibesRadius.md),
+                    WorldSkeleton(height: 82, radius: 20),
                   ],
                 ),
                 error: (e, _) => ErrorCanvas(
@@ -113,114 +153,152 @@ class NotificationsScreen extends ConsumerWidget {
                 ),
                 data: (list) {
                   if (list.isEmpty) {
-                    return const EmptyCanvas(
-                      icon: Icons.notifications_none_rounded,
-                      title: 'لا إشعارات',
-                      subtitle: 'ستصلك هنا تحديثات الحجوزات والرسائل والعروض',
+                    return const Center(
+                      child: WorldEmpty(
+                        icon: Icons.notifications_none_rounded,
+                        title: 'لا إشعارات بعد',
+                        subtitle:
+                            'ستصلك هنا تحديثات حجوزاتك ورسائلك والعروض الجديدة',
+                      ),
                     );
                   }
                   return RefreshIndicator(
-                    color: Vibes.teal,
+                    color: context.world.accent,
                     onRefresh: () async =>
                         ref.invalidate(notificationsProvider),
-                    child: ListView.separated(
+                    child: ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(
                         parent: BouncingScrollPhysics(),
                       ),
                       padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
                       itemCount: list.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
                       itemBuilder: (context, i) {
                         final n = list[i];
-                        return Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () async {
-                              if (!n.isRead) {
-                                await ref
-                                    .read(apiClientProvider)
-                                    .patch('/api/notifications/${n.id}/read');
-                                ref.invalidate(notificationsProvider);
-                                ref.invalidate(notificationsUnreadProvider);
-                              }
-                              if (context.mounted) _open(context, n);
-                            },
-                            customBorder: Folio.shape,
-                            child: FolioPanel(
-                              railColor: n.isRead ? null : Vibes.teal,
-                              shadows: Vibes.card,
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  14,
-                                  14,
-                                  14,
-                                  14,
-                                ),
-                                child: Row(
+                        // فاصل يوم عند بداية كل يوم جديد
+                        final prev = i > 0 ? list[i - 1] : null;
+                        final newDay =
+                            prev == null ||
+                            prev.createdAt?.year != n.createdAt?.year ||
+                            prev.createdAt?.month != n.createdAt?.month ||
+                            prev.createdAt?.day != n.createdAt?.day;
+                        final card = SurfaceListCard(
+                          accent: n.isRead ? null : context.world.accent,
+                          highlighted: !n.isRead,
+                          onTap: () async {
+                            if (!n.isRead) {
+                              await ref
+                                  .read(apiClientProvider)
+                                  .patch('/api/notifications/${n.id}/read');
+                              ref.invalidate(notificationsProvider);
+                              ref.invalidate(notificationsUnreadProvider);
+                            }
+                            if (context.mounted) _open(context, n);
+                          },
+                          child: Row(
+                            children: [
+                              MaisonIconWell(
+                                icon: _icon(n.type),
+                                color: n.isRead
+                                    ? VibesTheme.textTertiaryOf(context)
+                                    : _typeColor(n.type),
+                                background: n.isRead
+                                    ? const Color(0xFFF4F5F7)
+                                    : _typeColor(n.type).withValues(alpha: .10),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    MaisonIconWell(
-                                      icon: _icon(n.type),
-                                      color: n.isRead
-                                          ? Vibes.inkSecondary
-                                          : Vibes.coral,
-                                      background: Vibes.surface,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            n.title,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleSmall
-                                                ?.copyWith(
-                                                  fontWeight: n.isRead
-                                                      ? FontWeight.w600
-                                                      : FontWeight.w900,
-                                                ),
+                                    Text(
+                                      n.title,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall
+                                          ?.copyWith(
+                                            fontWeight: n.isRead
+                                                ? FontWeight.w600
+                                                : FontWeight.w900,
                                           ),
-                                          if (n.body.isNotEmpty)
-                                            Text(
-                                              n.body,
-                                              maxLines: 2,
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall
-                                                  ?.copyWith(
-                                                    color:
-                                                        VibesTheme.textTertiaryOf(
-                                                          context,
-                                                        ),
-                                                  ),
+                                    ),
+                                    if (n.body.isNotEmpty)
+                                      Text(
+                                        n.body,
+                                        maxLines: 2,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: VibesTheme.textTertiaryOf(
+                                                context,
+                                              ),
                                             ),
-                                          Text(
-                                            _relative(n.createdAt),
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .labelSmall
-                                                ?.copyWith(
-                                                  color:
-                                                      VibesTheme.textTertiaryOf(
-                                                        context,
-                                                      ),
-                                                ),
+                                      ),
+                                    Text(
+                                      _relative(n.createdAt),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: VibesTheme.textTertiaryOf(
+                                              context,
+                                            ),
                                           ),
-                                        ],
-                                      ),
                                     ),
-                                    if (!n.isRead)
-                                      const ColoredBox(
-                                        color: Vibes.teal,
-                                        child: SizedBox(width: 7, height: 7),
-                                      ),
                                   ],
                                 ),
                               ),
-                            ),
+                              if (!n.isRead)
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: context.world.accent,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                            ],
                           ),
+                        );
+                        if (!newDay)
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: card,
+                          );
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (i > 0) const SizedBox(height: 6),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 3,
+                                    height: 12,
+                                    decoration: BoxDecoration(
+                                      gradient: context.world.fill,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _dayLabel(n.createdAt),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                          color: VibesTheme.textSecondaryOf(
+                                            context,
+                                          ),
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            card,
+                          ],
                         );
                       },
                     ),
@@ -232,5 +310,20 @@ class NotificationsScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  String _dayLabel(DateTime? at) {
+    final now = DateTime.now();
+    if (at == null) return '';
+    if (at.year == now.year && at.month == now.month && at.day == now.day) {
+      return 'اليوم';
+    }
+    final yesterday = now.subtract(const Duration(days: 1));
+    if (at.year == yesterday.year &&
+        at.month == yesterday.month &&
+        at.day == yesterday.day) {
+      return 'أمس';
+    }
+    return '${at.day}/${at.month}${at.year != now.year ? '/${at.year}' : ''}';
   }
 }

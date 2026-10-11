@@ -99,131 +99,139 @@ class OffersScreen extends ConsumerWidget {
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                           child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    o.propertyName ?? 'عرض سعر',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall
-                                        ?.copyWith(fontWeight: FontWeight.w800),
-                                  ),
-                                ),
-                                StatusPill(
-                                  label: pending
-                                      ? 'بانتظار الرد'
-                                      : o.status == 'ACCEPTED'
-                                      ? 'مقبول'
-                                      : 'منتهٍ',
-                                  color: statusColor,
-                                  compact: true,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            PriceText(o.amount, compact: true),
-                            if (o.startDate != null && o.endDate != null) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                '${o.startDate!.day}/${o.startDate!.month} → ${o.endDate!.subtract(const Duration(days: 1)).day}/${o.endDate!.subtract(const Duration(days: 1)).month}',
-                                style: Theme.of(context).textTheme.labelSmall,
-                              ),
-                            ],
-                            if (o.message.isNotEmpty) ...[
-                              const SizedBox(height: 6),
-                              Text(o.message),
-                            ],
-                            if (!isProvider && pending) ...[
-                              const SizedBox(height: 12),
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                               Row(
                                 children: [
                                   Expanded(
-                                    child: VibesButton(
-                                      label: 'قبول العرض',
-                                      onPressed: () async {
-                                        try {
-                                          final data = await ref
-                                              .read(apiClientProvider)
-                                              .post(
-                                                '/api/offers/${o.id}/respond',
-                                                body: {'accept': true},
-                                              );
-                                          ref.invalidate(offersProvider);
-                                          ref.invalidate(myBookingsProvider);
-                                          final booking = data is Map
-                                              ? data['booking']
-                                              : null;
-                                          final bookingId = booking is Map
-                                              ? booking['id'] as String?
-                                              : null;
-                                          if (!context.mounted) return;
-                                          if (bookingId != null) {
-                                            context.push('/booking/$bookingId');
-                                          } else {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'تم قبول العرض وإنشاء الحجز',
-                                                ),
-                                              ),
-                                            );
-                                          }
-                                        } catch (e) {
-                                          if (!context.mounted) return;
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(content: Text(maisonError(e))),
-                                          );
-                                        }
-                                      },
+                                    child: Text(
+                                      o.propertyName ?? 'عرض سعر',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                          ),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  VibesButton(
-                                    label: 'رفض',
-                                    small: true,
-                                    ghost: true,
-                                    expanded: false,
-                                    onPressed: () async {
-                                      await ref
-                                          .read(apiClientProvider)
-                                          .post(
-                                            '/api/offers/${o.id}/respond',
-                                            body: {'accept': false},
-                                          );
-                                      ref.invalidate(offersProvider);
-                                    },
+                                  StatusPill(
+                                    label: pending
+                                        ? 'بانتظار الرد'
+                                        : o.status == 'ACCEPTED'
+                                        ? 'مقبول'
+                                        : 'منتهٍ',
+                                    color: statusColor,
+                                    compact: true,
                                   ),
                                 ],
                               ),
-                            ],
-                            if (o.bookingId != null) ...[
                               const SizedBox(height: 8),
-                              VibesButton(
-                                label: 'فتح الحجز',
-                                small: true,
-                                ghost: true,
-                                expanded: false,
-                                onPressed: () =>
-                                    context.push('/booking/${o.bookingId}'),
-                              ),
-                            ],
-                            if (isProvider)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Text(
-                                  pending ? 'بانتظار رد العميل' : o.status,
+                              PriceText(o.amount, compact: true),
+                              if (o.startDate != null && o.endDate != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${o.startDate!.day}/${o.startDate!.month} → ${o.endDate!.subtract(const Duration(days: 1)).day}/${o.endDate!.subtract(const Duration(days: 1)).month}',
                                   style: Theme.of(context).textTheme.labelSmall,
                                 ),
-                              ),
-                          ],
-                        ),
+                              ],
+                              if (o.message.isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                Text(o.message),
+                              ],
+                              if (!isProvider && pending) ...[
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: VibesButton(
+                                        label: 'قبول العرض',
+                                        onPressed: () async {
+                                          try {
+                                            final data = await ref
+                                                .read(apiClientProvider)
+                                                .post(
+                                                  '/api/offers/${o.id}/respond',
+                                                  body: {'accept': true},
+                                                );
+                                            ref.invalidate(offersProvider);
+                                            ref.invalidate(myBookingsProvider);
+                                            final booking = data is Map
+                                                ? data['booking']
+                                                : null;
+                                            final bookingId = booking is Map
+                                                ? booking['id'] as String?
+                                                : null;
+                                            if (!context.mounted) return;
+                                            if (bookingId != null) {
+                                              context.push(
+                                                '/booking/$bookingId',
+                                              );
+                                            } else {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'تم قبول العرض وإنشاء الحجز',
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          } catch (e) {
+                                            if (!context.mounted) return;
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(maisonError(e)),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    VibesButton(
+                                      label: 'رفض',
+                                      small: true,
+                                      ghost: true,
+                                      expanded: false,
+                                      onPressed: () async {
+                                        await ref
+                                            .read(apiClientProvider)
+                                            .post(
+                                              '/api/offers/${o.id}/respond',
+                                              body: {'accept': false},
+                                            );
+                                        ref.invalidate(offersProvider);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ],
+                              if (o.bookingId != null) ...[
+                                const SizedBox(height: 8),
+                                VibesButton(
+                                  label: 'فتح الحجز',
+                                  small: true,
+                                  ghost: true,
+                                  expanded: false,
+                                  onPressed: () =>
+                                      context.push('/booking/${o.bookingId}'),
+                                ),
+                              ],
+                              if (isProvider)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Text(
+                                    pending ? 'بانتظار رد العميل' : o.status,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.labelSmall,
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                       );
                     },
@@ -385,9 +393,9 @@ Future<void> _createOffer(BuildContext context, WidgetRef ref) async {
                         if (ctx.mounted) Navigator.pop(ctx, true);
                       } catch (e) {
                         if (ctx.mounted) {
-                          ScaffoldMessenger.of(
-                            ctx,
-                          ).showSnackBar(SnackBar(content: Text(maisonError(e))));
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(content: Text(maisonError(e))),
+                          );
                         }
                       }
                     },

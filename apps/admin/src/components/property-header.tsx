@@ -28,7 +28,7 @@ export function PropertyHeader({ property, publicWebUrl, children }: Props) {
             primary.type === "VIDEO" ? (
               <video src={primary.url} className="h-full w-full object-cover" muted />
             ) : (
-              <img src={primary.url} alt={primary.altText ?? property.name} className="h-full w-full object-cover" />
+              <img src={primary.url} alt={primary.altText ?? property.name} className="h-full w-full object-cover" loading="lazy" decoding="async" />
             )
           ) : (
             <div className="flex h-full items-center justify-center text-xs text-muted">لا صور</div>

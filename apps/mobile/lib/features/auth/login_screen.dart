@@ -4,13 +4,18 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/theme/app_theme.dart';
+import '../../core/app_mode/app_mode_controller.dart';
+import '../../core/theme/world_theme.dart';
 import '../../shared/widgets/maison_chrome.dart';
 import '../../shared/widgets/maison_shapes.dart';
-import '../../shared/widgets/vibes_widgets.dart';
+import '../../shared/widgets/vibes_graphics.dart';
+import '../home/home_sections.dart';
 import 'auth_controller.dart';
 
-/// الدخول — دعوة ضيافة على حقل Midnight، لا نموذج SaaS
+/// ═══════════════════════════════════════════════════════════
+/// الدخول — رأس ليلي بجوّ العالم الحالي يحتضن الشعار، وبطاقة بيضاء
+/// تصعد فوقه تحمل خطوة واحدة فقط في كل مرة. الألوان كلها من العالم.
+/// ═══════════════════════════════════════════════════════════
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -22,7 +27,9 @@ enum _PinPhase { phone, create, confirm, unlock }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _phoneController = TextEditingController();
-  final _codeController = TextEditingController();
+  final _pinController = TextEditingController();
+  final _phoneFocus = FocusNode();
+  final _pinFocus = FocusNode();
   _PinPhase _phase = _PinPhase.phone;
   String _draftPin = '';
   bool _loading = false;
@@ -32,17 +39,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _codeController.addListener(() {
-      if (_phase != _PinPhase.phone && _codeController.text.length == 6) {
-        _submitPin();
-      }
-    });
+    _pinController.addListener(_onPinChanged);
+    _phoneController.addListener(_rebuild);
+    _phoneFocus.addListener(_rebuild);
+    _pinFocus.addListener(_rebuild);
+  }
+
+  void _rebuild() {
+    if (mounted) setState(() {});
+  }
+
+  void _onPinChanged() {
+    if (mounted) setState(() {});
+    if (_phase == _PinPhase.phone) return;
+    if (_pinController.text.length == 6) {
+      _submitPin();
+    } else if (_error != null) {
+      setState(() => _error = null);
+    }
   }
 
   @override
   void dispose() {
+    _phoneController.removeListener(_rebuild);
+    _pinController.removeListener(_onPinChanged);
+    _phoneFocus.removeListener(_rebuild);
+    _pinFocus.removeListener(_rebuild);
     _phoneController.dispose();
-    _codeController.dispose();
+    _pinController.dispose();
+    _phoneFocus.dispose();
+    _pinFocus.dispose();
     super.dispose();
   }
 
@@ -61,9 +87,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _continuePhone() async {
+    _phoneFocus.unfocus();
     final phone = _normalizedPhone;
     if (phone.length < 12) {
-      setState(() => _error = 'أدخل رقم هاتف عراقي صحيح (مثال 07XXXXXXXXX)');
+      setState(() => _error = 'أدخل رقم هاتف عراقي صحيح، مثل 07XXXXXXXXX');
       return;
     }
 
@@ -73,15 +100,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     try {
-      final hasPin = await ref.read(authControllerProvider.notifier).hasPin(phone);
+      final hasPin = await ref
+          .read(authControllerProvider.notifier)
+          .hasPin(phone);
       if (!mounted) return;
       setState(() {
         _phase = hasPin ? _PinPhase.unlock : _PinPhase.create;
         _draftPin = '';
         _loading = false;
-        _codeController.clear();
+        _pinController.clear();
       });
       HapticFeedback.lightImpact();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _pinFocus.requestFocus();
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -93,7 +125,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _submitPin() async {
     if (_loading || _pinBusy || _phase == _PinPhase.phone) return;
-    final pin = _codeController.text.trim();
+    final pin = _pinController.text.trim();
     if (pin.length != 6) return;
     _pinBusy = true;
 
@@ -102,22 +134,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         _draftPin = pin;
         _phase = _PinPhase.confirm;
         _error = null;
-        _codeController.clear();
+        _pinController.clear();
       });
       _pinBusy = false;
       HapticFeedback.selectionClick();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _pinFocus.requestFocus();
+      });
       return;
     }
 
     if (_phase == _PinPhase.confirm && pin != _draftPin) {
       setState(() {
-        _error = 'الرقمان غير متطابقين — اختر الرقم من جديد';
+        _error = 'الرقمان غير متطابقين — أعد الاختيار';
         _phase = _PinPhase.create;
         _draftPin = '';
-        _codeController.clear();
+        _pinController.clear();
       });
       _pinBusy = false;
       HapticFeedback.lightImpact();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _pinFocus.requestFocus();
+      });
       return;
     }
 
@@ -138,14 +176,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() {
         _loading = false;
         _error = maisonError(e);
-        _codeController.clear();
+        _pinController.clear();
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _pinFocus.requestFocus();
       });
     } finally {
       _pinBusy = false;
     }
   }
 
-  void _finish() {
+  Future<void> _finish() async {
     final auth = ref.read(authControllerProvider);
     final next = GoRouterState.of(context).uri.queryParameters['next'];
     if (context.canPop()) {
@@ -156,398 +197,825 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       context.go(next);
       return;
     }
-    context.go(auth.isProvider ? '/provider' : '/home');
+    if (auth.isProvider) {
+      await ref.read(appModeProvider.notifier).onProviderLogin();
+      if (!mounted) return;
+      context.go('/provider');
+      return;
+    }
+    context.go('/home');
   }
 
   void _backToPhone() {
+    _pinFocus.unfocus();
     setState(() {
       _phase = _PinPhase.phone;
       _draftPin = '';
-      _codeController.clear();
+      _pinController.clear();
       _error = null;
       _loading = false;
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _phoneFocus.requestFocus();
+    });
   }
 
+  String get _kicker => switch (_phase) {
+    _PinPhase.phone => 'VIBEES',
+    _PinPhase.create => 'خطوة ١ من ٢',
+    _PinPhase.confirm => 'خطوة ٢ من ٢',
+    _PinPhase.unlock => 'مرحباً بعودتك',
+  };
+
   String get _headline => switch (_phase) {
-    _PinPhase.phone => 'ادخل\nحين تشاء',
-    _PinPhase.create => 'ستة\nأرقام',
-    _PinPhase.confirm => 'أكّد\nالرقم',
-    _PinPhase.unlock => 'أهلاً\nبك',
+    _PinPhase.phone => 'سجّل دخولك',
+    _PinPhase.create => 'اختر رقماً سرياً',
+    _PinPhase.confirm => 'أكّد الرقم السري',
+    _PinPhase.unlock => 'أدخل الرقم السري',
   };
 
   String get _subtitle => switch (_phase) {
-    _PinPhase.phone => 'تصفح الأماكن بحرية. الدخول عند إتمام الحجز',
-    _PinPhase.create => 'اختر ستة أرقام خاصة بك، بلا رسائل تحقق',
-    _PinPhase.confirm => 'أدخل الأرقام الستة مرة أخرى',
-    _PinPhase.unlock => 'أدخل الرقم السري لحساب $_displayPhone',
-  };
-
-  String get _kicker => switch (_phase) {
-    _PinPhase.phone => 'ضيافة بلا عجلة',
-    _PinPhase.create || _PinPhase.confirm => 'رقم سري جديد',
-    _PinPhase.unlock => 'الرقم السري',
+    _PinPhase.phone =>
+      'رقم هاتفك العراقي يكفي. الحساب يُنشأ تلقائياً عند أول دخول.',
+    _PinPhase.create => 'ستة أرقام تتذكرها بسهولة. تُحفظ مشفّرة على جهازك.',
+    _PinPhase.confirm => 'أعد كتابة الأرقام نفسها لتثبيتها.',
+    _PinPhase.unlock => 'نفس الأرقام التي اخترتها لهذا الرقم.',
   };
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: MaisonNightWash(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth < 80 || constraints.maxHeight < 80) {
-              return const SizedBox.shrink();
-            }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(28, 16, 28, 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+    final isPin = _phase != _PinPhase.phone;
+    final world = ref.watch(homeSectionProvider);
+    final p = world.palette;
+    final step = switch (_phase) {
+      _PinPhase.phone => 0,
+      _PinPhase.create || _PinPhase.unlock => 1,
+      _PinPhase.confirm => 2,
+    };
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlayFor(darkBackground: true),
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        resizeToAvoidBottomInset: true,
+        body: Stack(
+          children: [
+            // ── الرأس الليلي بجوّ العالم ──
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 290,
+              child: WorldAtmosphere(palette: p, night: true, intensity: 1.2),
+            ),
+            SafeArea(
+              bottom: false,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: Row(
                       children: [
-                        _BrandLockup(kicker: _kicker)
-                            .animate()
-                            .fadeIn(duration: 420.ms)
-                            .slideY(begin: .04, end: 0),
-                        const SizedBox(height: 20),
-                        Text(
-                          _headline,
-                          style: Theme.of(context).textTheme.displaySmall
-                              ?.copyWith(
-                                color: Vibes.canvas,
-                                fontWeight: FontWeight.w800,
-                                height: 1.08,
-                              ),
-                        ).animate().fadeIn(delay: 80.ms),
-                        const SizedBox(height: 10),
-                        const ArcFlourish(width: 42, color: Vibes.tealBright),
-                        const SizedBox(height: 12),
-                        Text(
-                          _subtitle,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: const Color(0xCCFAF7F0),
-                                height: 1.65,
-                              ),
+                        _GlassCircle(
+                          icon: isPin
+                              ? Icons.arrow_back_rounded
+                              : Icons.close_rounded,
+                          onTap: isPin
+                              ? _backToPhone
+                              : () => context.canPop()
+                                    ? context.pop()
+                                    : context.go('/home'),
                         ),
+                        const Spacer(),
+                        _WorldTag(world: world),
                       ],
                     ),
                   ),
-                ),
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child:
-                          MaisonInviteDock(
-                                child: SafeArea(
-                                  top: false,
-                                  child: Center(
-                                    child: ConstrainedBox(
-                                      constraints: const BoxConstraints(
-                                        maxWidth: 520,
-                                      ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.fromLTRB(
-                                          24,
-                                          18,
-                                          24,
-                                          12,
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.stretch,
-                                          children: [
-                                            _InvitationForm(
-                                              phase: _phase,
-                                              loading: _loading,
-                                              error: _error,
-                                              phoneController: _phoneController,
-                                              codeController: _codeController,
-                                              onContinue: _continuePhone,
-                                              onChangeNumber: _backToPhone,
-                                            ),
-                                            const SizedBox(height: 4),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              )
-                              .animate()
-                              .fadeIn(delay: 140.ms)
-                              .slideY(begin: .06, end: 0),
+                  const SizedBox(height: 14),
+                  const VibesLogo.mark(
+                    size: 62,
+                    color: Colors.white,
+                  ).animate().scale(
+                    begin: const Offset(.85, .85),
+                    duration: 520.ms,
+                    curve: Curves.easeOutBack,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    p.mood,
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white.withValues(alpha: .75),
                     ),
                   ),
-                ),
-              ],
-            );
-          },
+                  const SizedBox(height: 22),
+                  // ── البطاقة الصاعدة ──
+                  Expanded(
+                    child: Container(
+                      width: double.infinity,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(32),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0x22000000),
+                            blurRadius: 30,
+                            offset: Offset(0, -6),
+                          ),
+                        ],
+                      ),
+                      child: AnimatedSwitcher(
+                        duration: 340.ms,
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        transitionBuilder: (child, anim) => FadeTransition(
+                          opacity: anim,
+                          child: SlideTransition(
+                            position: Tween(
+                              begin: const Offset(0, .04),
+                              end: Offset.zero,
+                            ).animate(anim),
+                            child: child,
+                          ),
+                        ),
+                        child: ListView(
+                          key: ValueKey(_phase),
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          padding: const EdgeInsets.fromLTRB(24, 26, 24, 28),
+                          children: [
+                            _StepDots(step: step, total: 3, palette: p),
+                            const SizedBox(height: 18),
+                            Text(
+                              _kicker,
+                              style: TextStyle(
+                                fontFamily: 'Montserrat',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.6,
+                                color: p.accentDeep,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              _headline,
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 30,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF141C2B),
+                                height: 1.15,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _subtitle,
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF5A6678),
+                                height: 1.6,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            if (_error != null) ...[
+                              _ErrorNote(message: _error!).animate().shakeX(
+                                hz: 5,
+                                amount: 4,
+                                duration: 360.ms,
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            if (isPin) ...[
+                              if (_displayPhone.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 18),
+                                  child: _PhoneChip(
+                                    phone: _displayPhone,
+                                    accent: p.accentDeep,
+                                    onTap: _backToPhone,
+                                  ),
+                                ),
+                              _PinBoxes(
+                                value: _pinController.text,
+                                focusNode: _pinFocus,
+                                controller: _pinController,
+                                error: _error != null,
+                                palette: p,
+                              ),
+                              const SizedBox(height: 18),
+                              Center(
+                                child: _loading
+                                    ? SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.2,
+                                          color: p.accent,
+                                        ),
+                                      )
+                                    : Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.lock_outline_rounded,
+                                            size: 14,
+                                            color: Color(0xFF5A6678),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            'محفوظ ومشفّر · ${_pinController.text.length} / 6',
+                                            style: const TextStyle(
+                                              fontFamily: 'Cairo',
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: Color(0xFF5A6678),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            ] else ...[
+                              _PhoneField(
+                                controller: _phoneController,
+                                focusNode: _phoneFocus,
+                                onSubmitted: _continuePhone,
+                                palette: p,
+                              ),
+                              const SizedBox(height: 20),
+                              _PrimaryButton(
+                                label: 'متابعة',
+                                loading: _loading,
+                                onTap: _continuePhone,
+                                palette: p,
+                              ),
+                              const SizedBox(height: 22),
+                              const _TrustRow(),
+                              const SizedBox(height: 18),
+                              const Text(
+                                'بالمتابعة أنت توافق على شروط الاستخدام وسياسة الخصوصية.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF8A9099),
+                                  height: 1.6,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _BrandLockup extends StatelessWidget {
-  const _BrandLockup({required this.kicker});
+const _ink = Color(0xFF141C2B);
+const _ink2 = Color(0xFF5A6678);
+const _line = Color(0xFFE4E9F0);
+const _paper = Color(0xFFF6F7F9);
 
-  final String kicker;
+class _GlassCircle extends StatelessWidget {
+  const _GlassCircle({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const VibesLogo.lockup(height: 72),
-        const SizedBox(height: 18),
-        MaisonKicker(
-          kicker,
-          light: true,
-          color: Vibes.tealBright,
+    return PressScale(
+      onTap: onTap,
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white.withValues(alpha: .12),
+          border: Border.all(color: Colors.white.withValues(alpha: .22)),
         ),
+        child: Icon(icon, size: 19, color: Colors.white),
+      ),
+    );
+  }
+}
+
+class _WorldTag extends StatelessWidget {
+  const _WorldTag({required this.world});
+
+  final HomeSection world;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: Colors.white.withValues(alpha: .12),
+        border: Border.all(color: Colors.white.withValues(alpha: .22)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          VibesCategoryIcon(
+            category: world.icon,
+            size: 14,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            world.label,
+            style: const TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StepDots extends StatelessWidget {
+  const _StepDots({
+    required this.step,
+    required this.total,
+    required this.palette,
+  });
+
+  final int step;
+  final int total;
+  final WorldPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (var i = 0; i < total; i++)
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOutCubic,
+            margin: const EdgeInsetsDirectional.only(end: 6),
+            width: i == step ? 28 : 8,
+            height: 6,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(3),
+              color: i <= step ? palette.accent : _line,
+            ),
+          ),
       ],
     );
   }
 }
 
-class _InvitationForm extends StatelessWidget {
-  const _InvitationForm({
-    required this.phase,
-    required this.loading,
-    required this.error,
-    required this.phoneController,
-    required this.codeController,
-    required this.onContinue,
-    required this.onChangeNumber,
-  });
-
-  final _PinPhase phase;
-  final bool loading;
-  final String? error;
-  final TextEditingController phoneController;
-  final TextEditingController codeController;
-  final VoidCallback onContinue;
-  final VoidCallback onChangeNumber;
+class _TrustRow extends StatelessWidget {
+  const _TrustRow();
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (error != null) ...[
-          _ErrorBanner(message: error!),
-          const SizedBox(height: 16),
-        ],
-        if (phase == _PinPhase.phone) ...[
-          MaisonField(
-            label: 'رقم الهاتف',
-            controller: phoneController,
-            hint: '07XX XXX XXXX',
-            keyboardType: TextInputType.phone,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => onContinue(),
-            maxLength: 13,
-            textDirection: TextDirection.ltr,
-            fieldDirection: TextDirection.ltr,
-            prefix: Text(
-              '+964',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: Vibes.coral,
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          VibesButton(
-            label: 'متابعة',
-            loading: loading,
-            onPressed: onContinue,
-          ),
-        ] else ...[
+    Widget item(IconData icon, String label) => Expanded(
+      child: Column(
+        children: [
+          Icon(icon, size: 20, color: context.world.accentDeep),
+          const SizedBox(height: 6),
           Text(
-            switch (phase) {
-              _PinPhase.create => 'اختر الرقم السري',
-              _PinPhase.confirm => 'أكّد الرقم السري',
-              _ => 'الرقم السري',
-            },
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Vibes.inkSecondary,
-              fontWeight: FontWeight.w800,
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: _ink2,
+              height: 1.3,
             ),
           ),
-          const SizedBox(height: 8),
-          _CodeField(controller: codeController),
-          if (loading) ...[
-            const SizedBox(height: 16),
-            const Center(
-              child: SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2),
+        ],
+      ),
+    );
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      decoration: BoxDecoration(
+        color: context.world.canvas,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          item(Icons.bolt_rounded, 'دخول بثوانٍ\nبلا رسائل'),
+          item(Icons.shield_outlined, 'رقم سري\nمشفّر'),
+          item(Icons.support_agent_rounded, 'دعم مباشر\nعند الحاجة'),
+        ],
+      ),
+    );
+  }
+}
+
+class _PhoneField extends StatelessWidget {
+  const _PhoneField({
+    required this.controller,
+    required this.focusNode,
+    required this.onSubmitted,
+    required this.palette,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final VoidCallback onSubmitted;
+  final WorldPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final focused = focusNode.hasFocus;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      height: 66,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: focused ? palette.accent : _line,
+          width: focused ? 1.8 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (focused ? palette.glow : _ink).withValues(
+              alpha: focused ? .16 : .04,
+            ),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            margin: const EdgeInsetsDirectional.only(start: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            height: 46,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: palette.accentFaint,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Text('🇮🇶', style: TextStyle(fontSize: 16)),
+                const SizedBox(width: 6),
+                Text(
+                  '+964',
+                  style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: palette.accentDeep,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              autofocus: true,
+              keyboardType: TextInputType.phone,
+              textInputAction: TextInputAction.done,
+              maxLength: 11,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              textDirection: TextDirection.ltr,
+              cursorColor: palette.accent,
+              style: const TextStyle(
+                fontFamily: 'Montserrat',
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: _ink,
+                letterSpacing: 1.2,
+              ),
+              decoration: const InputDecoration(
+                hintText: '07XX XXX XXXX',
+                hintStyle: TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFFB7C0CC),
+                  letterSpacing: .6,
+                ),
+                counterText: '',
+                filled: false,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(horizontal: 14),
+              ),
+              onSubmitted: (_) => onSubmitted(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PinBoxes extends StatelessWidget {
+  const _PinBoxes({
+    required this.value,
+    required this.focusNode,
+    required this.controller,
+    required this.error,
+    required this.palette,
+  });
+
+  final String value;
+  final FocusNode focusNode;
+  final TextEditingController controller;
+  final bool error;
+  final WorldPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => focusNode.requestFocus(),
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Row(
+              children: [
+                for (var i = 0; i < 6; i++) ...[
+                  if (i > 0) SizedBox(width: i == 3 ? 16 : 8),
+                  Expanded(
+                    child: _PinCell(
+                      digit: i < value.length ? value[i] : null,
+                      active: focusNode.hasFocus && i == value.length,
+                      error: error,
+                      palette: palette,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0,
+                child: TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: const InputDecoration(
+                    counterText: '',
+                    border: InputBorder.none,
+                  ),
+                ),
               ),
             ),
           ],
-          const SizedBox(height: 8),
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: TextButton(
-              onPressed: onChangeNumber,
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero,
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: const Text('تغيير الرقم'),
-            ),
-          ),
-        ],
-        const SizedBox(height: 18),
-        const ScallopDivider(),
-        const SizedBox(height: 12),
-        Text(
-          'بالدخول أنت توافق على شروط الاستخدام وسياسة الخصوصية',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: Vibes.inkTertiary,
-            height: 1.5,
-          ),
         ),
-      ],
+      ),
     );
   }
 }
 
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.message});
+class _PinCell extends StatelessWidget {
+  const _PinCell({
+    required this.digit,
+    required this.active,
+    required this.error,
+    required this.palette,
+  });
+
+  final String? digit;
+  final bool active;
+  final bool error;
+  final WorldPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final filled = digit != null;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      height: 62,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: filled ? palette.accentFaint : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: error
+              ? const Color(0xFFDC2626)
+              : active
+              ? palette.accent
+              : filled
+              ? palette.accent.withValues(alpha: .55)
+              : _line,
+          width: active ? 2 : (filled ? 1.4 : 1),
+        ),
+        boxShadow: active
+            ? [
+                BoxShadow(
+                  color: palette.glow.withValues(alpha: .22),
+                  blurRadius: 14,
+                ),
+              ]
+            : const [],
+      ),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 160),
+        transitionBuilder: (child, anim) =>
+            ScaleTransition(scale: anim, child: child),
+        child: filled
+            ? Container(
+                key: const ValueKey('dot'),
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: palette.accentDeep,
+                ),
+              )
+            : active
+            ? Container(
+                key: const ValueKey('caret'),
+                width: 2,
+                height: 22,
+                color: palette.accent,
+              )
+            : const SizedBox.shrink(key: ValueKey('empty')),
+      ),
+    );
+  }
+}
+
+class _PhoneChip extends StatelessWidget {
+  const _PhoneChip({
+    required this.phone,
+    required this.accent,
+    required this.onTap,
+  });
+
+  final String phone;
+  final Color accent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: _paper,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: _line),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.phone_iphone_rounded, size: 14, color: _ink2),
+              const SizedBox(width: 6),
+              Text(
+                phone,
+                textDirection: TextDirection.ltr,
+                style: const TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: _ink,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'تغيير',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800,
+                  color: accent,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PrimaryButton extends StatelessWidget {
+  const _PrimaryButton({
+    required this.label,
+    required this.onTap,
+    required this.palette,
+    this.loading = false,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final WorldPalette palette;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return PressScale(
+      onTap: loading ? null : onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        height: 58,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          gradient: palette.fill,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: loading ? const [] : palette.glowShadow,
+        ),
+        child: loading
+            ? SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.2,
+                  color: palette.onAccent,
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w900,
+                      color: palette.onAccent,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 19,
+                    color: palette.onAccent,
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _ErrorNote extends StatelessWidget {
+  const _ErrorNote({required this.message});
 
   final String message;
 
   @override
   Widget build(BuildContext context) {
-    return FolioPanel(
-      color: SemanticColors.danger.withValues(alpha: .08),
-      borderColor: SemanticColors.danger.withValues(alpha: .28),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.error_outline_rounded,
-              color: SemanticColors.danger,
-              size: 18,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: SemanticColors.danger),
-              ),
-            ),
-          ],
-        ),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFECACA)),
       ),
-    ).animate().shakeX(duration: 400.ms).fadeIn();
-  }
-}
-
-class _CodeField extends StatefulWidget {
-  const _CodeField({required this.controller});
-
-  final TextEditingController controller;
-
-  @override
-  State<_CodeField> createState() => _CodeFieldState();
-}
-
-class _CodeFieldState extends State<_CodeField> {
-  final _focus = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    widget.controller.addListener(_rebuild);
-  }
-
-  @override
-  void dispose() {
-    widget.controller.removeListener(_rebuild);
-    _focus.dispose();
-    super.dispose();
-  }
-
-  void _rebuild() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final code = widget.controller.text;
-
-    return GestureDetector(
-      onTap: () => _focus.requestFocus(),
-      child: Stack(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Opacity(
-            opacity: 0,
-            child: TextField(
-              controller: widget.controller,
-              focusNode: _focus,
-              keyboardType: TextInputType.number,
-              maxLength: 6,
-              autofocus: true,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                counterText: '',
-                border: InputBorder.none,
+          const Icon(
+            Icons.error_outline_rounded,
+            size: 18,
+            color: Color(0xFFB91C1C),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFB91C1C),
+                height: 1.45,
               ),
             ),
-          ),
-          Row(
-            children: List.generate(6, (i) {
-              final filled = i < code.length;
-              final isNext = i == code.length;
-              final active = isNext || (i == 5 && filled);
-              return Expanded(
-                child: Padding(
-                  padding: EdgeInsetsDirectional.only(end: i == 5 ? 0 : 6),
-                  child: AnimatedContainer(
-                    duration: VibesMotion.fast,
-                    curve: VibesMotion.curve,
-                    height: 56,
-                    alignment: Alignment.center,
-                    decoration: ShapeDecoration(
-                      color: Vibes.surface,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: Folio.compact,
-                        side: BorderSide(
-                          color: active
-                              ? Vibes.teal
-                              : filled
-                              ? Vibes.coral.withValues(alpha: .45)
-                              : Vibes.hairlineStrong,
-                          width: active ? 1.6 : 1,
-                        ),
-                      ),
-                    ),
-                    child: Text(
-                      filled ? code[i] : '',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: Vibes.ink,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
           ),
         ],
       ),

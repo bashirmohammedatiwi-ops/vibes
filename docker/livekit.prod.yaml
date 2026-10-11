@@ -3,7 +3,24 @@ rtc:
   tcp_port: 6003
   port_range_start: 6004
   port_range_end: 6033
-  # العنوان العام يُمرَّر عند التشغيل حتى لا يعتمد على STUN داخل الحاوية
+  # نطاق المنافذ نفسه يُستخدم أيضاً لترحيل حزم TURN (relay)
+  # العنوان العام يُمرَّر عند التشغيل حتى لا يعتمد على STUN داخل الحاوية
   use_external_ip: false
+# TURN — يرفع نسبة نجاح الاتصال على شبكات الهاتف المحمول
+# والشبكات التي تحجب UDP المباشر. الخادم يُعلن تلقائياً عن خوادم ICE
+# مع كل مكالمة، فلا يحتاج التطبيق أي تعديل.
+# relay ports الافتراضية 30000-40000 تعمل لأن الحاوية على شبكة المضيف.
+# الغرف الفارغة تُحذف تلقائياً (افتراضي LiveKit: empty_timeout 300s /
+# departure_timeout 20s) — تم التحقق عملياً 2026-10-09.
+turn:
+  enabled: true
+  udp_port: 3478
+  # --- عند توفر دومين + شهادة SSL فعّل التالي (TURN/TLS عبر TCP 5349):
+  # domain: rtc.your-domain.com
+  # tls_port: 5349
+  # cert_file: /etc/livekit/certs/fullchain.pem
+  # key_file: /etc/livekit/certs/privkey.pem
+# ⚠️ إنتاج: استبدل بمفاتيح قوية (على السيرفر: openssl rand -hex 32)
+# يجب أن يطابق السر LIVEKIT_API_SECRET في .env
 keys:
-  devkey: devsecret_vibes_livekit_32chars
+  devkey: devkey_secret_change_me_in_production_32ch

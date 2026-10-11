@@ -20,7 +20,7 @@ export function ImagePreview({ url, title, onClose }: Props) {
           <iframe src={url} className="h-[60vh] w-full rounded-lg border" title="PDF" />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt="" className="mx-auto max-h-[65vh] rounded-lg object-contain" />
+          <img src={url} alt="" className="mx-auto max-h-[65vh] rounded-lg object-contain" loading="lazy" decoding="async" />
         )}
         <a href={url} target="_blank" rel="noreferrer" className="mt-3 block text-center text-sm text-accent underline">
           فتح في تبويب جديد

@@ -283,6 +283,11 @@ export class AdminRenameLocationDto {
   @IsOptional()
   @IsString()
   nameEn?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  imageUrl?: string | null;
 }
 
 export class AdminSettingsDto {

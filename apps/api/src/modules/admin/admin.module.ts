@@ -71,6 +71,16 @@ import { PublicSettingsController } from './public-settings.controller';
     PaginationService,
     PropertyQueryBuilder,
   ],
-  exports: [AdminDashboardService, AdminBannersService, NotificationService, AmenitySyncService, AdminPricingService, AdminAvailabilityService],
+  exports: [
+    AdminDashboardService,
+    AdminBannersService,
+    NotificationService,
+    AmenitySyncService,
+    AdminPricingService,
+    AdminAvailabilityService,
+    AdminPropertiesService,
+    AdminMediaService,
+    AdminAmenitiesService,
+  ],
 })
 export class AdminModule {}

@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../constants/api_constants.dart';
@@ -21,13 +23,35 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+/// إشارة انتهاء الجلسة فعلياً (رفض الخادم رمز التحديث) — تستمع لها
+/// [AuthController] لتخرج بنظافة بدل البقاء في حالة «Unauthorized».
+final sessionExpiredSignal = ValueNotifier<int>(0);
+
+/// وقت انتهاء JWT من حمولته (بلا تحقق من التوقيع — للتحديث المسبق فقط).
+DateTime? _jwtExpiry(String token) {
+  try {
+    final parts = token.split('.');
+    if (parts.length != 3) return null;
+    final payload = jsonDecode(
+      utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+    );
+    final exp = payload is Map ? payload['exp'] : null;
+    if (exp is! num) return null;
+    return DateTime.fromMillisecondsSinceEpoch(exp.toInt() * 1000);
+  } catch (_) {
+    return null;
+  }
+}
+
+enum _RefreshResult { ok, rejected, offline }
+
 class ApiClient {
   ApiClient({required this.tokenStorage}) {
     dio = Dio(
       BaseOptions(
         baseUrl: ApiConstants.baseUrl,
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 25),
+        connectTimeout: const Duration(seconds: 8),
+        receiveTimeout: const Duration(seconds: 15),
         sendTimeout: const Duration(seconds: 60),
         validateStatus: (_) => true, // نعالج الحالات يدوياً لرسائل أدق
       ),
@@ -36,8 +60,22 @@ class ApiClient {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final token = await tokenStorage.readAccess();
-          if (token != null) {
+          var token = await tokenStorage.readAccess();
+          // تحديث مسبق: إن قارب الرمز على الانتهاء نجدّده قبل الطلب
+          // بدل انتظار 401 (يمنع موجات الرفض عند فتح التطبيق).
+          if (token != null &&
+              token.isNotEmpty &&
+              options.path != '/api/auth/refresh') {
+            final exp = _jwtExpiry(token);
+            if (exp != null &&
+                exp.isBefore(DateTime.now().add(const Duration(seconds: 45)))) {
+              final r = await _coordinatedRefresh();
+              if (r == _RefreshResult.ok) {
+                token = await tokenStorage.readAccess();
+              }
+            }
+          }
+          if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
           handler.next(options);
@@ -49,6 +87,7 @@ class ApiClient {
           }
 
           if (response.statusCode == 401 &&
+              response.requestOptions.extra['authRetried'] != true &&
               response.requestOptions.path != '/api/auth/refresh') {
             final retried = await _retryWithRefresh(response.requestOptions);
             if (retried != null) {
@@ -92,52 +131,78 @@ class ApiClient {
   late final Dio dio;
   final TokenStorage tokenStorage;
 
-  Completer<String?>? _refreshCompleter;
+  /// طابور تحديث واحد لكل التطبيق (static) — حتى لو أُعيد إنشاء
+  /// العميل، لا يُرسل رمز التحديث نفسه مرتين بالتوازي (الخادم يدوّره).
+  static Future<_RefreshResult>? _refreshFuture;
+
+  Future<_RefreshResult> _coordinatedRefresh() {
+    final running = _refreshFuture;
+    if (running != null) return running;
+    final f = _performRefresh().whenComplete(() => _refreshFuture = null);
+    _refreshFuture = f;
+    return f;
+  }
+
+  Future<_RefreshResult> _performRefresh() async {
+    final refresh = await tokenStorage.readRefresh();
+    if (refresh == null || refresh.isEmpty) return _RefreshResult.rejected;
+    try {
+      final res = await Dio(
+        BaseOptions(
+          baseUrl: ApiConstants.baseUrl,
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 15),
+          validateStatus: (_) => true,
+        ),
+      ).post('/api/auth/refresh', data: {'refreshToken': refresh});
+      final code = res.statusCode ?? 0;
+      if (code >= 200 &&
+          code < 300 &&
+          res.data is Map &&
+          res.data['accessToken'] != null) {
+        await tokenStorage.saveTokens(
+          access: res.data['accessToken'] as String,
+          refresh: (res.data['refreshToken'] as String?) ?? refresh,
+        );
+        return _RefreshResult.ok;
+      }
+      if (code == 401 || code == 403) {
+        // ربما جدّد طلب آخر الرمز للتو — إن تغيّر المخزَّن فالجلسة سليمة
+        final current = await tokenStorage.readRefresh();
+        if (current != null && current.isNotEmpty && current != refresh) {
+          return _RefreshResult.ok;
+        }
+        // رفض نهائي من الخادم: الجلسة انتهت فعلاً
+        await tokenStorage.clear();
+        sessionExpiredSignal.value++;
+        return _RefreshResult.rejected;
+      }
+      // 5xx أو ردّ غير متوقع: لا نمسح الجلسة بسبب عطل مؤقت
+      return _RefreshResult.offline;
+    } catch (_) {
+      // انقطاع شبكة/مهلة: نحتفظ بالرموز ونحاول لاحقاً
+      return _RefreshResult.offline;
+    }
+  }
 
   /// يحدّث التوكن مرة واحدة (طابور موحّد) ويعيد المحاولة
   Future<Response?> _retryWithRefresh(RequestOptions original) async {
-    try {
-      final completer = _refreshCompleter ??= Completer<String?>();
-
-      if (identical(completer, _refreshCompleter) && !completer.isCompleted) {
-        // أول طالب ينفّذ التحديث فعلياً
-        final refresh = await tokenStorage.readRefresh();
-        if (refresh == null) {
-          completer.complete(null);
-        } else {
-          try {
-            final res = await Dio(BaseOptions(baseUrl: ApiConstants.baseUrl))
-                .post('/api/auth/refresh', data: {'refreshToken': refresh});
-            if (res.statusCode == 200 && res.data['accessToken'] != null) {
-              await tokenStorage.saveTokens(
-                access: res.data['accessToken'] as String,
-                refresh: (res.data['refreshToken'] as String?) ?? refresh,
-              );
-              completer.complete(res.data['accessToken'] as String);
-            } else {
-              await tokenStorage.clear();
-              completer.complete(null);
-            }
-          } catch (_) {
-            await tokenStorage.clear();
-            completer.complete(null);
-          }
-        }
-      }
-
-      final newToken = await completer.future;
-      _refreshCompleter = null;
-      if (newToken == null) return null;
-
-      final headers = Map<String, dynamic>.from(original.headers);
-      headers['Authorization'] = 'Bearer $newToken';
-
-      return await Dio(BaseOptions(baseUrl: ApiConstants.baseUrl))
-          .fetch(original.copyWith(headers: headers));
-    } catch (_) {
-      _refreshCompleter = null;
-      return null;
+    final used = (original.headers['Authorization'] as String?)?.replaceFirst(
+      'Bearer ',
+      '',
+    );
+    final stored = await tokenStorage.readAccess();
+    // طلب آخر جدّد الرمز بعد إرسال هذا الطلب — أعد المحاولة مباشرة
+    if (stored == null || stored.isEmpty || stored == used) {
+      final r = await _coordinatedRefresh();
+      if (r != _RefreshResult.ok) return null;
     }
+    final newToken = await tokenStorage.readAccess();
+    if (newToken == null || newToken.isEmpty) return null;
+    final headers = Map<String, dynamic>.from(original.headers);
+    headers['Authorization'] = 'Bearer $newToken';
+    final retry = await dio.fetch<dynamic>(original.copyWith(headers: headers));
+    return retry;
   }
 
   String _extractMessage(Response response) {

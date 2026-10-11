@@ -2,7 +2,11 @@ port: 7880
 rtc:
   tcp_port: 7881
   port_range_start: 50000
-  port_range_end: 50050
+  port_range_end: 50100
   use_external_ip: true
+turn:
+  enabled: true
+  udp_port: 3478
+  tls_port: 5349
 keys:
   devkey: devsecret_vibes_livekit_32chars

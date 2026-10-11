@@ -2,10 +2,12 @@ import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/world_theme.dart';
 import '../../core/utils/vibes_net_image.dart';
 import '../../shared/models/models.dart';
 
@@ -14,10 +16,18 @@ import '../../shared/models/models.dart';
 /// ═══════════════════════════════════════════════════════════
 
 class MediaGallery extends StatefulWidget {
-  const MediaGallery({super.key, required this.items, this.height = 300});
+  const MediaGallery({
+    super.key,
+    required this.items,
+    this.height = 300,
+    this.bottomInset = 0,
+  });
 
   final List<MediaItem> items;
   final double height;
+
+  /// مسافة إضافية أسفل المؤشر والعدّاد (حين يُغطّى أسفل المعرض).
+  final double bottomInset;
 
   @override
   State<MediaGallery> createState() => _MediaGalleryState();
@@ -75,69 +85,76 @@ class _MediaGalleryState extends State<MediaGallery> {
             },
           ),
 
-          // مؤشر الموضع — شريحة ذهبية رقيقة
+          // مؤشر الموضع — كبسولات بيضاء، النشطة أعرض بلون العالم
           if (widget.items.length > 1)
             Positioned(
-              bottom: 12,
+              bottom: 16 + widget.bottomInset,
               left: 0,
               right: 0,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(widget.items.length, (i) {
-                  final active = i == _index;
+                children: List.generate(widget.items.length.clamp(0, 9), (i) {
+                  final active = i == _index.clamp(0, 8);
                   return AnimatedContainer(
-                    duration: VibesMotion.fast,
+                    duration: VibesMotion.base,
+                    curve: VibesMotion.curve,
                     margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: active ? 20 : 8,
-                    height: 2,
-                    color: active
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: .45),
+                    width: active ? 20 : 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(3),
+                      color: active
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: .55),
+                      boxShadow: active
+                          ? [
+                              BoxShadow(
+                                color: context.world.glow.withValues(alpha: .6),
+                                blurRadius: 8,
+                              ),
+                            ]
+                          : null,
+                    ),
                   );
                 }),
               ),
             ),
 
-          // عدّاد + شارات الوسائط
+          // عدّاد الصور — كبسولة زجاجية داكنة
           Positioned(
-            top: 12,
-            left: 12,
-            child: ClipPath(
-              clipper: const ShapeBorderClipper(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(8),
-                    topRight: Radius.circular(2),
-                    bottomRight: Radius.circular(8),
-                    bottomLeft: Radius.circular(8),
-                  ),
-                ),
+            bottom: 10 + widget.bottomInset,
+            left: 14,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: .42),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.white.withValues(alpha: .2)),
               ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.photo_library_rounded,
+                    size: 12,
+                    color: Colors.white,
                   ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: .38),
-                  ),
-                  child: Text(
-                    '${_index + 1} / ${widget.items.length}',
+                  const SizedBox(width: 5),
+                  Text(
+                    '${_index + 1}/${widget.items.length}',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: Colors.white,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w800,
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
           // شارة نوع الوسيط الحالي
           Positioned(
-            top: 12,
-            right: 52,
+            bottom: 10 + widget.bottomInset,
+            right: 14,
             child: Builder(
               builder: (context) {
                 final kind = widget.items[_index];
@@ -181,6 +198,18 @@ class _MediaPageState extends State<_MediaPage> {
     super.dispose();
   }
 
+  void _openFullscreenPano(BuildContext context, String url) {
+    Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        opaque: false,
+        transitionDuration: VibesMotion.slow,
+        pageBuilder: (_, __, ___) => _PanoramaFullscreen(url: url),
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
+      ),
+    );
+  }
+
   Future<void> _playVideo() async {
     if (_video != null) {
       await _video!.play();
@@ -188,7 +217,7 @@ class _MediaPageState extends State<_MediaPage> {
       return;
     }
     final controller = VideoPlayerController.networkUrl(
-      Uri.parse(widget.media.url),
+      Uri.parse(widget.media.playbackUrl),
     );
     try {
       await controller.initialize();
@@ -213,44 +242,16 @@ class _MediaPageState extends State<_MediaPage> {
     final media = widget.media;
 
     if (media.kind == MediaKind.panorama) {
-      // جولة 360° — سحب أفقي للنظر حول المكان
+      // جولة 360° — انجراف سينمائي، سحب للتحكم، ونقرة لملء الشاشة
       return Stack(
         fit: StackFit.expand,
         children: [
-          _PanoramaView(url: media.url),
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.black45,
-                    border: Border.all(color: Vibes.coral, width: 1),
-                  ),
-                  child: const Icon(
-                    Icons.threed_rotation_rounded,
-                    color: Vibes.coral,
-                    size: 30,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 5,
-                  ),
-                  decoration: const BoxDecoration(color: Colors.black45),
-                  child: Text(
-                    'جولة 360° — اسحب للاستكشاف',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.labelSmall?.copyWith(color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
+          _PanoramaView(
+            url: media.url,
+            onOpenFullscreen: () => _openFullscreenPano(context, media.url),
           ),
+          // شريط تلميح سفلي أنيق يخبو بعد لحظة
+          const Positioned(bottom: 34, left: 0, right: 0, child: _PanoHint()),
         ],
       );
     }
@@ -324,7 +325,21 @@ class _GalleryFullscreen extends StatelessWidget {
             itemBuilder: (context, i) {
               final media = items[i];
               if (media.isVideo) {
-                return Center(child: _FullscreenVideo(url: media.url));
+                return Center(child: _FullscreenVideo(url: media.playbackUrl));
+              }
+              if (media.kind == MediaKind.panorama) {
+                // بانوراما: ابدأ مغطية الشاشة ودور بحرية
+                return PhotoView(
+                  imageProvider: CachedNetworkImageProvider(media.url),
+                  backgroundDecoration: const BoxDecoration(
+                    color: Colors.black,
+                  ),
+                  initialScale: PhotoViewComputedScale.covered,
+                  minScale: PhotoViewComputedScale.contained,
+                  maxScale: PhotoViewComputedScale.covered * 2.6,
+                  enablePanAlways: true,
+                  gaplessPlayback: true,
+                );
               }
               return PhotoView(
                 imageProvider: CachedNetworkImageProvider(media.url),
@@ -408,9 +423,7 @@ class _FullscreenVideoState extends State<_FullscreenVideo> {
       );
     }
     if (!_ready) {
-      return const Center(
-        child: CircularProgressIndicator(color: Vibes.coral),
-      );
+      return const Center(child: CircularProgressIndicator(color: Vibes.coral));
     }
     return AspectRatio(
       aspectRatio: _controller.value.aspectRatio,
@@ -429,22 +442,56 @@ class _FullscreenVideoState extends State<_FullscreenVideo> {
   }
 }
 
-/// عارض بانوراما بسيط وأنيق — صورة عريضة تُسحب أفقياً للنظر حول المكان.
-/// بلا حزم خارجية: Physics مخصصة تجعل السحب دائرياً (يلف حول الصورة).
+/// عارض 360° سينمائي — انجراف تلقائي حلقي بلا فواصل (ثلاث نسخ
+/// من الصورة تعيد الضبط عند الحدود)، والسحب اليدوي يوقف
+/// الانجراف مؤقتاً ثم يستأنف. ملء الشاشة يفتح تحكماً كاملاً.
 class _PanoramaView extends StatefulWidget {
-  const _PanoramaView({required this.url});
+  const _PanoramaView({required this.url, this.onOpenFullscreen});
 
   final String url;
+  final VoidCallback? onOpenFullscreen;
 
   @override
   State<_PanoramaView> createState() => _PanoramaViewState();
 }
 
-class _PanoramaViewState extends State<_PanoramaView> {
+class _PanoramaViewState extends State<_PanoramaView>
+    with SingleTickerProviderStateMixin {
   final _controller = ScrollController();
+  late final Ticker _drift;
+  Duration? _last;
+  bool _holding = false;
+  double _velocity = 14.0; // بكسل منطقي/ثانية — نظرة هادئة
+
+  static const _copies = 3;
+
+  @override
+  void initState() {
+    super.initState();
+    final reduce = false;
+    _drift = createTicker(_onTick);
+    if (!reduce) _drift.start();
+  }
+
+  void _onTick(Duration elapsed) {
+    final previous = _last;
+    _last = elapsed;
+    if (previous == null || _holding || !_controller.hasClients) return;
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    if (reduceMotion) return;
+    final dt = (elapsed - previous).inMicroseconds / 1e6;
+    final extent = _controller.position.maxScrollExtent;
+    if (extent <= 0) return;
+    var next = _controller.offset + dt * _velocity;
+    // الحلقة: عند تجاوز النسخة الوسطى عد إلى بدايتها — القفز غير مرئي
+    final one = extent / (_copies - 1);
+    if (next >= one * 2) next -= one;
+    _controller.jumpTo(next);
+  }
 
   @override
   void dispose() {
+    _drift.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -458,29 +505,160 @@ class _PanoramaViewState extends State<_PanoramaView> {
       imageBuilder: (context, provider) {
         final image = Image(image: provider);
         return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onHorizontalDragStart: (_) => _holding = true,
           onHorizontalDragUpdate: (details) {
             if (!_controller.hasClients) return;
-            final target = (_controller.offset - details.delta.dx * 1.6).clamp(
+            final extent = _controller.position.maxScrollExtent;
+            final one = extent / (_copies - 1);
+            var target = (_controller.offset - details.delta.dx * 1.8).clamp(
               0.0,
-              _controller.position.maxScrollExtent,
+              extent,
             );
+            // اسمح باللف الدائري عند الطرفين
+            if (target <= 0) target = one * 2 - 1;
+            if (target >= extent) target = one + 1;
             _controller.jumpTo(target);
           },
+          onHorizontalDragEnd: (_) {
+            // استئناف الانجراف بعد لحظة من السكون
+            Future<void>.delayed(const Duration(milliseconds: 1200), () {
+              if (mounted) _holding = false;
+            });
+          },
+          onTap: widget.onOpenFullscreen,
           child: ListView(
             controller: _controller,
             scrollDirection: Axis.horizontal,
             physics: const NeverScrollableScrollPhysics(),
             children: [
-              AspectRatio(
-                aspectRatio: 2.05, // بانوراما عريضة
-                child: image,
-              ),
+              for (var i = 0; i < _copies; i++)
+                AspectRatio(aspectRatio: 2.05, child: image),
             ],
           ),
         );
       },
       placeholder: (_, __) => const ColoredBox(color: VibesDark.canvas),
       errorWidget: (_, __, ___) => const ColoredBox(color: VibesDark.canvas),
+    );
+  }
+}
+
+/// ملء الشاشة البانورامي — PhotoView بحجم الصورة الطبيعي:
+/// تبدأ مغطية للشاشة فتُرى كأنك داخل المكان، والسحب يدور بك
+/// بحرية، والقرص يقرّب، والنقر المزدوج يبدّل التقريب.
+class _PanoramaFullscreen extends StatefulWidget {
+  const _PanoramaFullscreen({required this.url});
+
+  final String url;
+
+  @override
+  State<_PanoramaFullscreen> createState() => _PanoramaFullscreenState();
+}
+
+class _PanoramaFullscreenState extends State<_PanoramaFullscreen> {
+  bool _hintVisible = true;
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.delayed(const Duration(milliseconds: 3200), () {
+      if (mounted) setState(() => _hintVisible = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          PhotoView(
+            imageProvider: CachedNetworkImageProvider(widget.url),
+            backgroundDecoration: const BoxDecoration(color: Colors.black),
+            initialScale: PhotoViewComputedScale.covered,
+            minScale: PhotoViewComputedScale.contained,
+            maxScale: PhotoViewComputedScale.covered * 2.6,
+            enablePanAlways: true,
+            gaplessPlayback: true,
+          ),
+          // إغلاق
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 12,
+            left: 16,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(color: Colors.black54),
+                child: const Icon(
+                  Icons.close_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: MediaQuery.of(context).padding.bottom + 22,
+            left: 0,
+            right: 0,
+            child: AnimatedOpacity(
+              opacity: _hintVisible ? 1 : 0,
+              duration: VibesMotion.slow,
+              child: const _PanoHint(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// شريط تلميح البانوراما — زجاجي بإطار نحاسي يرشد للتحكم
+class _PanoHint extends StatelessWidget {
+  const _PanoHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ClipPath(
+        clipper: const ShapeBorderClipper(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(9),
+              topRight: Radius.circular(3),
+              bottomRight: Radius.circular(9),
+              bottomLeft: Radius.circular(8),
+            ),
+          ),
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: .55),
+            border: Border.all(color: Vibes.teal.withValues(alpha: .5)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.threed_rotation_rounded,
+                size: 15,
+                color: Vibes.tealBright,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'جولة 360° — اسحب للدوران · انقر لتكبير',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

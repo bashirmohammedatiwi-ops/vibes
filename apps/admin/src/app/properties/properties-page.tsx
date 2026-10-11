@@ -35,7 +35,15 @@ type ConfirmState =
   | { kind: "reject"; id: string; name: string }
   | null;
 
-export default function PropertiesPageContent() {
+export type WorldTheme = {
+  type: string;
+  title: string;
+  description: string;
+  eyebrow: string;
+  accent?: string;
+};
+
+export default function PropertiesPageContent({ world }: { world?: WorldTheme }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -43,7 +51,7 @@ export default function PropertiesPageContent() {
   const [data, setData] = useState<Paginated<Property> | null>(null);
   const [q, setQ] = useState("");
   const qDebounced = useDebouncedValue(q);
-  const [type, setType] = useState("");
+  const [type, setType] = useState(world?.type ?? searchParams.get("type") ?? "");
   const [status, setStatus] = useState(() => searchParams.get("status") ?? "");
   const [featured, setFeatured] = useState("");
   const [source, setSource] = useState(() => searchParams.get("source") ?? "");
@@ -192,7 +200,7 @@ export default function PropertiesPageContent() {
         method: "PATCH",
         body: JSON.stringify({ featured: !item.featured }),
       });
-      toast(item.featured ? "أُلغي التمييز" : "تم تمييز المكان");
+      toast(item.featured ? "أُزيل من أماكن مختارة" : "ظهر في أماكن مختارة");
       await load();
     } catch (err) {
       toast(err instanceof Error ? err.message : "تعذر التحديث", "error");
@@ -216,7 +224,7 @@ export default function PropertiesPageContent() {
     return (
       <button
         type="button"
-        title={item.featured ? "إلغاء التمييز" : "تمييز"}
+        title={item.featured ? "إزالة من أماكن مختارة" : "إضافة إلى أماكن مختارة"}
         className={`featured-star ${item.featured ? "featured-star-active" : ""}`}
         onClick={(e) => {
           e.stopPropagation();
@@ -231,6 +239,13 @@ export default function PropertiesPageContent() {
   function PropertyActions({ item }: { item: Property }) {
     return (
       <div className="flex flex-wrap gap-2">
+        <Button
+          variant={item.featured ? "primary" : "ghost"}
+          className="px-2 py-1 text-xs"
+          onClick={() => toggleFeatured(item)}
+        >
+          {item.featured ? "في أماكن مختارة" : "أضف لأماكن مختارة"}
+        </Button>
         {(item.type === "FARM" || item.type === "HALL") && (
           <Button
             variant={item.isNew ? "primary" : "ghost"}
@@ -269,9 +284,9 @@ export default function PropertiesPageContent() {
   return (
     <PageShell>
       <PageHeader
-        title="الأماكن"
-        description="أضف وعدّل المزارع والقاعات — أو راجع ما رفعه مزود"
-        eyebrow="VIBES Admin"
+        title={world?.title ?? "الأماكن"}
+        description={world?.description ?? "أضف وعدّل المزارع والقاعات — أو راجع ما رفعه مزود"}
+        eyebrow={world?.eyebrow ?? "VIBES Admin"}
         action={
           <>
             <Button variant="ghost" disabled={exporting} onClick={() => exportCsv("/api/admin/reports/properties/export", "properties.csv")}>تصدير CSV</Button>
@@ -285,15 +300,15 @@ export default function PropertiesPageContent() {
         }
       />
 
-      <HelpTip>النجمة تميّز المكان. «تفعيل جديدة» على المزرعة أو القاعة يظهرها في قسم الجديدة بالصفحة الرئيسية.</HelpTip>
+      <HelpTip>«أضف لأماكن مختارة» يظهر المكان في البطاقات المتراكبة أعلى التطبيق، بشرط أن يكون منشوراً. «تفعيل جديدة» يظهر المزرعة أو القاعة في قسم الجديدة.</HelpTip>
 
       <ContentPanel>
         {selected.size > 0 && (
           <div className="bulk-bar">
             <span className="text-sm font-bold">{selected.size} محدد — ماذا تريد أن تفعل؟</span>
             <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => bulk("publish")}>نشر</Button>
-            <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => bulk("feature")}>تمييز</Button>
-            <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => bulk("unfeature")}>إلغاء التمييز</Button>
+            <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => bulk("feature")}>إضافة لأماكن مختارة</Button>
+            <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => bulk("unfeature")}>إزالة من أماكن مختارة</Button>
             <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => bulk("suspend")}>إيقاف</Button>
             <Button variant="danger" className="px-2 py-1 text-xs" onClick={() => bulk("delete")}>حذف</Button>
           </div>
@@ -313,6 +328,12 @@ export default function PropertiesPageContent() {
           />
           <PageToolbar className="mb-0 mt-4">
             <Input className="max-w-sm flex-1" placeholder="ابحث بالاسم..." value={q} onChange={(e) => { setPage(1); setQ(e.target.value); }} />
+            <Button
+              variant={featured === "true" ? "primary" : "ghost"}
+              onClick={() => { setPage(1); setFeatured(featured === "true" ? "" : "true"); }}
+            >
+              أماكن مختارة
+            </Button>
             <Button variant="ghost" onClick={() => setShowFilters((v) => !v)}>
               {showFilters ? "إخفاء فلاتر" : "المزيد من الفلاتر"}
             </Button>
@@ -332,7 +353,7 @@ export default function PropertiesPageContent() {
             </Select>
             <Select value={featured} onChange={(e) => { setPage(1); setFeatured(e.target.value); }}>
               <option value="">الكل</option>
-              <option value="true">مميزة فقط</option>
+              <option value="true">أماكن مختارة فقط</option>
             </Select>
             <Select value={source} onChange={(e) => { setPage(1); setSource(e.target.value); }}>
               <option value="">كل المصادر</option>
@@ -356,7 +377,7 @@ export default function PropertiesPageContent() {
                   <div className="property-thumb h-14 w-20 shrink-0">
                     {cover(item) ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={cover(item)} alt="" className="h-full w-full object-cover" />
+                      <img src={cover(item)} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
                     ) : null}
                   </div>
                 </div>
@@ -402,7 +423,7 @@ export default function PropertiesPageContent() {
                     <div className="property-thumb h-12 w-16 shrink-0">
                       {cover(item) ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={cover(item)} alt="" className="h-full w-full object-cover" />
+                        <img src={cover(item)} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
                       ) : null}
                     </div>
                     <div className="flex items-center gap-1.5">

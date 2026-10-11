@@ -99,6 +99,7 @@ export default function CollectionsPage() {
                         alt=""
                         className="h-11 w-16 shrink-0 object-cover"
                         style={{ borderRadius: "10px 3px 10px 10px" }}
+                      loading="lazy" decoding="async"
                       />
                     ) : null}
                     <div>
@@ -128,7 +129,8 @@ export default function CollectionsPage() {
                       alt=""
                       className="h-11 w-16 shrink-0 object-cover"
                       style={{ borderRadius: "10px 3px 10px 10px" }}
-                    />
+                    loading="lazy" decoding="async"
+                      />
                   ) : undefined}
                   title={row.name}
                   subtitle={`${row.user?.phone ?? ""} · ${row._count?.items ?? 0} مكان`}

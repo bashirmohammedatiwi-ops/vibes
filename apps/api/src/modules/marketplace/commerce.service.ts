@@ -135,8 +135,14 @@ export class CommerceService {
     });
     if (!booking) throw new NotFoundException('الحجز غير موجود');
     if (booking.userId !== user.id) throw new ForbiddenException('غير مسموح');
-    if (booking.status !== BookingStatus.CONFIRMED) {
-      throw new BadRequestException('طلب الإلغاء بعد التأكيد فقط — استخدم الإلغاء المباشر قبل التأكيد');
+    // After confirmation, or once the guest has paid / uploaded a receipt
+    // (money is involved, so it goes through review instead of a direct cancel).
+    const paidBeforeConfirm =
+      (booking.status === BookingStatus.PENDING || booking.status === BookingStatus.AWAITING_PAYMENT) &&
+      !!booking.payment &&
+      (booking.payment.status === PaymentStatus.PAID || !!booking.payment.proofUrl);
+    if (booking.status !== BookingStatus.CONFIRMED && !paidBeforeConfirm) {
+      throw new BadRequestException('طلب الإلغاء بعد التأكيد أو الدفع فقط — استخدم الإلغاء المباشر قبل ذلك');
     }
 
     const open = await this.prisma.cancellationRequest.findFirst({

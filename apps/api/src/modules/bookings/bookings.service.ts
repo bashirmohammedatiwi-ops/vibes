@@ -152,13 +152,13 @@ export class BookingsService {
     return decorated;
   }
 
-  async list(user: AuthUser) {
+  async list(user: AuthUser, mineOnly = false) {
     // Capped: this endpoint predates admin pagination and is still used by
     // the mobile app for "my bookings" / provider views, which never need
     // more than a few hundred rows. Staff should use the paginated
     // /api/admin/bookings endpoint instead.
     const isStaff = user.role === UserRole.ADMIN || user.role === UserRole.STAFF;
-    if (isStaff) {
+    if (isStaff && !mineOnly) {
       return this.prisma.booking.findMany({
         include: {
           user: true,
@@ -172,7 +172,7 @@ export class BookingsService {
       });
     }
 
-    if (user.role === UserRole.PROVIDER) {
+    if (user.role === UserRole.PROVIDER && !mineOnly) {
       return this.prisma.booking.findMany({
         where: { property: { provider: { userId: user.id } } },
         include: {

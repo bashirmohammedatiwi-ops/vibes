@@ -54,6 +54,16 @@ export class ProvidersController {
     return this.providers.becomeProvider(user, dto);
   }
 
+  @Post('claims')
+  claimPlace(@CurrentUser() user: AuthUser, @Body() dto: { propertyId: string }) {
+    return this.providers.claimPlace(user, dto.propertyId);
+  }
+
+  @Get('claims/mine')
+  myClaims(@CurrentUser() user: AuthUser) {
+    return this.providers.myClaims(user);
+  }
+
   @Patch(':id/verify')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
   verify(@CurrentUser() user: AuthUser, @Param('id') id: string) {

@@ -78,3 +78,10 @@ apps/api/prisma/*.db-journal
 *.pem
 *.key
 .turbo/
+
+# Mapbox token (local only)
+apps/mobile/lib/core/constants/mapbox_token.dart
+
+# Local agent/tool workspaces
+.impeccable/
+apps/mobile/.impeccable/

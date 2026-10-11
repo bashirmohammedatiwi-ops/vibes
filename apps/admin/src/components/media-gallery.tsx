@@ -17,7 +17,9 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 const MEDIA_FILTERS = [
   { value: "", label: "الكل" },
   { value: "IMAGE", label: "الصور" },
-  { value: "VIDEO", label: "الفيديو" },
+  { value: "VIDEO", label: "فيديو المعرض" },
+  { value: "REEL", label: "ريلز استكشف" },
+  { value: "PANORAMA", label: "360°" },
 ];
 
 type UploadState = {
@@ -131,6 +133,68 @@ export function MediaGallery({ propertyId, initialMedia = [], onChange }: Props)
         videos > 0
           ? `تم رفع ${uploaded.length} ملفاً — ${videos} فيديو قيد المعالجة`
           : `تم رفع ${uploaded.length} صورة`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "فشل الرفع");
+    } finally {
+      setUploading(null);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  async function onUploadPano(files: FileList | null) {
+    if (!files?.length) return;
+    const images = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (!images.length) {
+      setError("صورة 360° يجب أن تكون ملف صورة");
+      return;
+    }
+    setUploading({ active: true, percent: 0, name: images[0].name });
+    setError(null);
+    try {
+      const uploaded = await uploadFilesWithProgress<MediaItem[]>(
+        `/api/admin/properties/${propertyId}/media/bulk`,
+        "files",
+        images,
+        {
+          fields: { kind: "panorama" },
+          onProgress: (percent) => setUploading((state) => (state ? { ...state, percent } : state)),
+        },
+      );
+      sync([...items, ...uploaded].sort((a, b) => a.sortOrder - b.sortOrder));
+      toast(`تم رفع ${uploaded.length} صورة جولة 360°`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "فشل الرفع");
+    } finally {
+      setUploading(null);
+    }
+  }
+
+  async function onUploadReel(files: FileList | null) {
+    if (!files?.length) return;
+    const videos = Array.from(files).filter((f) => f.type.startsWith("video/"));
+    if (!videos.length) {
+      setError("الريل يجب أن يكون ملف فيديو");
+      return;
+    }
+    setUploading({ active: true, percent: 0, name: videos[0].name });
+    setError(null);
+    try {
+      const uploaded = await uploadFilesWithProgress<MediaItem[]>(
+        `/api/admin/properties/${propertyId}/media/bulk`,
+        "files",
+        videos,
+        {
+          fields: { kind: "reel" },
+          onProgress: (percent) => setUploading((state) => (state ? { ...state, percent } : state)),
+        },
+      );
+      sync([...items, ...uploaded].sort((a, b) => a.sortOrder - b.sortOrder));
+      const processing = uploaded.filter((m) => m.status === "PROCESSING").length;
+      toast(
+        processing > 0
+          ? `تم رفع ${uploaded.length} ريل — قيد المعالجة السحابية (HLS متعدد الجودات)`
+          : `تم رفع ${uploaded.length} ريل`,
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "فشل الرفع");
@@ -263,6 +327,45 @@ export function MediaGallery({ propertyId, initialMedia = [], onChange }: Props)
         hint="JPG / PNG / MP4 — حتى 200MB لكل فيديو"
       />
 
+      <div className="rounded-xl border border-dashed border-accent/50 bg-accent-soft/40 p-3">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-lg" aria-hidden>🌐</span>
+          <div>
+            <h4 className="text-sm font-bold">جولات 360°</h4>
+            <p className="text-xs text-muted">
+              صور بانورامية استوائية (نسبة 2:1) — تُعرض في التطبيق بعارض غامر يدور حول المكان بالسحب
+            </p>
+          </div>
+        </div>
+        <SimpleUpload
+          onFiles={onUploadPano}
+          accept="image/*"
+          multiple
+          uploading={!!uploading}
+          label="اسحب صور 360° هنا"
+          hint="ملفات JPG/PNG من كاميرا 360 أو تطبيق بانوراما"
+        />
+      </div>
+
+      <div className="rounded-xl border border-dashed border-reel/60 bg-gradient-to-l from-reel-soft/50 to-transparent p-3">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-lg" aria-hidden>📱</span>
+          <div>
+            <h4 className="text-sm font-bold">ريلز «استكشف» — فيديو عمودي 9:16</h4>
+            <p className="text-xs text-muted">
+              فيديو عمودي يظهر في قسم استكشف (شاشة الريلز) وفي صفحة المكان. القياس الأمثل: 1080×1920، مدة 10-60 ثانية
+            </p>
+          </div>
+        </div>
+        <SimpleUpload
+          onFiles={onUploadReel}
+          accept="video/*"
+          uploading={!!uploading}
+          label="اسحب فيديو الريل العمودي هنا"
+          hint="MP4 عمودي (9:16) — حتى 200MB، تُعالج الجودات تلقائياً في السحابة"
+        />
+      </div>
+
       {uploading && (
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs text-muted">
@@ -319,16 +422,26 @@ export function MediaGallery({ propertyId, initialMedia = [], onChange }: Props)
                         إعادة المحاولة
                       </Button>
                     </div>
-                  ) : item.type === "VIDEO" ? (
+                  ) : item.type === "PANORAMA" ? (
+                    <div className="relative h-full w-full">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={item.url} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <span className="rounded-lg border border-accent/60 bg-ink/70 px-3 py-1 text-xs font-bold text-accent">
+                          360°
+                        </span>
+                      </span>
+                    </div>
+                  ) : item.type === "VIDEO" || item.type === "REEL" ? (
                     item.posterUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.posterUrl} alt="" className="h-full w-full object-cover" />
+                      <img src={item.posterUrl} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
                     ) : (
                       <video src={item.url} className="h-full w-full object-cover" controls preload="metadata" />
                     )
                   ) : (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.url} alt="" className="h-full w-full object-cover" />
+                    <img src={item.url} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
                   )}
                   {item.isPrimary && (
                     <span className="absolute left-2 top-2">
@@ -341,23 +454,40 @@ export function MediaGallery({ propertyId, initialMedia = [], onChange }: Props)
                       {formatDuration(item.durationSec) && <Badge variant="muted">{formatDuration(item.durationSec)}</Badge>}
                     </span>
                   )}
+                  {item.type === "REEL" && !processing && !failed && (
+                    <span className="absolute right-2 top-2 flex gap-1">
+                      <Badge variant="success">ريل · استكشف</Badge>
+                      {item.aspectRatio && <Badge variant="muted">{item.aspectRatio}</Badge>}
+                      {formatDuration(item.durationSec) && <Badge variant="muted">{formatDuration(item.durationSec)}</Badge>}
+                    </span>
+                  )}
                 </div>
                 <div className="media-card-body space-y-2">
                   {(item.caption || item.altText) && (
                     <p className="text-xs text-muted line-clamp-2">{item.caption || item.altText}</p>
                   )}
-                  {item.type === "VIDEO" && !processing && !failed && item.posterUrl && (
+                  {item.type === "PANORAMA" && !processing && !failed && (
                     <Button
                       type="button"
                       variant="ghost"
                       className="px-2 py-1 text-xs"
                       onClick={() => window.open(item.url, "_blank")}
                     >
+                      🌐 معاينة 360°
+                    </Button>
+                  )}
+                  {(item.type === "VIDEO" || item.type === "REEL") && !processing && !failed && item.posterUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="px-2 py-1 text-xs"
+                      onClick={() => window.open(item.hlsUrl ?? item.url, "_blank")}
+                    >
                       ▶ تشغيل الفيديو
                     </Button>
                   )}
                   <div className="flex flex-wrap gap-2">
-                    {!item.isPrimary && (
+                    {!item.isPrimary && item.type !== "PANORAMA" && (
                       <Button type="button" variant="ghost" className="px-2 py-1 text-xs" onClick={() => setPrimary(item.id)}>
                         جعلها رئيسية
                       </Button>

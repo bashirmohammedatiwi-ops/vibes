@@ -4,12 +4,15 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/world_theme.dart';
 import '../../shared/data/property_providers.dart';
 import '../../shared/data/marketplace_providers.dart';
 import '../../shared/widgets/maison_chrome.dart';
 import '../../shared/widgets/maison_shapes.dart';
+import '../../shared/widgets/vibes_graphics.dart';
 import '../../shared/widgets/vibes_widgets.dart';
 import '../auth/auth_controller.dart';
+import '../../core/app_mode/app_mode_controller.dart';
 import '../booking/booking_providers.dart';
 
 /// ═══════════════════════════════════════════════════════════
@@ -32,7 +35,7 @@ class ProfileScreen extends ConsumerWidget {
       body: MaisonWash(
         child: ListView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
           children: [
             const MaisonPageHeader(
               title: 'ملفي',
@@ -40,125 +43,13 @@ class ProfileScreen extends ConsumerWidget {
               safe: true,
             ),
             const SizedBox(height: 8),
-            FolioPanel(
-              color: Vibes.coral,
-              borderColor: Vibes.teal.withValues(alpha: .4),
-              shadows: Vibes.floating,
-              railColor: Vibes.teal,
-              child: Container(
-                padding: const EdgeInsets.all(18),
-                decoration: const BoxDecoration(gradient: Vibes.coralFill),
-                child: Row(
-                  children: [
-                    FolioPanel(
-                      color: Vibes.canvas,
-                      borderColor: Vibes.teal.withValues(alpha: .5),
-                      clip: true,
-                      child: const SizedBox(
-                        width: 72,
-                        height: 72,
-                        child: Center(child: VibesLogo.mark(size: 40)),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'عضوية VIBEES',
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: const Color(0xCCFAF7F0),
-                                  fontWeight: FontWeight.w800,
-                                ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  user?.name ?? 'ضيف VIBEES',
-                                  style: Theme.of(context).textTheme.titleLarge
-                                      ?.copyWith(
-                                        color: Vibes.canvas,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                ),
-                              ),
-                              IconButton(
-                                tooltip: 'تعديل الاسم',
-                                onPressed: () =>
-                                    _editName(context, ref, user?.name),
-                                icon: const Icon(
-                                  Icons.edit_rounded,
-                                  size: 18,
-                                  color: Vibes.canvas,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Container(
-                            width: 28,
-                            height: 2,
-                            color: Vibes.tealBright,
-                          ),
-                          const SizedBox(height: 6),
-                          Directionality(
-                            textDirection: TextDirection.ltr,
-                            child: Text(
-                              user?.phone ?? '',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: const Color(0xB8FAF7F0),
-                                    fontFeatures: const [
-                                      FontFeature.tabularFigures(),
-                                    ],
-                                  ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ).animate().fadeIn(),
+            // بطاقة العضوية — تدرّج العالم، الهوية، والأرقام
+            _MemberCard(
+              name: user?.name,
+              phone: user?.phone,
+              onEdit: () => _editName(context, ref, user?.name),
+            ).animate().fadeIn(duration: 400.ms).slideY(begin: .05, end: 0),
             const SizedBox(height: 24),
-
-            // صف الإحصاءات — بطاقة أفقية أنيقة
-            Row(
-              children: [
-                Expanded(
-                  child: Consumer(
-                    builder: (context, ref, _) {
-                      final bookings = ref.watch(myBookingsProvider);
-                      return _StatTile(
-                        icon: Icons.calendar_month_rounded,
-                        value: '${bookings.valueOrNull?.length ?? 0}',
-                        label: 'حجوزات',
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Consumer(
-                    builder: (context, ref, _) {
-                      final favs = ref.watch(favoritesProvider);
-                      return _StatTile(
-                        icon: Icons.favorite_rounded,
-                        value: '${favs.valueOrNull?.length ?? 0}',
-                        label: 'مفضلة',
-                        honey: true,
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 22),
             const MaisonKicker('حسابك'),
             const SizedBox(height: 10),
             MaisonMenuGroup(
@@ -306,7 +197,7 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 MaisonMenuRow(
                   icon: Icons.info_outline_rounded,
-                  label: 'عن VIBEES',
+                  label: 'عن VIBES',
                   trailing: Text(
                     '1.0.0',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -326,6 +217,7 @@ class ProfileScreen extends ConsumerWidget {
                 ghost: true,
                 onPressed: () async {
                   await ref.read(authControllerProvider.notifier).logout();
+                  await ref.read(appModeProvider.notifier).resetAfterLogout();
                   if (context.mounted) context.go('/home');
                 },
               ),
@@ -333,8 +225,13 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 36),
             _OwnerWhisper(
               isOwner: auth.isProvider,
-              onTap: () =>
-                  context.push(auth.isProvider ? '/provider' : '/owner'),
+              onTap: () {
+                if (auth.isProvider) {
+                  switchToProviderPortal(context, ref);
+                } else {
+                  context.push('/owner');
+                }
+              },
             ),
           ],
         ),
@@ -378,7 +275,7 @@ class _GuestProfile extends ConsumerWidget {
       body: MaisonWash(
         child: ListView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
           children: [
             const MaisonPageHeader(
               title: 'ملفي',
@@ -418,7 +315,10 @@ class _GuestProfile extends ConsumerWidget {
             const SizedBox(height: 18),
             FolioPanel(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 child: Row(
                   children: [
                     Expanded(
@@ -465,7 +365,11 @@ class _GuestProfile extends ConsumerWidget {
                 final ok = await context.push<bool>('/login?next=/owner');
                 if (ok != true || !context.mounted) return;
                 final auth = ref.read(authControllerProvider);
-                context.push(auth.isProvider ? '/provider' : '/owner');
+                if (auth.isProvider) {
+                  switchToProviderPortal(context, ref);
+                } else {
+                  context.push('/owner');
+                }
               },
             ),
           ],
@@ -494,12 +398,27 @@ class _OwnerWhisper extends StatelessWidget {
             children: [
               const ArcFlourish(width: 22),
               const SizedBox(height: 10),
-              Text(
-                isOwner ? 'لوحة الإدارة' : 'لأصحاب الأماكن',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: VibesTheme.textTertiaryOf(context),
-                  fontWeight: FontWeight.w700,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isOwner
+                        ? Icons.space_dashboard_outlined
+                        : Icons.home_work_outlined,
+                    size: 14,
+                    color: VibesTheme.textTertiaryOf(context),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    isOwner
+                        ? 'الانتقال إلى بوابة المالك'
+                        : 'مالك مزرعة أو قاعة؟',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: VibesTheme.textTertiaryOf(context),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -525,7 +444,7 @@ class _CountMark extends StatelessWidget {
     return Text(
       value,
       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-        color: Vibes.coral,
+        color: context.world.accentDeep,
         fontWeight: FontWeight.w800,
       ),
     );
@@ -543,63 +462,230 @@ class _ToggleMini extends StatelessWidget {
     return Switch.adaptive(
       value: value,
       onChanged: onChanged,
-      activeTrackColor: Vibes.coral,
+      activeTrackColor: context.world.accent,
     );
   }
 }
 
-/// بطاقة إحصاء — رقم كبير عسلي أو زمردي
-class _StatTile extends StatelessWidget {
-  const _StatTile({
-    required this.icon,
-    required this.value,
-    required this.label,
-    this.honey = false,
+/// بطاقة العضوية — تدرّج العالم بزخرفة، الحرف الأول أو الشعار الأبيض،
+/// والاسم والهاتف، وأرقام الحجوزات والمفضلة داخل البطاقة.
+class _MemberCard extends ConsumerWidget {
+  const _MemberCard({
+    required this.name,
+    required this.phone,
+    required this.onEdit,
   });
 
-  final IconData icon;
-  final String value;
-  final String label;
-  final bool honey;
+  final String? name;
+  final String? phone;
+  final VoidCallback onEdit;
 
   @override
-  Widget build(BuildContext context) {
-    final color = honey ? Vibes.teal : Vibes.coral;
-    return FolioPanel(
-      color: VibesTheme.surfaceOf(context),
-      borderColor: VibesTheme.hairlineOf(context),
-      shadows: Vibes.card,
-      clip: false,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.world;
+    final n = (name ?? '').trim();
+    final bookings = ref.watch(myBookingsProvider).valueOrNull?.length ?? 0;
+    final favs = ref.watch(favoritesProvider).valueOrNull?.length ?? 0;
+    final following =
+        ref.watch(followingProvidersProvider).valueOrNull?.length ?? 0;
+
+    Widget stat(String value, String label, VoidCallback onTap) => Expanded(
+      child: PressScale(
+        onTap: onTap,
         child: Column(
           children: [
-            FolioPanel(
-              color: color.withValues(alpha: .10),
-              borderColor: Colors.transparent,
-              child: SizedBox(
-                width: 40,
-                height: 40,
-                child: Icon(icon, size: 20, color: color),
-              ),
-            ),
-            const SizedBox(height: 8),
             Text(
               value,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w900,
-                color: color,
-                fontFeatures: const [FontFeature.tabularFigures()],
+              style: const TextStyle(
+                fontFamily: 'Montserrat',
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                height: 1.2,
               ),
             ),
             Text(
               label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: VibesTheme.textTertiaryOf(context),
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: Colors.white.withValues(alpha: .75),
               ),
             ),
           ],
         ),
+      ),
+    );
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 500),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [
+            Color.lerp(p.accent, p.accentDeep, .2)!,
+            p.accentDeep,
+            Color.lerp(p.accentDeep, p.night, .5)!,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: [
+          BoxShadow(
+            color: p.glow.withValues(alpha: .30),
+            blurRadius: 26,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          PositionedDirectional(
+            end: -30,
+            top: -40,
+            child: Opacity(
+              opacity: .10,
+              child: VibesLogo.mark(size: 170, color: Colors.white),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    n.isEmpty
+                        ? const VibesLogo.mark(size: 52, color: Colors.white)
+                        : Container(
+                            width: 58,
+                            height: 58,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                n.characters.first,
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900,
+                                  color: p.accentDeep,
+                                  height: 1.1,
+                                ),
+                              ),
+                            ),
+                          ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'عضو VIBEES',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white.withValues(alpha: .75),
+                            ),
+                          ),
+                          Text(
+                            n.isEmpty ? 'أضف اسمك' : n,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              height: 1.25,
+                            ),
+                          ),
+                          if ((phone ?? '').isNotEmpty)
+                            Directionality(
+                              textDirection: TextDirection.ltr,
+                              child: Text(
+                                phone!,
+                                style: TextStyle(
+                                  fontFamily: 'Montserrat',
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white.withValues(alpha: .8),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    PressScale(
+                      onTap: onEdit,
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: .16),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: .3),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.edit_rounded,
+                          size: 17,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .12),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: .18),
+                    ),
+                  ),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      children: [
+                        stat(
+                          '$bookings',
+                          'حجوزات',
+                          () => context.go('/bookings'),
+                        ),
+                        VerticalDivider(
+                          width: 1,
+                          color: Colors.white.withValues(alpha: .2),
+                        ),
+                        stat(
+                          '$favs',
+                          'مفضلة',
+                          () => context.push('/favorites'),
+                        ),
+                        VerticalDivider(
+                          width: 1,
+                          color: Colors.white.withValues(alpha: .2),
+                        ),
+                        stat(
+                          '$following',
+                          'أتابعهم',
+                          () => context.push('/following'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

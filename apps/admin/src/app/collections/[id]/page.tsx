@@ -94,7 +94,7 @@ export default function CollectionDetailPage() {
       </div>
       {data.coverUrl ? (
         <Card className="overflow-hidden p-0">
-          <img src={data.coverUrl} alt="" className="h-48 w-full object-cover" />
+          <img src={data.coverUrl} alt="" className="h-48 w-full object-cover" loading="lazy" decoding="async" />
         </Card>
       ) : null}
       <Card padded={false} className="overflow-hidden">

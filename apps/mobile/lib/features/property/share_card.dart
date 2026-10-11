@@ -32,9 +32,9 @@ Future<void> sharePropertyAsImage(
 
     await Share.shareXFiles([
       XFile(file.path),
-    ], text: '${property.name} — اكتشفها على تطبيق VIBEES');
+    ], text: '${property.name} — اكتشفها على تطبيق VIBES');
   } catch (_) {
-    await Share.share('${property.name} — اكتشفها على تطبيق VIBEES');
+    await Share.share('${property.name} — اكتشفها على تطبيق VIBES');
   }
 }
 
@@ -60,22 +60,23 @@ class ShareablePropertyCard extends StatelessWidget {
               Row(
                 children: [
                   FolioPanel(
-                    color: Vibes.coral,
+                    color: Brand.midnight,
                     borderColor: Colors.transparent,
                     child: const SizedBox(
                       width: 34,
                       height: 34,
                       child: Center(
-                        child: CrestSeal(size: 20, color: Colors.white),
+                        child: CrestSeal(size: 20, color: Vibes.tealBright),
                       ),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    'VIBEES',
+                    'VIBES',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w900,
-                      color: Vibes.coral,
+                      letterSpacing: 2,
+                      color: Brand.midnight,
                     ),
                   ),
                   const Spacer(),
@@ -90,7 +91,7 @@ class ShareablePropertyCard extends StatelessWidget {
                         Text(
                           property.ratingAvg.toStringAsFixed(1),
                           style: const TextStyle(
-                            color: Vibes.teal,
+                            color: Vibes.honeyDeep,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -136,7 +137,7 @@ class ShareablePropertyCard extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               fontWeight: FontWeight.w900,
-                              color: Vibes.coral,
+                              color: Vibes.honeyDeep,
                             ),
                       ),
                     ],

@@ -89,12 +89,17 @@ services:
     build:
       context: ./apps/admin
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: ${MAPBOX_ACCESS_TOKEN}
+        NEXT_PUBLIC_API_URL: ${APP_URL}
+        NEXT_PUBLIC_BASE_PATH: /admin
     container_name: vibes-admin
     restart: always
     environment:
       NODE_ENV: production
       PORT: 3001
       NEXT_PUBLIC_API_URL: ${APP_URL}
+      NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: ${MAPBOX_ACCESS_TOKEN}
     depends_on:
       api:
         condition: service_healthy
@@ -106,25 +111,27 @@ services:
       - vibes
 
   livekit:
-    image: livekit/livekit-server:v1.8.4
+    image: livekit/livekit-server:v1.9.4
     container_name: vibes-livekit
     restart: always
     command: --config /etc/livekit.yaml --node-ip ${LIVEKIT_NODE_IP}
-    dns:
-      - 1.1.1.1
-      - 8.8.8.8
-    ports:
-      - "6002:6002"
-      - "6003:6003"
-      - "6004-6033:6004-6033/udp"
+    # شبكة المضيف مباشرة: يلغي docker-proxy (أداء أعلى + كل منافذ
+    # الترحيل 30000-40000 تعمل فوراً بدون نشر كل منفذ يدوياً)
+    network_mode: host
     volumes:
       - ./docker/livekit.prod.yaml:/etc/livekit.yaml:ro
+    # فحص صحة دوري — يعيد الحاوية تلقائياً إن تجمّدت الإشارة
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:6002/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     deploy:
       resources:
         limits:
-          memory: 512M
-    networks:
-      - vibes
+          # 38MB فعلياً في وضع الخمول — 256M سخي لمكالمات صوتية محدودة
+          memory: 256M
 
   nginx:
     image: nginx:alpine

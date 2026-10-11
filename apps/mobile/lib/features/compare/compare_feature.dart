@@ -332,7 +332,7 @@ class _CompareRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
       decoration: ShapeDecoration(
-        color: highlight ? Vibes.coralMint : null,
+        color: highlight ? Vibes.tealMint : null,
         shape: RoundedRectangleBorder(
           borderRadius: isLast
               ? const BorderRadius.only(
@@ -350,7 +350,7 @@ class _CompareRow extends StatelessWidget {
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.w800,
               color: highlight
-                  ? Vibes.coral
+                  ? Vibes.honeyDeep
                   : VibesTheme.textTertiaryOf(context),
             ),
           ),

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,104 @@ function placeTypesLabel(value?: string) {
     .join(" · ");
 }
 
+type PlaceClaim = {
+  id: string;
+  status: string;
+  conversationId: string;
+  user?: { name?: string | null; phone: string };
+  property?: {
+    name: string;
+    provider?: { businessName?: string | null; user?: { phone: string } } | null;
+  };
+};
+
+function PlaceClaimsPanel() {
+  const { toast } = useToast();
+  const [claims, setClaims] = useState<PlaceClaim[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setClaims(await api<PlaceClaim[]>("/api/admin/providers/claims"));
+  }, []);
+
+  useEffect(() => {
+    load().catch(() => undefined);
+  }, [load]);
+
+  async function decide(id: string, approve: boolean) {
+    setBusy(id);
+    try {
+      await api(`/api/admin/providers/claims/${id}/${approve ? "approve" : "reject"}`, { method: "PATCH" });
+      toast(approve ? "تم ربط الحساب بالمكان" : "تم رفض طلب الربط");
+      await load();
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "تعذر تحديث الطلب");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <Card className="mb-4 border-accent/20 bg-gradient-to-b from-accent/5 to-white">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-black">طلبات ربط الأماكن</div>
+          <p className="text-xs text-ink-soft">
+            الموافقة تربط الحساب بالمكان وترسل رسالة للمالك. للربط اليدوي من المحادثة استخدم «ربط مكان» داخل كونسول الدعم.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Link href="/conversations?kind=CLAIM&status=OPEN" className="text-xs font-bold text-accent">
+            محادثات الربط
+          </Link>
+          <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => load().catch(() => undefined)}>
+            تحديث
+          </Button>
+        </div>
+      </div>
+      {!claims.length ? (
+        <p className="text-sm text-ink-soft">لا طلبات ربط معلّقة.</p>
+      ) : (
+      <div className="space-y-2">
+        {claims.map((claim) => (
+          <div key={claim.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line px-3 py-3">
+            <div>
+              <div className="font-bold">{claim.property?.name ?? "مكان"}</div>
+              <div className="text-xs text-ink-soft" dir="ltr">{claim.user?.phone}</div>
+              {claim.property?.provider ? (
+                <div className="text-xs text-danger">مربوط حالياً: {claim.property.provider.businessName || claim.property.provider.user?.phone}</div>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={`/properties?highlight=${claim.property?.name ?? ""}`}
+                className="self-center text-xs font-bold text-muted underline"
+              >
+                المكان
+              </Link>
+              <Link
+                href={`/conversations?kind=CLAIM&status=OPEN&open=${claim.conversationId}`}
+                className="self-center text-xs font-bold text-accent"
+              >
+                المحادثة
+              </Link>
+              <Button className="px-3 py-1 text-xs" disabled={busy === claim.id} onClick={() => decide(claim.id, true)}>
+                موافقة وربط
+              </Button>
+              <Button variant="danger" className="px-3 py-1 text-xs" disabled={busy === claim.id} onClick={() => decide(claim.id, false)}>
+                رفض
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+      )}
+    </Card>
+  );
+}
+
 export default function ProvidersPage() {
+  const router = useRouter();
   const { toast } = useToast();
   const { exportCsv, exporting } = useCsvExport();
   const [data, setData] = useState<Paginated<Provider> | null>(null);
@@ -153,7 +251,7 @@ export default function ProvidersPage() {
     <PageShell>
       <PageHeader
         title="المزودون"
-        description="راجع طلبات أصحاب المزارع والقاعات. بعد الموافقة يُدار التقويم من تطبيقهم، والصور يرفعها الفريق."
+        description="طلبات ربط الحساب بمكان موجود. أنت تنشئ المكان، والموافقة هنا تنقل إدارته إلى حساب المزود."
         eyebrow="VIBES Admin"
         onRefresh={load}
         refreshing={loading}
@@ -168,7 +266,8 @@ export default function ProvidersPage() {
         }
       />
 
-      <HelpTip>المالك لا يرفع صور المكان. بعد موافقتك يفتح له تطبيق الإدارة لتسجيل الحجوزات الخارجية حتى يظهر التوفر الحقيقي. فريق VIBES يصور المكان عند النشر.</HelpTip>
+      <HelpTip>المالك لا ينشئ المكان. يطلب ربط حسابه بمكان أضفته أنت، وتظهر المحادثة هنا. الموافقة فقط تنقل ملكية المكان إلى حسابه.</HelpTip>
+      <PlaceClaimsPanel />
 
       <StatStrip
         stats={[
@@ -201,7 +300,7 @@ export default function ProvidersPage() {
           {filtered.map((item) => (
             <ListRow
               key={item.id}
-              onClick={() => window.location.assign(`/providers/${item.id}`)}
+              onClick={() => router.push(`/providers/${item.id}`)}
               title={item.businessName ?? item.user?.name ?? "—"}
               subtitle={
                 <>

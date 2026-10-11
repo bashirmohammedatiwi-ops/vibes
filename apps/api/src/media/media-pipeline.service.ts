@@ -6,7 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { LocalStorageDriver } from './storage/local-storage.driver';
 import { BunnyStreamTranscodeDriver } from './transcode/bunny.driver';
 import { FfmpegTranscodeDriver } from './transcode/ffmpeg.driver';
-import type { RenditionSpec, TargetRatio, TranscodeDriver } from './transcode/transcode-driver';
+import type { RenditionResult, RenditionSpec, TargetRatio, TranscodeDriver } from './transcode/transcode-driver';
 
 export type { RenditionSpec, TargetRatio };
 
@@ -56,21 +56,39 @@ export class MediaPipelineService {
         (suffix) => `${mediaId}-${suffix}`,
         specs.length ? specs : buildSpecs('auto'),
       );
-      const primary = result.renditions[0];
+
+      // مع Bunny: روابط التشغيل تخدم من CDN — لا ملفات محلية renditions
+      // نخزن GUID داخل renditions (label=bunny_guid) للحذف المتزامن لاحقاً.
+      const isBunny = engine.name === 'bunny';
+      const renditions: RenditionResult[] = isBunny
+        ? [
+            ...result.renditions,
+            { label: 'bunny_guid', url: `bunny:${extractBunnyGuid(result.renditions[0]?.url)}`, width: 0, height: 0, bytes: 0 },
+          ]
+        : result.renditions;
+
+      const hls = result.renditions.find((r) => r.label === 'hls');
+      const primary = hls ?? result.renditions[0];
+
+      // النوع يبقى كما اختاره الفريق عند الرفع: خانة «الريلز» → REEL
+      // (يظهر في «استكشف»)، والفيديو العادي → VIDEO (صفحة المكان فقط).
+      const w = result.probe.width || 0;
+      const h = result.probe.height || 0;
+
       await this.prisma.media.update({
         where: { id: mediaId },
         data: {
           status: MediaStatus.READY,
           processingProgress: 100,
           processingError: null,
-          width: result.probe.width,
-          height: result.probe.height,
+          width: w || null,
+          height: h || null,
           durationSec: result.probe.durationSec || null,
           aspectRatio: result.probe.aspectRatio,
           posterUrl: result.posterUrl,
           thumbnailUrl: result.posterUrl,
           hlsUrl: primary?.url ?? null,
-          renditions: result.renditions,
+          renditions,
         },
       });
       return { mediaId, renditions: result.renditions };
@@ -92,4 +110,11 @@ export class MediaPipelineService {
       },
     });
   }
+}
+
+/** يستخرج GUID من رابط CDN بصيغة https://host/{guid}/playlist.m3u8 */
+function extractBunnyGuid(url?: string): string {
+  if (!url) return '';
+  const m = url.match(/https?:\/\/[^/]+\/([0-9a-f-]{36})\//);
+  return m?.[1] ?? '';
 }

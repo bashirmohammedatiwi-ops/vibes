@@ -50,7 +50,7 @@ class FollowingScreen extends ConsumerWidget {
                     );
                   }
                   return RefreshIndicator(
-                    color: Vibes.coral,
+                    color: Vibes.teal,
                     onRefresh: () async =>
                         ref.invalidate(followingProvidersProvider),
                     child: ListView.separated(

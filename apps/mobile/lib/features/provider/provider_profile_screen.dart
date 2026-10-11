@@ -8,6 +8,8 @@ import '../../shared/data/marketplace_providers.dart';
 import '../../shared/models/models.dart';
 import '../../shared/widgets/maison_chrome.dart';
 import '../../shared/widgets/property_card.dart';
+import 'provider_ui.dart';
+import '../../shared/widgets/world_ui.dart';
 import '../../shared/widgets/vibes_widgets.dart';
 
 final _providerProfileProvider =
@@ -34,11 +36,11 @@ class ProviderProfileScreen extends ConsumerWidget {
           loading: () => ListView(
             padding: const EdgeInsets.fromLTRB(20, 72, 20, 28),
             children: const [
-              ShimmerBox(height: 88, radius: VibesRadius.lg),
+              WorldSkeleton(height: 88, radius: 20),
               SizedBox(height: 16),
-              ShimmerBox(height: 220, radius: VibesRadius.xl),
+              WorldSkeleton(height: 220, radius: 20),
               SizedBox(height: 14),
-              ShimmerBox(height: 220, radius: VibesRadius.xl),
+              WorldSkeleton(height: 220, radius: 20),
             ],
           ),
           error: (e, _) => ErrorCanvas(
@@ -50,7 +52,7 @@ class ProviderProfileScreen extends ConsumerWidget {
             final name =
                 data['businessName'] as String? ??
                 user?['name'] as String? ??
-                'مالك VIBEES';
+                'مالك VIBES';
             final avatar = user?['avatar'] as String?;
             final properties =
                 (data['properties'] as List<dynamic>? ?? const [])
@@ -66,7 +68,7 @@ class ProviderProfileScreen extends ConsumerWidget {
                 MaisonPageHeader(title: name, onBack: () => context.pop()),
                 Expanded(
                   child: RefreshIndicator(
-                    color: Vibes.coral,
+                    color: ownerNavyHigh,
                     onRefresh: () async {
                       ref.invalidate(_providerProfileProvider(providerId));
                       ref.invalidate(followStatusProvider(providerId));
@@ -148,7 +150,7 @@ class ProviderProfileScreen extends ConsumerWidget {
                         const SizedBox(height: 22),
                         const SectionHeader('أماكن هذا المالك'),
                         if (properties.isEmpty)
-                          const EmptyCanvas(
+                          const WorldEmpty(
                             icon: Icons.home_work_outlined,
                             title: 'لا أماكن ظاهرة',
                             subtitle: 'لم ينشر هذا المالك أماكن بعد',

@@ -9,6 +9,7 @@ import '../../shared/data/property_providers.dart';
 import '../../shared/widgets/maison_chrome.dart';
 import '../../shared/widgets/maison_shapes.dart';
 import '../../shared/widgets/vibes_widgets.dart';
+import '../../shared/widgets/world_ui.dart';
 import 'provider_data.dart';
 
 const _iraqCenters = <String, (double, double)>{
@@ -134,7 +135,7 @@ class _ProviderAddPropertyScreenState
           children: [
             MaisonPageHeader(title: 'إضافة مكان', onBack: () => context.pop()),
             Text(
-              'أدخل الاسم والمدينة والسعر. فريق VIBEES يزور المكان ويصوره بعد الموافقة — لا حاجة لرفع صور من هنا.',
+              'أدخل الاسم والمدينة والسعر. فريق VIBES يزور المكان ويصوره بعد الموافقة — لا حاجة لرفع صور من هنا.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: VibesTheme.textTertiaryOf(context),
                 height: 1.5,
@@ -182,7 +183,7 @@ class _ProviderAddPropertyScreenState
                     cities.when(
                       loading: () => const Padding(
                         padding: EdgeInsets.symmetric(vertical: 12),
-                        child: ShimmerBox(height: 56, radius: VibesRadius.lg),
+                        child: WorldSkeleton(height: 56, radius: 20),
                       ),
                       error: (error, _) => Text(maisonError(error)),
                       data: (list) => Column(

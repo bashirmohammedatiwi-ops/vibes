@@ -16,7 +16,7 @@ import { basename } from 'node:path';
 import { AuthUser, CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JobsService } from '../../jobs/jobs.service';
 import { buildSpecs } from '../../media/media-pipeline.service';
-import { mediaStorageOptions } from '../admin/admin-media.service';
+import { mediaStorageOptions, writeDisplaySizes } from '../admin/admin-media.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @ApiTags('media')
@@ -73,6 +73,12 @@ export class MediaController {
 
     if (isVideo) {
       await this.jobs.enqueue('process-video', { mediaId: media.id, specs: buildSpecs('auto') });
+    } else {
+      try {
+        await writeDisplaySizes(file.filename);
+      } catch {
+        /* النسخة الكاملة تبقى متاحة إن تعذّر التصغير */
+      }
     }
 
     return media;

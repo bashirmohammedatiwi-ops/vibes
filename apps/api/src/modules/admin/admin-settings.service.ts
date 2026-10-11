@@ -98,6 +98,8 @@ export class AdminSettingsService {
       },
       whatsappConfigured: !!(process.env.WHATSAPP_PHONE_NUMBER_ID && process.env.WHATSAPP_ACCESS_TOKEN),
       notifyWhatsappEnabled: flag(map[KEYS.notifyWhatsappEnabled], false),
+      mapboxAccessToken: process.env.MAPBOX_ACCESS_TOKEN ?? '',
+      mapboxStyleId: process.env.MAPBOX_STYLE_ID ?? 'mapbox/streets-v12',
     };
   }
 
@@ -119,6 +121,8 @@ export class AdminSettingsService {
         eveningShiftEnd: full.eveningShiftEnd,
         fullShiftStart: full.fullShiftStart,
         fullShiftEnd: full.fullShiftEnd,
+        mapboxAccessToken: full.mapboxAccessToken,
+        mapboxStyleId: full.mapboxStyleId,
       };
     });
   }

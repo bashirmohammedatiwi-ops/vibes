@@ -12,19 +12,27 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get("vibes_admin_token")?.value;
   const role = request.cookies.get("vibes_admin_role")?.value;
 
+  // NextURL.clone() keeps the basePath — redirects land on /admin/... not /
   if (pathname.startsWith("/login")) {
-    if (token) return NextResponse.redirect(new URL("/", request.url));
+    if (token) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      return NextResponse.redirect(url);
+    }
     return NextResponse.next();
   }
 
   if (!token) {
-    const login = new URL("/login", request.url);
+    const login = request.nextUrl.clone();
+    login.pathname = "/login";
     login.searchParams.set("next", pathname);
     return NextResponse.redirect(login);
   }
 
   if (isAdminOnly(pathname) && role !== "ADMIN") {
-    return NextResponse.redirect(new URL("/", request.url));
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
   }
 
   return NextResponse.next();

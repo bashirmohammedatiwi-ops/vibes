@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
+import 'vibes_graphics.dart';
 
 /// ═══════════════════════════════════════════════════════════
 /// VIBES Maison — نظام أشكال «الماسة الزمردية»
@@ -24,7 +25,7 @@ class EmeraldDiamond extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? Vibes.coralBright : Vibes.coral;
+    final color = active ? Vibes.tealBright : Vibes.teal;
     return CustomPaint(
       size: Size.square(size),
       painter: _DiamondPainter(
@@ -146,7 +147,7 @@ class DiamondDivider extends StatelessWidget {
             height: 3,
             margin: const EdgeInsetsDirectional.only(end: 8),
             transform: Matrix4.rotationZ(0.785398), // 45°
-            color: Vibes.coral,
+            color: Vibes.teal,
           ),
           Expanded(
             child: Container(
@@ -245,53 +246,93 @@ class WristLine extends StatelessWidget {
       width: 32,
       height: 2,
       decoration: BoxDecoration(
-        color: Vibes.coral,
+        color: Vibes.teal,
         borderRadius: BorderRadius.circular(1),
       ),
     );
   }
 }
 
-/// 7) دبوس الخريطة — مستطيل معماري + السعر
+/// 7) دبوس الخريطة — لوح نحاسي متدرج يحمل أيقونة التصنيف
 class DiamondPin extends StatelessWidget {
-  const DiamondPin({super.key, required this.price, this.selected = false});
+  const DiamondPin({
+    super.key,
+    required this.price,
+    this.selected = false,
+    this.category,
+  });
 
   final String price;
   final bool selected;
+  final String? category;
+
+  VibesCategory? get _category => switch (category?.toUpperCase()) {
+    'FARM' => VibesCategory.farm,
+    'HALL' => VibesCategory.hall,
+    'DECORATION' => VibesCategory.decoration,
+    _ => null,
+  };
 
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        MaisonSquircle(
-          radius: 28,
-          color: selected ? Vibes.coral : VibesTheme.surfaceOf(context),
-          borderColor: selected
-              ? Colors.white.withValues(alpha: .35)
-              : Vibes.coral.withValues(alpha: .45),
-          shadows: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: selected ? .28 : .16),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+        DecoratedBox(
+          decoration: ShapeDecoration(
+            gradient: selected
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFE8C273), Vibes.teal],
+                  )
+                : const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Colors.white, Color(0xFFF3EDDF)],
+                  ),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(9),
+                topRight: Radius.circular(13),
+                bottomRight: Radius.circular(9),
+                bottomLeft: Radius.circular(11),
+              ),
+              side: BorderSide(color: Color(0x66C89844)),
             ),
-          ],
+            shadows: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: selected ? .32 : .16),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+              if (selected)
+                const BoxShadow(
+                  color: Color(0x59C89844),
+                  blurRadius: 16,
+                  offset: Offset(0, 6),
+                ),
+            ],
+          ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                PetalMark(
-                  size: 6,
-                  color: selected ? Colors.white : Vibes.coral,
-                ),
-                const SizedBox(width: 4),
+                if (_category != null) ...[
+                  VibesCategoryIcon(
+                    category: _category!,
+                    size: 13,
+                    color: selected ? Vibes.onTeal : Vibes.honeyDeep,
+                    strokeWidth: 1.8,
+                  ),
+                  const SizedBox(width: 4),
+                ],
                 Text(
                   price,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: selected ? Colors.white : Vibes.coral,
+                    color: selected ? Vibes.onTeal : Vibes.honeyDeep,
                     fontFeatures: const [ui.FontFeature.tabularFigures()],
                   ),
                 ),
@@ -305,9 +346,10 @@ class DiamondPin extends StatelessWidget {
             width: 7,
             height: 7,
             decoration: BoxDecoration(
-              color: selected ? Vibes.coral : VibesTheme.surfaceOf(context),
-              borderRadius: BorderRadius.circular(2),
-              border: Border.all(color: Vibes.coral.withValues(alpha: .5)),
+              gradient: selected ? Vibes.tealFill : null,
+              color: selected ? null : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Vibes.teal.withValues(alpha: .5)),
             ),
           ),
         ),
@@ -353,18 +395,19 @@ class _OctagonButtonState extends State<OctagonButton> {
           child: Ink(
             height: height,
             decoration: ShapeDecoration(
-              color: widget.ghost ? Colors.transparent : Vibes.coral,
+              gradient: widget.ghost ? null : Vibes.tealFill,
+              color: widget.ghost ? Colors.transparent : null,
               shape: RoundedRectangleBorder(
                 borderRadius: Folio.radius,
                 side: widget.ghost
-                    ? const BorderSide(color: Vibes.coral, width: 1.4)
+                    ? const BorderSide(color: Vibes.teal, width: 1.4)
                     : BorderSide.none,
               ),
               shadows: widget.ghost
                   ? null
                   : const [
                       BoxShadow(
-                        color: Color(0x441B3857),
+                        color: Color(0x3DC89844),
                         blurRadius: 18,
                         offset: Offset(0, 6),
                       ),
@@ -385,7 +428,7 @@ class _OctagonButtonState extends State<OctagonButton> {
                           child: CircularProgressIndicator(
                             strokeWidth: 1.5,
                             valueColor: AlwaysStoppedAnimation(
-                              widget.ghost ? Vibes.coral : Colors.white,
+                              widget.ghost ? Vibes.teal : Vibes.onTeal,
                             ),
                           ),
                         )
@@ -393,10 +436,10 @@ class _OctagonButtonState extends State<OctagonButton> {
                           widget.label,
                           style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w800,
                                 color: widget.ghost
-                                    ? Vibes.coralBright
-                                    : Colors.white,
+                                    ? Vibes.honeyDeep
+                                    : Vibes.onTeal,
                               ),
                         ),
                 ),
@@ -407,39 +450,6 @@ class _OctagonButtonState extends State<OctagonButton> {
       ),
     );
   }
-}
-
-class _ChamferShape extends ShapeBorder {
-  const _ChamferShape(this.chamfer);
-
-  final double chamfer;
-
-  @override
-  EdgeInsetsGeometry get dimensions => EdgeInsets.zero;
-
-  @override
-  Path getInnerPath(Rect rect, {TextDirection? textDirection}) =>
-      getOuterPath(rect.deflate(1), textDirection: textDirection);
-
-  @override
-  Path getOuterPath(Rect rect, {TextDirection? textDirection}) {
-    return ui.Path()
-      ..moveTo(rect.left + chamfer, rect.top)
-      ..lineTo(rect.right - chamfer, rect.top)
-      ..lineTo(rect.right, rect.top + chamfer)
-      ..lineTo(rect.right, rect.bottom - chamfer)
-      ..lineTo(rect.right - chamfer, rect.bottom)
-      ..lineTo(rect.left + chamfer, rect.bottom)
-      ..lineTo(rect.left, rect.bottom - chamfer)
-      ..lineTo(rect.left, rect.top + chamfer)
-      ..close();
-  }
-
-  @override
-  void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) {}
-
-  @override
-  ShapeBorder scale(double t) => _ChamferShape(chamfer * t);
 }
 
 /// 9) رقم بمعين مفرغ — استمارات الحجز
@@ -455,7 +465,7 @@ class NumberedDiamond extends StatelessWidget {
       height: 28,
       alignment: Alignment.center,
       decoration: const BoxDecoration(
-        gradient: Vibes.coralFill,
+        gradient: Vibes.tealFill,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(6),
           topRight: Radius.circular(2),
@@ -467,7 +477,7 @@ class NumberedDiamond extends StatelessWidget {
         '$number',
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
           fontWeight: FontWeight.w800,
-          color: Colors.white,
+          color: Vibes.onTeal,
           height: 1,
           fontFeatures: const [ui.FontFeature.tabularFigures()],
         ),
@@ -525,9 +535,9 @@ class _DrawnCheckPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Vibes.coralBright
+      ..color = Vibes.teal
       ..style = ui.PaintingStyle.stroke
-      ..strokeWidth = 1.6
+      ..strokeWidth = 1.8
       ..strokeCap = ui.StrokeCap.round;
 
     // المرحلة 1 (0→0.5): معين يتحول دائرة (رسم دائرة تدريجياً)
@@ -569,30 +579,14 @@ class _DrawnCheckPainter extends CustomPainter {
 
 /// إطار تحريري موحّد — قطع معماري خفيف بلا كبسولات
 abstract final class Folio {
-  static const BorderRadius radius = BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(12),
-    bottomRight: Radius.circular(8),
-    bottomLeft: Radius.circular(10),
-  );
+  static const BorderRadius radius = BorderRadius.all(Radius.circular(12));
 
-  static const BorderRadius compact = BorderRadius.only(
-    topLeft: Radius.circular(5),
-    topRight: Radius.circular(8),
-    bottomRight: Radius.circular(5),
-    bottomLeft: Radius.circular(7),
-  );
+  static const BorderRadius compact = BorderRadius.all(Radius.circular(8));
 
-  /// قطع معماري للحقول والأزرار القصيرة — زاوية حادة تمنع قراءة الكبسولة
-  static const BorderRadius chrome = BorderRadius.only(
-    topLeft: Radius.circular(0),
-    topRight: Radius.circular(8),
-    bottomRight: Radius.circular(0),
-    bottomLeft: Radius.circular(6),
-  );
+  static const BorderRadius chrome = BorderRadius.all(Radius.circular(12));
 
-  /// صورة بطاقة القائمة — 16:10 تحريرية
-  static const double listingPhoto = 16 / 10;
+  /// صورة بطاقة القائمة — 4:3 متوازنة للجوال
+  static const double listingPhoto = 4 / 3;
 
   /// ختم تصنيف/محافظة — 3:4 عمودي
   static const double stamp = 3 / 4;
@@ -701,7 +695,7 @@ class PetalMark extends StatelessWidget {
   const PetalMark({
     super.key,
     this.size = 10,
-    this.color = Vibes.coral,
+    this.color = Vibes.teal,
     this.filled = true,
   });
 
@@ -729,39 +723,78 @@ class PetalMark extends StatelessWidget {
 }
 
 /// خط نحاسي قصير تحت العناوين — مربع تسجيل ثم شعرة
-class ArcFlourish extends StatelessWidget {
+class ArcFlourish extends StatefulWidget {
   const ArcFlourish({super.key, this.width = 46, this.color = Vibes.teal});
 
   final double width;
   final Color color;
 
   @override
+  State<ArcFlourish> createState() => _ArcFlourishState();
+}
+
+class _ArcFlourishState extends State<ArcFlourish>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _draw = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 620),
+  );
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) {
+      _draw.value = 1;
+      return;
+    }
+    _draw.forward();
+  }
+
+  @override
+  void dispose() {
+    _draw.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size(width, 6),
-      painter: _RulePainter(color),
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _draw,
+        builder: (context, _) => CustomPaint(
+          size: Size(widget.width, 6),
+          painter: _RulePainter(widget.color, _draw.value),
+        ),
+      ),
     );
   }
 }
 
 class _RulePainter extends CustomPainter {
-  const _RulePainter(this.color);
+  const _RulePainter(this.color, [this.progress = 1]);
 
   final Color color;
+
+  /// 0→1 — الخط يُرسم تدريجياً مرة واحدة عند الظهور
+  final double progress;
 
   @override
   void paint(Canvas canvas, Size size) {
     final mark = Paint()..color = color;
     canvas.drawRect(const Rect.fromLTWH(0, 1.5, 3, 3), mark);
-    canvas.drawRect(
-      Rect.fromLTWH(7, 2.5, (size.width - 7).clamp(0, size.width), 1),
-      mark,
-    );
+    final lineLength =
+        ((size.width - 7).clamp(0, size.width)) * progress.clamp(0.0, 1.0);
+    if (lineLength > 0) {
+      canvas.drawRect(Rect.fromLTWH(7, 2.5, lineLength, 1), mark);
+    }
   }
 
   @override
   bool shouldRepaint(covariant _RulePainter oldDelegate) =>
-      oldDelegate.color != color;
+      oldDelegate.color != color || oldDelegate.progress != progress;
 }
 
 /// فاصل تحريري — نفس علامة التسجيل ثم خط شعري
@@ -836,11 +869,7 @@ class _PlateCornerPainter extends CustomPainter {
     }
 
     corner(Offset(inset, inset), arm, arm);
-    corner(
-      Offset(size.width - inset, size.height - inset),
-      -arm,
-      -arm,
-    );
+    corner(Offset(size.width - inset, size.height - inset), -arm, -arm);
   }
 
   @override
@@ -871,7 +900,7 @@ class BloomOrb extends StatelessWidget {
   }
 }
 
-/// شعار VIBEES الرسمي — العلامة أو القفل الكامل مع الكلمة
+/// شعار VIBES الرسمي — العلامة أو القفل الكامل مع الكلمة
 class VibesLogo extends StatelessWidget {
   const VibesLogo.mark({
     super.key,
@@ -879,7 +908,15 @@ class VibesLogo extends StatelessWidget {
     this.color,
     this.opacity = 1,
   }) : lockup = false,
-       height = null;
+       height = null,
+       _brand = false;
+
+  /// العلامة الملونة الأصلية — للدوك والشاشات الرئيسية
+  const VibesLogo.brand({super.key, this.size = 48, this.opacity = 1})
+    : lockup = false,
+      height = null,
+      color = null,
+      _brand = true;
 
   const VibesLogo.lockup({
     super.key,
@@ -887,9 +924,11 @@ class VibesLogo extends StatelessWidget {
     this.color,
     this.opacity = 1,
   }) : lockup = true,
-       size = null;
+       size = null,
+       _brand = false;
 
   final bool lockup;
+  final bool _brand;
   final double? size;
   final double? height;
   final Color? color;
@@ -898,18 +937,23 @@ class VibesLogo extends StatelessWidget {
   static const markAsset = 'assets/brand/logo_mark_white.png';
   static const lockupAsset = 'assets/brand/logo_lockup.png';
   static const goldMarkAsset = 'assets/brand/logo_mark_gold.png';
+  static const brandMarkAsset = 'assets/brand/logo_mark.png';
+
+  String get _asset {
+    if (lockup) return color == null ? lockupAsset : markAsset;
+    if (_brand) return brandMarkAsset;
+    return color == null ? goldMarkAsset : markAsset;
+  }
 
   @override
   Widget build(BuildContext context) {
     final image = Image.asset(
-      lockup
-          ? (color == null ? lockupAsset : markAsset)
-          : (color == null ? goldMarkAsset : markAsset),
+      _asset,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.high,
     );
 
-    Widget child = color == null
+    Widget child = (_brand || color == null)
         ? image
         : ColorFiltered(
             colorFilter: ColorFilter.mode(color!, BlendMode.srcIn),
@@ -920,9 +964,6 @@ class VibesLogo extends StatelessWidget {
       child = Opacity(opacity: opacity, child: child);
     }
 
-    if (lockup && color == null) {
-      return SizedBox(height: height, child: child);
-    }
     if (lockup) {
       return SizedBox(height: height, child: child);
     }
@@ -930,7 +971,7 @@ class VibesLogo extends StatelessWidget {
   }
 }
 
-/// علامة VIBEES الرسمية — دبوس الموقع، يُلوَّن حسب السياق
+/// علامة VIBES الرسمية — دبوس الموقع، يُلوَّن حسب السياق
 class CrestSeal extends StatelessWidget {
   const CrestSeal({super.key, this.size = 72, this.color = Vibes.coral});
 
@@ -963,19 +1004,25 @@ class WaveClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
-/// شارة تحريرية فوق الصور — مستطيل حاد بلا زينة
+/// شارة تحريرية فوق الصور — نحاس بحبر ليلي، لمسة التوقيع
 class RibbonChip extends StatelessWidget {
-  const RibbonChip({super.key, required this.label, this.color = Vibes.coral});
+  const RibbonChip({
+    super.key,
+    required this.label,
+    this.color = Vibes.teal,
+    this.onColor = Vibes.onTeal,
+  });
 
   final String label;
   final Color color;
+  final Color onColor;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: ShapeDecoration(
-        color: color.withValues(alpha: .94),
+        color: color.withValues(alpha: .96),
         shape: RoundedRectangleBorder(
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(8),
@@ -996,7 +1043,7 @@ class RibbonChip extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: Colors.white,
+          color: onColor,
           fontWeight: FontWeight.w800,
         ),
       ),

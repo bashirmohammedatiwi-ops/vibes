@@ -9,6 +9,7 @@ import { validateEnv } from './config/env.validation';
 import { BigIntSerializerInterceptor } from './common/interceptors/bigint-serializer.interceptor';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { StaffPermissionsGuard } from './common/guards/staff-permissions.guard';
 import { JobsModule } from './jobs/jobs.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -26,6 +27,7 @@ import { ProvidersModule } from './modules/providers/providers.module';
 import { ProviderPortalModule } from './modules/provider-portal/provider-portal.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { SearchModule } from './modules/search/search.module';
+import { StaffModule } from './modules/staff/staff.module';
 import { SeoModule } from './modules/seo/seo.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -75,6 +77,7 @@ import { RedisModule } from './redis/redis.module';
     ReelsModule,
     ReviewsModule,
     SearchModule,
+    StaffModule,
     SeoModule,
     LocationsModule,
     HealthModule,
@@ -83,6 +86,7 @@ import { RedisModule } from './redis/redis.module';
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: StaffPermissionsGuard },
     { provide: APP_INTERCEPTOR, useClass: BigIntSerializerInterceptor },
   ],
 })

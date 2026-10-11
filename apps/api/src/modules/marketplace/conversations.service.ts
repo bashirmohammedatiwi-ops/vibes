@@ -4,11 +4,23 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ConversationKind, MessageKind, Prisma, UserRole } from '@prisma/client';
+import {
+  ConversationKind,
+  ConversationPriority,
+  ConversationStatus,
+  MessageKind,
+  Prisma,
+  UserRole,
+} from '@prisma/client';
 import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MarketplaceLifecycleService } from './marketplace-lifecycle.service';
 import { ChatEventsService } from './chat-events.service';
+
+const STAFF_ROLES = [UserRole.ADMIN, UserRole.STAFF] as const;
+
+export const isStaffUser = (user: AuthUser) =>
+  (STAFF_ROLES as readonly string[]).includes(user.role);
 
 @Injectable()
 export class ConversationsService {
@@ -19,7 +31,7 @@ export class ConversationsService {
   ) {}
 
   async list(user: AuthUser) {
-    const staff = user.role === UserRole.ADMIN || user.role === UserRole.STAFF;
+    const staff = isStaffUser(user);
     const rows = await this.prisma.conversation.findMany({
       where: staff ? undefined : { participants: { some: { userId: user.id } } },
       include: {
@@ -49,6 +61,7 @@ export class ConversationsService {
         participants: {
           include: { user: { select: { id: true, name: true, phone: true, role: true } } },
         },
+        assignedTo: { select: { id: true, name: true, phone: true, role: true } },
         messages: { orderBy: { createdAt: 'desc' }, take: 1 },
       },
       orderBy: { updatedAt: 'desc' },
@@ -59,9 +72,13 @@ export class ConversationsService {
     return rows.map((row) => ({
       id: row.id,
       kind: row.kind,
+      status: row.status,
+      priority: row.priority,
+      staffNote: row.staffNote || undefined,
       booking: row.booking,
       property: row.property ?? row.booking?.property ?? null,
       participants: row.participants.map((p) => p.user),
+      assignedTo: row.assignedTo,
       lastMessage: row.messages[0] ?? null,
       unread: unreadMap.get(row.id) ?? 0,
       updatedAt: row.updatedAt,
@@ -132,13 +149,37 @@ export class ConversationsService {
       include: { sender: { select: { id: true, name: true, phone: true, role: true } } },
     });
 
+    // بث فوري للمستمعين قبل أي عمل جانبي (إشعارات/تحديث حالة)
+    this.events.emit(id, message);
+
+    const staff = isStaffUser(user);
+    void this.afterMessageSent(user.id, id, body, staff).catch(() => undefined);
+
+    return message;
+  }
+
+  /** تحديث الحالة + إشعارات — خارج مسار الرد حتى لا يتأخر الإرسال */
+  private async afterMessageSent(
+    senderId: string,
+    conversationId: string,
+    body: string,
+    staff: boolean,
+  ) {
+    const current = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { firstResponseAt: true },
+    });
     await this.prisma.conversation.update({
-      where: { id },
-      data: { updatedAt: new Date() },
+      where: { id: conversationId },
+      data: {
+        updatedAt: new Date(),
+        status: staff ? ConversationStatus.PENDING : ConversationStatus.OPEN,
+        ...(staff && !current?.firstResponseAt ? { firstResponseAt: new Date() } : {}),
+      },
     });
 
     const others = await this.prisma.conversationParticipant.findMany({
-      where: { conversationId: id, userId: { not: user.id } },
+      where: { conversationId, userId: { not: senderId } },
       select: { userId: true },
     });
     await Promise.all(
@@ -148,15 +189,177 @@ export class ConversationsService {
           type: 'MESSAGE',
           title: 'رسالة جديدة',
           body: body || 'صورة',
-          linkUrl: `/chat/${id}`,
+          linkUrl: `/chat/${conversationId}`,
           entityType: 'conversation',
-          entityId: id,
+          entityId: conversationId,
         }),
       ),
     );
+  }
 
-    this.events.emit(id, message);
-    return message;
+  /// لوحة فريق الدعم — تصفية بالحالة والإسناد والنوع والبحث
+  async listForStaff(query: {
+    status?: string;
+    assignedToId?: string;
+    kind?: string;
+    priority?: string;
+    q?: string;
+    page?: number;
+    pageSize?: number;
+  }) {
+    const page = Math.max(1, Number(query.page) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(query.pageSize) || 20));
+    const statusValues = ['OPEN', 'PENDING', 'RESOLVED', 'CLOSED'];
+    const priorityValues = ['LOW', 'NORMAL', 'URGENT'];
+
+    const where: Prisma.ConversationWhereInput = {
+      ...(query.status && statusValues.includes(query.status)
+        ? { status: query.status as ConversationStatus }
+        : { status: { not: ConversationStatus.CLOSED } }),
+      ...(query.assignedToId === 'me'
+        ? {}
+        : query.assignedToId
+          ? { assignedToId: query.assignedToId }
+          : {}),
+      ...(query.kind && ['BOOKING', 'SUPPORT'].includes(query.kind)
+        ? { kind: query.kind as ConversationKind }
+        : {}),
+      ...(query.priority && priorityValues.includes(query.priority)
+        ? { priority: query.priority as ConversationPriority }
+        : {}),
+      ...(query.q
+        ? {
+            OR: [
+              { property: { name: { contains: query.q, mode: 'insensitive' } } },
+              { booking: { property: { name: { contains: query.q, mode: 'insensitive' } } } },
+              {
+                participants: {
+                  some: {
+                    user: {
+                      OR: [
+                        { name: { contains: query.q, mode: 'insensitive' } },
+                        { phone: { contains: query.q } },
+                      ],
+                    },
+                  },
+                },
+              },
+              { messages: { some: { body: { contains: query.q, mode: 'insensitive' } } } },
+            ],
+          }
+        : {}),
+    };
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.conversation.findMany({
+        where,
+        include: {
+          booking: {
+            select: {
+              id: true,
+              status: true,
+              startDate: true,
+              property: { select: { id: true, name: true } },
+              user: { select: { name: true, phone: true } },
+            },
+          },
+          property: { select: { id: true, name: true } },
+          participants: {
+            include: { user: { select: { id: true, name: true, phone: true, role: true } } },
+          },
+          assignedTo: { select: { id: true, name: true } },
+          messages: { orderBy: { createdAt: 'desc' }, take: 1 },
+          _count: { select: { messages: true } },
+        },
+        orderBy: [
+          { priority: 'desc' },
+          { updatedAt: 'desc' },
+        ],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.conversation.count({ where }),
+    ]);
+
+    return {
+      items: rows.map((row) => ({
+        id: row.id,
+        kind: row.kind,
+        status: row.status,
+        priority: row.priority,
+        staffNote: row.staffNote,
+        booking: row.booking,
+        property: row.property ?? row.booking?.property ?? null,
+        participants: row.participants.map((p) => p.user),
+        assignedTo: row.assignedTo,
+        lastMessage: row.messages[0] ?? null,
+        messageCount: row._count.messages,
+        updatedAt: row.updatedAt,
+      })),
+      total,
+      page,
+      pageSize,
+    };
+  }
+
+  /// تحديث حالة/إسناد/أولوية/ملاحظة — لفريق الدعم فقط
+  async updateOps(
+    staff: AuthUser,
+    id: string,
+    dto: {
+      status?: ConversationStatus;
+      assignedToId?: string | null;
+      priority?: ConversationPriority;
+      staffNote?: string;
+    },
+  ) {
+    if (!isStaffUser(staff)) throw new ForbiddenException('خاص بفريق الدعم');
+    await this.assertAccess(staff, id);
+
+    if (dto.assignedToId) {
+      const assignee = await this.prisma.user.findUnique({
+        where: { id: dto.assignedToId },
+        select: { id: true, role: true },
+      });
+      if (!assignee || !(STAFF_ROLES as readonly string[]).includes(assignee.role)) {
+        throw new BadRequestException('المسنِد له يجب أن يكون من الفريق');
+      }
+    }
+
+    const updated = await this.prisma.conversation.update({
+      where: { id },
+      data: {
+        ...(dto.status ? { status: dto.status } : {}),
+        ...(dto.priority ? { priority: dto.priority } : {}),
+        ...(dto.assignedToId !== undefined ? { assignedToId: dto.assignedToId } : {}),
+        ...(dto.staffNote !== undefined ? { staffNote: dto.staffNote } : {}),
+      },
+      include: {
+        assignedTo: { select: { id: true, name: true } },
+      },
+    });
+
+    // إسناد أول موظف يردّ تلقائياً إن لم يُسند من قبل
+    if (isStaffUser(staff) && !dto.assignedToId) {
+      await this.prisma.conversation.updateMany({
+        where: { id, assignedToId: null },
+        data: { assignedToId: staff.id },
+      });
+    }
+
+    return updated;
+  }
+
+  /// يسند المحادثة تلقائياً لأول موظف يفتحها — لعرض «متابَعة بواسطتي»
+  async claim(staff: AuthUser, id: string) {
+    if (!isStaffUser(staff)) throw new ForbiddenException('خاص بفريق الدعم');
+    await this.assertAccess(staff, id);
+    const updated = await this.prisma.conversation.update({
+      where: { id },
+      data: { assignedToId: staff.id },
+      include: { assignedTo: { select: { id: true, name: true } } },
+    });
+    return updated;
   }
 
   async openForBooking(user: AuthUser, bookingId: string) {
@@ -186,7 +389,7 @@ export class ConversationsService {
     if (staffId === user.id) throw new BadRequestException('لا يمكنك مراسلة نفسك');
 
     const existing = await this.prisma.conversation.findFirst({
-      where: { guestUserId: user.id, propertyId },
+      where: { guestUserId: user.id, propertyId, kind: ConversationKind.BOOKING },
     });
     if (existing) {
       await this.prisma.conversationParticipant.upsert({

@@ -30,7 +30,10 @@ class Property {
   factory Property.fromJson(Map<String, dynamic> json) {
     final city = json['city'] as Map<String, dynamic>?;
     final media = json['media'] as List<dynamic>? ?? [];
-    final firstImage = media.cast<Map<String, dynamic>?>().whereType<Map<String, dynamic>>().cast<Map<String, dynamic>>();
+    final firstImage = media
+        .cast<Map<String, dynamic>?>()
+        .whereType<Map<String, dynamic>>()
+        .cast<Map<String, dynamic>>();
     return Property(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -40,19 +43,22 @@ class Property {
           : num.tryParse('${json['pricePerDay']}') ?? 0,
       priceMorningShift: json['priceMorningShift'] != null
           ? (json['priceMorningShift'] is num
-              ? json['priceMorningShift'] as num
-              : num.tryParse('${json['priceMorningShift']}'))
+                ? json['priceMorningShift'] as num
+                : num.tryParse('${json['priceMorningShift']}'))
           : null,
       priceEveningShift: json['priceEveningShift'] != null
           ? (json['priceEveningShift'] is num
-              ? json['priceEveningShift'] as num
-              : num.tryParse('${json['priceEveningShift']}'))
+                ? json['priceEveningShift'] as num
+                : num.tryParse('${json['priceEveningShift']}'))
           : null,
       capacity: json['capacity'] as int? ?? 0,
       description: json['description'] as String? ?? '',
       cityName: city?['nameAr'] as String?,
-      provinceName: (city?['province'] as Map<String, dynamic>?)?['nameAr'] as String?,
-      amenities: (json['amenities'] as List<dynamic>? ?? []).map((e) => '$e').toList(),
+      provinceName:
+          (city?['province'] as Map<String, dynamic>?)?['nameAr'] as String?,
+      amenities: (json['amenities'] as List<dynamic>? ?? [])
+          .map((e) => '$e')
+          .toList(),
       imageUrl: firstImage.isEmpty ? null : firstImage.first['url'] as String?,
     );
   }

@@ -3,6 +3,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Header,
   Param,
@@ -16,14 +17,15 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import { diskStorage } from 'multer';
 import { existsSync, mkdirSync } from 'fs';
 import { extname, join } from 'path';
 import { randomUUID } from 'node:crypto';
 import { interval, map, merge, Observable } from 'rxjs';
+import { ConversationPriority, ConversationStatus } from '@prisma/client';
 import { AuthUser, CurrentUser } from '../../common/decorators/current-user.decorator';
-import { ConversationsService } from './conversations.service';
+import { ConversationsService, isStaffUser } from './conversations.service';
 import { ChatEventsService } from './chat-events.service';
 
 class SendMessageDto {
@@ -45,6 +47,25 @@ class OpenBookingDto {
 class OpenPropertyDto {
   @IsString()
   propertyId!: string;
+}
+
+class UpdateOpsDto {
+  @IsOptional()
+  @IsEnum(ConversationStatus)
+  status?: ConversationStatus;
+
+  @IsOptional()
+  @IsEnum(ConversationPriority)
+  priority?: ConversationPriority;
+
+  @IsOptional()
+  @IsString()
+  assignedToId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  staffNote?: string;
 }
 
 function messageStorage() {
@@ -72,6 +93,29 @@ export class ConversationsController {
   @Get()
   list(@CurrentUser() user: AuthUser) {
     return this.conversations.list(user);
+  }
+
+  /// طابور فريق الدعم — تصفية بالحالة والإسناد والبحث (موظفون فقط)
+  @Get('queue')
+  queue(@CurrentUser() user: AuthUser, @Query() query: Record<string, string | undefined>) {
+    if (!isStaffUser(user)) throw new ForbiddenException('خاص بفريق الدعم');
+    return this.conversations.listForStaff(query);
+  }
+
+  /// تحديث حالة/إسناد/أولوية/ملاحظة — أساس تطبيق الموظفين
+  @Patch(':id/ops')
+  updateOps(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateOpsDto,
+  ) {
+    return this.conversations.updateOps(user, id, dto);
+  }
+
+  /// «أنا أتولّاها» — إسناد فوري للموظف الحالي
+  @Post(':id/claim')
+  claim(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.conversations.claim(user, id);
   }
 
   @Get('unread')

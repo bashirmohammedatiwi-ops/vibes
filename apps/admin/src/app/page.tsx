@@ -117,11 +117,19 @@ function buildInbox(stats: DashboardStats): InboxItem[] {
     },
     {
       key: "support",
-      label: "دردشات دعم هذا الأسبوع",
+      label: "محادثات بانتظار ردك",
       value: stats.pendingSupport ?? 0,
-      href: "/conversations?kind=SUPPORT",
+      href: "/conversations?status=OPEN",
       urgent: (stats.pendingSupport ?? 0) > 0,
-      hint: "رد على العملاء من صندوق المحادثات",
+      hint: "رسالة عميل بلا رد — افتح المحادثة ورد",
+    },
+    {
+      key: "missedCalls",
+      label: "مكالمات فائتة اليوم",
+      value: stats.missedCallsToday ?? 0,
+      href: "/conversations?status=PENDING",
+      urgent: (stats.missedCallsToday ?? 0) > 2,
+      hint: "عميل حاول الاتصال ولم يُرد — تواصل معه",
     },
     {
       key: "notifications",
