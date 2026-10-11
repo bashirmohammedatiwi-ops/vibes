@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../core/session.dart';
 import '../core/theme.dart';
+import '../core/net_image.dart';
 
 class ContactAvatar extends StatelessWidget {
   const ContactAvatar({super.key, required this.name, this.phone, this.size = 52, this.unread = 0});
@@ -228,7 +229,7 @@ class MessageBubble extends StatelessWidget {
             if (kind == 'IMAGE' && imageUrl != null && imageUrl.isNotEmpty)
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: Image.network(imageUrl, height: 180, width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined)),
+                child: staffNetworkImage(imageUrl, height: 180, width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined)),
               ),
             if (body.isNotEmpty)
               Padding(

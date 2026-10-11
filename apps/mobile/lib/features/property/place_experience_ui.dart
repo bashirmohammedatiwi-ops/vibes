@@ -1525,7 +1525,8 @@ class PlaceShiftSelector extends StatelessWidget {
           property.priceEveningShift,
           ShiftType.evening,
         ),
-        _shiftChip('يوم كامل', null, property.pricePerDay, ShiftType.full),
+        if (property.supportsFullDay)
+          _shiftChip('يوم كامل', null, property.pricePerDay, ShiftType.full),
       ],
     );
   }

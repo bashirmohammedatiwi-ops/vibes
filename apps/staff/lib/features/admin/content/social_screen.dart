@@ -7,6 +7,7 @@ import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
 import '../../../widgets/ui.dart';
 import 'content_common.dart';
+import '../../../core/net_image.dart';
 
 String socialStatusLabel(String? s) => switch (s) {
       'PUBLISHED' => 'منشور',
@@ -469,7 +470,7 @@ class _SocialPostDetailScreenState extends State<SocialPostDetailScreen> {
           body: Center(
             child: InteractiveViewer(
               maxScale: 5,
-              child: Image.network(resolved, fit: BoxFit.contain),
+              child: staffNetworkImage(resolved, fit: BoxFit.contain),
             ),
           ),
         ),

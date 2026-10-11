@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api.dart';
 import '../../core/format.dart';
+import '../../core/net_image.dart';
 import '../../core/session.dart';
 import '../../core/theme.dart';
 import '../../widgets/form_kit.dart';
@@ -170,15 +171,22 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     return RefreshIndicator(
       onRefresh: () => _load(silent: true),
       child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           SliverAppBar(
             pinned: true,
-            expandedHeight: 270,
             backgroundColor: placePaper,
             foregroundColor: placeInk,
+            surfaceTintColor: Colors.transparent,
+            title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
             leading: BackButton(onPressed: () => Navigator.of(context).pop(_changed)),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
+          ),
+          // المعرض داخل الصفحة (لا داخل الشريط المنهار) — السحب الأفقي للصور
+          // والعمودي للصفحة لا يتعارضان، والضغط يفتح عارضاً بملء الشاشة.
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 260,
+              child: Stack(
                 fit: StackFit.expand,
                 children: [
                   if (gallery.isEmpty)
@@ -192,41 +200,60 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       controller: _page,
                       itemCount: gallery.length,
                       onPageChanged: (i) => setState(() => _pageIndex = i),
-                      itemBuilder: (context, i) => NetImage(
-                        url: (gallery[i]['url'] ?? gallery[i]['thumbnailUrl'])?.toString(),
-                        radius: 0,
+                      itemBuilder: (context, i) => GestureDetector(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => _GalleryViewer(
+                              urls: [
+                                for (final m in gallery) (m['url'] ?? m['thumbnailUrl']).toString(),
+                              ],
+                              initial: i,
+                            ),
+                          ),
+                        ),
+                        child: NetImage(
+                          url: (gallery[i]['url'] ?? gallery[i]['thumbnailUrl'])?.toString(),
+                          radius: 0,
+                        ),
                       ),
                     ),
-                  const DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Color(0x66000000), Colors.transparent, Colors.transparent, Color(0x55000000)],
-                        stops: [0, 0.3, 0.7, 1],
-                      ),
-                    ),
-                  ),
                   if (gallery.length > 1)
                     Positioned(
-                      bottom: 12,
+                      bottom: 10,
                       left: 0,
                       right: 0,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          for (var i = 0; i < gallery.length && i < 12; i++)
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 180),
-                              margin: const EdgeInsets.symmetric(horizontal: 2.5),
-                              width: i == _pageIndex ? 18 : 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                color: i == _pageIndex ? Colors.white : Colors.white54,
-                                borderRadius: BorderRadius.circular(3),
+                      child: IgnorePointer(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            for (var i = 0; i < gallery.length && i < 12; i++)
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                                width: i == _pageIndex ? 18 : 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: i == _pageIndex ? Colors.white : Colors.white54,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (gallery.isNotEmpty)
+                    Positioned(
+                      top: 10,
+                      left: 10,
+                      child: IgnorePointer(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                          decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(999)),
+                          child: Text(
+                            '${_pageIndex + 1}/${gallery.length}',
+                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800),
+                          ),
+                        ),
                       ),
                     ),
                 ],
@@ -499,6 +526,60 @@ class _InfoRow extends StatelessWidget {
           child: Text(value, style: const TextStyle(color: placeInk, fontWeight: FontWeight.w800, fontSize: 13.5)),
         ),
       ],
+    );
+  }
+}
+
+/// عارض الصور بملء الشاشة: سحب بين الصور وتكبير بإصبعين.
+class _GalleryViewer extends StatefulWidget {
+  const _GalleryViewer({required this.urls, required this.initial});
+
+  final List<String> urls;
+  final int initial;
+
+  @override
+  State<_GalleryViewer> createState() => _GalleryViewerState();
+}
+
+class _GalleryViewerState extends State<_GalleryViewer> {
+  late final _controller = PageController(initialPage: widget.initial);
+  late int _index = widget.initial;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text('${_index + 1} / ${widget.urls.length}'),
+      ),
+      body: PageView.builder(
+        controller: _controller,
+        itemCount: widget.urls.length,
+        onPageChanged: (i) => setState(() => _index = i),
+        itemBuilder: (context, i) => InteractiveViewer(
+          minScale: 1,
+          maxScale: 4,
+          child: Center(
+            child: staffNetworkImage(
+              widget.urls[i],
+              fit: BoxFit.contain,
+              px: 1440,
+              loadingBuilder: (context, child, progress) => progress == null
+                  ? child
+                  : const Center(child: CircularProgressIndicator(color: Colors.white54, strokeWidth: 2)),
+              errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.white54, size: 48),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

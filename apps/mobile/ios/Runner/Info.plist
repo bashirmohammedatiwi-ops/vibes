@@ -7,15 +7,13 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Vibes</string>
+	<string>VIBES</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>نحتاج الميكروفون للاتصال بالموظف داخل التطبيق</string>
 	<key>CFBundleName</key>
 	<string>vibes</string>
 	<key>CFBundlePackageType</key>
@@ -26,8 +24,36 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>comgooglemaps</string>
+		<string>waze</string>
+		<string>whatsapp</string>
+		<string>tel</string>
+		<string>sms</string>
+		<string>maps</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>يستخدم VIBES الكاميرا لتصوير إيصال الدفع ومشاركة صور تجربتك.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>يستخدم VIBES موقعك لعرض الأماكن القريبة منك.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>نحتاج الميكروفون للاتصال بالموظف داخل التطبيق</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>يحفظ VIBES الفواتير والصور في مكتبة صورك عند طلبك.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>يستخدم VIBES صورك لإرفاق إيصال الدفع ومشاركة صور تجربتك.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -58,24 +84,7 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<!-- المرحلة الحالية: مكالمات LiveKit عبر ws://IP:6002 (بدون دومين/شهادة).
-		     ATS لا يدعم استثناء نطاق لعناوين IP حرفياً (NSExceptionDomains
-		     لأسماء نطاقات فقط)، لذا نسمح مؤقتاً بالحمولات غير المشفرة مع
-		     منع الوصول للشبكة المحلية. عند الانتقال إلى wss://rtc.example.com
-		     احذف NSAllowsArbitraryLoads بالكامل واستبدله بـ:
-		     <dict><key>NSAllowsLocalNetworking</key><true/></dict> -->
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>يستخدم VIBES موقعك لعرض الأماكن القريبة منك.</string>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

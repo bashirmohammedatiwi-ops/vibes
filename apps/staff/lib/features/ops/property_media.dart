@@ -11,6 +11,7 @@ import '../../core/session.dart';
 import '../../core/theme.dart';
 import '../../widgets/form_kit.dart';
 import '../../widgets/ui.dart';
+import '../../core/net_image.dart';
 
 /// مدير وسائط المكان: صور، فيديو، ريلز (استكشف)، وصور 360°.
 /// رفع متتابع بشريط تقدّم، سحب لإعادة الترتيب، غلاف، وصف، حذف، وإعادة معالجة الفيديو.
@@ -838,7 +839,7 @@ class _ImagePreview extends StatelessWidget {
               minScale: 1,
               maxScale: 5,
               child: Center(
-                child: Image.network(
+                child: staffNetworkImage(
                   url!,
                   fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) =>

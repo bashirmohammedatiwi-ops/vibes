@@ -72,6 +72,13 @@ class QuoteBookingBody {
   @IsOptional()
   @IsString()
   couponCode?: string;
+
+  // يرسله التطبيق مع كل تسعير — لا يغيّر السعر، لكن رفضه كان يُفشل التسعير كله
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  guests?: number;
 }
 
 class UpdateBookingStatusDto {

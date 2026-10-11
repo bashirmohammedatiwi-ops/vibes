@@ -250,6 +250,8 @@ class _ShiftOptions extends StatelessWidget {
     // «اليوم الكامل» يظهر فقط إن كان للمكان شفتات أصلاً.
     final visible = property.supportsShifts
         ? options
+              .where((o) => o.$1 != ShiftType.full || property.supportsFullDay)
+              .toList()
         : options.where((o) => o.$1 == ShiftType.full).toList();
 
     return Column(

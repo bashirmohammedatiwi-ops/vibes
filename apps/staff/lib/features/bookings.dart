@@ -10,6 +10,7 @@ import '../widgets/chat_ui.dart';
 import '../widgets/ui.dart';
 import 'chat_room.dart';
 import 'ops/ops_booking_detail.dart';
+import '../core/net_image.dart';
 
 class BookingsScreen extends StatefulWidget {
   const BookingsScreen({super.key, this.embedded = false});
@@ -226,7 +227,7 @@ class _BookingCard extends StatelessWidget {
               actions: [IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close))],
             ),
             InteractiveViewer(
-              child: Image.network(
+              child: staffNetworkImage(
                 full,
                 fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => const Padding(

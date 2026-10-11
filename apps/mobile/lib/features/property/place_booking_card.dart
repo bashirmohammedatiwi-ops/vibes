@@ -16,6 +16,7 @@ import 'place_booking_sheets.dart';
 import 'place_booking_wizard.dart';
 import '../booking/booking_providers.dart';
 import '../booking/booking_date_picker.dart';
+import '../../shared/widgets/maison_chrome.dart';
 
 /// بطاقة الحجز — تدفق عملي: فترة → ضيوف → تاريخ، ثم تعديل سهل لأي بند.
 class PlaceBookingCard extends ConsumerStatefulWidget {
@@ -56,12 +57,17 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
   void initState() {
     super.initState();
     _shift = widget.initialShift ?? ShiftType.full;
+    // مكان بالشفتات فقط لا يقبل «يوم كامل» — الافتراضي صباحي
+    if (_shift == ShiftType.full && !widget.property.supportsFullDay) {
+      _shift = ShiftType.morning;
+    }
     if (widget.initialShift == null && widget.property.supportsShifts) {
       final avail = computeShiftAvailability(widget.dayPrices);
       ShiftType? cheapest;
       num? cheapestPrice;
       for (final s in [ShiftType.morning, ShiftType.evening, ShiftType.full]) {
         if (!avail[s]!.isAvailable) continue;
+        if (s == ShiftType.full && !widget.property.supportsFullDay) continue;
         final price = switch (s) {
           ShiftType.morning => widget.property.priceMorningShift ?? 0,
           ShiftType.evening => widget.property.priceEveningShift ?? 0,
@@ -147,11 +153,13 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
         _quote = data;
         _quoting = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
         _quoting = false;
-        _quoteError = 'تعذر حساب السعر — حاول مجدداً';
+        // رسالة الخادم أوضح (موعد محجوز، شفت غير متاح…) من رسالة عامة
+        final msg = maisonError(e);
+        _quoteError = msg.trim().isEmpty ? 'تعذر حساب السعر — حاول مجدداً' : msg;
       });
     }
   }

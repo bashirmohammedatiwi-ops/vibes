@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/theme.dart';
+import '../core/net_image.dart';
 
 /// أدوات واجهة مشتركة لشاشات إدارة الأماكن (نموذج، وسائط، تسعير).
 
@@ -110,24 +111,13 @@ class NetImage extends StatelessWidget {
       borderRadius: BorderRadius.circular(radius),
       child: (u == null || u.isEmpty)
           ? placeholder
-          : Image.network(
-              u,
+          : StaffSizedImage(
+              url: u,
               fit: fit,
-              width: double.infinity,
-              height: double.infinity,
-              gaplessPlayback: true,
               errorBuilder: (_, __, ___) => placeholder,
               loadingBuilder: (context, child, progress) {
                 if (progress == null) return child;
-                return Container(
-                  color: placeInk.withValues(alpha: 0.04),
-                  alignment: Alignment.center,
-                  child: const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: placeBrass),
-                  ),
-                );
+                return Container(color: placeInk.withValues(alpha: 0.04));
               },
             ),
     );

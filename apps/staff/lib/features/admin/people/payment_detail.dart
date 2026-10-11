@@ -8,6 +8,7 @@ import '../../../core/theme.dart';
 import '../../../widgets/form_kit.dart';
 import '../../ops/ops_booking_detail.dart';
 import 'people_common.dart';
+import '../../../core/net_image.dart';
 
 /// تفاصيل دفعة: الإثبات (تكبير)، الاعتماد/الرفض، تغيير الحالة، الاسترداد، رفع إثبات.
 class AdminPaymentDetailScreen extends StatefulWidget {
@@ -431,7 +432,7 @@ class _ProofViewerState extends State<ProofViewer> {
           child: Center(
             child: Hero(
               tag: widget.url,
-              child: Image.network(
+              child: staffNetworkImage(
                 widget.url,
                 fit: BoxFit.contain,
                 loadingBuilder: (context, child, progress) =>

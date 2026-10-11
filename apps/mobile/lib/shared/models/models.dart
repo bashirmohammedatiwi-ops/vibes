@@ -397,6 +397,9 @@ class Property {
     return null;
   }
 
+  /// يقبل الحجز ليوم كامل؟ (المكان بالشفتات فقط لا يقبله — الخادم يرفضه)
+  bool get supportsFullDay => bookingMode != BookingMode.shifts;
+
   bool get supportsShifts {
     if (bookingMode != null) {
       return bookingMode == BookingMode.shifts ||
