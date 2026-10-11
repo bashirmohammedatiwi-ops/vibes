@@ -9,6 +9,7 @@ import 'package:vibes/core/theme/world_theme.dart';
 import 'package:vibes/features/auth/auth_controller.dart';
 import 'package:vibes/features/chat/incoming_call.dart';
 import 'package:vibes/features/home/home_sections.dart';
+import '../core/network/data_healer.dart';
 
 /// سلوك تمرير التطبيق — بلا أشرطة تمرير نظام تشوه الواجهة:
 /// لمس مرن (iOS-style stretch) على كل المنصات.
@@ -85,7 +86,8 @@ class VibesApp extends ConsumerWidget {
       builder: (context, child) {
         return Stack(
           children: [
-            child ?? const SizedBox.shrink(),
+            // يعيد تحميل أي قسم فشل جلبه (أول فتح، انقطاع شبكة، عودة للتطبيق)
+            DataHealer(child: child ?? const SizedBox.shrink()),
             // غطاء المكالمة الواردة فوق أي شاشة — بلا سياق تنقل خاص
             const Positioned.fill(child: IncomingCallSheet()),
           ],

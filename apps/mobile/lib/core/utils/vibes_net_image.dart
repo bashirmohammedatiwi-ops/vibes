@@ -111,10 +111,37 @@ class VibesNetImage extends StatefulWidget {
 class _VibesNetImageState extends State<VibesNetImage> {
   bool _original = false;
 
+  /// محاولات إعادة التحميل بعد الفشل (شبكة أول فتح أو انقطاع لحظي).
+  int _attempt = 0;
+  bool _retryScheduled = false;
+
+  void _scheduleRetry() {
+    if (_retryScheduled || _attempt >= 3) return;
+    _retryScheduled = true;
+    final wait = Duration(milliseconds: 900 * (1 << _attempt));
+    Future<void>.delayed(wait, () async {
+      if (!mounted) return;
+      // امسح نسخة الفشل من ذاكرة الصور ثم أعد الطلب بمفتاح جديد
+      await CachedNetworkImage.evictFromCache(
+        widget.url,
+        cacheManager: VibesNetImage.cache,
+      );
+      if (!mounted) return;
+      setState(() {
+        _attempt++;
+        _retryScheduled = false;
+        _original = false; // ابدأ من النسخة المصغّرة مجدداً
+      });
+    });
+  }
+
   @override
   void didUpdateWidget(covariant VibesNetImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.url != widget.url) _original = false;
+    if (oldWidget.url != widget.url) {
+      _original = false;
+      _attempt = 0;
+    }
   }
 
   @override
@@ -135,6 +162,7 @@ class _VibesNetImageState extends State<VibesNetImage> {
         final cacheW = widget.memCacheWidth ?? bucket;
 
         return CachedNetworkImage(
+          key: ValueKey('$request#$_attempt'),
           imageUrl: request,
           cacheManager: VibesNetImage.cache,
           width: widget.width,
@@ -153,6 +181,8 @@ class _VibesNetImageState extends State<VibesNetImage> {
               });
               return const ColoredBox(color: Color(0xFFF3F0EA));
             }
+            // الأصل فشل أيضاً — أعد المحاولة لاحقاً بدل البقاء فارغة
+            _scheduleRetry();
             return widget.fallback ??
                 ColoredBox(
                   color: VibesTheme.surfaceHighOf(context),

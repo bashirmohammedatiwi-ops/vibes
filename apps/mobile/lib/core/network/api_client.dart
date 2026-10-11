@@ -50,7 +50,7 @@ class ApiClient {
     dio = Dio(
       BaseOptions(
         baseUrl: ApiConstants.baseUrl,
-        connectTimeout: const Duration(seconds: 8),
+        connectTimeout: const Duration(seconds: 12),
         receiveTimeout: const Duration(seconds: 15),
         sendTimeout: const Duration(seconds: 60),
         validateStatus: (_) => true, // نعالج الحالات يدوياً لرسائل أدق
@@ -226,15 +226,38 @@ class ApiClient {
 
   // ── الواجهة العامة ──
 
+  /// طلبات القراءة تُعاد تلقائياً عند الأعطال العابرة (انقطاع، مهلة، 5xx/429):
+  /// أول فتح على iOS تُهيّأ فيه الشبكة وتظهر نوافذ الأذونات بالتزامن مع
+  /// عشرات الطلبات، فيفشل بعضها مؤقتاً — والمحاولة الثانية تنجح.
   Future<dynamic> get(
     String path, {
     Map<String, dynamic>? queryParameters,
   }) async {
-    try {
-      final res = await dio.get(path, queryParameters: queryParameters);
-      return _unwrap(res);
-    } on DioException catch (e) {
-      throw _surface(e);
+    const delays = [Duration(milliseconds: 700), Duration(milliseconds: 1800)];
+    for (var attempt = 0; ; attempt++) {
+      try {
+        final res = await dio.get(path, queryParameters: queryParameters);
+        final code = res.statusCode ?? 0;
+        final transient =
+            code == 429 || code == 502 || code == 503 || code == 504;
+        if (transient && attempt < delays.length) {
+          await Future<void>.delayed(delays[attempt]);
+          continue;
+        }
+        return _unwrap(res);
+      } on DioException catch (e) {
+        final transient =
+            e.type == DioExceptionType.connectionTimeout ||
+            e.type == DioExceptionType.receiveTimeout ||
+            e.type == DioExceptionType.sendTimeout ||
+            e.type == DioExceptionType.connectionError ||
+            e.type == DioExceptionType.unknown;
+        if (transient && attempt < delays.length) {
+          await Future<void>.delayed(delays[attempt]);
+          continue;
+        }
+        throw _surface(e);
+      }
     }
   }
 
