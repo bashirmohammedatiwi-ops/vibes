@@ -1,2 +1,2 @@
 /// يُحدَّث مع كل نشر — يظهر في «حسابي» للتأكد من التثبيت على الهاتف.
-const staffAppVersionLabel = '2.1.1+23';
+const staffAppVersionLabel = '2.1.1+24';
