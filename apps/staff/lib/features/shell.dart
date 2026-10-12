@@ -74,6 +74,8 @@ class _OfficeShellState extends State<OfficeShell> with WidgetsBindingObserver {
     _session = Timer.periodic(const Duration(seconds: 60), (_) => _refreshSession());
     _beat();
     _loadBadges();
+    // iOS: إذن الإشعارات بعد الدخول (لرنين المكالمات وتنبيهات الرسائل)
+    StaffNotifications.requestIosPermission().catchError((_) {});
   }
 
   @override

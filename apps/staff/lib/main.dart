@@ -12,8 +12,13 @@ final staffNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('ar');
-  await StaffNotifications.init();
+  // خطوات الإقلاع محمية: فشل أيٍّ منها لا يمنع فتح التطبيق أبداً
+  try {
+    await initializeDateFormatting('ar');
+  } catch (_) {}
+  try {
+    await StaffNotifications.init().timeout(const Duration(seconds: 4));
+  } catch (_) {}
   Session.onUnauthorized = () {
     staffNavigatorKey.currentState?.pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -41,7 +46,10 @@ class StaffApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      builder: (context, child) => Directionality(textDirection: TextDirection.rtl, child: child ?? const SizedBox()),
+      builder: (context, child) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: child ?? const SizedBox(),
+      ),
       home: const Gate(),
     );
   }
