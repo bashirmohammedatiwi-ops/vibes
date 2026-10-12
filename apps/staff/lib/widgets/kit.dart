@@ -10,6 +10,13 @@ import '../core/theme.dart';
 /// ═══════════════════════════════════════════════════════════
 
 /// صفحة قياسية: رأس كبير يصغر عند التمرير + محتوى + سحب للتحديث.
+///
+/// نمطان للرأس:
+///  • «علامة» (brand) — لصفحات التبويبات الرئيسية: تدرّج كحلي بزخرفة ذهبية،
+///    عنوان أبيض كبير، أزرار في دوائر زجاجية، ويبدأ المحتوى بحافة مستديرة.
+///  • «فاتح» — للصفحات الفرعية: رأس أبيض نظيف، زر رجوع واضح، وخط فاصل
+///    رفيع يظهر عند التمرير.
+/// الافتراضي: علامة إن لم يمكن الرجوع (صفحة تبويب)، وفاتح لما عداها.
 class StaffPage extends StatelessWidget {
   const StaffPage({
     super.key,
@@ -22,6 +29,7 @@ class StaffPage extends StatelessWidget {
     this.leading,
     this.showBack,
     this.bottom,
+    this.brand,
   });
 
   final String title;
@@ -36,77 +44,151 @@ class StaffPage extends StatelessWidget {
   final bool? showBack;
   final PreferredSizeWidget? bottom;
 
+  /// null = تلقائي (علامة لصفحات التبويب).
+  final bool? brand;
+
   @override
   Widget build(BuildContext context) {
     final canPop = showBack ?? Navigator.of(context).canPop();
+    final isBrand = brand ?? !canPop;
+    final bottomH = bottom?.preferredSize.height ?? 0;
+    final expanded = (isBrand ? 132.0 : 112.0) + (subtitle == null ? 0 : 18);
+    const collapsed = 60.0;
+    final fg = isBrand ? Colors.white : placeInk;
+
+    Widget? backButton;
+    if (leading != null) {
+      backButton = leading;
+    } else if (canPop) {
+      backButton = Padding(
+        padding: const EdgeInsetsDirectional.only(start: 10),
+        child: Center(
+          child: _HeaderButton(
+            brand: isBrand,
+            icon: Icons.arrow_back_rounded,
+            tooltip: 'رجوع',
+            onTap: () => Navigator.of(context).maybePop(),
+          ),
+        ),
+      );
+    }
+
     final scroll = CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       slivers: [
         SliverAppBar(
           pinned: true,
-          expandedHeight: subtitle == null ? 108 : 124,
-          collapsedHeight: 60,
-          automaticallyImplyLeading: canPop,
-          leading: leading,
-          actions: [...actions, const SizedBox(width: 8)],
+          expandedHeight: expanded,
+          collapsedHeight: collapsed,
+          toolbarHeight: collapsed,
+          backgroundColor: isBrand ? placeNavy : Colors.white,
+          foregroundColor: fg,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          automaticallyImplyLeading: false,
+          leading: backButton,
+          leadingWidth: backButton == null ? 0 : 58,
+          systemOverlayStyle: (isBrand ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
+              .copyWith(statusBarColor: Colors.transparent),
+          actionsIconTheme: IconThemeData(color: fg, size: 22),
+          iconTheme: IconThemeData(color: fg),
+          actions: [
+            for (final a in actions)
+              Padding(
+                padding: const EdgeInsetsDirectional.only(end: 6),
+                child: Center(child: _HeaderActionFrame(brand: isBrand, child: a)),
+              ),
+            const SizedBox(width: 8),
+          ],
           bottom: bottom,
           flexibleSpace: LayoutBuilder(
             builder: (context, c) {
               final top = MediaQuery.paddingOf(context).top;
-              final minH = 60 + top + (bottom?.preferredSize.height ?? 0);
-              final maxH = (subtitle == null ? 108 : 124) + top + (bottom?.preferredSize.height ?? 0);
+              final minH = collapsed + top + bottomH;
+              final maxH = expanded + top + bottomH;
               final t = ((c.maxHeight - minH) / (maxH - minH)).clamp(0.0, 1.0);
               return Stack(
+                fit: StackFit.expand,
                 children: [
-                  // العنوان الكبير — يتلاشى عند التمرير
+                  if (isBrand) const _BrandBackdrop() else _LightBackdrop(collapsed: t < .05),
+                  // العنوان الكبير — يتلاشى ويصعد قليلاً عند التمرير
                   PositionedDirectional(
-                    start: StaffSpace.page,
+                    start: StaffSpace.page + 2,
                     end: StaffSpace.page,
-                    bottom: 10 + (bottom?.preferredSize.height ?? 0),
+                    bottom: (isBrand ? 26 : 12) + bottomH,
                     child: Opacity(
-                      opacity: t,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 26, fontWeight: FontWeight.w900, color: placeInk, height: 1.2),
-                          ),
-                          if (subtitle != null)
+                      opacity: Curves.easeOut.transform(t),
+                      child: Transform.translate(
+                        offset: Offset(0, 8 * (1 - t)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                             Text(
-                              subtitle!,
+                              title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.w600, color: placeInk2),
+                              style: TextStyle(fontFamily: 'Cairo', fontSize: isBrand ? 27 : 25, fontWeight: FontWeight.w900, color: fg, height: 1.2),
                             ),
-                        ],
+                            if (subtitle != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  subtitle!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: isBrand ? Colors.white.withValues(alpha: .72) : placeInk2,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                   // العنوان الصغير — يظهر عند الطي
                   PositionedDirectional(
-                    start: canPop || leading != null ? 56 : StaffSpace.page,
-                    end: 56.0 * actions.length + 16,
+                    start: backButton != null ? 68 : StaffSpace.page + 2,
+                    end: 52.0 * actions.length + 16,
                     top: top,
-                    height: 60,
+                    height: collapsed,
                     child: IgnorePointer(
                       child: Opacity(
-                        opacity: 1 - t,
+                        opacity: (1 - t * 1.6).clamp(0.0, 1.0),
                         child: Align(
                           alignment: AlignmentDirectional.centerStart,
                           child: Text(
                             title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.w900, color: placeInk),
+                            style: TextStyle(fontFamily: 'Cairo', fontSize: 17, fontWeight: FontWeight.w900, color: fg),
                           ),
                         ),
                       ),
                     ),
                   ),
+                  // حافة المحتوى المستديرة تحت رأس العلامة
+                  if (isBrand)
+                    PositionedDirectional(
+                      start: 0,
+                      end: 0,
+                      bottom: bottomH - 1,
+                      height: 18,
+                      child: Opacity(
+                        opacity: t,
+                        child: const DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: placePaper,
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(StaffRadius.xl)),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               );
             },
@@ -120,7 +202,151 @@ class StaffPage extends StatelessWidget {
       floatingActionButton: floatingActionButton,
       body: onRefresh == null
           ? scroll
-          : RefreshIndicator(color: placeGold, onRefresh: onRefresh!, child: scroll),
+          : RefreshIndicator(
+              color: placeGold,
+              edgeOffset: MediaQuery.paddingOf(context).top + collapsed,
+              onRefresh: onRefresh!,
+              child: scroll,
+            ),
+    );
+  }
+}
+
+/// خلفية رأس العلامة: تدرّج كحلي مع دوائر ذهبية خافتة.
+class _BrandBackdrop extends StatelessWidget {
+  const _BrandBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
+          colors: [Color(0xFF1E3A5C), placeNavy, Color(0xFF0C1828)],
+          stops: [0, .55, 1],
+        ),
+      ),
+      child: ClipRect(
+        child: Stack(
+          children: [
+            PositionedDirectional(
+              end: -60,
+              top: -70,
+              child: Container(
+                width: 220,
+                height: 220,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(colors: [placeGold.withValues(alpha: .28), placeGold.withValues(alpha: 0)]),
+                ),
+              ),
+            ),
+            PositionedDirectional(
+              end: 40,
+              top: 18,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: placeGold.withValues(alpha: .14), width: 1.2),
+                ),
+              ),
+            ),
+            PositionedDirectional(
+              start: -30,
+              bottom: -40,
+              child: Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withValues(alpha: .05), width: 1.2),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// خلفية الرأس الفاتح: بيضاء، وخط سفلي رفيع عند الطي.
+class _LightBackdrop extends StatelessWidget {
+  const _LightBackdrop({required this.collapsed});
+
+  final bool collapsed;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: collapsed ? placeLine : Colors.transparent)),
+      ),
+    );
+  }
+}
+
+/// زر دائري في الرأس (رجوع) — زجاجي على الكحلي، ومحدد على الأبيض.
+class _HeaderButton extends StatelessWidget {
+  const _HeaderButton({required this.brand, required this.icon, required this.onTap, this.tooltip});
+
+  final bool brand;
+  final IconData icon;
+  final VoidCallback onTap;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final box = Material(
+      color: brand ? Colors.white.withValues(alpha: .12) : placePaper,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(13),
+        side: BorderSide(color: brand ? Colors.white.withValues(alpha: .16) : placeLine),
+      ),
+      child: InkWell(
+        customBorder: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: SizedBox(
+          width: 42,
+          height: 42,
+          child: Icon(icon, size: 21, color: brand ? Colors.white : placeInk),
+        ),
+      ),
+    );
+    return tooltip == null ? box : Tooltip(message: tooltip!, child: box);
+  }
+}
+
+/// إطار موحّد لأزرار الإجراءات في الرأس (الأيقونات فقط تُؤطَّر).
+class _HeaderActionFrame extends StatelessWidget {
+  const _HeaderActionFrame({required this.brand, required this.child});
+
+  final bool brand;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (child is! IconButton) return child;
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: brand ? Colors.white.withValues(alpha: .12) : placePaper,
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: brand ? Colors.white.withValues(alpha: .16) : placeLine),
+      ),
+      child: IconTheme.merge(
+        data: IconThemeData(color: brand ? Colors.white : placeInk, size: 21),
+        child: Center(child: child),
+      ),
     );
   }
 }

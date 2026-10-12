@@ -110,12 +110,13 @@ ThemeData buildStaffTheme() {
       labelSmall: cairo.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: placeInk2),
     ),
     appBarTheme: AppBarTheme(
-      backgroundColor: placePaper,
+      // مطابق لرأس الصفحات الفرعية في StaffPage: أبيض بخط سفلي رفيع
+      backgroundColor: Colors.white,
       surfaceTintColor: Colors.transparent,
       foregroundColor: placeInk,
       elevation: 0,
-      scrolledUnderElevation: 0.5,
-      shadowColor: placeLine,
+      scrolledUnderElevation: 0,
+      shape: const Border(bottom: BorderSide(color: placeLine)),
       centerTitle: false,
       titleSpacing: 4,
       systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
