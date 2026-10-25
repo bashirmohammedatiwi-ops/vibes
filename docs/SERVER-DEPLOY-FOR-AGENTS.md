@@ -42,9 +42,12 @@ git push -u origin HEAD
 | مفتاح SSH | `~/.ssh/vibes_vps` (BatchMode، بدون كلمة مرور) |
 | مسار المشروع على السيرفر | `/root/vibes` |
 | Compose | `docker-compose.prod.yml` |
-| API العام | `http://187.127.88.146:6001` |
-| Health | `http://187.127.88.146:6001/health` |
-| Admin | `http://187.127.88.146:6001/admin/` |
+| الدومين (الأساسي) | `https://vibesiraq.com` — API تحت `/api`، اللوحة `/admin`، الصور `/media`، المكالمات `wss://vibesiraq.com/rtc` |
+| Health | `https://vibesiraq.com/health` |
+| Admin | `https://vibesiraq.com/admin/` |
+| العنوان الاحتياطي | `http://187.127.88.146:6001` (يبقى شغالاً للنسخ القديمة) |
+| HTTPS | nginx مشترك `infra-nginx-1` (مشروع alhayaa) — ملف VIBES المستقل `/root/alhayaa/infra/nginx/vibes.conf` (نسخته في `docker/nginx/front/vibes.conf`). لا تعدّل `default.conf` الخاص بهم. بعد تعديل الملف: `docker cp` إلى الحاوية ثم `nginx -t && nginx -s reload` |
+| الشهادة | Let's Encrypt في volume `infra_certbot_certs` — تجديد أسبوعي عبر `/etc/cron.d/vibes-certbot` |
 
 ### أمر SSH الأساسي
 
