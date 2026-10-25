@@ -200,6 +200,8 @@ class Property {
     this.whatsapp,
     this.featured = false,
     this.isNew = false,
+    this.isWinter = false,
+    this.hasIndoorPool = false,
     this.status,
     this.ratingAvg = 0,
     this.ratingCount = 0,
@@ -242,6 +244,12 @@ class Property {
   final String? whatsapp;
   final bool featured;
   final bool isNew;
+
+  /// مزرعة شتوية (مناسبة للشتاء).
+  final bool isWinter;
+
+  /// تحتوي على مسبح مغلق.
+  final bool hasIndoorPool;
   final String? status;
   final num ratingAvg;
   final int ratingCount;
@@ -330,6 +338,8 @@ class Property {
       whatsapp: j['whatsapp'] as String?,
       featured: j['featured'] == true,
       isNew: j['isNew'] == true,
+      isWinter: j['isWinter'] == true,
+      hasIndoorPool: j['hasIndoorPool'] == true,
       status: j['status'] as String?,
       ratingAvg: _num(j['ratingAvg']),
       ratingCount: _num(j['ratingCount']).toInt(),

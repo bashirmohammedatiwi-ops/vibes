@@ -168,6 +168,8 @@ export type Property = {
   whatsapp?: string | null;
   featured: boolean;
   isNew?: boolean;
+  isWinter?: boolean;
+  hasIndoorPool?: boolean;
   amenities: string[];
   tags: string[];
   rules?: string | null;
@@ -253,6 +255,8 @@ export type PropertyFormData = {
   phone: string;
   whatsapp: string;
   featured: boolean;
+  isWinter: boolean;
+  hasIndoorPool: boolean;
   status: PropertyStatus;
   amenityIds: string[];
   tags: string;

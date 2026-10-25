@@ -139,6 +139,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         const _Reveal(order: 3, child: EditorsPicks()),
                         const _OccasionsSection(),
                         _WorldFade(builder: (s) => _NewArrivals(section: s)),
+                        _WorldFade(
+                          builder: (s) => s == HomeSection.farm
+                              ? const _WinterFarmsSection()
+                              : const SizedBox.shrink(),
+                        ),
                         const _CouponTicket(),
                         const _Band(child: TopRatedEditorial()),
                         const _SpotlightStrip(),
@@ -2392,14 +2397,39 @@ class _RailCard extends StatelessWidget {
                   fit: StackFit.expand,
                   children: [
                     _Cover(property: property),
-                    if (property.isNew)
-                      const PositionedDirectional(
+                    if (property.isNew ||
+                        property.isWinter ||
+                        property.hasIndoorPool)
+                      PositionedDirectional(
                         top: 12,
                         start: 12,
-                        child: _WhitePill(
-                          label: 'جديد',
-                          icon: Icons.fiber_new_rounded,
-                          iconColor: Color(0xFF0E9F6E),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (property.isNew)
+                              const _WhitePill(
+                                label: 'جديد',
+                                icon: Icons.fiber_new_rounded,
+                                iconColor: Color(0xFF0E9F6E),
+                              ),
+                            if (property.isWinter) ...[
+                              if (property.isNew) const SizedBox(height: 6),
+                              const _WhitePill(
+                                label: 'شتوية',
+                                icon: Icons.ac_unit_rounded,
+                                iconColor: Color(0xFF0284C7),
+                              ),
+                            ],
+                            if (property.hasIndoorPool) ...[
+                              if (property.isNew || property.isWinter)
+                                const SizedBox(height: 6),
+                              const _WhitePill(
+                                label: 'مسبح مغلق',
+                                icon: Icons.pool_rounded,
+                                iconColor: Color(0xFF0D9488),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                     PositionedDirectional(
@@ -2546,6 +2576,36 @@ class _NewArrivals extends ConsumerWidget {
         ),
         _Rail(items: fresh),
       ],
+    );
+  }
+}
+
+/// «مزارع شتوية» — تظهر في عالم المزارع فقط عند وجود مزارع مفعّل لها الخيار.
+class _WinterFarmsSection extends ConsumerWidget {
+  const _WinterFarmsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final all =
+        ref.watch(propertiesProvider(null)).valueOrNull ?? const <Property>[];
+    final winter = [
+      for (final p in all)
+        if (p.type == PropertyType.farm && p.isWinter) p,
+    ]..sort((a, b) => (b.hasIndoorPool ? 1 : 0) - (a.hasIndoorPool ? 1 : 0));
+    if (winter.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _Head(
+            'مزارع شتوية ❄️',
+            subtitle: 'دافئة ومجهّزة للشتاء — بعضها بمسبح مغلق',
+            onMore: () => context.push('/search?winter=true'),
+          ),
+          _Rail(items: winter.take(12).toList()),
+        ],
+      ),
     );
   }
 }

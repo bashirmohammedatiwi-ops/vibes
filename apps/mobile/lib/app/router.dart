@@ -237,6 +237,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           child: SearchScreen(
             initialType: state.uri.queryParameters['type'],
             initialProvince: state.uri.queryParameters['province'],
+            initialWinter: state.uri.queryParameters['winter'] == 'true',
+            initialIndoorPool:
+                state.uri.queryParameters['indoorPool'] == 'true',
           ),
         ),
       ),

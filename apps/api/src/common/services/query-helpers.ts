@@ -41,6 +41,8 @@ export class PropertyQueryBuilder {
     province?: string;
     featured?: string;
     isNew?: string;
+    winter?: string;
+    indoorPool?: string;
     source?: string;
     providerId?: string;
   }): PropertyWhere {
@@ -52,6 +54,8 @@ export class PropertyQueryBuilder {
     if (query.province) where.city = { province: { slug: query.province } };
     if (query.featured === 'true') where.featured = true;
     if (query.isNew === 'true') where.isNew = true;
+    if (query.winter === 'true') where.isWinter = true;
+    if (query.indoorPool === 'true') where.hasIndoorPool = true;
     if (query.providerId) where.providerId = query.providerId;
     if (query.source === 'provider') where.providerId = { not: null };
     if (query.source === 'team') where.providerId = null;

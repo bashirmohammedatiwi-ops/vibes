@@ -52,6 +52,8 @@ const listCardSelect = {
   status: true,
   featured: true,
   isNew: true,
+  isWinter: true,
+  hasIndoorPool: true,
   capacity: true,
   pricePerDay: true,
   ratingAvg: true,
@@ -155,6 +157,8 @@ export class PropertiesService {
     province?: string;
     featured?: string;
     isNew?: string;
+    winter?: string;
+    indoorPool?: string;
     page?: string;
     pageSize?: string;
     q?: string;

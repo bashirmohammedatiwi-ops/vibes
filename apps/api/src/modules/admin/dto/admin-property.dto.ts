@@ -141,6 +141,16 @@ export class AdminCreatePropertyDto {
   @IsBoolean()
   isNew?: boolean;
 
+  @ApiPropertyOptional({ description: 'مزرعة شتوية — تظهر في قسم المزارع الشتوية' })
+  @IsOptional()
+  @IsBoolean()
+  isWinter?: boolean;
+
+  @ApiPropertyOptional({ description: 'تحتوي على مسبح مغلق' })
+  @IsOptional()
+  @IsBoolean()
+  hasIndoorPool?: boolean;
+
   @ApiPropertyOptional({ enum: PropertyStatus })
   @IsOptional()
   @IsEnum(PropertyStatus)

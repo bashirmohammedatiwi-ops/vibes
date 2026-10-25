@@ -724,6 +724,24 @@ class _TitleBlock extends StatelessWidget {
                         color: Color(0xFF0E9F6E),
                       ),
                     ),
+                  if (p.isWinter)
+                    const _Tag(
+                      label: 'مزرعة شتوية',
+                      leading: Icon(
+                        Icons.ac_unit_rounded,
+                        size: 14,
+                        color: Color(0xFF0284C7),
+                      ),
+                    ),
+                  if (p.hasIndoorPool)
+                    const _Tag(
+                      label: 'مسبح مغلق',
+                      leading: Icon(
+                        Icons.pool_rounded,
+                        size: 14,
+                        color: Color(0xFF0D9488),
+                      ),
+                    ),
                   if (p.supportsShifts)
                     _Tag(
                       label: 'صباحي ومسائي',

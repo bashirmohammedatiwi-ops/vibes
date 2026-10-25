@@ -60,6 +60,8 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
   String _status = 'DRAFT';
   bool _featured = false;
   bool _isNew = false;
+  bool _isWinter = false;
+  bool _hasIndoorPool = false;
   final Set<String> _amenityIds = {};
   final List<String> _tags = [];
 
@@ -150,6 +152,8 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
     _status = p['status']?.toString() ?? 'DRAFT';
     _featured = p['featured'] == true;
     _isNew = p['isNew'] == true;
+    _isWinter = p['isWinter'] == true;
+    _hasIndoorPool = p['hasIndoorPool'] == true;
     final links = p['amenityLinks'];
     if (links is List) {
       for (final link in links) {
@@ -324,6 +328,9 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
       'whatsapp': opt(_whatsapp),
       'featured': _featured,
       'isNew': _isNew,
+      // خصائص المزارع فقط
+      'isWinter': _type == 'FARM' && _isWinter,
+      'hasIndoorPool': _type == 'FARM' && _hasIndoorPool,
       // لا نرسل الحالة إن لم تتغيّر: الموظف بلا صلاحية الاعتماد لا يستطيع إعادة إرسال «معتمد».
       if (!_isEdit || _status != widget.property?['status']?.toString()) 'status': _status,
       'amenityIds': _amenityIds.toList(),
@@ -1025,6 +1032,26 @@ class _PropertyEditorScreenState extends State<PropertyEditorScreen> {
             _dirty = true;
           }),
         ),
+        if (_type == 'FARM') ...[
+          ToggleRow(
+            title: '❄️ مزرعة شتوية',
+            subtitle: 'تظهر في قسم «مزارع شتوية» وفلتر البحث',
+            value: _isWinter,
+            onChanged: (v) => setState(() {
+              _isWinter = v;
+              _dirty = true;
+            }),
+          ),
+          ToggleRow(
+            title: '🏊 مسبح مغلق',
+            subtitle: 'مسبح داخلي أو مسقوف — شارة على المزرعة وفلتر في البحث',
+            value: _hasIndoorPool,
+            onChanged: (v) => setState(() {
+              _hasIndoorPool = v;
+              _dirty = true;
+            }),
+          ),
+        ],
       ],
     );
   }

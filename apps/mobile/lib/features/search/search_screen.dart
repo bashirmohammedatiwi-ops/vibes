@@ -36,7 +36,15 @@ class SearchFilters {
     this.minPrice = 0,
     this.maxPrice = 0,
     this.sort,
+    this.winter = false,
+    this.indoorPool = false,
   });
+
+  /// مزارع شتوية فقط.
+  bool winter;
+
+  /// مسبح مغلق فقط.
+  bool indoorPool;
 
   String? type;
   String? cityId;
@@ -53,7 +61,9 @@ class SearchFilters {
       capacity == 0 &&
       minPrice == 0 &&
       maxPrice == 0 &&
-      sort == null;
+      sort == null &&
+      !winter &&
+      !indoorPool;
 
   int get count => [
     type != null,
@@ -63,14 +73,24 @@ class SearchFilters {
     minPrice > 0,
     maxPrice > 0,
     sort != null,
+    winter,
+    indoorPool,
   ].where((b) => b).length;
 }
 
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key, this.initialType, this.initialProvince});
+  const SearchScreen({
+    super.key,
+    this.initialType,
+    this.initialProvince,
+    this.initialWinter = false,
+    this.initialIndoorPool = false,
+  });
 
   final String? initialType;
   final String? initialProvince;
+  final bool initialWinter;
+  final bool initialIndoorPool;
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -91,8 +111,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     super.initState();
     _query = TextEditingController();
     _filters = SearchFilters(
-      type: widget.initialType,
+      type: (widget.initialWinter || widget.initialIndoorPool)
+          ? 'FARM'
+          : widget.initialType,
       province: widget.initialProvince,
+      winter: widget.initialWinter,
+      indoorPool: widget.initialIndoorPool,
     );
     _loadSaved();
     _search();
@@ -149,7 +173,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
       if (q.isNotEmpty &&
           _filters.cityId == null &&
-          _filters.province == null) {
+          _filters.province == null &&
+          !_filters.winter &&
+          !_filters.indoorPool) {
         try {
           final data = await client.get(
             '/api/search',
@@ -176,6 +202,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           cityId: _filters.cityId,
           province: _filters.province,
           sort: _filters.sort,
+          winter: _filters.winter ? true : null,
+          indoorPool: _filters.indoorPool ? true : null,
           pageSize: 100,
         );
       }
@@ -190,6 +218,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         if (_filters.maxPrice > 0 && p.pricePerDay > _filters.maxPrice) {
           return false;
         }
+        if (_filters.winter && !p.isWinter) return false;
+        if (_filters.indoorPool && !p.hasIndoorPool) return false;
         return true;
       }).toList();
 
@@ -248,7 +278,25 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   void _setType(String? type) {
     HapticFeedback.selectionClick();
-    setState(() => _filters.type = type);
+    setState(() {
+      _filters.type = type;
+      // فلاتر المزارع فقط — تُلغى عند اختيار نوع آخر
+      if (type != null && type != 'FARM') {
+        _filters.winter = false;
+        _filters.indoorPool = false;
+      }
+    });
+    _search();
+  }
+
+  /// مزارع شتوية / مسبح مغلق — اختيار أي منهما يحصر البحث بالمزارع.
+  void _toggleFarmFeature({bool? winter, bool? indoorPool}) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      if (winter != null) _filters.winter = winter;
+      if (indoorPool != null) _filters.indoorPool = indoorPool;
+      if (_filters.winter || _filters.indoorPool) _filters.type = 'FARM';
+    });
     _search();
   }
 
@@ -396,6 +444,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
             // ── فلاتر النوع ──
             _TypeFilterRow(selected: _filters.type, onSelected: _setType),
+            if (_filters.type == null || _filters.type == 'FARM')
+              _FarmFeatureRow(
+                winter: _filters.winter,
+                indoorPool: _filters.indoorPool,
+                onWinter: (v) => _toggleFarmFeature(winter: v),
+                onIndoorPool: (v) => _toggleFarmFeature(indoorPool: v),
+              ),
 
             // ── الفلاتر النشطة ──
             if (_filters.count > 0)
@@ -769,6 +824,70 @@ class _TypeFilterRow extends StatelessWidget {
   }
 }
 
+/// صف خصائص المزارع: مزارع شتوية ومسبح مغلق (مفاتيح تشغيل/إيقاف).
+class _FarmFeatureRow extends StatelessWidget {
+  const _FarmFeatureRow({
+    required this.winter,
+    required this.indoorPool,
+    required this.onWinter,
+    required this.onIndoorPool,
+  });
+
+  final bool winter;
+  final bool indoorPool;
+  final ValueChanged<bool> onWinter;
+  final ValueChanged<bool> onIndoorPool;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget chip(String emoji, String label, bool on, ValueChanged<bool> tap, Color color) {
+      return GestureDetector(
+        onTap: () => tap(!on),
+        child: AnimatedContainer(
+          duration: VibesMotion.fast,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: on ? color.withValues(alpha: .12) : Colors.white,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: on ? color : placeLine, width: on ? 1.4 : 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 14)),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: on ? color : placeInk,
+                ),
+              ),
+              if (on) ...[
+                const SizedBox(width: 4),
+                Icon(Icons.check_rounded, size: 15, color: color),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Row(
+        children: [
+          chip('❄️', 'مزارع شتوية', winter, onWinter, const Color(0xFF0284C7)),
+          const SizedBox(width: 8),
+          chip('🏊', 'مسبح مغلق', indoorPool, onIndoorPool, const Color(0xFF0D9488)),
+        ],
+      ),
+    );
+  }
+}
+
 class _TypeChip extends StatelessWidget {
   const _TypeChip({
     required this.label,
@@ -851,6 +970,12 @@ class _ActiveFiltersRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final chips = <Widget>[];
 
+    if (filters.winter) {
+      chips.add(_FilterPill(label: '❄️ مزارع شتوية', onTap: onEdit));
+    }
+    if (filters.indoorPool) {
+      chips.add(_FilterPill(label: '🏊 مسبح مغلق', onTap: onEdit));
+    }
     if (filters.province != null) {
       chips.add(_FilterPill(label: filters.province!, onTap: onEdit));
     }
@@ -1302,6 +1427,8 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
       minPrice: widget.filters.minPrice,
       maxPrice: _maxPrice,
       sort: _sort,
+      winter: widget.filters.winter,
+      indoorPool: widget.filters.indoorPool,
     );
     widget.onApply(next);
     Navigator.pop(context);

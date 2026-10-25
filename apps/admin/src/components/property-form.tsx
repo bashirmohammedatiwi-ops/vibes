@@ -58,6 +58,8 @@ const emptyForm = (): PropertyFormData => ({
   phone: "",
   whatsapp: "",
   featured: false,
+  isWinter: false,
+  hasIndoorPool: false,
   status: "DRAFT",
   amenityIds: [],
   tags: "",
@@ -88,6 +90,8 @@ function fromProperty(p: Property): PropertyFormData {
     phone: p.phone ?? "",
     whatsapp: p.whatsapp ?? "",
     featured: p.featured,
+    isWinter: p.isWinter ?? false,
+    hasIndoorPool: p.hasIndoorPool ?? false,
     status: p.status,
     amenityIds: (p.amenityLinks ?? []).map((link) => link.amenityId),
     tags: (p.tags ?? []).join("، "),
@@ -123,6 +127,9 @@ function toPayload(form: PropertyFormData, isEdit: boolean) {
     phone: form.phone.trim() || undefined,
     whatsapp: form.whatsapp.trim() || undefined,
     featured: form.featured,
+    // خصائص المزارع فقط — غيرها تُحفظ false
+    isWinter: form.type === "FARM" ? form.isWinter : false,
+    hasIndoorPool: form.type === "FARM" ? form.hasIndoorPool : false,
     status: isEdit ? form.status : "DRAFT",
     amenityIds: form.amenityIds,
     tags: splitList(form.tags),
@@ -363,6 +370,34 @@ export function PropertyForm({ initial, onSaved, submitLabel = "حفظ" }: Props
             <span className="mt-0.5 block text-xs text-muted">يظهر في البطاقات المتراكبة أعلى الصفحة الرئيسية. المكان لازم يكون منشوراً.</span>
           </span>
         </label>
+        {form.type === "FARM" && (
+          <>
+            <label className="field-checkbox rounded-xl border border-line bg-surface px-4 py-3">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-line accent-brand"
+                checked={form.isWinter}
+                onChange={(e) => update("isWinter", e.target.checked)}
+              />
+              <span>
+                <span className="font-bold">❄️ مزرعة شتوية</span>
+                <span className="mt-0.5 block text-xs text-muted">تظهر في قسم «مزارع شتوية» وفلتر البحث — مناسبة للشتاء (تدفئة، جلسات مغلقة…).</span>
+              </span>
+            </label>
+            <label className="field-checkbox rounded-xl border border-line bg-surface px-4 py-3">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-line accent-brand"
+                checked={form.hasIndoorPool}
+                onChange={(e) => update("hasIndoorPool", e.target.checked)}
+              />
+              <span>
+                <span className="font-bold">🏊 مسبح مغلق</span>
+                <span className="mt-0.5 block text-xs text-muted">مسبح داخلي أو مسقوف — يظهر كشارة على المزرعة وفي فلتر البحث.</span>
+              </span>
+            </label>
+          </>
+        )}
       </section>
       </DetailCard>
 

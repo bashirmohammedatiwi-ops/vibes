@@ -28,6 +28,8 @@ String _propertyKicker(PropertyType type) => switch (type) {
 
 String _propertyMeta(Property property) => [
   property.cityName ?? property.provinceName ?? '',
+  if (property.isWinter) '❄️ شتوية',
+  if (property.hasIndoorPool) '🏊 مسبح مغلق',
   if (property.capacity > 0) '${property.capacity} ضيف',
   if (property.ratingCount > 0) '★ ${property.ratingAvg.toStringAsFixed(1)}',
 ].where((part) => part.isNotEmpty).join('  ·  ');
