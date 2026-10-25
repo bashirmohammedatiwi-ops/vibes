@@ -109,7 +109,9 @@ class BookingDatePickerPanel extends StatefulWidget {
 
 class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
   /// الفترة الحالية — يغيّرها الزبون من أعلى التقويم دون الرجوع.
-  late ShiftType _shift = widget.shift;
+  late ShiftType _shift = _allowedShifts.contains(widget.shift)
+      ? widget.shift
+      : _allowedShifts.first;
   late final BookingDatePickMode _fullMode = widget.shift == ShiftType.full
       ? widget.mode
       : BookingDatePickMode.singleDay;
@@ -339,63 +341,6 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
     });
   }
 
-  void _pickQuick(_QuickPick pick) {
-    final available = _days.where(
-      (day) => !_disabled(_dateOnly(day.date)!, day),
-    );
-
-    if (pick == _QuickPick.weekend) {
-      for (final day in available) {
-        if (day.date.weekday == DateTime.friday ||
-            day.date.weekday == DateTime.saturday) {
-          _setRange(_dateOnly(day.date)!, 1);
-          return;
-        }
-      }
-      setState(() => _error = 'لا توجد عطلة نهاية أسبوع متاحة حالياً');
-      return;
-    }
-
-    if (pick == _QuickPick.twoDays) {
-      if (_singleDay) {
-        setState(() => _error = 'هذه الفترة يوم واحد فقط');
-        return;
-      }
-      for (final day in available) {
-        final start = _dateOnly(day.date)!;
-        if (_rangeIsAvailable(start, start.add(const Duration(days: 1)))) {
-          _setRange(start, 2);
-          return;
-        }
-      }
-      setState(() => _error = 'لا يوجد نطاق يومين متصل متاح حالياً');
-      return;
-    }
-
-    final first = available.firstOrNull;
-    if (first == null) {
-      setState(() => _error = 'لا توجد مواعيد متاحة حالياً');
-      return;
-    }
-    _setRange(_dateOnly(first.date)!, 1);
-  }
-
-  void _setRange(DateTime start, int length) {
-    final end = start.add(Duration(days: length - 1));
-    if (!_rangeIsAvailable(start, end)) {
-      setState(() => _error = 'لا يتوفر نطاق متصل بهذه المدة');
-      return;
-    }
-    HapticFeedback.selectionClick();
-    setState(() {
-      _start = start;
-      _endInclusive = end;
-      _awaitingRangeEnd = false;
-      _error = null;
-    });
-    _maybeAutoConfirm();
-  }
-
   num get _estimatedTotal {
     if (_start == null || _endInclusive == null) return 0;
     final map = _byDate;
@@ -478,7 +423,7 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${widget.propertyName} · ${_shiftHintLabel()}',
+                        widget.propertyName,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -531,42 +476,10 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
               onChanged: _changeShift,
             ),
           ),
-        // اختصارات سريعة — نفس أسلوب رقائق لوحة الشفتات
-        SizedBox(
-          height: 38,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            children: [
-              _QuickChip(
-                label: 'أقرب موعد متاح',
-                icon: Icons.bolt_rounded,
-                onTap: () => _pickQuick(_QuickPick.nearest),
-              ),
-              const SizedBox(width: 8),
-              _QuickChip(
-                label: 'عطلة نهاية الأسبوع',
-                icon: Icons.weekend_outlined,
-                onTap: () => _pickQuick(_QuickPick.weekend),
-              ),
-              if (!_singleDay) ...[
-                const SizedBox(width: 8),
-                _QuickChip(
-                  label: 'يومان متصلان',
-                  icon: Icons.date_range_outlined,
-                  onTap: () => _pickQuick(_QuickPick.twoDays),
-                ),
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: _AvailabilityLegend(
-            showSplit: _allowedShifts.contains(ShiftType.morning),
-            periodName: _shiftName(_shift),
-          ),
+        const SizedBox(height: 6),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: _AvailabilityLegend(),
         ),
         if (_error != null)
           Padding(
@@ -706,57 +619,6 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
       '${date.day.toString().padLeft(2, '0')}';
 }
 
-enum _QuickPick { nearest, weekend, twoDays }
-
-class _QuickChip extends StatelessWidget {
-  const _QuickChip({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: placePaper,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        borderRadius: BorderRadius.circular(999),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: placeLine),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.bolt_rounded, size: 14, color: placeBrass),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: placeInk,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _MonthCalendar extends StatelessWidget {
   const _MonthCalendar({
     required this.month,
@@ -871,9 +733,9 @@ class _MonthCalendar extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 7,
-            mainAxisSpacing: 6,
-            crossAxisSpacing: 5,
-            mainAxisExtent: 62,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 6,
+            mainAxisExtent: 46,
           ),
           itemCount: leading + monthLength - skipCells,
           itemBuilder: (context, rawIndex) {
@@ -883,9 +745,6 @@ class _MonthCalendar extends StatelessWidget {
             final date = DateTime(month.year, month.month, number);
             final pricing = byDay[number];
             final disabled = !isFree(date, pricing, shift);
-            final otherFree = allowedShifts.any(
-              (x) => x != shift && isFree(date, pricing, x),
-            );
             final isStart = _sameDate(date, start);
             final isEnd = _sameDate(date, endInclusive);
             final inRange =
@@ -896,21 +755,8 @@ class _MonthCalendar extends StatelessWidget {
 
             return _DayCell(
               date: date,
-              pricing: pricing,
-              shift: shift,
-              hybridMarkers: hybridMarkers,
-              disabled: disabled,
-              partial: disabled && otherFree,
-              partialLabel: () {
-                final m = isFree(date, pricing, ShiftType.morning);
-                final e = isFree(date, pricing, ShiftType.evening);
-                if (m && !e) return 'صباحي فقط';
-                if (e && !m) return 'مسائي فقط';
-                return 'فترة أخرى';
-              }(),
-              morningFree: isFree(date, pricing, ShiftType.morning),
-              eveningFree: isFree(date, pricing, ShiftType.evening),
-              showSplit: allowedShifts.contains(ShiftType.morning),
+              past: pricing == null || pricing.isPast,
+              available: !disabled,
               selected: isStart || isEnd,
               inRange: inRange,
               onTap: pricing == null || pricing.isPast
@@ -933,187 +779,110 @@ class _MonthCalendar extends StatelessWidget {
 class _DayCell extends StatelessWidget {
   const _DayCell({
     required this.date,
-    required this.pricing,
-    required this.shift,
-    required this.hybridMarkers,
-    required this.disabled,
-    required this.partial,
-    this.partialLabel = 'جزئي',
-    required this.morningFree,
-    required this.eveningFree,
-    required this.showSplit,
+    required this.past,
+    required this.available,
     required this.selected,
     required this.inRange,
     this.onTap,
   });
 
   final DateTime date;
-  final DayPricing? pricing;
-  final ShiftType shift;
-  final bool hybridMarkers;
+  final bool past;
 
-  /// غير متاح للفترة المختارة.
-  final bool disabled;
-
-  /// غير متاح للفترة المختارة لكن فترة أخرى متاحة فيه.
-  final bool partial;
-  final String partialLabel;
-  final bool morningFree;
-  final bool eveningFree;
-  final bool showSplit;
+  /// متاح للفترة المختارة (أخضر) — وإلا غير متاح (أحمر).
+  final bool available;
   final bool selected;
   final bool inRange;
   final VoidCallback? onTap;
 
-  static const _free = Color(0xFF16A34A);
-  static const _taken = Color(0xFFD5D9E0);
-  static const _partial = Color(0xFFD97706);
-
-  /// سعر مختصر يُقرأ بسهولة: 240 ألف، 1.2م
-  static String _short(num v) {
-    if (v >= 1000000) {
-      final m = v / 1000000;
-      return '${m.toStringAsFixed(m >= 10 ? 0 : 1).replaceAll('.0', '')}م';
-    }
-    if (v >= 1000) return '${(v / 1000).round()} ألف';
-    return '$v';
-  }
+  static const green = Color(0xFF16A34A);
+  static const red = Color(0xFFDC2626);
 
   @override
   Widget build(BuildContext context) {
-    final past = pricing == null || pricing!.isPast;
-    final accent = placeShiftColor(shift);
-    final weekend =
-        date.weekday == DateTime.friday || date.weekday == DateTime.saturday;
-
     final Color bg;
+    final Color fg;
     final Color border;
     if (selected) {
-      bg = accent;
-      border = accent;
+      bg = green;
+      fg = Colors.white;
+      border = green;
     } else if (inRange) {
-      bg = accent.withValues(alpha: .1);
-      border = accent.withValues(alpha: .35);
+      bg = green.withValues(alpha: .18);
+      fg = const Color(0xFF15803D);
+      border = green.withValues(alpha: .4);
     } else if (past) {
       bg = Colors.transparent;
+      fg = placeInk2.withValues(alpha: .3);
       border = Colors.transparent;
-    } else if (!disabled) {
-      bg = Colors.white;
-      border = _free.withValues(alpha: .35);
-    } else if (partial) {
-      bg = _partial.withValues(alpha: .07);
-      border = _partial.withValues(alpha: .3);
+    } else if (available) {
+      bg = green.withValues(alpha: .10);
+      fg = const Color(0xFF15803D);
+      border = green.withValues(alpha: .35);
     } else {
-      bg = const Color(0xFFF1F3F6);
-      border = const Color(0xFFE6E9EE);
+      bg = red.withValues(alpha: .08);
+      fg = red;
+      border = red.withValues(alpha: .28);
     }
-
-    final numberColor = selected
-        ? Colors.white
-        : past
-        ? placeInk2.withValues(alpha: .35)
-        : disabled
-        ? placeInk2
-        : weekend
-        ? placeBrass
-        : placeInk;
-
-    final String? label;
-    final Color labelColor;
-    if (past) {
-      label = null;
-      labelColor = placeInk2;
-    } else if (!disabled) {
-      label = _short(pricing!.priceFor(shift));
-      labelColor = selected ? Colors.white : const Color(0xFF15803D);
-    } else if (partial) {
-      label = partialLabel;
-      labelColor = _partial;
-    } else {
-      label = 'محجوز';
-      labelColor = placeInk2.withValues(alpha: .7);
-    }
-
-    Widget seg(bool free) => Expanded(
-      child: Container(
-        height: 4,
-        decoration: BoxDecoration(
-          color: selected
-              ? (free ? Colors.white : Colors.white.withValues(alpha: .35))
-              : (free ? _free : _taken),
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
-    );
 
     return Semantics(
       button: !past,
-      label: '${date.day}${label == null ? '' : ' · $label'}',
+      label:
+          '${date.day} ${past
+              ? ''
+              : available
+              ? 'متاح'
+              : 'غير متاح'}',
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.fromLTRB(4, 6, 4, 5),
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: border, width: selected ? 1.4 : 1),
+            border: Border.all(color: border, width: selected ? 1.6 : 1),
             boxShadow: selected
                 ? [
                     BoxShadow(
-                      color: accent.withValues(alpha: .35),
+                      color: green.withValues(alpha: .35),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
                   ]
                 : null,
           ),
-          child: Column(
-            children: [
-              Text(
-                '${date.day}',
-                style: TextStyle(
-                  fontFamily: 'Montserrat',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: numberColor,
-                  decoration: disabled && !partial && !past && !selected
-                      ? TextDecoration.lineThrough
-                      : null,
-                  decorationColor: placeInk2.withValues(alpha: .5),
-                  height: 1.1,
-                ),
-              ),
-              const Spacer(),
-              if (label != null)
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      color: labelColor,
-                      height: 1.2,
+          child: selected
+              ? Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.check_rounded,
+                      size: 14,
+                      color: Colors.white,
                     ),
+                    const SizedBox(width: 2),
+                    Text(
+                      '${date.day}',
+                      style: const TextStyle(
+                        fontFamily: 'Montserrat',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                )
+              : Text(
+                  '${date.day}',
+                  style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: fg,
                   ),
                 ),
-              // شريط الفترتين: يمين = صباحي، يسار = مسائي (أخضر = متاح)
-              if (showSplit && !past) ...[
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    seg(morningFree),
-                    const SizedBox(width: 2),
-                    seg(eveningFree),
-                  ],
-                ),
-              ],
-            ],
-          ),
         ),
       ),
     );
@@ -1223,143 +992,43 @@ class _PeriodSwitcher extends StatelessWidget {
   }
 }
 
-/// دليل الألوان أعلى التقويم.
+/// دليل الألوان — سطر واحد: أخضر متاح، أحمر غير متاح.
 class _AvailabilityLegend extends StatelessWidget {
-  const _AvailabilityLegend({
-    required this.showSplit,
-    required this.periodName,
-  });
-
-  final bool showSplit;
-  final String periodName;
+  const _AvailabilityLegend();
 
   @override
   Widget build(BuildContext context) {
-    Widget dot(Color c, String t, {Color? border}) => Row(
+    Widget item(Color c, String t) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 12,
-          height: 12,
+          width: 14,
+          height: 14,
           decoration: BoxDecoration(
-            color: c,
+            color: c.withValues(alpha: .15),
             borderRadius: BorderRadius.circular(4),
-            border: border == null ? null : Border.all(color: border),
+            border: Border.all(color: c),
           ),
         ),
-        const SizedBox(width: 5),
+        const SizedBox(width: 6),
         Text(
           t,
           style: const TextStyle(
             fontFamily: 'Cairo',
-            fontSize: 11.5,
-            fontWeight: FontWeight.w700,
-            color: placeInk2,
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: placeInk,
           ),
         ),
       ],
     );
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FB),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: placeLine),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            spacing: 14,
-            runSpacing: 6,
-            children: [
-              dot(
-                Colors.white,
-                'متاح ($periodName)',
-                border: const Color(0xFF86C79A),
-              ),
-              dot(
-                const Color(0xFFFBEBD4),
-                'فترة أخرى متاحة — اضغط',
-                border: const Color(0xFFEFC48A),
-              ),
-              dot(
-                const Color(0xFFF1F3F6),
-                'محجوز',
-                border: const Color(0xFFE6E9EE),
-              ),
-            ],
-          ),
-          if (showSplit) ...[
-            const SizedBox(height: 7),
-            Row(
-              children: [
-                SizedBox(
-                  width: 34,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF16A34A),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 2),
-                      Expanded(
-                        child: Container(
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFD5D9E0),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.wb_sunny_rounded,
-                  size: 13,
-                  color: placeShiftMorning,
-                ),
-                const Text(
-                  ' صباحي  ',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: placeInk2,
-                  ),
-                ),
-                const Icon(
-                  Icons.nightlight_round,
-                  size: 12,
-                  color: placeShiftEvening,
-                ),
-                const Expanded(
-                  child: Text(
-                    ' مسائي · الأخضر متاح والرمادي محجوز',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: placeInk2,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        item(_DayCell.green, 'متاح'),
+        const SizedBox(width: 22),
+        item(_DayCell.red, 'غير متاح'),
+      ],
     );
   }
 }
@@ -1540,7 +1209,6 @@ class _SummaryBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ready = start != null && endInclusive != null && !awaitingEnd;
-    final departure = start?.add(const Duration(days: 1));
 
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -1598,11 +1266,9 @@ class _SummaryBar extends StatelessWidget {
                               color: placeInk2,
                             ),
                           ),
-                        if (ready)
+                        if (ready && !singleDay && days > 1)
                           Text(
-                            singleDay || days == 1
-                                ? 'مغادرة ${dateLabel(departure!)} · تلقائي'
-                                : '$days أيام · سعر تقديري قبل الكوبون',
+                            '$days أيام',
                             style: const TextStyle(
                               fontFamily: 'Cairo',
                               fontSize: 10.5,

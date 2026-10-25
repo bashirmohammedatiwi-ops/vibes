@@ -394,6 +394,13 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
             setState(() => _shift = ShiftType.full);
           });
         }
+        // مكان بالفترات فقط: لا «يوم كامل» — نبدأ بالصباحية
+        if (p.bookingMode == BookingMode.shifts && _shift == ShiftType.full) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            setState(() => _shift = ShiftType.morning);
+          });
+        }
         final accent = accentForType(p.type.name);
 
         final availability = ref

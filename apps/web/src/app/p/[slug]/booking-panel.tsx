@@ -289,34 +289,26 @@ export function BookingPanel({ property: p }: { property: PropertyDetail }) {
                     key={d}
                     disabled={st === "past"}
                     onClick={() => pick(d)}
-                    className={`relative flex h-14 flex-col items-center justify-center rounded-xl text-sm transition ${
+                    className={`flex h-11 items-center justify-center rounded-xl border text-[15px] font-bold transition ${
                       isEdge
-                        ? "bg-[var(--w-accent)] text-[var(--w-on)]"
+                        ? "border-green-600 bg-green-600 text-white shadow-md"
                         : inRange
-                          ? "bg-[var(--w-tint)]"
+                          ? "border-green-300 bg-green-100 text-green-800"
                           : st === "free"
-                            ? "bg-success-pale/60 hover:bg-success-pale"
-                            : st === "partial"
-                              ? "bg-warning-pale/70 hover:bg-warning-pale"
-                              : st === "busy"
-                                ? "bg-soft text-ink-3 line-through"
-                                : "text-line-strong"
+                            ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
+                            : st === "past"
+                              ? "border-transparent text-line-strong"
+                              : "border-red-200 bg-red-50 text-red-600"
                     }`}
                   >
-                    <span className="num font-bold">{Number(d.slice(8))}</span>
-                    {st !== "past" && st !== "busy" && (
-                      <span className={`num text-[9px] font-bold ${isEdge ? "opacity-90" : "text-ink-2"}`}>
-                        {st === "partial" ? (shift === "FULL" ? "فترة" : "أخرى") : moneyShort(priceOf(d, shift)).replace(" ألف", "k").replace(" مليون", "M")}
-                      </span>
-                    )}
+                    <span className="num">{Number(d.slice(8))}</span>
                   </button>
                 );
               })}
             </div>
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-semibold text-ink-2">
-              <Legend className="bg-success-pale" label="متاح" />
-              <Legend className="bg-warning-pale" label={shift === "FULL" ? "فترة واحدة متاحة" : "الفترة الأخرى متاحة"} />
-              <Legend className="bg-soft" label="محجوز" />
+            <div className="mt-3 flex justify-center gap-6 text-sm font-bold text-ink">
+              <Legend className="border border-green-500 bg-green-50" label="متاح" />
+              <Legend className="border border-red-400 bg-red-50" label="غير متاح" />
             </div>
             {shift === "FULL" && <p className="mt-2 text-[11px] text-ink-3">لحجز عدة أيام: اختر يوم البداية ثم يوم النهاية.</p>}
           </div>
