@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,7 +16,7 @@ import '../../shared/widgets/maison_shapes.dart';
 import '../../shared/widgets/vibes_graphics.dart';
 import '../../shared/widgets/world_glyphs.dart';
 import '../../shared/widgets/world_ui.dart';
-import '../home/home_sections.dart';
+import 'nadeem_config.dart';
 
 /// ═══════════════════════════════════════════════════════════
 /// نديم — مخطّط المناسبات. محادثة حيّة لا استبيان:
@@ -34,12 +35,10 @@ class NadeemScreen extends ConsumerStatefulWidget {
   ConsumerState<NadeemScreen> createState() => _NadeemScreenState();
 }
 
-enum _Occasion { wedding, engagement, birthday, family, work, other }
-
 enum _Shift { full, morning, evening, flex }
 
 class _Answers {
-  _Occasion? occasion;
+  NadeemOccasion? occasion;
   PropertyType? type;
   bool typeOpen = false;
   String? provinceSlug;
@@ -52,27 +51,11 @@ class _Answers {
 
   PropertyType? get impliedType {
     if (type != null) return type;
-    if (typeOpen) {
-      return switch (occasion) {
-        _Occasion.wedding ||
-        _Occasion.engagement ||
-        _Occasion.work => PropertyType.hall,
-        _Occasion.birthday || _Occasion.family => PropertyType.farm,
-        _ => null,
-      };
-    }
+    if (typeOpen) return occasion?.impliedType;
     return null;
   }
 
-  String get occasionLabel => switch (occasion) {
-    _Occasion.wedding => 'زفاف',
-    _Occasion.engagement => 'خطوبة',
-    _Occasion.birthday => 'عيد ميلاد',
-    _Occasion.family => 'جلسة أهل',
-    _Occasion.work => 'مناسبة عمل',
-    _Occasion.other => 'مناسبة خاصة',
-    null => 'مناسبتك',
-  };
+  String get occasionLabel => occasion?.label ?? 'مناسبتك';
 }
 
 /// رسالة في المحادثة.
@@ -115,12 +98,43 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
   String? _error;
   int _session = 0;
 
-  static const _total = 6;
+  /// لقطة الإعدادات عند بدء المحادثة — لا تتغير في منتصفها.
+  NadeemConfig? _cfg;
+  NadeemConfig get _c => _cfg ?? NadeemConfig.defaults;
+
+  /// معرّف الجلسة على السيرفر (للإحصاءات).
+  String? _loggedId;
+
+  /// الخطوات المفعّلة بالترتيب — 0 المناسبة دائماً.
+  List<int> get _flow => [
+    0,
+    if (_c.typeEnabled) 1,
+    if (_c.provinceEnabled) 2,
+    if (_c.guestsEnabled) 3,
+    if (_c.shiftEnabled) 4,
+    if (_c.budgetEnabled) 5,
+  ];
+
+  int get _total => _flow.length;
 
   @override
   void initState() {
     super.initState();
-    _opening();
+    final now = ref.read(nadeemConfigProvider);
+    if (now.hasValue) {
+      _cfg = now.value;
+      _opening();
+      // تحديث صامت للمرة القادمة — تعديلات لوحة التحكم تصل بلا إعادة تشغيل
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.invalidate(nadeemConfigProvider);
+      });
+    } else {
+      ref.read(nadeemConfigProvider.future).then((c) {
+        if (!mounted) return;
+        setState(() => _cfg = c);
+        _opening();
+      });
+    }
   }
 
   @override
@@ -132,13 +146,13 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
   // ── المحادثة ──
 
   Future<void> _opening() async {
+    if (!_c.enabled) return;
     final s = _session;
-    await _say('أهلاً بك، أنا نديم ✨', s, delay: 500);
-    await _say(
-      'سأساعدك تختار المكان المثالي لمناسبتك — بست خطوات خفيفة.',
-      s,
-      delay: 900,
-    );
+    _answers.typeOpen = !_c.typeEnabled;
+    final greeting = _c.greeting;
+    for (var i = 0; i < greeting.length; i++) {
+      await _say(greeting[i], s, delay: i == 0 ? 500 : 900);
+    }
     await _ask(0, s);
   }
 
@@ -146,7 +160,9 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
     if (!mounted || session != _session) return;
     setState(() => _typing = true);
     _toBottom();
-    await Future<void>.delayed(Duration(milliseconds: delay));
+    await Future<void>.delayed(
+      Duration(milliseconds: (delay * _c.typingScale).round()),
+    );
     if (!mounted || session != _session) return;
     setState(() {
       _typing = false;
@@ -163,33 +179,25 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
   }
 
   String _question(int step) => switch (step) {
-    0 => 'ما المناسبة التي تخطّط لها؟',
-    1 => 'أي مكان يليق بها؟',
-    2 => 'في أي محافظة؟',
-    3 => 'كم ضيفاً تتوقع تقريباً؟',
-    4 => 'متى تفضّل وقت المناسبة؟',
-    _ => 'وأخيراً — كم تحب أن تكون ميزانيتك لليوم؟',
+    0 => _c.occasionQuestion,
+    1 => _c.typeQuestion,
+    2 => _c.provinceQuestion,
+    3 => _c.guestsQuestion,
+    4 => _c.shiftQuestion,
+    _ => _c.budgetQuestion,
   };
 
   String _reaction(int step) => switch (step) {
-    0 => switch (_answers.occasion) {
-      _Occasion.wedding => 'ألف مبروك! ليلة العمر تستحق الأفضل 💍',
-      _Occasion.engagement => 'مبارك مقدّماً! بداية جميلة تستحق مكاناً دافئاً.',
-      _Occasion.birthday => 'رائع! سنجعلها حفلة لا تُنسى 🎂',
-      _Occasion.family => 'جميل — الأهل يستحقون يوماً هادئاً ومريحاً.',
-      _Occasion.work => 'ممتاز، سأبحث عن مكان أنيق ومنظّم.',
-      _ => 'حسناً، أخبرني بالمزيد وسأقرأ بين السطور.',
-    },
-    1 =>
-      _answers.typeOpen
-          ? 'اترك الأمر لي — سأختار ما يناسب مناسبتك.'
-          : 'اختيار موفّق.',
+    0 => _answers.occasion?.reaction ?? '',
+    1 => _answers.typeOpen ? _c.typeReactionAuto : _c.typeReaction,
     2 =>
       _answers.provinceName == null
-          ? 'سأبحث في كل العراق.'
-          : 'تمام، سأركّز على ${_answers.provinceName}.',
-    3 => 'وصلت — سأستبعد ما لا يتسع لضيوفك.',
-    4 => 'حلو، سأراعي التوقيت.',
+          ? _c.provinceReactionAll
+          : fillTokens(_c.provinceReactionOne, {
+              'province': _answers.provinceName!,
+            }),
+    3 => _c.guestsReaction,
+    4 => _c.shiftReaction,
     _ => '',
   };
 
@@ -202,10 +210,12 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
       _thread.add(_Msg.mine(label, step));
     });
     _toBottom();
-    if (step < _total - 1) {
-      final r = _reaction(step);
-      if (r.isNotEmpty) await _say(r, s, delay: 520);
-      await _ask(step + 1, s);
+    final flow = _flow;
+    final at = flow.indexOf(step);
+    final r = _reaction(step);
+    if (r.isNotEmpty) await _say(r, s, delay: 520);
+    if (at >= 0 && at < flow.length - 1) {
+      await _ask(flow[at + 1], s);
     } else {
       await _finish(s);
     }
@@ -222,6 +232,7 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
       _typing = false;
       _thinking = false;
       _matches = null;
+      _loggedId = null;
       _error = null;
       _step = step;
     });
@@ -237,7 +248,9 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
       _typing = false;
       _thinking = false;
       _matches = null;
+      _loggedId = null;
       _error = null;
+      _cfg = ref.read(nadeemConfigProvider).valueOrNull ?? _cfg;
       _answers
         ..occasion = null
         ..type = null
@@ -267,7 +280,7 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
   // ── الاختيار ──
 
   Future<void> _finish(int session) async {
-    await _say('ممتاز! دعني أقرأ الأماكن لأجلك…', session, delay: 500);
+    await _say(_c.finishIntro, session, delay: 500);
     if (!mounted || session != _session) return;
     setState(() {
       _thinking = true;
@@ -282,23 +295,23 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
       ]);
       var decor = const <Property>[];
       final wantsDecor =
-          (_answers.occasion == _Occasion.wedding ||
-              _answers.occasion == _Occasion.engagement ||
-              _answers.occasion == _Occasion.birthday) &&
+          (_answers.occasion?.suggestDecor ?? false) &&
+          _c.decorCount > 0 &&
           _answers.impliedType != PropertyType.decoration;
       if (wantsDecor) {
-        decor = (await fetchProperties(
-          client,
-          type: 'DECORATION',
-          province: _answers.provinceSlug,
-          sort: 'rating',
-        )).take(6).toList();
-        if (decor.isEmpty)
-          decor = (await fetchProperties(
-            client,
-            type: 'DECORATION',
-            sort: 'rating',
-          )).take(6).toList();
+        final excluded = _c.excluded;
+        Future<List<Property>> pull(String? province) async =>
+            (await fetchProperties(
+                  client,
+                  type: 'DECORATION',
+                  province: province,
+                  sort: 'rating',
+                ))
+                .where((p) => !excluded.contains(p.id))
+                .take(_c.decorCount)
+                .toList();
+        decor = await pull(_answers.provinceSlug);
+        if (decor.isEmpty) decor = await pull(null);
       }
       if (!mounted || session != _session) return;
       HapticFeedback.mediumImpact();
@@ -308,28 +321,64 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
         _decorPicks = decor;
         _thread.add(const _Msg.results());
       });
+      _logSession(session);
     } catch (_) {
       if (!mounted || session != _session) return;
       setState(() {
         _thinking = false;
-        _error = 'تعذّر عليّ إكمال البحث الآن — تحقّق من الاتصال وحاول مجدداً.';
+        _error = _c.finishError;
       });
     }
     _toBottom();
+  }
+
+  /// تسجيل الخطة للإحصاءات في لوحة التحكم — لا يؤثر على الزبون إن فشل.
+  Future<void> _logSession(int session) async {
+    final a = _answers;
+    final list = _matches ?? const <_Scored>[];
+    try {
+      final res = await ref
+          .read(apiClientProvider)
+          .post(
+            '/api/nadeem/sessions',
+            body: {
+              'occasion': a.occasion?.key,
+              'propertyType': a.type == null ? null : _typeKey(a.type!),
+              'autoType': a.type == null,
+              'province': a.provinceName,
+              'guests': a.minCapacity,
+              'shift': a.shift?.name,
+              'maxBudget': a.budgetOpen ? null : a.maxPrice?.round(),
+              'budgetOpen': a.budgetOpen,
+              'resultIds': [for (final m in list) m.property.id],
+              'precise': list.isNotEmpty && list.first.precise,
+              'platform': defaultTargetPlatform.name,
+            },
+          );
+      if (!mounted || session != _session) return;
+      if (res is Map && res['id'] is String) _loggedId = res['id'] as String;
+    } catch (_) {}
+  }
+
+  void _logClick(String propertyId) {
+    final id = _loggedId;
+    if (id == null) return;
+    ref
+        .read(apiClientProvider)
+        .post(
+          '/api/nadeem/sessions/$id/click',
+          body: {'propertyId': propertyId},
+        )
+        .catchError((_) => null);
   }
 
   Future<List<_Scored>> _collectMatches(
     ApiClient client,
     PropertyType? type,
   ) async {
-    final typeKey = type == null
-        ? null
-        : switch (type) {
-            PropertyType.farm => 'FARM',
-            PropertyType.hall => 'HALL',
-            PropertyType.decoration => 'DECORATION',
-          };
-    final seen = <String>{};
+    final typeKey = type == null ? null : _typeKey(type);
+    final excluded = _c.excluded;
+    final seen = <String>{...excluded};
     final pool = <Property>[];
     Future<void> pull({String? type, String? province, String? sort}) async {
       final extra = await fetchProperties(
@@ -362,8 +411,8 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
             )
             .toList()
           ..sort((a, b) => b.score.compareTo(a.score));
-    final strong = ranked.where((m) => m.score >= 18).toList();
-    return (strong.isNotEmpty ? strong : ranked).take(10).toList();
+    final strong = ranked.where((m) => m.score >= _c.minScore).toList();
+    return (strong.isNotEmpty ? strong : ranked).take(_c.maxResults).toList();
   }
 
   bool _precise(Property p) {
@@ -377,40 +426,60 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
   }
 
   int _score(Property p) {
+    final c = _c;
     var s = 0;
     final preferred = _answers.impliedType;
-    if (preferred != null) s += p.type == preferred ? 40 : -12;
+    if (preferred != null)
+      s += p.type == preferred ? c.w('type', 40) : c.w('typeMiss', -12);
     final province = _answers.provinceName;
-    if (province != null) s += p.provinceName == province ? 28 : -10;
+    if (province != null)
+      s += p.provinceName == province
+          ? c.w('province', 28)
+          : c.w('provinceMiss', -10);
     final minCap = _answers.minCapacity;
-    if (minCap != null) s += p.capacity >= minCap ? 22 : -24;
+    if (minCap != null)
+      s += p.capacity >= minCap
+          ? c.w('capacity', 22)
+          : c.w('capacityMiss', -24);
     final maxPrice = _answers.maxPrice;
     if (maxPrice != null && !_answers.budgetOpen)
-      s += _fromPrice(p) <= maxPrice ? 18 : -20;
+      s += _fromPrice(p) <= maxPrice
+          ? c.w('budget', 18)
+          : c.w('budgetMiss', -20);
+    final shiftPrice = c.w('shiftPrice', 12);
+    final shiftSupport = c.w('shiftSupport', 6);
     switch (_answers.shift) {
       case _Shift.morning:
-        if (p.priceMorningShift != null) s += 12;
-        if (p.supportsShifts) s += 6;
+        if (p.priceMorningShift != null) s += shiftPrice;
+        if (p.supportsShifts) s += shiftSupport;
       case _Shift.evening:
-        if (p.priceEveningShift != null) s += 12;
-        if (p.supportsShifts) s += 6;
+        if (p.priceEveningShift != null) s += shiftPrice;
+        if (p.supportsShifts) s += shiftSupport;
       case _Shift.full:
-        if (!p.supportsShifts) s += 8;
+        if (!p.supportsShifts) s += c.w('fullDay', 8);
       case _Shift.flex:
-        s += 4;
+        s += c.w('flex', 4);
       case null:
         break;
     }
-    s += (p.ratingAvg * 3).round();
-    if (p.featured) s += 6;
+    s += (p.ratingAvg * c.w('ratingMultiplier', 3)).round();
+    if (p.featured) s += c.w('featured', 6);
+    if (p.isWinter) s += c.w('winter', 0);
+    s += c.pinned[p.id] ?? 0;
     return s;
   }
 
-  /// نسبة التطابق المعروضة — من الدرجة إلى 55..99٪.
-  int _matchPercent(int score) =>
-      (55 + (score.clamp(-20, 110) + 20) / 130 * 44).round().clamp(55, 99);
+  /// نسبة التطابق المعروضة — من الدرجة إلى المدى المحدد في لوحة التحكم.
+  int _matchPercent(int score) {
+    final lo = _c.minPercent, hi = _c.maxPercent;
+    return (lo + (score.clamp(-20, 110) + 20) / 130 * (hi - lo)).round().clamp(
+      lo,
+      hi,
+    );
+  }
 
   List<String> _reasons(Property p) {
+    if (!_c.showReasons) return const [];
     final r = <String>[];
     if (_answers.provinceName != null &&
         p.provinceName == _answers.provinceName)
@@ -454,27 +523,36 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
           body: Column(
             children: [
               _TopBar(
+                name: _c.name,
+                subtitle: _c.subtitle,
+                typingLabel: _c.typingLabel,
                 typing: _typing || _thinking,
                 progress: _progress,
                 onBack: () =>
                     context.canPop() ? context.pop() : context.go('/home'),
                 onRestart: _restart,
               ),
-              Expanded(
-                child: ListView(
-                  controller: _scroll,
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                  children: [
-                    for (var i = 0; i < _thread.length; i++)
-                      _message(_thread[i], i),
-                    if (_typing) const _TypingBubble(),
-                    if (_thinking) _ThinkingCard(palette: p),
-                    if (_error != null) _errorCard(),
-                  ],
+              if (_cfg == null)
+                const Expanded(child: Center(child: _Orb(size: 64)))
+              else if (!_c.enabled)
+                Expanded(child: _disabled())
+              else
+                Expanded(
+                  child: ListView(
+                    controller: _scroll,
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                    children: [
+                      for (var i = 0; i < _thread.length; i++)
+                        _message(_thread[i], i),
+                      if (_typing) const _TypingBubble(),
+                      if (_thinking)
+                        _ThinkingCard(palette: p, text: _c.finishThinking),
+                      if (_error != null) _errorCard(),
+                    ],
+                  ),
                 ),
-              ),
-              _composer(),
+              if (_cfg != null && _c.enabled) _composer(),
             ],
           ),
         ),
@@ -505,6 +583,50 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
     );
   }
 
+  Widget _disabled() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const _Orb(size: 72),
+            const SizedBox(height: 18),
+            Text(
+              _c.disabledTitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: Vibes.ink,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _c.disabledMessage,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: Vibes.inkSecondary,
+                height: 1.6,
+              ),
+            ),
+            const SizedBox(height: 20),
+            WorldButton(
+              label: 'ابحث عن مكان',
+              icon: Icons.search_rounded,
+              height: 50,
+              onTap: () => context.push('/search'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _errorCard() {
     return Padding(
       padding: const EdgeInsets.only(top: 6),
@@ -528,7 +650,7 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
             ),
             const SizedBox(height: 10),
             WorldGhostButton(
-              label: 'حاول مجدداً',
+              label: _c.retryLabel,
               icon: Icons.refresh_rounded,
               height: 44,
               onTap: () => _finish(_session),
@@ -545,35 +667,46 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
     final bottom = MediaQuery.paddingOf(context).bottom;
     final Widget? body = switch (_step) {
       0 => _OccasionPicker(
-        onPick: (o, label) => _answer(0, label, () => _answers.occasion = o),
+        occasions: _c.occasions,
+        onPick: (o) => _answer(0, o.label, () => _answers.occasion = o),
       ),
       1 => _TypePicker(
+        config: _c,
         onPick: (t, label) => _answer(1, label, () {
           _answers.type = t;
           _answers.typeOpen = t == null;
         }),
       ),
       2 => _ProvincePicker(
+        config: _c,
         type: _answers.impliedType,
-        onPick: (slug, name) => _answer(2, name ?? 'أي مكان في العراق', () {
+        onPick: (slug, name) => _answer(2, name ?? _c.provinceAnyLabel, () {
           _answers.provinceSlug = slug;
           _answers.provinceName = name;
         }),
       ),
       3 => _GuestDial(
-        onDone: (n) => _answer(3, 'حوالي $n ضيف', () {
-          _answers.minCapacity = n;
-          _answers.guestsLabel = 'حوالي $n ضيف';
-        }),
+        config: _c,
+        onDone: (n) {
+          final label = fillTokens(_c.guestsAnswer, {'n': '$n'});
+          _answer(3, label, () {
+            _answers.minCapacity = n;
+            _answers.guestsLabel = label;
+          });
+        },
       ),
       4 => _DayPicker(
+        config: _c,
         onPick: (s, label) => _answer(4, label, () => _answers.shift = s),
       ),
       5 => _BudgetPicker(
+        config: _c,
         type: _answers.impliedType,
         onDone: (max) => _answer(
           5,
-          max == null ? 'الميزانية مفتوحة' : 'حتى ${_money(max)} د.ع',
+          max == null
+              ? _c.budgetOpenAnswer
+              : fillTokens(_c.budgetAnswer, {'amount': _money(max)}),
           () {
             _answers.budgetOpen = max == null;
             _answers.maxPrice = max;
@@ -632,24 +765,28 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
     final list = _matches ?? const <_Scored>[];
     final width = MediaQuery.sizeOf(context).width;
     final card = (width * .78).clamp(260.0, 360.0);
+    final c = _c;
     final chips = <(int, IconData, String)>[
       (0, Icons.celebration_rounded, _answers.occasionLabel),
-      if (_answers.type != null)
-        (1, Icons.home_work_rounded, _typeLabel(_answers.type!))
-      else
-        (1, Icons.auto_awesome_rounded, 'نديم يختار'),
-      (2, Icons.location_on_rounded, _answers.provinceName ?? 'كل العراق'),
+      if (c.typeEnabled)
+        if (_answers.type != null)
+          (1, Icons.home_work_rounded, _typeLabel(_answers.type!))
+        else
+          (1, Icons.auto_awesome_rounded, c.autoTypeChip),
+      if (c.provinceEnabled)
+        (2, Icons.location_on_rounded, _answers.provinceName ?? 'كل العراق'),
       if (_answers.minCapacity != null)
         (3, Icons.groups_rounded, '${_answers.minCapacity} ضيف'),
       if (_answers.shift != null)
         (4, Icons.schedule_rounded, _shiftLabel(_answers.shift!)),
-      (
-        5,
-        Icons.payments_rounded,
-        _answers.budgetOpen || _answers.maxPrice == null
-            ? 'مفتوحة'
-            : 'حتى ${_money(_answers.maxPrice!)}',
-      ),
+      if (c.budgetEnabled)
+        (
+          5,
+          Icons.payments_rounded,
+          _answers.budgetOpen || _answers.maxPrice == null
+              ? c.budgetOpenLabel
+              : 'حتى ${_money(_answers.maxPrice!)}',
+        ),
     ];
 
     return Padding(
@@ -682,7 +819,9 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'خطة ${_answers.occasionLabel}',
+                        fillTokens(c.resultsTitle, {
+                          'occasion': _answers.occasionLabel,
+                        }),
                         style: const TextStyle(
                           fontFamily: 'Cairo',
                           fontSize: 18,
@@ -744,7 +883,7 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'المس أي بند لتعديله',
+                  c.editHint,
                   style: TextStyle(
                     fontFamily: 'Cairo',
                     fontSize: 11,
@@ -758,10 +897,10 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
           const SizedBox(height: 14),
           _Bubble(
             text: list.isEmpty
-                ? 'لم أجد مطابقة دقيقة الآن — جرّب توسيع الميزانية أو تغيير المحافظة.'
+                ? c.resultsEmpty
                 : list.first.precise
-                ? 'هذه أفضل الأماكن لمناسبتك، مرتّبة حسب التطابق 👇'
-                : 'لم أجد تطابقاً كاملاً، لكن هذه الأقرب لما طلبت 👇',
+                ? c.resultsPrecise
+                : c.resultsApprox,
             mine: false,
             showAvatar: true,
           ),
@@ -778,18 +917,18 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
                 itemBuilder: (context, i) => _MatchCard(
                   scored: list[i],
                   width: card,
-                  percent: _matchPercent(list[i].score),
+                  percent: c.showMatchPercent
+                      ? _matchPercent(list[i].score)
+                      : null,
                   best: i == 0,
+                  bestLabel: 'اختيار ${c.name} الأول',
+                  onOpen: () => _logClick(list[i].property.id),
                 ),
               ),
             ),
           if (_decorPicks.isNotEmpty) ...[
             const SizedBox(height: 10),
-            const _Bubble(
-              text: 'ولتكتمل الصورة — فرق تزيين تليق بمناسبتك 🌸',
-              mine: false,
-              showAvatar: true,
-            ),
+            _Bubble(text: c.decorIntro, mine: false, showAvatar: true),
             SizedBox(
               height: 92,
               child: ListView.separated(
@@ -797,8 +936,10 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
                 physics: const BouncingScrollPhysics(),
                 itemCount: _decorPicks.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 10),
-                itemBuilder: (context, i) =>
-                    _MiniPlace(property: _decorPicks[i]),
+                itemBuilder: (context, i) => _MiniPlace(
+                  property: _decorPicks[i],
+                  onOpen: () => _logClick(_decorPicks[i].id),
+                ),
               ),
             ),
           ],
@@ -807,7 +948,7 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
             children: [
               Expanded(
                 child: WorldGhostButton(
-                  label: 'من جديد',
+                  label: c.restartLabel,
                   icon: Icons.refresh_rounded,
                   height: 48,
                   onTap: _restart,
@@ -816,7 +957,7 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: WorldButton(
-                  label: 'كل النتائج',
+                  label: c.allResultsLabel,
                   icon: Icons.search_rounded,
                   height: 48,
                   onTap: () {
@@ -863,6 +1004,12 @@ String _money(num v) {
   return formatIqdShort(v);
 }
 
+String _typeKey(PropertyType t) => switch (t) {
+  PropertyType.farm => 'FARM',
+  PropertyType.hall => 'HALL',
+  PropertyType.decoration => 'DECORATION',
+};
+
 String _typeLabel(PropertyType t) => switch (t) {
   PropertyType.farm => 'مزرعة',
   PropertyType.hall => 'قاعة',
@@ -882,12 +1029,18 @@ String _shiftLabel(_Shift s) => switch (s) {
 
 class _TopBar extends StatelessWidget {
   const _TopBar({
+    required this.name,
+    required this.subtitle,
+    required this.typingLabel,
     required this.typing,
     required this.progress,
     required this.onBack,
     required this.onRestart,
   });
 
+  final String name;
+  final String subtitle;
+  final String typingLabel;
   final bool typing;
   final double progress;
   final VoidCallback onBack;
@@ -921,9 +1074,9 @@ class _TopBar extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'نديم',
-                      style: TextStyle(
+                    Text(
+                      name,
+                      style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 17,
                         fontWeight: FontWeight.w900,
@@ -934,7 +1087,7 @@ class _TopBar extends StatelessWidget {
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 250),
                       child: Text(
-                        typing ? 'يكتب…' : 'مخطّط مناسبتك الشخصي',
+                        typing ? typingLabel : subtitle,
                         key: ValueKey(typing),
                         style: TextStyle(
                           fontFamily: 'Cairo',
@@ -1251,9 +1404,10 @@ class _TypingBubbleState extends State<_TypingBubble>
 
 /// بطاقة «أقرأ الأماكن» — كرة تتنفس وحلقات تتسع.
 class _ThinkingCard extends StatefulWidget {
-  const _ThinkingCard({required this.palette});
+  const _ThinkingCard({required this.palette, required this.text});
 
   final WorldPalette palette;
+  final String text;
 
   @override
   State<_ThinkingCard> createState() => _ThinkingCardState();
@@ -1311,7 +1465,7 @@ class _ThinkingCardState extends State<_ThinkingCard>
           ),
           const SizedBox(height: 8),
           Text(
-            'أطابق مناسبتك مع الأماكن المتاحة…',
+            widget.text,
             style: TextStyle(
               fontFamily: 'Cairo',
               fontSize: 13,
@@ -1330,55 +1484,15 @@ class _ThinkingCardState extends State<_ThinkingCard>
 // ═══════════════════════════════════════════════════════════
 
 class _OccasionPicker extends StatelessWidget {
-  const _OccasionPicker({required this.onPick});
+  const _OccasionPicker({required this.occasions, required this.onPick});
 
-  final void Function(_Occasion, String) onPick;
+  final List<NadeemOccasion> occasions;
+  final void Function(NadeemOccasion) onPick;
 
   @override
   Widget build(BuildContext context) {
-    const items = [
-      (
-        _Occasion.wedding,
-        'زفاف',
-        'ليلة العمر',
-        Icons.diamond_outlined,
-        HomeSection.hall,
-      ),
-      (
-        _Occasion.engagement,
-        'خطوبة',
-        'بداية الحكاية',
-        Icons.volunteer_activism_outlined,
-        HomeSection.decoration,
-      ),
-      (
-        _Occasion.birthday,
-        'عيد ميلاد',
-        'فرحة وزينة',
-        Icons.cake_outlined,
-        HomeSection.decoration,
-      ),
-      (
-        _Occasion.family,
-        'جلسة أهل',
-        'يوم دافئ',
-        Icons.family_restroom_rounded,
-        HomeSection.farm,
-      ),
-      (
-        _Occasion.work,
-        'عمل',
-        'لقاء رسمي',
-        Icons.work_outline_rounded,
-        HomeSection.hall,
-      ),
-      (
-        _Occasion.other,
-        'أخرى',
-        'فاجئني',
-        Icons.auto_awesome_outlined,
-        HomeSection.farm,
-      ),
+    final items = [
+      for (final o in occasions) (o, o.label, o.sub, o.icon, o.world),
     ];
     return GridView.count(
       crossAxisCount: 3,
@@ -1390,7 +1504,7 @@ class _OccasionPicker extends StatelessWidget {
       children: [
         for (final it in items)
           PressScale(
-            onTap: () => onPick(it.$1, it.$2),
+            onTap: () => onPick(it.$1),
             child: Container(
               decoration: BoxDecoration(
                 color: it.$5.palette.canvas,
@@ -1446,29 +1560,26 @@ class _OccasionPicker extends StatelessWidget {
 // ═══════════════════════════════════════════════════════════
 
 class _TypePicker extends ConsumerWidget {
-  const _TypePicker({required this.onPick});
+  const _TypePicker({required this.config, required this.onPick});
 
+  final NadeemConfig config;
   final void Function(PropertyType?, String) onPick;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final all =
         ref.watch(propertiesProvider(null)).valueOrNull ?? const <Property>[];
-    const items = [
-      (PropertyType.farm, HomeSection.farm),
-      (PropertyType.hall, HomeSection.hall),
-      (PropertyType.decoration, HomeSection.decoration),
-    ];
+    final items = config.types;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Row(
           children: [
             for (final it in items) ...[
-              if (it.$1 != PropertyType.farm) const SizedBox(width: 10),
+              if (it != items.first) const SizedBox(width: 10),
               Expanded(
                 child: PressScale(
-                  onTap: () => onPick(it.$1, it.$2.label),
+                  onTap: () => onPick(it.$1, it.$3),
                   child: Container(
                     height: 116,
                     decoration: BoxDecoration(
@@ -1489,7 +1600,7 @@ class _TypePicker extends ConsumerWidget {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          it.$2.label,
+                          it.$3,
                           style: const TextStyle(
                             fontFamily: 'Cairo',
                             fontSize: 15,
@@ -1497,15 +1608,16 @@ class _TypePicker extends ConsumerWidget {
                             color: Vibes.ink,
                           ),
                         ),
-                        Text(
-                          '${all.where((p) => p.type == it.$1).length} مكان',
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Vibes.inkTertiary,
+                        if (config.typeShowCounts)
+                          Text(
+                            '${all.where((p) => p.type == it.$1).length} مكان',
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Vibes.inkTertiary,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -1514,12 +1626,14 @@ class _TypePicker extends ConsumerWidget {
             ],
           ],
         ),
-        const SizedBox(height: 10),
-        _SoftLink(
-          icon: Icons.auto_awesome_rounded,
-          label: 'لست متأكداً — اختر لي يا نديم',
-          onTap: () => onPick(null, 'اختر لي يا نديم'),
-        ),
+        if (config.typeAllowAuto) ...[
+          const SizedBox(height: 10),
+          _SoftLink(
+            icon: Icons.auto_awesome_rounded,
+            label: config.typeAutoLabel,
+            onTap: () => onPick(null, config.typeAutoAnswer),
+          ),
+        ],
       ],
     );
   }
@@ -1573,8 +1687,13 @@ class _SoftLink extends StatelessWidget {
 // ═══════════════════════════════════════════════════════════
 
 class _ProvincePicker extends ConsumerWidget {
-  const _ProvincePicker({required this.type, required this.onPick});
+  const _ProvincePicker({
+    required this.config,
+    required this.type,
+    required this.onPick,
+  });
 
+  final NadeemConfig config;
   final PropertyType? type;
   final void Function(String?, String?) onPick;
 
@@ -1596,8 +1715,11 @@ class _ProvincePicker extends ConsumerWidget {
           (x) => x.provinceName == name && (type == null || x.type == type),
         )
         .length;
-    final list = provinces.values.toList()
-      ..sort((a, b) => count(b.name).compareTo(count(a.name)));
+    final list =
+        provinces.values
+            .where((pr) => !config.provinceHideEmpty || count(pr.name) > 0)
+            .toList()
+          ..sort((a, b) => count(b.name).compareTo(count(a.name)));
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1642,7 +1764,8 @@ class _ProvincePicker extends ConsumerWidget {
                               color: Vibes.ink,
                             ),
                           ),
-                          if (count(pr.name) > 0) ...[
+                          if (config.provinceShowCounts &&
+                              count(pr.name) > 0) ...[
                             const SizedBox(width: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -1675,7 +1798,7 @@ class _ProvincePicker extends ConsumerWidget {
         const SizedBox(height: 10),
         _SoftLink(
           icon: Icons.public_rounded,
-          label: 'أي مكان في العراق',
+          label: config.provinceAnyLabel,
           onTap: () => onPick(null, null),
         ),
       ],
@@ -1688,8 +1811,9 @@ class _ProvincePicker extends ConsumerWidget {
 // ═══════════════════════════════════════════════════════════
 
 class _GuestDial extends StatefulWidget {
-  const _GuestDial({required this.onDone});
+  const _GuestDial({required this.config, required this.onDone});
 
+  final NadeemConfig config;
   final ValueChanged<int> onDone;
 
   @override
@@ -1697,28 +1821,27 @@ class _GuestDial extends StatefulWidget {
 }
 
 class _GuestDialState extends State<_GuestDial> {
-  double _t = .25;
+  int get _min => widget.config.guestsMin;
+  int get _max => widget.config.guestsMax;
+
+  late double _t = _tFor(widget.config.guestsInitial);
+
+  double _tFor(int n) =>
+      math.sqrt(((n - _min) / (_max - _min)).clamp(0.0, 1.0));
 
   /// منحنى غير خطي — دقة أكبر للأعداد الصغيرة.
   int get _guests {
-    final raw = 10 + (1000 - 10) * math.pow(_t, 2);
+    final raw = _min + (_max - _min) * math.pow(_t, 2);
     final step = raw < 100 ? 5 : (raw < 300 ? 10 : 50);
-    return (raw / step).round() * step;
+    return ((raw / step).round() * step).clamp(_min, _max);
   }
 
-  String get _scale {
-    final g = _guests;
-    if (g <= 30) return 'جلسة حميمة';
-    if (g <= 80) return 'عزيمة عائلية';
-    if (g <= 200) return 'حفل متوسط';
-    if (g <= 450) return 'مناسبة كبيرة';
-    return 'حدث ضخم';
-  }
+  String get _scale => widget.config.guestScale(_guests);
 
   void _nudge(int delta) {
     HapticFeedback.selectionClick();
-    final target = (_guests + delta).clamp(10, 1000);
-    setState(() => _t = math.sqrt((target - 10) / 990));
+    final target = (_guests + delta).clamp(_min, _max);
+    setState(() => _t = _tFor(target));
   }
 
   @override
@@ -1815,7 +1938,7 @@ class _GuestDialState extends State<_GuestDial> {
         ),
         const SizedBox(height: 4),
         WorldButton(
-          label: 'تمام — $_guests ضيف',
+          label: fillTokens(widget.config.guestsConfirm, {'n': '$_guests'}),
           icon: Icons.check_rounded,
           height: 52,
           onTap: () => widget.onDone(_guests),
@@ -1855,8 +1978,9 @@ class _StepBtn extends StatelessWidget {
 // ═══════════════════════════════════════════════════════════
 
 class _DayPicker extends StatelessWidget {
-  const _DayPicker({required this.onPick});
+  const _DayPicker({required this.config, required this.onPick});
 
+  final NadeemConfig config;
   final void Function(_Shift, String) onPick;
 
   @override
@@ -1921,52 +2045,64 @@ class _DayPicker extends StatelessWidget {
       ),
     );
 
+    final m = config.morning, e = config.evening, f = config.fullDay;
+    final skies = <Widget>[
+      if (m.enabled)
+        sky(
+          colors: const [Color(0xFFFFF4D6), Color(0xFFFFD98A)],
+          icon: Icons.wb_sunny_rounded,
+          iconColor: const Color(0xFFF59E0B),
+          title: m.title,
+          sub: m.sub,
+          dark: false,
+          onTap: () => onPick(_Shift.morning, m.title),
+        ),
+      if (e.enabled)
+        sky(
+          colors: const [Color(0xFF3B4A7A), Color(0xFF151B33)],
+          icon: Icons.nightlight_round,
+          iconColor: const Color(0xFFFDE68A),
+          title: e.title,
+          sub: e.sub,
+          dark: true,
+          onTap: () => onPick(_Shift.evening, e.title),
+        ),
+      if (f.enabled)
+        sky(
+          colors: const [
+            Color(0xFFFFD98A),
+            Color(0xFF6D5BBA),
+            Color(0xFF151B33),
+          ],
+          icon: Icons.brightness_6_rounded,
+          iconColor: Colors.white,
+          title: f.title,
+          sub: f.sub,
+          dark: true,
+          onTap: () => onPick(_Shift.full, f.title),
+        ),
+    ];
+    final showFlex = config.flexEnabled || skies.isEmpty;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          children: [
-            sky(
-              colors: const [Color(0xFFFFF4D6), Color(0xFFFFD98A)],
-              icon: Icons.wb_sunny_rounded,
-              iconColor: const Color(0xFFF59E0B),
-              title: 'صباحاً',
-              sub: 'شمس وهواء',
-              dark: false,
-              onTap: () => onPick(_Shift.morning, 'صباحاً'),
-            ),
-            const SizedBox(width: 8),
-            sky(
-              colors: const [Color(0xFF3B4A7A), Color(0xFF151B33)],
-              icon: Icons.nightlight_round,
-              iconColor: const Color(0xFFFDE68A),
-              title: 'مساءً',
-              sub: 'أضواء وسهر',
-              dark: true,
-              onTap: () => onPick(_Shift.evening, 'مساءً'),
-            ),
-            const SizedBox(width: 8),
-            sky(
-              colors: const [
-                Color(0xFFFFD98A),
-                Color(0xFF6D5BBA),
-                Color(0xFF151B33),
+        if (skies.isNotEmpty)
+          Row(
+            children: [
+              for (var i = 0; i < skies.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                skies[i],
               ],
-              icon: Icons.brightness_6_rounded,
-              iconColor: Colors.white,
-              title: 'يوم كامل',
-              sub: 'من الصبح لليل',
-              dark: true,
-              onTap: () => onPick(_Shift.full, 'يوم كامل'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        _SoftLink(
-          icon: Icons.schedule_rounded,
-          label: 'التوقيت مرن عندي',
-          onTap: () => onPick(_Shift.flex, 'التوقيت مرن'),
-        ),
+            ],
+          ),
+        if (showFlex) ...[
+          if (skies.isNotEmpty) const SizedBox(height: 10),
+          _SoftLink(
+            icon: Icons.schedule_rounded,
+            label: config.flexLabel,
+            onTap: () => onPick(_Shift.flex, config.flexAnswer),
+          ),
+        ],
       ],
     );
   }
@@ -1977,8 +2113,13 @@ class _DayPicker extends StatelessWidget {
 // ═══════════════════════════════════════════════════════════
 
 class _BudgetPicker extends ConsumerStatefulWidget {
-  const _BudgetPicker({required this.type, required this.onDone});
+  const _BudgetPicker({
+    required this.config,
+    required this.type,
+    required this.onDone,
+  });
 
+  final NadeemConfig config;
   final PropertyType? type;
   final ValueChanged<num?> onDone;
 
@@ -1987,7 +2128,7 @@ class _BudgetPicker extends ConsumerStatefulWidget {
 }
 
 class _BudgetPickerState extends ConsumerState<_BudgetPicker> {
-  double _t = .55;
+  late double _t = widget.config.budgetInitial;
 
   @override
   Widget build(BuildContext context) {
@@ -2134,7 +2275,7 @@ class _BudgetPickerState extends ConsumerState<_BudgetPicker> {
           children: [
             Expanded(
               child: WorldGhostButton(
-                label: 'مفتوحة',
+                label: widget.config.budgetOpenLabel,
                 icon: Icons.all_inclusive_rounded,
                 height: 50,
                 onTap: () => widget.onDone(null),
@@ -2144,7 +2285,7 @@ class _BudgetPickerState extends ConsumerState<_BudgetPicker> {
             Expanded(
               flex: 2,
               child: WorldButton(
-                label: 'اعرض النتائج',
+                label: widget.config.budgetSubmit,
                 icon: Icons.auto_awesome_rounded,
                 height: 50,
                 onTap: () => widget.onDone(value),
@@ -2167,12 +2308,16 @@ class _MatchCard extends StatelessWidget {
     required this.width,
     required this.percent,
     required this.best,
+    required this.bestLabel,
+    required this.onOpen,
   });
 
   final _Scored scored;
   final double width;
-  final int percent;
+  final int? percent;
   final bool best;
+  final String bestLabel;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -2180,7 +2325,10 @@ class _MatchCard extends StatelessWidget {
     final p = WorldPalette.forType(prop.type.name);
     final imageH = width * .62;
     return PressScale(
-      onTap: () => context.push('/property/${prop.id}'),
+      onTap: () {
+        onOpen();
+        context.push('/property/${prop.id}');
+      },
       child: Container(
         width: width,
         decoration: BoxDecoration(
@@ -2226,7 +2374,7 @@ class _MatchCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
-                          'اختيار نديم الأول',
+                          bestLabel,
                           style: TextStyle(
                             fontFamily: 'Cairo',
                             fontSize: 11.5,
@@ -2236,11 +2384,12 @@ class _MatchCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                  PositionedDirectional(
-                    top: 8,
-                    end: 8,
-                    child: _MatchRing(percent: percent, color: p.accent),
-                  ),
+                  if (percent != null)
+                    PositionedDirectional(
+                      top: 8,
+                      end: 8,
+                      child: _MatchRing(percent: percent!, color: p.accent),
+                    ),
                 ],
               ),
             ),
@@ -2391,15 +2540,19 @@ class _MatchRing extends StatelessWidget {
 }
 
 class _MiniPlace extends StatelessWidget {
-  const _MiniPlace({required this.property});
+  const _MiniPlace({required this.property, required this.onOpen});
 
   final Property property;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
     final p = WorldPalette.forType(property.type.name);
     return PressScale(
-      onTap: () => context.push('/property/${property.id}'),
+      onTap: () {
+        onOpen();
+        context.push('/property/${property.id}');
+      },
       child: Container(
         width: 230,
         padding: const EdgeInsets.all(8),

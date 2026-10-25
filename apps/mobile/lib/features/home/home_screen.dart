@@ -24,6 +24,7 @@ import '../../shared/widgets/world_ui.dart';
 import '../auth/auth_controller.dart';
 import '../booking/booking_providers.dart';
 import 'home_editorial.dart';
+import '../concierge/nadeem_config.dart';
 import 'home_sections.dart';
 
 /// ═══════════════════════════════════════════════════════════
@@ -1666,11 +1667,13 @@ class _QuickRail extends ConsumerWidget {
     final section = ref.watch(homeSectionProvider);
     final offers = ref.watch(offersProvider).valueOrNull?.length ?? 0;
     final coupons = ref.watch(publicCouponsProvider).valueOrNull?.length ?? 0;
+    final nadeem = nadeemConfigNow(ref);
     final items = <(IconData, String, String, int)>[
       (Icons.map_rounded, 'الخريطة', '/map?type=${section.typeFilter}', 0),
       (Icons.local_offer_rounded, 'العروض', '/offers', offers),
       (Icons.confirmation_number_rounded, 'الكوبونات', '/coupons', coupons),
-      (Icons.auto_awesome_rounded, 'نديم', '/nadeem', 0),
+      if (nadeem.showOnHome && nadeem.enabled)
+        (Icons.auto_awesome_rounded, nadeem.name, '/nadeem', 0),
       (Icons.celebration_rounded, 'التجارب', '/experiences', 0),
       (Icons.compare_arrows_rounded, 'المقارنة', '/compare', 0),
     ];

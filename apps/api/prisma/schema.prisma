@@ -1097,3 +1097,28 @@ model UserNotification {
   @@index([userId, isRead, createdAt])
   @@map("user_notifications")
 }
+
+/// جلسات نديم — كل خطة أكملها زبون (للإحصاءات في لوحة التحكم).
+model NadeemSession {
+  id                String   @id @default(uuid())
+  userId            String?  @map("user_id")
+  occasion          String?
+  propertyType      String?  @map("property_type")
+  autoType          Boolean  @default(false) @map("auto_type")
+  province          String?
+  guests            Int?
+  shift             String?
+  maxBudget         Int?     @map("max_budget")
+  budgetOpen        Boolean  @default(false) @map("budget_open")
+  resultIds         String[] @default([]) @map("result_ids")
+  resultCount       Int      @default(0) @map("result_count")
+  precise           Boolean  @default(false)
+  clickedPropertyId String?  @map("clicked_property_id")
+  clickedAt         DateTime? @map("clicked_at")
+  platform          String?
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([occasion])
+  @@map("nadeem_sessions")
+}

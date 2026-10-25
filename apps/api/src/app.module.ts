@@ -20,6 +20,7 @@ import { LocationsModule } from './modules/locations/locations.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { MarketplaceModule } from './modules/marketplace/marketplace.module';
 import { MediaModule } from './modules/media/media.module';
+import { NadeemModule } from './modules/nadeem/nadeem.module';
 import { ReelsModule } from './modules/reels/reels.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { PropertiesModule } from './modules/properties/properties.module';
@@ -65,6 +66,7 @@ import { RedisModule } from './redis/redis.module';
     JobsModule,
     AuthModule,
     AdminModule,
+    NadeemModule,
     DashboardModule,
     UsersModule,
     ProvidersModule,

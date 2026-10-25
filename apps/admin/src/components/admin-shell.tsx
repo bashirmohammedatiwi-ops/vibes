@@ -50,6 +50,7 @@ const sections: Array<{ title: string; links: NavLink[] }> = [
         { href: "/map", label: "الخريطة" },
         { href: "/banners", label: "البانرات" },
         { href: "/spotlights", label: "أماكن مميزة" },
+        { href: "/nadeem", label: "نديم" },
         { href: "/reviews", label: "التقييمات" },
         { href: "/collections", label: "القوائم" },
         { href: "/social", label: "التجارب" },

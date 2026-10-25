@@ -11,6 +11,7 @@ import '../../core/theme/world_theme.dart';
 import 'maison_shapes.dart';
 import 'experience_mode_switcher.dart';
 import '../../core/app_mode/app_mode_controller.dart';
+import '../../features/concierge/nadeem_config.dart';
 
 /// ═══════════════════════════════════════════════════════════
 /// هيكل التطبيق — دوك VIBES العائم:
@@ -130,6 +131,15 @@ class _GlassDock extends ConsumerWidget {
     final dockAccent = world.accent;
     final dockDeep = world.accentDeep;
     final dockOn = world.onAccent;
+    // زر نديم يُدار من لوحة التحكم (الاسم + الظهور)
+    final nadeem = nadeemConfigNow(ref);
+    final slots = [
+      for (final s in _slots)
+        if (s.$3 != -1)
+          s
+        else if (nadeem.showInNav && nadeem.enabled)
+          (s.$1, nadeem.name, s.$3),
+    ];
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
@@ -159,18 +169,18 @@ class _GlassDock extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                for (var i = 0; i < _slots.length; i++)
+                for (var i = 0; i < slots.length; i++)
                   Expanded(
                     child: _DockItem(
-                      icon: _slots[i].$1,
-                      label: _slots[i].$2,
-                      branch: _slots[i].$3,
-                      active: _slotActive(context, branch: _slots[i].$3),
+                      icon: slots[i].$1,
+                      label: slots[i].$2,
+                      branch: slots[i].$3,
+                      active: _slotActive(context, branch: slots[i].$3),
                       accent: dockAccent,
                       accentDeep: dockDeep,
                       onAccent: dockOn,
-                      isJewel: _slots[i].$3 == 1,
-                      onTap: () => onSelect(_slots[i].$3, current),
+                      isJewel: slots[i].$3 == 1,
+                      onTap: () => onSelect(slots[i].$3, current),
                     ),
                   ),
               ],

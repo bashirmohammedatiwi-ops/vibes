@@ -34,6 +34,7 @@ export const STAFF_PERMISSIONS = [
   'disputes.review',
   'settings.write',
   'activity.read',
+  'nadeem.write',
 ] as const;
 
 export type StaffPermission = (typeof STAFF_PERMISSIONS)[number];
@@ -74,6 +75,7 @@ export const STAFF_PERMISSION_LABELS: Record<StaffPermission, string> = {
   'disputes.review': 'النزاعات',
   'settings.write': 'إعدادات المنصة',
   'activity.read': 'سجل النشاط والتنبيهات',
+  'nadeem.write': 'إعدادات نديم (مخطّط المناسبات)',
 };
 
 export const STAFF_TEMPLATES: Record<string, StaffPermission[]> = {
@@ -159,6 +161,7 @@ export const STAFF_TEMPLATES: Record<string, StaffPermission[]> = {
     'coupons.write',
     'amenities.write',
     'locations.write',
+    'nadeem.write',
   ],
   full: [...STAFF_PERMISSIONS],
 };
@@ -186,7 +189,7 @@ export const STAFF_PERMISSION_GROUPS: { key: string; label: string; codes: Staff
   {
     key: 'content',
     label: 'المحتوى والتسويق',
-    codes: ['content.moderate', 'content.write', 'reviews.moderate', 'coupons.read', 'coupons.write'],
+    codes: ['content.moderate', 'content.write', 'reviews.moderate', 'coupons.read', 'coupons.write', 'nadeem.write'],
   },
   { key: 'admin', label: 'الإدارة', codes: ['reports.read', 'activity.read', 'settings.write'] },
 ];
