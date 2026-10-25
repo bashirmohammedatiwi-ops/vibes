@@ -9,7 +9,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_webrtc
   geolocator_windows
   livekit_client
-  rive_common
   share_plus
   url_launcher_windows
 )
