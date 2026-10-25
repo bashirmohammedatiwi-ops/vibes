@@ -321,6 +321,11 @@ class _PlaceBookingWizardSheetState extends State<_PlaceBookingWizardSheet> {
   void _onDatePicked(BookingDateSelection picked) {
     HapticFeedback.mediumImpact();
     setState(() {
+      // الزبون قد يغيّر الفترة من أعلى التقويم مباشرة
+      if (picked.shift != null && picked.shift != _shift) {
+        _shift = picked.shift;
+        if (_shift != ShiftType.full) _fullDayMulti = false;
+      }
       _start = picked.start;
       _end = picked.endExclusive;
       _estimatedTotal = picked.estimatedTotal;
@@ -684,6 +689,7 @@ class _DatesEmbeddedStep extends StatelessWidget {
       initialEndExclusive: initialEnd,
       embedded: true,
       autoConfirmSingleDay: !fullDayMulti,
+      shiftTimes: property.shiftLabels,
       onConfirm: onPicked,
     );
   }

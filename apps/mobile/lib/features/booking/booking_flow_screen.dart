@@ -246,10 +246,16 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
       initialStart: _start,
       initialEndExclusive: _end,
       mode: mode,
+      shiftTimes: property.shiftLabels,
     );
 
     if (picked == null || !mounted) return;
     setState(() {
+      // الفترة قد تتغير من أعلى التقويم
+      if (picked.shift != null) {
+        _shift = picked.shift!;
+        if (_shift != ShiftType.full) _fullDayMulti = false;
+      }
       _start = picked.start;
       _end = picked.endExclusive;
       _quote = null;
