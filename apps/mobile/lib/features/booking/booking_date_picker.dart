@@ -143,12 +143,15 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
   ];
 
   /// صباحي/مسائي: يوم واحد. اليوم الكامل: يوم أو أكثر (اضغط يوم النهاية).
-  bool get _singleDay => _shift != ShiftType.full;
+  bool get _singleDay => _shift != ShiftType.full || _isService;
+
+  /// التزيين خدمة ليوم المناسبة: يوم واحد، بلا يوم مغادرة.
+  bool get _isService => widget.availability.isService;
 
   /// يوم المغادرة يظهر للمسائي واليوم الكامل (اليوم التالي لآخر يوم محجوز).
   DateTime? get _departure {
     final end = _endInclusive;
-    if (end == null || _shift == ShiftType.morning) return null;
+    if (end == null || _shift == ShiftType.morning || _isService) return null;
     return end.add(const Duration(days: 1));
   }
 
@@ -410,7 +413,11 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _singleDay ? 'اختر اليوم' : 'اختر مدة الإقامة',
+                        _isService
+                            ? 'اختر يوم المناسبة'
+                            : _singleDay
+                            ? 'اختر اليوم'
+                            : 'اختر مدة الإقامة',
                         style: const TextStyle(
                           fontFamily: 'Cairo',
                           fontSize: 17,
@@ -564,10 +571,12 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
           singleDay: _singleDay,
           dateLabel: _longDate,
           departureLabel: _departure == null ? null : _longDate(_departure!),
-          periodLabel: [
-            _shiftName(_shift),
-            if (_shiftTime(_shift) != null) _shiftTime(_shift)!,
-          ].join(' · '),
+          periodLabel: _isService
+              ? 'خدمة التزيين · سعر موحّد'
+              : [
+                  _shiftName(_shift),
+                  if (_shiftTime(_shift) != null) _shiftTime(_shift)!,
+                ].join(' · '),
           onConfirm: _confirm,
         ),
       ],

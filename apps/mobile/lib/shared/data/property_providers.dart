@@ -57,11 +57,19 @@ Future<List<Property>> fetchProperties(
 
 /// كل الأماكن المنشورة — صفحات من 100 حتى نهاية القائمة (حد أقصى 10 صفحات).
 /// كانت تُطلب أول 16 فقط، فتختفي الأماكن المضافة لاحقاً من القوائم والخريطة.
-Future<List<Property>> fetchAllProperties(ApiClient client, {String? type}) async {
+Future<List<Property>> fetchAllProperties(
+  ApiClient client, {
+  String? type,
+}) async {
   const size = 100;
   final all = <Property>[];
   for (var page = 1; page <= 10; page++) {
-    final batch = await fetchProperties(client, type: type, page: page, pageSize: size);
+    final batch = await fetchProperties(
+      client,
+      type: type,
+      page: page,
+      pageSize: size,
+    );
     all.addAll(batch);
     if (batch.length < size) break;
   }
@@ -175,6 +183,7 @@ final availabilityProvider =
         slots: slots,
         dayPrices: dayPrices,
         bookingMode: mode,
+        propertyType: data['propertyType'] as String?,
       );
     });
 

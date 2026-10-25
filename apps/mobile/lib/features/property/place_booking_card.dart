@@ -194,6 +194,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
       slots: slots,
       dayPrices: dayPrices,
       bookingMode: results.firstOrNull?.bookingMode,
+      propertyType: results.firstOrNull?.propertyType,
     );
     return _fullAvailability!;
   }

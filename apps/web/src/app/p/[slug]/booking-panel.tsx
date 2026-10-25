@@ -103,8 +103,8 @@ export function BookingPanel({ property: p }: { property: PropertyDetail }) {
       );
       return;
     }
-    // يوم كامل: نطاق أيام متتالية
-    if (shift === "FULL" && start && end === start && date > start) {
+    // يوم كامل: نطاق أيام متتالية (التزيين خدمة ليوم واحد)
+    if (shift === "FULL" && p.type !== "DECORATION" && start && end === start && date > start) {
       let cur = addDays(dateOnly(start), 1);
       let n = 1;
       while (ymd(cur) <= date) {
@@ -192,7 +192,7 @@ export function BookingPanel({ property: p }: { property: PropertyDetail }) {
   const count = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
   const cells: (string | null)[] = [...Array(lead).fill(null), ...Array.from({ length: count }, (_, i) => ymd(new Date(first.getFullYear(), first.getMonth(), i + 1)))];
   // يوم المغادرة: بعد المسائي أو اليوم الكامل
-  const departure = end && shift !== "MORNING" ? ymd(addDays(dateOnly(end), 1)) : null;
+  const departure = end && shift !== "MORNING" && p.type !== "DECORATION" ? ymd(addDays(dateOnly(end), 1)) : null;
   const nights = start && end ? Math.round((dateOnly(end).getTime() - dateOnly(start).getTime()) / 86400000) + 1 : 0;
   const shiftTime =
     shift === "MORNING"
@@ -316,7 +316,9 @@ export function BookingPanel({ property: p }: { property: PropertyDetail }) {
               <Legend className="border border-green-500 bg-green-50" label="متاح" />
               <Legend className="border border-red-400 bg-red-50" label="غير متاح" />
             </div>
-            {shift === "FULL" && <p className="mt-2 text-[11px] text-ink-3">لحجز عدة أيام: اختر يوم البداية ثم يوم النهاية.</p>}
+            {shift === "FULL" && p.type !== "DECORATION" && (
+              <p className="mt-2 text-[11px] text-ink-3">لحجز عدة أيام: اختر يوم البداية ثم يوم النهاية.</p>
+            )}
           </div>
 
           {/* الضيوف */}

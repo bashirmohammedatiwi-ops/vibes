@@ -141,7 +141,9 @@ export default async function PropertyPage({ params }: Params) {
           <section>
             <h2 className="mb-4 text-xl font-black">الأسعار والأوقات</h2>
             <div className="grid gap-3 sm:grid-cols-3">
-              {mode !== "SHIFTS" && (
+              {p.type === "DECORATION" ? (
+                <PriceTile icon={<CalendarClock className="h-5 w-5" />} label="سعر الخدمة" price={p.pricePerDay} sub="سعر موحّد في أي يوم" />
+              ) : mode !== "SHIFTS" && (
                 <PriceTile icon={<CalendarClock className="h-5 w-5" />} label="يوم كامل" price={p.pricePerDay} sub={mode === "FULL_DAY" ? "طوال اليوم" : `${clock(p.morningStart || "08:00")} – ${clock(p.eveningEnd || "22:00")}`} />
               )}
               {mode !== "FULL_DAY" && num(p.priceMorningShift) > 0 && (
@@ -151,12 +153,14 @@ export default async function PropertyPage({ params }: Params) {
                 <PriceTile icon={<Moon className="h-5 w-5" />} label="فترة مسائية" price={p.priceEveningShift} sub={times.evening} />
               )}
             </div>
-            {num(p.weekendPrice) > 0 && (
+            {num(p.weekendPrice) > 0 && p.type !== "DECORATION" && (
               <p className="mt-3 text-sm text-ink-2">
                 سعر عطلة نهاية الأسبوع: <span className="num font-bold text-ink">{money(p.weekendPrice)}</span> د.ع
               </p>
             )}
-            <p className="mt-2 text-xs text-ink-3">الأسعار قد تختلف في بعض الأيام — السعر الدقيق لكل يوم يظهر في التقويم.</p>
+            {p.type !== "DECORATION" && (
+              <p className="mt-2 text-xs text-ink-3">الأسعار قد تختلف في بعض الأيام — السعر الدقيق لكل يوم يظهر في التقويم.</p>
+            )}
           </section>
 
           {p.description && (

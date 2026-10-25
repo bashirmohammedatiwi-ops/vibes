@@ -131,6 +131,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
       slots: mergedSlots,
       dayPrices: dayPrices,
       bookingMode: results.firstOrNull?.bookingMode,
+      propertyType: results.firstOrNull?.propertyType,
     );
     _calendarAvailability = availability;
     return availability;

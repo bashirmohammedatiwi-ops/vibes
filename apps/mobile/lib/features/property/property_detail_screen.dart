@@ -275,18 +275,37 @@ class _PropertyPageState extends ConsumerState<_PropertyPage> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            head(
-                              'أسعار الأسبوع',
-                              subtitle: 'اضغط أي سعر لتبدأ الحجز بذلك اليوم',
-                            ),
-                            pad(
-                              PlaceWeeklyPriceTable(
-                                property: p,
-                                accent: world.accent,
-                                onBookDay: (weekday, shift) =>
-                                    _bookWeekday(p, dayPrices, weekday, shift),
+                            // التزيين خدمة بسعر موحّد — لا جدول أيام
+                            if (p.type == PropertyType.decoration) ...[
+                              head(
+                                'سعر الخدمة',
+                                subtitle: 'سعر ثابت في أي يوم تختاره لمناسبتك',
                               ),
-                            ),
+                              pad(
+                                _ServicePriceCard(
+                                  property: p,
+                                  accent: world.accent,
+                                  onBook: () => context.push('/book/${p.id}'),
+                                ),
+                              ),
+                            ] else ...[
+                              head(
+                                'أسعار الأسبوع',
+                                subtitle: 'اضغط أي سعر لتبدأ الحجز بذلك اليوم',
+                              ),
+                              pad(
+                                PlaceWeeklyPriceTable(
+                                  property: p,
+                                  accent: world.accent,
+                                  onBookDay: (weekday, shift) => _bookWeekday(
+                                    p,
+                                    dayPrices,
+                                    weekday,
+                                    shift,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -3034,6 +3053,109 @@ class _SimilarPlaces extends ConsumerWidget {
         );
       },
       orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+/// بطاقة سعر خدمة التزيين — سعر واحد مهما كان اليوم.
+class _ServicePriceCard extends StatelessWidget {
+  const _ServicePriceCard({
+    required this.property,
+    required this.accent,
+    required this.onBook,
+  });
+
+  final Property property;
+  final Color accent;
+  final VoidCallback onBook;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: accent.withValues(alpha: .18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                PriceText.format(property.pricePerDay),
+                style: const TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: Vibes.ink,
+                  height: 1,
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Text(
+                'د.ع · للخدمة',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: Vibes.inkSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          for (final line in const [
+            'نفس السعر في أي يوم — عطلة أو يوم عادي',
+            'تختار يوم مناسبتك فقط، والفريق يحضر ويجهّز',
+          ])
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle_rounded, size: 16, color: accent),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      line,
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Vibes.inkSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: accent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              onPressed: onBook,
+              child: const Text(
+                'اختر يوم مناسبتك',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

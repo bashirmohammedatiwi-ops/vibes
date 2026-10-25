@@ -272,6 +272,17 @@ export function PricingEditor({
   const weekdayRules = useMemo(() => rules.filter((r) => r.ruleType === "WEEKDAY"), [rules]);
   const seasonRules = useMemo(() => rules.filter((r) => r.ruleType === "DATE_RANGE"), [rules]);
 
+  // التزيين خدمة بسعر موحّد — لا أسعار حسب اليوم ولا فترات
+  if (propertyType === "DECORATION") {
+    return (
+      <div className="rounded-2xl border border-line bg-paper p-5 text-sm leading-7 text-muted">
+        <div className="mb-1 text-base font-bold text-ink">سعر موحّد للخدمة</div>
+        التزيين خدمة وليس حجز مكان، لذلك سعره ثابت في أي يوم ولا يتأثر بعطلة نهاية الأسبوع أو المواسم أو الفترات.
+        عدّل السعر من «سعر الخدمة» في بيانات المكان.
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Booking mode + custom shift times */}

@@ -35,10 +35,12 @@ export class BookingsService {
     }
 
     const start = new Date(dto.startDate);
-    const end = new Date(dto.endDate);
+    let end = new Date(dto.endDate);
     if (end <= start) {
       throw new BadRequestException('تاريخ النهاية يجب أن يكون بعد البداية');
     }
+    // التزيين خدمة ليوم المناسبة فقط — يوم واحد دائماً
+    if (property.type === 'DECORATION') end = new Date(start.getTime() + 86_400_000);
 
     const mode = resolveBookingMode(property.type, property.bookingMode);
     const shift = resolveBookingShift(mode, dto.shift);
@@ -246,10 +248,11 @@ export class BookingsService {
     }
 
     const start = new Date(dto.startDate);
-    const end = new Date(dto.endDate);
+    let end = new Date(dto.endDate);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
       throw new BadRequestException('تواريخ الحجز غير صالحة');
     }
+    if (property.type === 'DECORATION') end = new Date(start.getTime() + 86_400_000);
 
     const mode = resolveBookingMode(property.type, property.bookingMode);
     const shift = resolveBookingShift(mode, dto.shift);

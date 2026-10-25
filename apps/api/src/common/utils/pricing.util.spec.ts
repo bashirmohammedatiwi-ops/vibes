@@ -192,3 +192,29 @@ describe('calculateBookingTotal', () => {
     expect(total).toBe(1_500_000);
   });
 });
+
+describe('decoration service pricing', () => {
+  const decoration: PropertyPricing = {
+    type: 'DECORATION',
+    bookingMode: null,
+    pricePerDay: 250_000,
+    weekendPrice: 400_000,
+    priceMorningShift: 90_000,
+    priceEveningShift: 90_000,
+  };
+
+  it('uses one fixed service price on weekdays, weekends and rule days', () => {
+    for (const d of [WEDNESDAY, THURSDAY, FRIDAY, SATURDAY]) {
+      const p = resolveDayPricing(decoration, [weekdayRule], d);
+      expect(p.full).toBe(250_000);
+      expect(p.morning).toBe(250_000);
+      expect(p.evening).toBe(250_000);
+      expect(p.rule).toBeNull();
+    }
+  });
+
+  it('charges the service once regardless of days or slot overrides', () => {
+    const slots = [{ date: FRIDAY, shift: ShiftType.FULL, isAvailable: true, priceOverride: 999_000 }];
+    expect(calculateBookingTotal(decoration, [weekdayRule], THURSDAY, SUNDAY, slots, ShiftType.FULL)).toBe(250_000);
+  });
+});

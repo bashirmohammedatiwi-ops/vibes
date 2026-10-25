@@ -121,7 +121,8 @@ function toPayload(form: PropertyFormData, isEdit: boolean) {
     longitude: Number(form.longitude),
     capacity: Number(form.capacity) || 0,
     pricePerDay: Number(form.pricePerDay),
-    weekendPrice: form.weekendPrice ? Number(form.weekendPrice) : undefined,
+    // التزيين: سعر خدمة موحّد — لا سعر نهاية أسبوع
+    weekendPrice: form.type !== "DECORATION" && form.weekendPrice ? Number(form.weekendPrice) : undefined,
     priceMorningShift: form.priceMorningShift ? Number(form.priceMorningShift) : undefined,
     priceEveningShift: form.priceEveningShift ? Number(form.priceEveningShift) : undefined,
     phone: form.phone.trim() || undefined,
@@ -288,13 +289,19 @@ export function PropertyForm({ initial, onSaved, submitLabel = "حفظ" }: Props
           </Select>
         </div>
         <div>
-          <Label htmlFor="pricePerDay">السعر لليوم (د.ع) *</Label>
+          <Label htmlFor="pricePerDay">{form.type === "DECORATION" ? "سعر الخدمة (د.ع) *" : "السعر لليوم (د.ع) *"}</Label>
           <Input id="pricePerDay" type="number" min={0} value={form.pricePerDay} onChange={(e) => update("pricePerDay", e.target.value)} required placeholder="500000" />
         </div>
-        <div>
-          <Label htmlFor="weekendPrice">سعر نهاية الأسبوع</Label>
-          <Input id="weekendPrice" type="number" min={0} value={form.weekendPrice} onChange={(e) => update("weekendPrice", e.target.value)} placeholder="اختياري — إن اختلف" />
-        </div>
+        {form.type === "DECORATION" ? (
+          <p className="self-end rounded-xl bg-accent-soft px-3 py-2.5 text-xs leading-5 text-accent">
+            التزيين خدمة بسعر موحّد في أي يوم — بلا سعر نهاية أسبوع أو فترات.
+          </p>
+        ) : (
+          <div>
+            <Label htmlFor="weekendPrice">سعر نهاية الأسبوع</Label>
+            <Input id="weekendPrice" type="number" min={0} value={form.weekendPrice} onChange={(e) => update("weekendPrice", e.target.value)} placeholder="اختياري — إن اختلف" />
+          </div>
+        )}
         {form.type === "FARM" && (
           <>
             <div>

@@ -798,7 +798,14 @@ class AvailabilityData {
     this.slots = const {},
     this.dayPrices = const [],
     this.bookingMode,
+    this.propertyType,
   });
+
+  /// نوع المكان من السيرفر (FARM / HALL / DECORATION).
+  final String? propertyType;
+
+  /// التزيين خدمة: يوم المناسبة فقط بسعر موحّد.
+  bool get isService => propertyType == 'DECORATION';
 
   /// مفاتيح "yyyy-mm-dd:SHIFT" للأيام المغلقة
   final Set<String> slots;

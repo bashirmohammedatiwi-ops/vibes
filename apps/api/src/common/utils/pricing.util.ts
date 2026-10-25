@@ -106,11 +106,27 @@ export function applicableRule(rules: PriceRuleLike[] | null | undefined, date: 
  * the rule sets explicit shift prices. Days without rules keep the legacy
  * property behavior (explicit shift prices or 50% of the weekend-aware day price).
  */
+/** التزيين خدمة لا حجز مكان — سعر موحّد مهما كان اليوم. */
+export function isServicePricing(property: Pick<PropertyPricing, 'type'>) {
+  return property.type === PropertyType.DECORATION;
+}
+
 export function resolveDayPricing(
   property: PropertyPricing,
   rules: PriceRuleLike[] | null | undefined,
   date: Date,
 ): DayPricing {
+  if (isServicePricing(property)) {
+    const price = Number(property.pricePerDay);
+    return {
+      full: price,
+      morning: price,
+      evening: price,
+      times: resolveShiftTimes(property, null),
+      mode: resolveBookingMode(PropertyType.DECORATION, property.bookingMode),
+      rule: null,
+    };
+  }
   const rule = applicableRule(rules, date);
 
   const weekendRate = toNumber(property.weekendPrice);
@@ -186,6 +202,11 @@ export function calculateBookingTotal(
   }
 
   assertShiftAvailability(shift, start, end, slots);
+
+  // التزيين: سعر الخدمة مرة واحدة — لا يتغير باليوم ولا بعدد الأيام
+  if (isServicePricing(property)) {
+    return Number(property.pricePerDay);
+  }
 
   const map = slotLookup(slots);
   let total = 0;
