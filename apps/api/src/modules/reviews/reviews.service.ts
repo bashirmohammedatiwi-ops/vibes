@@ -3,6 +3,7 @@ import { NotificationType } from '@prisma/client';
 import { RatingService } from '../../common/services/rating.service';
 import { NotificationService } from '../../common/services/notification.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { publicReviewSelect } from '../properties/public-select';
 
 @Injectable()
 export class ReviewsService {
@@ -36,7 +37,7 @@ export class ReviewsService {
   list(propertyId: string) {
     return this.prisma.review.findMany({
       where: { propertyId, isVisible: true },
-      include: { user: { select: { name: true } } },
+      select: publicReviewSelect,
       orderBy: { createdAt: 'desc' },
     });
   }

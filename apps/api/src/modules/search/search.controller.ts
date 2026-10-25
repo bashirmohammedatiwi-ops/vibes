@@ -4,6 +4,7 @@ import { PropertyStatus, PropertyType } from '@prisma/client';
 import { CacheService } from '../../common/services/cache.service';
 import { Public } from '../../common/decorators/public.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
+import { publicMediaSelect, publicPropertyScalars } from '../properties/public-select';
 
 const CACHE_TTL_SECONDS = 30;
 
@@ -69,9 +70,10 @@ export class SearchController {
 
     const properties = await this.prisma.property.findMany({
       where,
-      include: {
+      select: {
+        ...publicPropertyScalars,
         city: { include: { province: true } },
-        media: { take: 3, orderBy: { sortOrder: 'asc' } },
+        media: { take: 3, orderBy: { sortOrder: 'asc' }, select: publicMediaSelect },
       },
       take: 50,
     });

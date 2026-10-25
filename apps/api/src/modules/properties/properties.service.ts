@@ -22,6 +22,7 @@ import {
 import { uniqueSlug } from '../../common/utils/slug.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePropertyDto, UpdatePropertyDto } from './dto/create-property.dto';
+import { publicMediaSelect, publicPropertyScalars, publicReviewSelect } from './public-select';
 
 const CACHE_NAMESPACE = 'properties';
 const LIST_TTL_SECONDS = 45;
@@ -42,6 +43,36 @@ const include = {
   },
   _count: { select: { reviews: true } },
 };
+
+/** Public property page (GET /properties/:id and /properties/slug/:slug). */
+const publicDetailSelect = {
+  ...publicPropertyScalars,
+  city: { include: { province: true } },
+  media: {
+    orderBy: { sortOrder: 'asc' as const },
+    where: { status: 'READY' as const },
+    select: publicMediaSelect,
+  },
+  amenityLinks: include.amenityLinks,
+  provider: {
+    select: {
+      id: true,
+      businessName: true,
+      verified: true,
+      user: { select: { name: true, phone: true } },
+      _count: { select: { followers: true } },
+    },
+  },
+  _count: { select: { reviews: true } },
+  reviews: {
+    where: { isVisible: true },
+    select: publicReviewSelect,
+    orderBy: { createdAt: 'desc' as const },
+    take: 20,
+  },
+} satisfies Prisma.PropertySelect;
+
+type PublicPropertyDetail = Prisma.PropertyGetPayload<{ select: typeof publicDetailSelect }>;
 
 /** بطاقة اكتشاف — غلاف واحد بدون مزايا أو وصف طويل */
 const listCardSelect = {
@@ -203,20 +234,12 @@ export class PropertiesService {
 
   async findOne(id: string) {
     const cacheKey = CacheService.keyFrom(`${CACHE_NAMESPACE}:detail:id`, { id });
-    const cached = await this.cache.get<Prisma.PropertyGetPayload<{ include: typeof include }>>(cacheKey);
+    const cached = await this.cache.get<PublicPropertyDetail>(cacheKey);
     if (cached) return cached;
 
     const property = await this.prisma.property.findUnique({
       where: { id },
-      include: {
-        ...include,
-        reviews: {
-          where: { isVisible: true },
-          include: { user: { select: { name: true } } },
-          orderBy: { createdAt: 'desc' },
-          take: 20,
-        },
-      },
+      select: publicDetailSelect,
     });
     if (!property || property.status !== PropertyStatus.APPROVED) {
       throw new NotFoundException('المكان غير موجود');
@@ -307,20 +330,12 @@ export class PropertiesService {
 
   async findBySlug(slug: string) {
     const cacheKey = CacheService.keyFrom(`${CACHE_NAMESPACE}:detail:slug`, { slug });
-    const cached = await this.cache.get<Prisma.PropertyGetPayload<{ include: typeof include }>>(cacheKey);
+    const cached = await this.cache.get<PublicPropertyDetail>(cacheKey);
     if (cached) return cached;
 
     const property = await this.prisma.property.findUnique({
       where: { slug },
-      include: {
-        ...include,
-        reviews: {
-          where: { isVisible: true },
-          include: { user: { select: { name: true } } },
-          orderBy: { createdAt: 'desc' },
-          take: 20,
-        },
-      },
+      select: publicDetailSelect,
     });
     if (!property || property.status !== PropertyStatus.APPROVED) {
       throw new NotFoundException('المكان غير موجود');

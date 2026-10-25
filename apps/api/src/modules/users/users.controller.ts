@@ -23,6 +23,7 @@ export class UsersController {
     return this.prisma.user.findUnique({
       where: { id: user.id },
       include: { provider: true },
+      omit: { pinHash: true },
     });
   }
 
@@ -32,6 +33,7 @@ export class UsersController {
       where: { id: user.id },
       data: { name: dto.name?.trim() || null },
       include: { provider: true },
+      omit: { pinHash: true },
     });
   }
 
@@ -41,6 +43,7 @@ export class UsersController {
     return this.prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
       include: { provider: true },
+      omit: { pinHash: true },
     });
   }
 }
