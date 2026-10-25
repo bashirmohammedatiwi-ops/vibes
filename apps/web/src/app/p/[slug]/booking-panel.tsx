@@ -191,6 +191,8 @@ export function BookingPanel({ property: p }: { property: PropertyDetail }) {
   const lead = first.getDay();
   const count = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
   const cells: (string | null)[] = [...Array(lead).fill(null), ...Array.from({ length: count }, (_, i) => ymd(new Date(first.getFullYear(), first.getMonth(), i + 1)))];
+  // يوم المغادرة: بعد المسائي أو اليوم الكامل
+  const departure = end && shift !== "MORNING" ? ymd(addDays(dateOnly(end), 1)) : null;
   const nights = start && end ? Math.round((dateOnly(end).getTime() - dateOnly(start).getTime()) / 86400000) + 1 : 0;
   const shiftTime =
     shift === "MORNING"
@@ -284,6 +286,7 @@ export function BookingPanel({ property: p }: { property: PropertyDetail }) {
                 const st = dayState(d);
                 const inRange = start && end && d >= start && d <= end;
                 const isEdge = d === start || d === end;
+                const isDeparture = !!departure && d === departure && !isEdge;
                 return (
                   <button
                     key={d}
@@ -292,7 +295,9 @@ export function BookingPanel({ property: p }: { property: PropertyDetail }) {
                     className={`flex h-11 items-center justify-center rounded-xl border text-[15px] font-bold transition ${
                       isEdge
                         ? "border-green-600 bg-green-600 text-white shadow-md"
-                        : inRange
+                        : isDeparture
+                          ? "flex-col border-2 border-green-600 bg-white text-green-700"
+                          : inRange
                           ? "border-green-300 bg-green-100 text-green-800"
                           : st === "free"
                             ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
@@ -302,6 +307,7 @@ export function BookingPanel({ property: p }: { property: PropertyDetail }) {
                     }`}
                   >
                     <span className="num">{Number(d.slice(8))}</span>
+                    {isDeparture && <span className="text-[9px] leading-none font-black">مغادرة</span>}
                   </button>
                 );
               })}
@@ -378,6 +384,7 @@ export function BookingPanel({ property: p }: { property: PropertyDetail }) {
               <Row label="التاريخ" value={start === end ? fmtDay(start) : `${fmtDay(start)} ← ${fmtDay(end)}`} />
               <Row label="الفترة" value={`${SHIFT_LABEL[shift]}${shiftTime ? ` · ${shiftTime}` : ""}`} />
               {nights > 1 && <Row label="عدد الأيام" value={`${nights}`} />}
+              {departure && <Row label="المغادرة" value={fmtDay(departure)} />}
               {quoting ? (
                 <div className="flex items-center gap-2 text-ink-3">
                   <Loader2 className="h-4 w-4 animate-spin" /> يحسب السعر…

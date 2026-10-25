@@ -159,7 +159,9 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
         _quoting = false;
         // رسالة الخادم أوضح (موعد محجوز، شفت غير متاح…) من رسالة عامة
         final msg = maisonError(e);
-        _quoteError = msg.trim().isEmpty ? 'تعذر حساب السعر — حاول مجدداً' : msg;
+        _quoteError = msg.trim().isEmpty
+            ? 'تعذر حساب السعر — حاول مجدداً'
+            : msg;
       });
     }
   }
@@ -282,6 +284,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
       }
       _start = picked.start;
       _end = picked.endExclusive;
+      _fullDayMulti = picked.endExclusive.difference(picked.start).inDays > 1;
       _quote = null;
     });
     _fetchQuote();

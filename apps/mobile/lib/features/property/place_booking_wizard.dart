@@ -184,10 +184,7 @@ class _PlaceBookingWizardSheetState extends State<_PlaceBookingWizardSheet> {
     if (s == ShiftType.evening) {
       return 'يوم واحد · المغادرة تُضبط لليوم التالي تلقائياً';
     }
-    if (_fullDayMulti == true) {
-      return 'اختر يوم الوصول ثم يوم المغادرة';
-    }
-    return 'يوم واحد · المغادرة تلقائياً في اليوم التالي';
+    return 'يوم أو أكثر — لأكثر من يوم اضغط على يوم النهاية';
   }
 
   Future<void> _ensureAvailability() async {
@@ -214,17 +211,14 @@ class _PlaceBookingWizardSheetState extends State<_PlaceBookingWizardSheet> {
     setState(() {
       _shift = s;
       _error = null;
-      if (s != ShiftType.full) {
-        _fullDayMulti = false;
-      } else {
-        _fullDayMulti = null;
-      }
+      // اليوم الكامل لا يحتاج سؤال «يوم أو أكثر» — التقويم يسمح بالتمديد
+      _fullDayMulti = false;
       _start = null;
       _end = null;
       _estimatedTotal = null;
     });
-    // صباحي/مسائي → انتقال تلقائي بعد لمسة قصيرة
-    if (s != ShiftType.full && !widget.editOnly) {
+    // انتقال تلقائي بعد لمسة قصيرة
+    if (!widget.editOnly) {
       Future<void>.delayed(const Duration(milliseconds: 280), () {
         if (!mounted || _shift != s) return;
         _advanceFromPeriod();
@@ -328,6 +322,7 @@ class _PlaceBookingWizardSheetState extends State<_PlaceBookingWizardSheet> {
       }
       _start = picked.start;
       _end = picked.endExclusive;
+      _fullDayMulti = picked.endExclusive.difference(picked.start).inDays > 1;
       _estimatedTotal = picked.estimatedTotal;
       _error = null;
     });

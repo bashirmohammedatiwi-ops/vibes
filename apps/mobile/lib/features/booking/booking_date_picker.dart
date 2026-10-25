@@ -112,9 +112,6 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
   late ShiftType _shift = _allowedShifts.contains(widget.shift)
       ? widget.shift
       : _allowedShifts.first;
-  late final BookingDatePickMode _fullMode = widget.shift == ShiftType.full
-      ? widget.mode
-      : BookingDatePickMode.singleDay;
   DateTime? _start;
   DateTime? _endInclusive;
   bool _awaitingRangeEnd = false;
@@ -145,8 +142,15 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
     'السبت',
   ];
 
-  bool get _singleDay =>
-      _shift != ShiftType.full || _fullMode == BookingDatePickMode.singleDay;
+  /// صباحي/مسائي: يوم واحد. اليوم الكامل: يوم أو أكثر (اضغط يوم النهاية).
+  bool get _singleDay => _shift != ShiftType.full;
+
+  /// يوم المغادرة يظهر للمسائي واليوم الكامل (اليوم التالي لآخر يوم محجوز).
+  DateTime? get _departure {
+    final end = _endInclusive;
+    if (end == null || _shift == ShiftType.morning) return null;
+    return end.add(const Duration(days: 1));
+  }
 
   /// الفترات التي يقبلها المكان.
   List<ShiftType> get _allowedShifts =>
@@ -319,21 +323,23 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
         _start = date;
         _endInclusive = date;
         _awaitingRangeEnd = false;
-        _maybeAutoConfirm();
         return;
       }
-      if (_start == null || !_awaitingRangeEnd || date.isBefore(_start!)) {
+      // يوم كامل: أول ضغطة = يوم واحد جاهز للاعتماد،
+      // وضغطة على يوم لاحق تمدّ الحجز حتى ذلك اليوم.
+      final start = _start;
+      final end = _endInclusive;
+      if (start == null || end == null || !date.isAfter(end)) {
         _start = date;
         _endInclusive = date;
-        _awaitingRangeEnd = true;
+        _awaitingRangeEnd = false;
         return;
       }
-
-      if (!_rangeIsAvailable(_start!, date)) {
-        _error = 'يوجد يوم غير متاح داخل هذا النطاق';
+      if (!_rangeIsAvailable(start, date)) {
+        _error = 'يوجد يوم غير متاح بين اليومين — اخترنا لك اليوم الجديد فقط';
         _start = date;
         _endInclusive = date;
-        _awaitingRangeEnd = true;
+        _awaitingRangeEnd = false;
         return;
       }
       _endInclusive = date;
@@ -371,15 +377,6 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
         shift: _shift,
       ),
     );
-  }
-
-  void _maybeAutoConfirm() {
-    if (!widget.autoConfirmSingleDay || !_singleDay) return;
-    if (_start != null && _endInclusive != null && !_awaitingRangeEnd) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _confirm();
-      });
-    }
   }
 
   @override
@@ -552,40 +549,27 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
                       availability: widget.availability,
                       start: _start,
                       endInclusive: _endInclusive,
+                      departure: _departure,
                       onSelect: _select,
                     );
                   },
                 ),
         ),
-        if (!widget.autoConfirmSingleDay || !_singleDay)
-          _SummaryBar(
-            start: _start,
-            endInclusive: _endInclusive,
-            days: _selectedDays,
-            total: _estimatedTotal,
-            awaitingEnd: _awaitingRangeEnd,
-            singleDay: _singleDay,
-            dateLabel: _longDate,
-            periodLabel: [
-              _shiftName(_shift),
-              if (_shiftTime(_shift) != null) _shiftTime(_shift)!,
-            ].join(' · '),
-            onConfirm: _confirm,
-          )
-        else if (_start != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-            child: Text(
-              'تم اختيار ${_longDate(_start!)} · متابعة…',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
-                color: placeInk2,
-              ),
-            ),
-          ),
+        _SummaryBar(
+          start: _start,
+          endInclusive: _endInclusive,
+          days: _selectedDays,
+          total: _estimatedTotal,
+          awaitingEnd: _awaitingRangeEnd,
+          singleDay: _singleDay,
+          dateLabel: _longDate,
+          departureLabel: _departure == null ? null : _longDate(_departure!),
+          periodLabel: [
+            _shiftName(_shift),
+            if (_shiftTime(_shift) != null) _shiftTime(_shift)!,
+          ].join(' · '),
+          onConfirm: _confirm,
+        ),
       ],
     );
 
@@ -630,9 +614,11 @@ class _MonthCalendar extends StatelessWidget {
     required this.availability,
     required this.start,
     required this.endInclusive,
+    required this.departure,
     required this.onSelect,
   });
 
+  final DateTime? departure;
   final DateTime month;
   final List<DayPricing> days;
   final ShiftType shift;
@@ -758,6 +744,7 @@ class _MonthCalendar extends StatelessWidget {
               past: pricing == null || pricing.isPast,
               available: !disabled,
               selected: isStart || isEnd,
+              departure: _sameDate(date, departure),
               inRange: inRange,
               onTap: pricing == null || pricing.isPast
                   ? null
@@ -783,9 +770,12 @@ class _DayCell extends StatelessWidget {
     required this.available,
     required this.selected,
     required this.inRange,
+    this.departure = false,
     this.onTap,
   });
 
+  /// يوم المغادرة (بعد المسائي أو اليوم الكامل).
+  final bool departure;
   final DateTime date;
   final bool past;
 
@@ -811,6 +801,10 @@ class _DayCell extends StatelessWidget {
       bg = green.withValues(alpha: .18);
       fg = const Color(0xFF15803D);
       border = green.withValues(alpha: .4);
+    } else if (departure) {
+      bg = Colors.white;
+      fg = const Color(0xFF15803D);
+      border = green;
     } else if (past) {
       bg = Colors.transparent;
       fg = placeInk2.withValues(alpha: .3);
@@ -842,7 +836,10 @@ class _DayCell extends StatelessWidget {
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: border, width: selected ? 1.6 : 1),
+            border: Border.all(
+              color: border,
+              width: selected || departure ? 1.8 : 1,
+            ),
             boxShadow: selected
                 ? [
                     BoxShadow(
@@ -853,7 +850,33 @@ class _DayCell extends StatelessWidget {
                   ]
                 : null,
           ),
-          child: selected
+          child: departure && !selected
+              ? Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '${date.day}',
+                      style: TextStyle(
+                        fontFamily: 'Montserrat',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: fg,
+                        height: 1.1,
+                      ),
+                    ),
+                    const Text(
+                      'مغادرة',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF15803D),
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
+                )
+              : selected
               ? Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -1194,9 +1217,11 @@ class _SummaryBar extends StatelessWidget {
     required this.dateLabel,
     required this.onConfirm,
     this.periodLabel,
+    this.departureLabel,
   });
 
   final String? periodLabel;
+  final String? departureLabel;
   final DateTime? start;
   final DateTime? endInclusive;
   final int days;
@@ -1266,9 +1291,21 @@ class _SummaryBar extends StatelessWidget {
                               color: placeInk2,
                             ),
                           ),
-                        if (ready && !singleDay && days > 1)
+                        if (ready && departureLabel != null)
                           Text(
-                            '$days أيام',
+                            'المغادرة: $departureLabel',
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF15803D),
+                            ),
+                          ),
+                        if (ready && !singleDay)
+                          Text(
+                            days > 1
+                                ? '$days أيام'
+                                : 'لأكثر من يوم: اضغط على يوم النهاية',
                             style: const TextStyle(
                               fontFamily: 'Cairo',
                               fontSize: 10.5,

@@ -258,6 +258,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
       }
       _start = picked.start;
       _end = picked.endExclusive;
+      _fullDayMulti = picked.endExclusive.difference(picked.start).inDays > 1;
       _quote = null;
       _quoteError = null;
     });
