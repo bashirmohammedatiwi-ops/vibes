@@ -97,7 +97,7 @@ Data linked to you — كلها لغرض **App Functionality** فقط:
 
 أنشئ حساباً تجريبياً برقم تملكه ورمز من 6 أرقام وضعه في خانة Sign-in information، مع هذا النص:
 
-> VIBES is a booking marketplace for farms, event halls and decoration teams in Iraq. Browsing works without an account. To test booking: sign in with the demo phone number and 6-digit PIN above, open any place, pick an available day on the calendar and tap "احجز الآن". Payment is a manual bank transfer or local payment gateway for a physical service (venue rental), confirmed by our staff — no digital goods are sold. Account deletion: Profile (ملفي) → حذف الحساب.
+> VIBES is a booking marketplace for farms, event halls and decoration teams in Iraq. Browsing works without an account. To test booking: sign in with the demo phone number and 6-digit PIN above, open any place, pick an available day on the calendar and tap "احجز الآن". Payment is a manual bank transfer or local payment gateway for a physical service (venue rental), confirmed by our staff — no digital goods are sold. Account deletion: Profile (ملفي) → حذف الحساب. User-generated content (reviews, guest posts, comments, chat): every item has a ⋯ menu to report it (reviewed by our team within 24 hours) or block the user (their content disappears immediately). The Terms include a zero-tolerance policy for objectionable content.
 >
 > Owner mode: verified venue owners can switch to an owner portal from Profile → "مالك مزرعة أو قاعة؟" to manage their calendar and booking requests. Owner accounts are linked by our team after verifying ownership (no self sign-up, no payments to us inside the app). Demo owner account: <phone> / <PIN>.
 
@@ -105,7 +105,7 @@ Data linked to you — كلها لغرض **App Functionality** فقط:
 
 - مسموحة: تطبيق واحد لنوعين من المستخدمين شائع (مثل Airbnb). لا يُباع فيها شيء رقمي، ولا تسجيل ذاتي، ولا رفع وثائق هوية.
 - **مهم:** أعطِ المراجع حساب مالك تجريبي مربوطاً بمكان تجريبي (في الملاحظات أعلاه)، وإلا قد يطلب Apple الوصول لهذه الميزة (Guideline 2.1).
-- حذف حساب المالك من التطبيق يرسل طلب حذف للدعم فوراً ويُخبره أنه يُنفَّذ خلال 7 أيام (بسبب حجوزات أماكنه) — مقبول لدى Apple ما دام يبدأ من داخل التطبيق وتُوضَّح المدة. نفّذ هذه الطلبات من لوحة التحكم ضمن المدة.
+- حذف حساب المالك فوري من داخل التطبيق (حسابي في بوابة المالك ← حذف الحساب). أماكنه تبقى وتصل رسالة للدعم لإعادة ربطها أو إيقافها.
 
 ---
 
