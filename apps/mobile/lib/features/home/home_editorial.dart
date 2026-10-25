@@ -225,7 +225,7 @@ class EditorsPicks extends ConsumerWidget {
           title: 'أماكن مختارة',
           subtitle: props.length == 1
               ? 'المكان الذي اخترناه لك'
-              : 'اسحب لتشوف المكان التالي',
+              : 'اسحب البطاقة لتشوف المكان التالي',
         ),
         const SizedBox(height: 16),
         _ChosenDeck(properties: props, accent: section.accent),
@@ -234,8 +234,9 @@ class EditorsPicks extends ConsumerWidget {
   }
 }
 
-/// رزمة بطاقات متراكبة — الأمامية كبيرة، واللي وراها تطلّ
-/// من الجانب. السحب يقلّب للبطاقة التالية بنعومة.
+/// رزمة بطاقات متراكبة حقيقية — البطاقة الأمامية فوق الجميع، واثنتان خلفها
+/// تطلّان من الأعلى أصغر قليلاً. اسحب البطاقة يميناً أو يساراً: تتبع إصبعك
+/// وتميل، ثم تطير لآخر الرزمة وتتقدّم التالية بنعومة. الرزمة تدور بلا نهاية.
 class _ChosenDeck extends StatefulWidget {
   const _ChosenDeck({required this.properties, required this.accent});
 
@@ -246,127 +247,249 @@ class _ChosenDeck extends StatefulWidget {
   State<_ChosenDeck> createState() => _ChosenDeckState();
 }
 
-class _ChosenDeckState extends State<_ChosenDeck> {
-  late final PageController _page = PageController(
-    viewportFraction: widget.properties.length == 1 ? 1 : 0.84,
-  );
-  int _index = 0;
+class _ChosenDeckState extends State<_ChosenDeck>
+    with SingleTickerProviderStateMixin {
+  static const _cardHeight = 232.0;
+  static const _peek = 11.0; // كم تطلّ كل بطاقة خلفية من الأعلى
+  static const _maxDepth = 3;
+
+  late final AnimationController _ctl = AnimationController(vsync: this)
+    ..addListener(_tick);
+  int _top = 0;
+  double _dx = 0;
+  double _from = 0;
+  double _to = 0;
+  bool _flyOut = false;
+
+  int get _n => widget.properties.length;
+
+  @override
+  void didUpdateWidget(covariant _ChosenDeck old) {
+    super.didUpdateWidget(old);
+    if (_top >= _n) _top = 0;
+  }
 
   @override
   void dispose() {
-    _page.dispose();
+    _ctl.dispose();
     super.dispose();
+  }
+
+  void _tick() {
+    final t = Curves.easeOutCubic.transform(_ctl.value);
+    setState(() => _dx = _from + (_to - _from) * t);
+  }
+
+  void _animateTo(double target, {required bool flyOut, double velocity = 0}) {
+    _from = _dx;
+    _to = target;
+    _flyOut = flyOut;
+    final distance = (target - _dx).abs();
+    final ms = flyOut
+        ? (220 - (velocity.abs() / 40)).clamp(140, 220).toInt()
+        : (180 + distance / 3).clamp(180, 320).toInt();
+    _ctl
+      ..duration = Duration(milliseconds: ms)
+      ..forward(from: 0).whenComplete(() {
+        if (!mounted || !_flyOut) return;
+        setState(() {
+          _top = (_top + 1) % _n;
+          _dx = 0;
+          _flyOut = false;
+        });
+      });
+  }
+
+  void _onDragUpdate(DragUpdateDetails d) {
+    if (_ctl.isAnimating) return;
+    setState(() => _dx += d.delta.dx);
+  }
+
+  void _onDragEnd(DragEndDetails d, double width) {
+    if (_ctl.isAnimating) return;
+    final v = d.velocity.pixelsPerSecond.dx;
+    final passed = _dx.abs() > width * 0.26 || v.abs() > 700;
+    if (passed) {
+      HapticFeedback.selectionClick();
+      final dir = (_dx == 0 ? v : _dx).sign;
+      _animateTo(dir * width * 1.25, flyOut: true, velocity: v);
+    } else {
+      _animateTo(0, flyOut: false);
+    }
+  }
+
+  void _jumpTo(int i) {
+    if (i == _top || _ctl.isAnimating) return;
+    HapticFeedback.selectionClick();
+    setState(() {
+      _top = i;
+      _dx = 0;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final n = widget.properties.length;
-    final rtl = Directionality.of(context) == TextDirection.rtl;
-    return Column(
-      children: [
-        SizedBox(
-          height: 192,
-          child: PageView.builder(
-            controller: _page,
-            itemCount: n,
-            padEnds: false,
-            onPageChanged: (i) {
-              HapticFeedback.selectionClick();
-              setState(() => _index = i);
-            },
-            itemBuilder: (context, i) {
-              return AnimatedBuilder(
-                animation: _page,
-                builder: (context, child) {
-                  final page = _page.hasClients ? (_page.page ?? 0) : 0.0;
-                  final delta = (page - i).clamp(-1.2, 1.2);
-                  final abs = delta.abs().clamp(0.0, 1.0);
-                  final shift = delta * 36 * (rtl ? -1 : 1);
-                  return Padding(
-                    padding: EdgeInsetsDirectional.fromSTEB(
-                      i == 0 ? 24 : 0,
-                      4,
-                      n == 1 ? 24 : 10,
-                      4,
-                    ),
-                    child: Transform.translate(
-                      offset: Offset(shift, abs * 8),
-                      child: Transform.scale(
-                        scale: 1 - abs * 0.06,
-                        alignment: Alignment.center,
-                        child: Opacity(
-                          opacity: (1 - abs * 0.18).clamp(0.62, 1),
-                          child: child,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-                child: _DeckCard(
-                  property: widget.properties[i],
-                  accent: widget.accent,
-                  index: i,
-                  total: n,
-                ),
-              );
-            },
+    if (_n == 1) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: SizedBox(
+          height: _cardHeight,
+          child: _DeckCard(
+            property: widget.properties.first,
+            index: 0,
+            total: 1,
           ),
         ),
-        if (n > 1) ...[
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (var i = 0; i < n; i++)
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOutCubic,
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  width: i == _index ? 18 : 6,
-                  height: 3,
-                  decoration: BoxDecoration(
-                    color: i == _index ? _brass : const Color(0xFFD5DCE6),
+      );
+    }
+    final depth = _n < _maxDepth ? _n : _maxDepth;
+    return Column(
+      children: [
+        LayoutBuilder(
+          builder: (context, c) {
+            final width = c.maxWidth - 40;
+            // تقدّم البطاقات الخلفية أثناء السحب (0 → 1)
+            final progress = (_dx.abs() / (width * 0.45)).clamp(0.0, 1.0);
+            final cards = <Widget>[];
+            for (var d = depth - 1; d >= 0; d--) {
+              final i = (_top + d) % _n;
+              final front = d == 0;
+              // العمق الفعّال: البطاقات الخلفية تتقدّم خطوة مع السحب
+              final eff = front ? 0.0 : d - progress;
+              final scale = 1 - eff * 0.055;
+              final dy = -eff * _peek;
+              Widget card = _DeckCard(
+                property: widget.properties[i],
+                index: i,
+                total: _n,
+                dim: front ? 0 : (eff * 0.22).clamp(0.0, 0.44),
+              );
+              if (front) {
+                card = Transform.translate(
+                  offset: Offset(_dx, _dx.abs() * 0.04),
+                  child: Transform.rotate(
+                    angle: (_dx / width) * 0.14,
+                    alignment: Alignment.bottomCenter,
+                    child: card,
+                  ),
+                );
+                card = GestureDetector(
+                  onHorizontalDragUpdate: _onDragUpdate,
+                  onHorizontalDragEnd: (d) => _onDragEnd(d, width),
+                  child: card,
+                );
+              } else {
+                card = IgnorePointer(
+                  child: Transform.translate(
+                    offset: Offset(0, dy),
+                    child: Transform.scale(
+                      scale: scale,
+                      alignment: Alignment.topCenter,
+                      child: card,
+                    ),
+                  ),
+                );
+              }
+              cards.add(
+                Positioned(
+                  key: ValueKey('deck-$i'),
+                  top: _peek * (depth - 1),
+                  left: 20,
+                  right: 20,
+                  height: _cardHeight,
+                  child: card,
+                ),
+              );
+            }
+            return SizedBox(
+              height: _cardHeight + _peek * (depth - 1) + 6,
+              child: Stack(clipBehavior: Clip.none, children: cards),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var i = 0; i < _n; i++)
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _jumpTo(i),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 3,
+                    vertical: 6,
+                  ),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 240),
+                    curve: Curves.easeOutCubic,
+                    width: i == _top ? 20 : 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: i == _top
+                          ? widget.accent
+                          : const Color(0xFFD5DCE6),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
                   ),
                 ),
-            ],
-          ),
-        ],
+              ),
+          ],
+        ),
       ],
     );
   }
 }
 
+/// أقل سعر يبدأ منه المكان (يوم كامل أو فترة).
+num _fromPrice(Property p) {
+  final prices = <num>[
+    p.pricePerDay,
+    if (p.priceMorningShift != null) p.priceMorningShift!,
+    if (p.priceEveningShift != null) p.priceEveningShift!,
+  ].where((v) => v > 0).toList()..sort();
+  return prices.isEmpty ? p.pricePerDay : prices.first;
+}
+
 class _DeckCard extends ConsumerWidget {
   const _DeckCard({
     required this.property,
-    required this.accent,
     required this.index,
     required this.total,
+    this.dim = 0,
   });
 
   final Property property;
-  final Color accent;
   final int index;
   final int total;
+
+  /// تعتيم البطاقات الخلفية (0 = الأمامية).
+  final double dim;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final fav = (ref.watch(favoritesProvider).valueOrNull ?? const <Property>[])
         .any((p) => p.id == property.id);
     final place = property.cityName ?? property.provinceName ?? '';
+    final price = _fromPrice(property);
+    final unit = switch (property.type) {
+      PropertyType.decoration => 'للخدمة',
+      _ when property.supportsShifts => 'للفترة',
+      _ => 'لليوم',
+    };
     return Semantics(
       button: true,
       label:
-          '${property.name}، ${property.typeLabelAr}، ${_money(property.pricePerDay)} دينار',
+          '${property.name}، ${property.typeLabelAr}، يبدأ من ${_money(price)} دينار',
       child: PressScale(
         onTap: () => context.push('/property/${property.id}'),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: _shadow(o: 1.1),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: _shadow(o: 1.15),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(24),
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -376,36 +499,63 @@ class _DeckCard extends ConsumerWidget {
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      stops: [0.32, 0.58, 1],
+                      stops: [0, 0.38, 0.62, 1],
                       colors: [
-                        Color(0x1A0F1626),
-                        Color(0x330F1626),
-                        Color(0xDE141C2B),
+                        Color(0x33000000),
+                        Color(0x00000000),
+                        Color(0x660F1626),
+                        Color(0xE6101827),
                       ],
                     ),
                   ),
                 ),
+                // الرأس: الترتيب والمفضلة
                 PositionedDirectional(
-                  top: 12,
-                  start: 12,
-                  child: _DeckRankMark(rank: index + 1),
+                  top: 14,
+                  start: 14,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.32),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Text(
+                      '${(index + 1).toString().padLeft(2, '0')} / ${total.toString().padLeft(2, '0')}',
+                      textDirection: TextDirection.ltr,
+                      style: const TextStyle(
+                        fontFamily: 'Montserrat',
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                        color: Colors.white,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
                 ),
                 PositionedDirectional(
-                  top: 12,
-                  end: 12,
+                  top: 10,
+                  end: 10,
                   child: GestureDetector(
                     onTap: () async {
                       if (!ref.read(authControllerProvider).loggedIn) {
                         await context.push('/login');
                         return;
                       }
+                      HapticFeedback.lightImpact();
                       ref.read(favoritesProvider.notifier).toggle(property);
                     },
                     child: Container(
-                      width: 36,
-                      height: 36,
+                      width: 38,
+                      height: 38,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.94),
+                        color: Colors.white.withValues(alpha: 0.95),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -413,196 +563,189 @@ class _DeckCard extends ConsumerWidget {
                             ? Icons.favorite_rounded
                             : Icons.favorite_border_rounded,
                         color: fav ? const Color(0xFFE11D48) : _ink,
-                        size: 18,
+                        size: 19,
                       ),
                     ),
                   ),
                 ),
+                // الجسم
                 Positioned(
-                  left: 14,
-                  right: 14,
-                  bottom: 8,
+                  left: 16,
+                  right: 16,
+                  bottom: 14,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        property.typeLabelAr,
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: _brassSoft.withValues(alpha: 0.95),
-                          height: 1,
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _brassSoft.withValues(alpha: 0.22),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              property.typeLabelAr,
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                color: _brassSoft,
+                              ),
+                            ),
+                          ),
+                          if (property.ratingCount > 0) ...[
+                            const SizedBox(width: 8),
+                            const Icon(
+                              Icons.star_rounded,
+                              size: 14,
+                              color: Color(0xFFF5C451),
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${property.ratingAvg.toStringAsFixed(1)} (${property.ratingCount})',
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 6),
                       Text(
                         property.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontFamily: 'Cairo',
-                          fontSize: 15,
-                          height: 1.12,
+                          fontSize: 18,
+                          height: 1.2,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        [
-                          if (place.isNotEmpty) place,
-                          if (property.ratingCount > 0)
-                            '★ ${property.ratingAvg.toStringAsFixed(1)}',
-                        ].join('  ·  '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white.withValues(alpha: 0.82),
+                      if (place.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.location_on_rounded,
+                                size: 13,
+                                color: Colors.white.withValues(alpha: 0.75),
+                              ),
+                              const SizedBox(width: 3),
+                              Flexible(
+                                child: Text(
+                                  place,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white.withValues(alpha: 0.82),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 10),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'يبدأ من',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white.withValues(alpha: 0.7),
+                                    height: 1.1,
+                                  ),
+                                ),
+                                Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: _money(price),
+                                        style: const TextStyle(
+                                          fontFamily: 'Montserrat',
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
+                                          fontFeatures: [
+                                            FontFeature.tabularFigures(),
+                                          ],
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: '  د.ع · $unit',
+                                        style: TextStyle(
+                                          fontFamily: 'Cairo',
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white.withValues(
+                                            alpha: 0.72,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           GestureDetector(
                             onTap: () => context.push('/book/${property.id}'),
                             child: Container(
-                              height: 30,
+                              height: 38,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
+                                horizontal: 16,
                               ),
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(999),
                               ),
                               child: const Text(
                                 'احجز الآن',
                                 style: TextStyle(
                                   fontFamily: 'Cairo',
                                   fontSize: 13,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w900,
                                   color: _ink,
                                 ),
                               ),
                             ),
-                          ),
-                          const Spacer(),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                _money(property.pricePerDay),
-                                style: const TextStyle(
-                                  fontFamily: 'Cairo',
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  height: 1,
-                                  fontFeatures: [FontFeature.tabularFigures()],
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                switch (property.type) {
-                                  PropertyType.decoration => 'د.ع / للخدمة',
-                                  _ when property.supportsShifts =>
-                                    'د.ع / للفترة',
-                                  _ => 'د.ع / لليوم',
-                                },
-                                style: TextStyle(
-                                  fontFamily: 'Cairo',
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white.withValues(alpha: 0.72),
-                                ),
-                              ),
-                            ],
                           ),
                         ],
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// رقم ترتيبي على بطاقة «أماكن مختارة» — Montserrat تحريري، أبيض بالكامل.
-class _DeckRankMark extends StatelessWidget {
-  const _DeckRankMark({required this.rank});
-
-  final int rank;
-
-  static const _digitWhite = Colors.white;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = rank.toString().padLeft(2, '0');
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: SizedBox(
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(9, 6, 11, 7),
-          decoration: BoxDecoration(
-            color: const Color(0x80101824),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Container(
-                width: 1.5,
-                height: 26,
-                margin: const EdgeInsetsDirectional.only(end: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.55),
-                  borderRadius: BorderRadius.circular(1),
-                ),
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontFamily: 'Montserrat',
-                      fontSize: 22,
-                      height: 0.95,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 5,
-                      color: _digitWhite,
-                      fontFeatures: [FontFeature.tabularFigures()],
-                      shadows: [
-                        Shadow(
-                          color: Color(0x99000000),
-                          blurRadius: 10,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
+                // تعتيم البطاقات الخلفية (بدل الشفافية التي تُظهر الصور فوق بعض)
+                if (dim > 0)
+                  IgnorePointer(
+                    child: ColoredBox(
+                      color: const Color(0xFF0B1220).withValues(alpha: dim),
                     ),
                   ),
-                  const SizedBox(height: 5),
-                  Container(
-                    width: 20,
-                    height: 1,
-                    color: Colors.white.withValues(alpha: 0.38),
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

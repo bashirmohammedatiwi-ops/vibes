@@ -280,6 +280,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                           const Spacer(),
                           Text(
                             '${_index + 1} / ${_slides.length}',
+                            textDirection: TextDirection.ltr,
                             style: const TextStyle(
                               fontFamily: 'Montserrat',
                               fontSize: 12,
@@ -355,46 +356,48 @@ class _SlideView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── المشهد المرسوم ──
-            Transform.translate(
-              offset: Offset(offset * 30, 0),
-              child: Transform.scale(
-                scale: 1 - .06 * offset.abs(),
-                child: Container(
-                  height: sceneH,
-                  width: double.infinity,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(34),
-                    boxShadow: [
-                      BoxShadow(
-                        color: p.glow.withValues(alpha: .28),
-                        blurRadius: 34,
-                        offset: const Offset(0, 16),
-                      ),
-                    ],
-                  ),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      RepaintBoundary(
-                        child: CustomPaint(
-                          painter: onboardingScene(slide.world, t, offset),
+            // ── المشهد المرسوم ── يتقلّص ليتسع النص على كل الشاشات
+            Flexible(
+              child: Transform.translate(
+                offset: Offset(offset * 30, 0),
+                child: Transform.scale(
+                  scale: 1 - .06 * offset.abs(),
+                  child: Container(
+                    height: sceneH,
+                    width: double.infinity,
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(34),
+                      boxShadow: [
+                        BoxShadow(
+                          color: p.glow.withValues(alpha: .28),
+                          blurRadius: 34,
+                          offset: const Offset(0, 16),
                         ),
-                      ),
-                      // إطار داخلي رفيع يمنح المشهد طابع اللوحة
-                      Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(26),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: .45),
+                      ],
+                    ),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        RepaintBoundary(
+                          child: CustomPaint(
+                            painter: onboardingScene(slide.world, t, offset),
+                          ),
+                        ),
+                        // إطار داخلي رفيع يمنح المشهد طابع اللوحة
+                        Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(26),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: .45),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
