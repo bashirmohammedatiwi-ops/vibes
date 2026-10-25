@@ -104,7 +104,7 @@ class ProviderProfileScreen extends ConsumerWidget {
                                           ),
                                     ),
                                     Text(
-                                      '$count متابع · ${properties.length} مكان',
+                                      '$count متابع',
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodySmall

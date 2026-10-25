@@ -1423,7 +1423,7 @@ class _MapListHero extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '$total ${total == 1 ? 'مكان' : 'أماكن'} · $onMap على الخريطة',
+                        'اسحب الخريطة واكتشف ما حولك',
                         style: const TextStyle(
                           fontFamily: 'Cairo',
                           fontSize: 11.5,

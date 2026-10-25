@@ -1567,8 +1567,6 @@ class _TypePicker extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final all =
-        ref.watch(propertiesProvider(null)).valueOrNull ?? const <Property>[];
     final items = config.types;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1608,16 +1606,6 @@ class _TypePicker extends ConsumerWidget {
                             color: Vibes.ink,
                           ),
                         ),
-                        if (config.typeShowCounts)
-                          Text(
-                            '${all.where((p) => p.type == it.$1).length} مكان',
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: Vibes.inkTertiary,
-                            ),
-                          ),
                       ],
                     ),
                   ),
@@ -1764,29 +1752,6 @@ class _ProvincePicker extends ConsumerWidget {
                               color: Vibes.ink,
                             ),
                           ),
-                          if (config.provinceShowCounts &&
-                              count(pr.name) > 0) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 1,
-                              ),
-                              decoration: BoxDecoration(
-                                color: p.accentSoft,
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                '${count(pr.name)}',
-                                style: TextStyle(
-                                  fontFamily: 'Montserrat',
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: p.accentDeep,
-                                ),
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                     ),
@@ -2200,9 +2165,7 @@ class _BudgetPickerState extends ConsumerState<_BudgetPicker> {
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
-                within == 0
-                    ? 'لا أماكن بعد'
-                    : '$within ${within == 1 ? 'مكان' : 'أماكن'} ضمنها',
+                within == 0 ? 'لا أماكن بعد' : 'ضمن ميزانيتك',
                 style: TextStyle(
                   fontFamily: 'Cairo',
                   fontSize: 12,

@@ -47,7 +47,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       <div className="mb-5">
         <h1 className="text-2xl font-black md:text-3xl">{title}</h1>
         <p className="mt-1 text-sm text-ink-2">
-          <span className="num font-bold">{items.length}</span> مكان {sp.q ? `يطابق «${sp.q}»` : "متاح للحجز"}
+          {sp.q ? `نتائج «${sp.q}»` : "أماكن متاحة للحجز"}
         </p>
       </div>
       <SearchFilters provinces={provinces ?? []} />

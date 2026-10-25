@@ -263,7 +263,6 @@ export function NadeemChat({ config: c, provinces }: { config: NadeemConfig; pro
       </div>
     );
 
-  const typeCounts = (t: PropertyType) => all.filter((p) => p.type === t).length;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -345,7 +344,6 @@ export function NadeemChat({ config: c, provinces }: { config: NadeemConfig; pro
                     className="rounded-2xl border border-line bg-[var(--w-tint)] p-4 text-center font-black transition hover:border-[var(--w-accent)]"
                   >
                     {t.label}
-                    <div className="num text-[11px] font-semibold text-ink-3">{typeCounts(t.key)} مكان</div>
                   </button>
                 ))}
             </div>
@@ -532,7 +530,7 @@ function BudgetPicker({ c, prices, onDone }: { c: NadeemConfig; prices: number[]
           <span className="num text-3xl font-extrabold">{moneyShort(value)}</span>
           <span className="text-sm font-bold text-ink-3"> د.ع</span>
         </div>
-        <span className="rounded-full bg-brass-pale px-3 py-1 text-xs font-black text-brass-deep">{within} مكان ضمنها</span>
+        <span className="rounded-full bg-brass-pale px-3 py-1 text-xs font-black text-brass-deep">{within ? "ضمن ميزانيتك" : "لا أماكن بعد"}</span>
       </div>
       <input type="range" min={0} max={1} step={0.01} value={t} onChange={(e) => setT(Number(e.target.value))} className="mt-4 w-full accent-[#c89844]" dir="ltr" />
       <div className="mt-4 flex gap-2">

@@ -223,14 +223,6 @@ void _selectWorld(WidgetRef ref, HomeSection world) {
   ref.read(homeSectionProvider.notifier).state = world;
 }
 
-/// «مكان واحد / مكانان / 5 أماكن / 12 مكاناً».
-String _placesCount(int n) {
-  if (n == 1) return 'مكان واحد';
-  if (n == 2) return 'مكانان';
-  if (n >= 3 && n <= 10) return '$n أماكن';
-  return '$n مكاناً';
-}
-
 /// المحافظة المختارة من رأس الرئيسية — (الاسم، المعرّف) أو لا شيء = كل العراق.
 final homeProvinceProvider = StateProvider<({String name, String slug})?>(
   (ref) => null,
@@ -1109,15 +1101,16 @@ class _ProvinceSheet extends ConsumerWidget {
                   ),
                 ),
               ),
-              Text(
-                count > 0 ? _placesCount(count) : 'لا أماكن بعد',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: count > 0 ? p.accentDeep : Vibes.inkTertiary,
+              if (count == 0)
+                const Text(
+                  'لا أماكن بعد',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Vibes.inkTertiary,
+                  ),
                 ),
-              ),
               if (on) ...[
                 const SizedBox(width: 8),
                 Icon(Icons.check_circle_rounded, size: 20, color: p.accent),
@@ -1519,21 +1512,6 @@ class _WorldSegment extends StatelessWidget {
                             height: 1.15,
                           ),
                         ),
-                        if (count > 0)
-                          Text(
-                            _placesCount(count),
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: Color.lerp(
-                                Vibes.inkTertiary,
-                                Colors.white.withValues(alpha: .82),
-                                t,
-                              ),
-                              height: 1.2,
-                            ),
-                          ),
                       ],
                     ),
                   ],
@@ -2061,29 +2039,6 @@ class _DestinationTile extends StatelessWidget {
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                         height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: count > 0
-                            ? p.accent
-                            : Colors.white.withValues(alpha: .18),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        count > 0 ? _placesCount(count) : '—',
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w800,
-                          color: count > 0 ? p.onAccent : Colors.white,
-                          height: 1.3,
-                        ),
                       ),
                     ),
                   ],
@@ -3168,9 +3123,7 @@ class _AllPlacesSection extends ConsumerWidget {
             SliverToBoxAdapter(
               child: _Head(
                 'كل ${section.label}',
-                subtitle: list.isEmpty
-                    ? null
-                    : '${_placesCount(list.length)} بانتظارك',
+                subtitle: list.isEmpty ? null : 'اختر ما يناسب مناسبتك',
                 onMore: list.isEmpty
                     ? null
                     : () => context.push('/search?type=${section.typeFilter}'),
@@ -3693,12 +3646,7 @@ class _OccasionStep extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    switch (count) {
-                      0 => 'تصفّح الأماكن المتاحة',
-                      1 => 'مكان واحد متاح للحجز',
-                      2 => 'مكانان متاحان للحجز',
-                      _ => '${_placesCount(count)} متاحة للحجز',
-                    },
+                    'تصفّح الأماكن المتاحة للحجز',
                     style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 11.5,

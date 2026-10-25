@@ -552,7 +552,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '${results.length} ${results.length == 1 ? 'مكان' : 'أماكن'}',
+                    'النتائج',
                     style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 14,
@@ -840,7 +840,13 @@ class _FarmFeatureRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget chip(String emoji, String label, bool on, ValueChanged<bool> tap, Color color) {
+    Widget chip(
+      String emoji,
+      String label,
+      bool on,
+      ValueChanged<bool> tap,
+      Color color,
+    ) {
       return GestureDetector(
         onTap: () => tap(!on),
         child: AnimatedContainer(
@@ -849,7 +855,10 @@ class _FarmFeatureRow extends StatelessWidget {
           decoration: BoxDecoration(
             color: on ? color.withValues(alpha: .12) : Colors.white,
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: on ? color : placeLine, width: on ? 1.4 : 1),
+            border: Border.all(
+              color: on ? color : placeLine,
+              width: on ? 1.4 : 1,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -881,7 +890,13 @@ class _FarmFeatureRow extends StatelessWidget {
         children: [
           chip('❄️', 'مزارع شتوية', winter, onWinter, const Color(0xFF0284C7)),
           const SizedBox(width: 8),
-          chip('🏊', 'مسبح مغلق', indoorPool, onIndoorPool, const Color(0xFF0D9488)),
+          chip(
+            '🏊',
+            'مسبح مغلق',
+            indoorPool,
+            onIndoorPool,
+            const Color(0xFF0D9488),
+          ),
         ],
       ),
     );

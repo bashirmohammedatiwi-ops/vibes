@@ -36,7 +36,6 @@ export default async function ProviderPage({ params }: { params: Promise<{ id: s
             {p.verified && <BadgeCheck className="h-6 w-6 text-sky-300" />}
           </h1>
           <div className="mt-1 text-sm text-white/70">
-            <span className="num">{p._count?.properties ?? p.properties.length}</span> مكان ·{" "}
             <span className="num">{p._count?.followers ?? 0}</span> متابع
           </div>
         </div>

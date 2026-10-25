@@ -101,7 +101,7 @@ class FollowingScreen extends ConsumerWidget {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '${p.propertiesCount} مكان · ${p.followers} متابع',
+                                      '${p.followers} متابع',
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodySmall

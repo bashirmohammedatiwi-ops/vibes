@@ -1194,7 +1194,7 @@ class MapPreviewCard extends ConsumerWidget {
                             ),
                           ),
                           Text(
-                            '${props.length} ${props.length == 1 ? 'مكان' : 'أماكن'} على الخريطة',
+                            'استكشف الأماكن على الخريطة',
                             style: const TextStyle(
                               fontFamily: 'Cairo',
                               fontSize: 10.5,
