@@ -1,7 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { BookingStatus, UserRole } from '@prisma/client';
 import { CacheService } from '../../common/services/cache.service';
+import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ConversationsService } from '../marketplace/conversations.service';
 import { userCacheKey } from '../auth/jwt.strategy';
 
 /**
@@ -16,16 +18,31 @@ export class AccountDeletionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
+    private readonly conversations: ConversationsService,
   ) {}
 
-  async deleteAccount(userId: string) {
+  async deleteAccount(authUser: AuthUser) {
+    const userId = authUser.id;
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, role: true, isActive: true, provider: { select: { id: true } } },
     });
     if (!user || !user.isActive) return { deleted: true };
+    if (user.role === UserRole.ADMIN || user.role === UserRole.STAFF) {
+      throw new BadRequestException('حسابات الموظفين تُدار من لوحة التحكم.');
+    }
+    // صاحب مكان: أماكنه وحجوزات ضيوفه مرتبطة بحسابه — نسجّل طلب حذف يصل للدعم
+    // فوراً (من داخل التطبيق) ويُنفَّذ بعد ترتيب الحجوزات القائمة.
     if (user.role !== UserRole.CUSTOMER || user.provider) {
-      throw new BadRequestException('حسابات أصحاب الأماكن والموظفين تُحذف عبر الدعم — تواصل معنا وسنحذفه لك.');
+      const conv = await this.conversations.openSupport(authUser);
+      await this.conversations.send(authUser, conv.id, {
+        body: 'طلب حذف الحساب: أرجو حذف حسابي (صاحب مكان) وبياناتي الشخصية نهائياً.',
+      });
+      return {
+        deleted: false,
+        requested: true,
+        message: 'استلمنا طلب حذف حسابك. سيُحذف خلال 7 أيام بعد ترتيب حجوزات أماكنك القائمة، وسنبلغك في محادثة الدعم.',
+      };
     }
 
     await this.prisma.$transaction(async (tx) => {

@@ -289,7 +289,17 @@ Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
   );
   if (!ok || !context.mounted) return;
   try {
-    await ref.read(authControllerProvider.notifier).deleteAccount();
+    final pending = await ref
+        .read(authControllerProvider.notifier)
+        .deleteAccount();
+    if (pending != null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(pending)));
+      }
+      return;
+    }
     await ref.read(appModeProvider.notifier).resetAfterLogout();
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(

@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Loader2, Trash2 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, clearTokens } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { clearTokens } from "@/lib/api";
 
 export function DeleteAccountBox() {
   const { user, ready } = useAuth();
@@ -37,7 +36,12 @@ export function DeleteAccountBox() {
           setBusy(true);
           setErr(null);
           try {
-            await api("/api/users/me", { method: "DELETE" });
+            const r = await api<{ deleted: boolean; requested?: boolean; message?: string }>("/api/users/me", { method: "DELETE" });
+            if (r?.requested) {
+              setErr(null);
+              alert(r.message ?? "استلمنا طلب حذف حسابك");
+              return;
+            }
             clearTokens();
             setDone(true);
           } catch (e) {

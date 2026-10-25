@@ -44,7 +44,7 @@ export class UsersController {
   /** حذف الحساب نهائياً (متطلب المتاجر). */
   @Delete('me')
   deleteMe(@CurrentUser() user: AuthUser) {
-    return this.deletion.deleteAccount(user.id);
+    return this.deletion.deleteAccount(user);
   }
 
   @Get()
