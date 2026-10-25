@@ -13,7 +13,6 @@ import { useToast } from "@/components/ui/toast";
 import { api, uploadFilesWithProgress } from "@/lib/api";
 import { RATIO_OPTIONS, type MediaItem, type TargetRatio } from "@/lib/types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 const MEDIA_FILTERS = [
   { value: "", label: "الكل" },
   { value: "IMAGE", label: "الصور" },

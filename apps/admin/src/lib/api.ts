@@ -1,4 +1,16 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+const BUILD_API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+
+/**
+ * عنوان الـ API: في المتصفح على السيرفر نستخدم نفس المضيف الذي فُتحت منه اللوحة
+ * (الـ API تحت /api على المضيف نفسه) — يعمل بالدومين https://vibesiraq.com
+ * وبعنوان IP القديم معاً بلا حجب «محتوى مختلط». محلياً (localhost) يبقى عنوان البناء.
+ */
+function apiBase() {
+  if (typeof window === "undefined") return BUILD_API_URL;
+  const { hostname, origin } = window.location;
+  if (hostname === "localhost" || hostname === "127.0.0.1") return BUILD_API_URL;
+  return origin;
+}
 const TOKEN_KEY = "vibes_admin_token";
 const REFRESH_KEY = "vibes_admin_refresh";
 const ROLE_KEY = "vibes_admin_role";
@@ -68,7 +80,7 @@ async function refreshAccessToken(): Promise<string | null> {
   if (!refresh) return null;
 
   if (!refreshPromise) {
-    refreshPromise = fetch(`${API_URL}/api/auth/refresh`, {
+    refreshPromise = fetch(`${apiBase()}/api/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken: refresh }),
@@ -96,7 +108,7 @@ export async function api<T>(path: string, init: RequestInit = {}, retried = fal
   if (!isFormData) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${API_URL}${path}`, { ...init, headers });
+  const response = await fetch(`${apiBase()}${path}`, { ...init, headers });
 
   if (response.status === 401 && !retried && getRefreshToken()) {
     const newToken = await refreshAccessToken();
@@ -131,7 +143,7 @@ export async function uploadFiles<T>(path: string, fieldName: string, files: Fil
   const headers = new Headers();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${API_URL}${path}`, { method: "POST", headers, body: form });
+  const response = await fetch(`${apiBase()}${path}`, { method: "POST", headers, body: form });
   if (!response.ok) {
     const text = await response.text();
     throw new Error(text || response.statusText);
@@ -161,7 +173,7 @@ export function uploadFilesWithProgress<T>(
     for (const file of files) form.append(fieldName, file);
 
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `${API_URL}${path}`);
+    xhr.open("POST", `${apiBase()}${path}`);
     if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable && options.onProgress) {
@@ -205,7 +217,7 @@ export async function downloadCsv(path: string, filename = "export.csv") {
   const headers = new Headers();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${API_URL}${path}`, { headers });
+  const response = await fetch(`${apiBase()}${path}`, { headers });
   if (!response.ok) {
     throw new Error(response.status === 403 ? "لا تملك صلاحية التصدير" : "فشل التصدير");
   }
@@ -228,7 +240,7 @@ export async function openPrintHtml(path: string) {
   const headers = new Headers();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${API_URL}${path}`, { headers });
+  const response = await fetch(`${apiBase()}${path}`, { headers });
   if (!response.ok) throw new Error("تعذر فتح الفاتورة للطباعة");
   const html = await response.text();
   const popup = window.open("", "_blank");

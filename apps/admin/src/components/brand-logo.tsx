@@ -23,7 +23,7 @@ export function BrandLogo({
         className="brand-logo-mark relative shrink-0 overflow-hidden bg-paper"
         style={{ width: sizes.icon, height: sizes.icon }}
       >
-        <Image src="/vibees-mark.png" alt="VIBEES" fill className="object-contain p-0.5" priority />
+        <Image src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/vibees-mark.png`} alt="VIBEES" fill className="object-contain p-0.5" priority unoptimized />
       </div>
       {showWordmark && (
         <div className="min-w-0">
