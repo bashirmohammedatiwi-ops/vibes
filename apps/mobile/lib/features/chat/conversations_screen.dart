@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/moderation/moderation.dart';
+
 import '../../core/network/api_client.dart';
 import '../../shared/models/models.dart';
 import '../../core/theme/app_theme.dart';
@@ -137,7 +139,14 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                   message: maisonError(e),
                   onRetry: () => ref.invalidate(conversationsProvider),
                 ),
-                data: (items) {
+                data: (all) {
+                  final mod = ref.watch(moderationProvider);
+                  final items = [
+                    for (final c in all)
+                      if (!mod.isHidden('CONVERSATION', c.id) &&
+                          !mod.isBlocked(c.lastMessageSenderId))
+                        c,
+                  ];
                   if (items.isEmpty) {
                     return Center(
                       child: WorldEmpty(

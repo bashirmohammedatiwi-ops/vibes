@@ -31,6 +31,7 @@ import '../../shared/widgets/directions_sheet.dart';
 import '../../shared/widgets/vibes_map.dart';
 import 'share_card.dart';
 import '../../shared/widgets/maison_chrome.dart';
+import '../../core/moderation/moderation.dart';
 import '../../shared/widgets/property_card.dart';
 import '../../shared/widgets/vibes_graphics.dart';
 import '../../core/perf/perf.dart';
@@ -2081,7 +2082,10 @@ class _HostCard extends ConsumerWidget {
 
   Future<void> _launch(String scheme, String value) async {
     final uri = Uri.parse('$scheme$value');
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
+    await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    ).catchError((_) => false);
   }
 
   Future<void> _toggleFollow(
@@ -2404,6 +2408,7 @@ class _ReviewsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final world = context.world;
     final reviews = ref.watch(propertyReviewsProvider(property.id));
+    final mod = ref.watch(moderationProvider);
 
     return reviews.when(
       loading: () => const Padding(
@@ -2411,7 +2416,11 @@ class _ReviewsSection extends ConsumerWidget {
         child: WorldSkeleton(height: 120, radius: 22),
       ),
       error: (_, _) => const SizedBox.shrink(),
-      data: (list) {
+      data: (all) {
+        final list = [
+          for (final r in all)
+            if (!mod.isHidden('REVIEW', r.id)) r,
+        ];
         if (list.isEmpty) {
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -2590,7 +2599,7 @@ class _ReviewsSection extends ConsumerWidget {
   }
 }
 
-class _ReviewCard extends StatelessWidget {
+class _ReviewCard extends ConsumerWidget {
   const _ReviewCard({required this.review});
 
   final Review review;
@@ -2611,7 +2620,7 @@ class _ReviewCard extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final world = context.world;
     final name = (review.userName ?? '').trim().isEmpty
         ? 'ضيف VIBES'
@@ -2679,6 +2688,26 @@ class _ReviewCard extends StatelessWidget {
                 ),
               ),
               GoldRatingBar(rating: review.rating.toDouble(), size: 12),
+              SizedBox(
+                width: 30,
+                height: 30,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  tooltip: 'إبلاغ',
+                  icon: const Icon(
+                    Icons.more_vert,
+                    size: 18,
+                    color: Vibes.inkTertiary,
+                  ),
+                  onPressed: () => showModerationSheet(
+                    context,
+                    ref,
+                    type: 'REVIEW',
+                    targetId: review.id,
+                    allowBlock: false,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),

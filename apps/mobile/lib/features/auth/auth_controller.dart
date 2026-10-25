@@ -60,6 +60,12 @@ class AuthController extends StateNotifier<AuthState> {
       state = const AuthState(ready: true);
       return;
     }
+    // دخول فوري من الملف المحفوظ — لا ننتظر الشبكة على شاشة البداية
+    // (شبكة بطيئة/تجديد توكن قد يعلّق الإقلاع)، ثم نحدّث في الخلفية.
+    final cached = await _readCachedUser();
+    if (cached != null) {
+      state = AuthState(loggedIn: true, ready: true, user: cached);
+    }
     // استرجاع الملف إن أمكن — الفشل لا يبطل الجلسة
     try {
       final me = await _client.get('/api/users/me');

@@ -163,30 +163,6 @@ class ProfileScreen extends ConsumerWidget {
                         .setDataSaver(v),
                   ),
                 ),
-                MaisonMenuRow(
-                  icon: Icons.language_rounded,
-                  label: 'اللغة',
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      MaisonChip(
-                        label: 'عربي',
-                        active: prefs.localeCode == 'ar',
-                        onTap: () => ref
-                            .read(prefsControllerProvider.notifier)
-                            .setLocale('ar'),
-                      ),
-                      const SizedBox(width: 6),
-                      MaisonChip(
-                        label: 'EN',
-                        active: prefs.localeCode == 'en',
-                        onTap: () => ref
-                            .read(prefsControllerProvider.notifier)
-                            .setLocale('en'),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
             const SizedBox(height: 18),
@@ -210,6 +186,7 @@ class ProfileScreen extends ConsumerWidget {
                 MaisonMenuRow(
                   icon: Icons.info_outline_rounded,
                   label: 'عن VIBES',
+                  onTap: () => openLegal('/'),
                   trailing: Text(
                     '1.0.0',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -237,7 +214,7 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 10),
             Center(
               child: TextButton.icon(
-                onPressed: () => _deleteAccount(context, ref),
+                onPressed: () => confirmDeleteAccount(context, ref),
                 icon: Icon(
                   Icons.delete_forever_outlined,
                   size: 18,
@@ -277,7 +254,7 @@ Future<void> openLegal(String path) => launchUrl(
   mode: LaunchMode.inAppBrowserView,
 );
 
-Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
+Future<void> confirmDeleteAccount(BuildContext context, WidgetRef ref) async {
   final ok = await showMaisonConfirm(
     context: context,
     title: 'حذف الحساب نهائياً؟',
@@ -343,8 +320,6 @@ class _GuestProfile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final prefs = ref.watch(prefsControllerProvider);
-
     return Scaffold(
       body: MaisonWash(
         child: ListView(
@@ -381,42 +356,6 @@ class _GuestProfile extends ConsumerWidget {
                     VibesButton(
                       label: 'دخول',
                       onPressed: () => context.push('/login'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            FolioPanel(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'اللغة',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    MaisonChip(
-                      label: 'عربي',
-                      active: prefs.localeCode == 'ar',
-                      onTap: () => ref
-                          .read(prefsControllerProvider.notifier)
-                          .setLocale('ar'),
-                    ),
-                    const SizedBox(width: 6),
-                    MaisonChip(
-                      label: 'EN',
-                      active: prefs.localeCode == 'en',
-                      onTap: () => ref
-                          .read(prefsControllerProvider.notifier)
-                          .setLocale('en'),
                     ),
                   ],
                 ),

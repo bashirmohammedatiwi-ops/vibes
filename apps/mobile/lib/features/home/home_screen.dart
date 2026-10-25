@@ -1115,7 +1115,7 @@ class _ProvinceSheet extends ConsumerWidget {
                 ),
               ),
               Text(
-                count > 0 ? _placesCount(count) : 'قريباً',
+                count > 0 ? _placesCount(count) : 'لا أماكن بعد',
                 style: TextStyle(
                   fontFamily: 'Cairo',
                   fontSize: 12,
@@ -2074,7 +2074,7 @@ class _DestinationTile extends StatelessWidget {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        count > 0 ? _placesCount(count) : 'قريباً',
+                        count > 0 ? _placesCount(count) : '—',
                         style: TextStyle(
                           fontFamily: 'Cairo',
                           fontSize: 10.5,
@@ -3692,7 +3692,7 @@ class _OccasionStep extends StatelessWidget {
                   ),
                   Text(
                     switch (count) {
-                      0 => 'قريباً على VIBES',
+                      0 => 'تصفّح الأماكن المتاحة',
                       1 => 'مكان واحد متاح للحجز',
                       2 => 'مكانان متاحان للحجز',
                       _ => '${_placesCount(count)} متاحة للحجز',

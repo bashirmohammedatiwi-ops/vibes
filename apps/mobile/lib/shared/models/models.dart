@@ -1138,12 +1138,14 @@ class SocialExperience {
     this.propertyName,
     this.propertyId,
     this.authorName,
+    this.authorId,
     this.likesCount = 0,
     this.commentsCount = 0,
     this.liked = false,
   });
 
   final String id;
+  final String? authorId;
   final String caption;
   final List<String> mediaUrls;
   final String? propertyName;
@@ -1168,6 +1170,11 @@ class SocialExperience {
     authorName: j['user'] is Map<String, dynamic>
         ? (j['user'] as Map<String, dynamic>)['name'] as String?
         : null,
+    authorId:
+        j['userId'] as String? ??
+        (j['user'] is Map<String, dynamic>
+            ? (j['user'] as Map<String, dynamic>)['id'] as String?
+            : null),
     likesCount: _num(j['likesCount']).toInt(),
     commentsCount: _num(j['commentsCount']).toInt(),
     liked: j['liked'] == true,

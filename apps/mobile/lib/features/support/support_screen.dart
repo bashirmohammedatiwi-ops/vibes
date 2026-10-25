@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -53,12 +54,30 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
 
   String _digits(String? phone) {
     final raw = (phone ?? '').replaceAll(RegExp(r'\D'), '');
-    return raw.isEmpty ? '9647700000000' : raw;
+    return raw;
   }
 
   Future<void> _launch(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
+    final ok = await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    ).catchError((_) => false);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تعذّر فتح التطبيق — جرّب المحادثة داخل VIBES'),
+        ),
+      );
+    }
+  }
+
+  /// محادثة الدعم تحتاج حساباً — الزائر يسجّل الدخول أولاً.
+  Future<void> _openChat() async {
+    if (ref.read(authControllerProvider).user == null) {
+      final ok = await context.push<bool>('/login');
+      if (ok != true || !mounted) return;
+    }
+    if (mounted) await openSupportChat(context, ref);
   }
 
   @override
@@ -103,42 +122,48 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                           icon: Icons.forum_outlined,
                           label: 'محادثة داخل التطبيق',
                           color: Vibes.coral,
-                          onTap: () => openSupportChat(context, ref),
+                          onTap: _openChat,
                         ),
-                        Divider(
-                          height: 1,
-                          color: VibesTheme.hairlineOf(context),
-                        ),
-                        _ContactRow(
-                          icon: Icons.chat_bubble_outline_rounded,
-                          label: 'واتساب — الأسرع رداً',
-                          color: Vibes.teal,
-                          onTap: () => _launch('https://wa.me/$phone'),
-                        ),
-                        Divider(
-                          height: 1,
-                          color: VibesTheme.hairlineOf(context),
-                        ),
-                        _ContactRow(
-                          icon: Icons.call_outlined,
-                          label: 'اتصال هاتفي',
-                          color: Vibes.coral,
-                          onTap: () => _launch('tel:+$phone'),
-                        ),
+                        if (phone.isNotEmpty) ...[
+                          Divider(
+                            height: 1,
+                            color: VibesTheme.hairlineOf(context),
+                          ),
+                          _ContactRow(
+                            icon: Icons.chat_bubble_outline_rounded,
+                            label: 'واتساب — الأسرع رداً',
+                            color: Vibes.teal,
+                            onTap: () => _launch('https://wa.me/$phone'),
+                          ),
+                          Divider(
+                            height: 1,
+                            color: VibesTheme.hairlineOf(context),
+                          ),
+                          _ContactRow(
+                            icon: Icons.call_outlined,
+                            label: 'اتصال هاتفي',
+                            color: Vibes.coral,
+                            onTap: () => _launch('tel:+$phone'),
+                          ),
+                        ],
                       ],
                     ),
                   ),
                   const SizedBox(height: 22),
-                  GestureDetector(
-                    onTap: () => setState(() => _diagnostics = !_diagnostics),
-                    child: Text(
-                      _diagnostics ? 'إخفاء التفاصيل التقنية' : 'تفاصيل تقنية',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Vibes.inkTertiary,
-                        fontWeight: FontWeight.w700,
+                  if (kDebugMode)
+                    GestureDetector(
+                      onTap: () => setState(() => _diagnostics = !_diagnostics),
+                      child: Text(
+                        _diagnostics
+                            ? 'إخفاء التفاصيل التقنية'
+                            : 'تفاصيل تقنية',
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: Vibes.inkTertiary,
+                              fontWeight: FontWeight.w700,
+                            ),
                       ),
                     ),
-                  ),
                   if (_diagnostics) ...[
                     const SizedBox(height: 10),
                     FolioPanel(

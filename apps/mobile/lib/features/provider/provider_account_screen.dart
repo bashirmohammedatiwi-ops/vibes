@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../profile/profile_screen.dart' show confirmDeleteAccount, openLegal;
+
 import '../../shared/widgets/maison_chrome.dart';
 import '../auth/auth_controller.dart';
 import '../chat/conversations_screen.dart';
@@ -179,6 +181,18 @@ class ProviderAccountScreen extends ConsumerWidget {
                           label: 'مركز المساعدة',
                           onTap: () => context.push('/support'),
                         ),
+                        const Divider(height: 1, color: ownerLine),
+                        OwnerMenuTile(
+                          icon: Icons.privacy_tip_outlined,
+                          label: 'سياسة الخصوصية',
+                          onTap: () => openLegal('/privacy'),
+                        ),
+                        const Divider(height: 1, color: ownerLine),
+                        OwnerMenuTile(
+                          icon: Icons.description_outlined,
+                          label: 'شروط الاستخدام',
+                          onTap: () => openLegal('/terms'),
+                        ),
                       ],
                     ),
                   ),
@@ -198,6 +212,23 @@ class ProviderAccountScreen extends ConsumerWidget {
                       style: TextStyle(
                         fontFamily: 'Cairo',
                         fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: () => confirmDeleteAccount(context, ref),
+                    icon: const Icon(
+                      Icons.delete_forever_outlined,
+                      size: 18,
+                      color: Color(0xFFC2402F),
+                    ),
+                    label: const Text(
+                      'حذف الحساب',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFFC2402F),
                       ),
                     ),
                   ),

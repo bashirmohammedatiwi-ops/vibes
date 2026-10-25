@@ -46,10 +46,14 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>يستخدم VIBES الكاميرا لتصوير إيصال الدفع ومشاركة صور تجربتك.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>يستخدم VIBES موقعك أثناء استخدام التطبيق فقط لعرض الأماكن القريبة منك، ولا يتتبعك في الخلفية.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>يستخدم VIBES موقعك أثناء استخدام التطبيق فقط لعرض الأماكن القريبة منك، ولا يتتبعك في الخلفية.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>يستخدم VIBES موقعك لعرض الأماكن القريبة منك.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>نحتاج الميكروفون للاتصال بالموظف داخل التطبيق</string>
+	<string>يستخدم VIBES الميكروفون أثناء الاتصال الصوتي من داخل التطبيق بفريق الدعم أو بصاحب المكان فقط، ولا يسجّل الصوت.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>يحفظ VIBES الفواتير والصور في مكتبة صورك عند طلبك.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

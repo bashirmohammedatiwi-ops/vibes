@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../auth/auth_controller.dart';
+
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/data/marketplace_providers.dart';
@@ -117,17 +119,33 @@ class ProviderProfileScreen extends ConsumerWidget {
                               ),
                               TextButton(
                                 onPressed: () async {
+                                  if (ref.read(authControllerProvider).user ==
+                                      null) {
+                                    await context.push<bool>('/login');
+                                    return;
+                                  }
                                   final client = ref.read(apiClientProvider);
                                   final following =
                                       follow.valueOrNull?.following == true;
-                                  if (following) {
-                                    await client.delete(
-                                      '/api/follows/$providerId',
-                                    );
-                                  } else {
-                                    await client.post(
-                                      '/api/follows/$providerId',
-                                    );
+                                  try {
+                                    if (following) {
+                                      await client.delete(
+                                        '/api/follows/$providerId',
+                                      );
+                                    } else {
+                                      await client.post(
+                                        '/api/follows/$providerId',
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(content: Text(maisonError(e))),
+                                      );
+                                    }
+                                    return;
                                   }
                                   ref.invalidate(
                                     followStatusProvider(providerId),

@@ -78,7 +78,8 @@ class VibesApp extends ConsumerWidget {
       // تبديل فوري للثيم — العناصر البارزة تتحرك بنفسها (AnimatedContainer
       // وأخواتها) فلا يُعاد رسم التطبيق كله مع كل إطار أثناء الانتقال.
       themeAnimationDuration: Duration.zero,
-      locale: Locale(prefs.localeCode),
+      // التطبيق عربي بالكامل حالياً — نثبّت العربية حتى لو اختار مستخدم سابقاً EN
+      locale: const Locale('ar'),
       supportedLocales: context.supportedLocales,
       localizationsDelegates: context.localizationDelegates,
       scrollBehavior: const VibesScrollBehavior(),

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/moderation/moderation.dart';
 import '../../core/network/api_client.dart';
+import '../auth/auth_controller.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/vibes_net_image.dart';
 import '../../shared/data/marketplace_providers.dart';
@@ -25,14 +27,42 @@ class ExperiencesScreen extends ConsumerStatefulWidget {
 class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
   bool _followingOnly = false;
 
+  /// الزائر يُطلب منه الدخول أولاً — لا أزرار صامتة.
+  Future<bool> _requireLogin() async {
+    if (ref.read(authControllerProvider).user != null) return true;
+    final ok = await context.push<bool>('/login');
+    return ok == true && ref.read(authControllerProvider).user != null;
+  }
+
+  void _toast(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
   Future<void> _comment(SocialExperience post) async {
+    if (!await _requireLogin() || !mounted) return;
     final controller = TextEditingController();
-    final comments = await ref
-        .read(apiClientProvider)
-        .get('/api/social/posts/${post.id}/comments');
-    final rows = (comments as List<dynamic>? ?? const [])
-        .whereType<Map<String, dynamic>>()
-        .toList();
+    List<Map<String, dynamic>> rows;
+    try {
+      final comments = await ref
+          .read(apiClientProvider)
+          .get('/api/social/posts/${post.id}/comments');
+      final mod = ref.read(moderationProvider);
+      rows = (comments as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .where(
+            (r) => !mod.shouldHide(
+              'COMMENT',
+              r['id']?.toString(),
+              userId: r['userId']?.toString(),
+            ),
+          )
+          .toList();
+    } catch (e) {
+      controller.dispose();
+      _toast(maisonError(e));
+      return;
+    }
     if (!mounted) {
       controller.dispose();
       return;
@@ -82,26 +112,60 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
                 ),
               )
             else
-              ...rows
-                  .take(8)
-                  .map(
-                    (row) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: FolioPanel(
-                        color: VibesTheme.surfaceHighOf(context),
-                        borderColor: Colors.transparent,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          child: Text(
-                            '${row['user'] is Map ? row['user']['name'] ?? 'ضيف' : 'ضيف'}: ${row['body'] ?? ''}',
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * .45,
+                ),
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final row in rows)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: FolioPanel(
+                          color: VibesTheme.surfaceHighOf(context),
+                          borderColor: Colors.transparent,
+                          child: Padding(
+                            padding: const EdgeInsetsDirectional.fromSTEB(
+                              12,
+                              4,
+                              0,
+                              4,
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '${row['user'] is Map ? row['user']['name'] ?? 'ضيف' : 'ضيف'}: ${row['body'] ?? ''}',
+                                  ),
+                                ),
+                                IconButton(
+                                  tooltip: 'إبلاغ أو حظر',
+                                  icon: const Icon(Icons.more_horiz, size: 20),
+                                  onPressed: () async {
+                                    final hidden = await showModerationSheet(
+                                      context,
+                                      ref,
+                                      type: 'COMMENT',
+                                      targetId: row['id'].toString(),
+                                      userId: row['userId']?.toString(),
+                                      userName: row['user'] is Map
+                                          ? row['user']['name']?.toString()
+                                          : null,
+                                    );
+                                    if (hidden && context.mounted) {
+                                      Navigator.pop(context);
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 12),
             MaisonField(
               label: 'تعليق',
@@ -114,12 +178,17 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
               onPressed: () async {
                 final text = controller.text.trim();
                 if (text.isEmpty) return;
-                await ref
-                    .read(apiClientProvider)
-                    .post(
-                      '/api/social/posts/${post.id}/comments',
-                      body: {'body': text},
-                    );
+                try {
+                  await ref
+                      .read(apiClientProvider)
+                      .post(
+                        '/api/social/posts/${post.id}/comments',
+                        body: {'body': text},
+                      );
+                } catch (e) {
+                  _toast(maisonError(e));
+                  return;
+                }
                 ref.invalidate(experiencesProvider);
                 ref.invalidate(followingExperiencesProvider);
                 if (context.mounted) Navigator.pop(context);
@@ -133,16 +202,14 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
   }
 
   Future<void> _report(SocialExperience post) async {
-    await ref
-        .read(apiClientProvider)
-        .post(
-          '/api/social/posts/${post.id}/report',
-          body: {'reason': 'محتوى غير مناسب'},
-        );
-    if (!mounted) return;
-    ScaffoldMessenger.of(
+    await showModerationSheet(
       context,
-    ).showSnackBar(const SnackBar(content: Text('تم إرسال البلاغ للمراجعة')));
+      ref,
+      type: 'POST',
+      targetId: post.id,
+      userId: post.authorId,
+      userName: post.authorName,
+    );
   }
 
   @override
@@ -177,7 +244,11 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
                   : 'انشر تجربتك بعد اكتمال الحجز لتظهر هنا',
             );
           }
-          final posts = [...list];
+          final mod = ref.watch(moderationProvider);
+          final posts = [
+            for (final p in list)
+              if (!mod.shouldHide('POST', p.id, userId: p.authorId)) p,
+          ];
           final highlightId = widget.highlightId;
           if (highlightId != null && highlightId.isNotEmpty) {
             posts.sort((a, b) {
@@ -203,9 +274,15 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
                     post: post,
                     featured: widget.highlightId == post.id,
                     onLike: () async {
-                      await ref
-                          .read(apiClientProvider)
-                          .post('/api/social/posts/${post.id}/like');
+                      if (!await _requireLogin()) return;
+                      try {
+                        await ref
+                            .read(apiClientProvider)
+                            .post('/api/social/posts/${post.id}/like');
+                      } catch (e) {
+                        _toast(maisonError(e));
+                        return;
+                      }
                       ref.invalidate(experiencesProvider);
                       ref.invalidate(followingExperiencesProvider);
                     },
@@ -386,9 +463,9 @@ class _ExperienceCard extends StatelessWidget {
                     ],
                     const Spacer(),
                     IconButton(
-                      tooltip: 'إبلاغ',
                       onPressed: onReport,
-                      icon: const Icon(Icons.flag_outlined, size: 18),
+                      tooltip: 'إبلاغ أو حظر',
+                      icon: const Icon(Icons.more_horiz, size: 20),
                     ),
                   ],
                 ),

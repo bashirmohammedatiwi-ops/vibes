@@ -112,6 +112,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     initialLocation: '/',
+    // رابط غير معروف (إشعار قديم مثلاً) — صفحة بهوية التطبيق بدل صفحة المطوّرين
+    errorBuilder: (context, state) => const _RouteNotFound(),
     redirect: (context, state) {
       final auth = ref.read(authControllerProvider);
       final location = state.matchedLocation;
@@ -496,3 +498,59 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+class _RouteNotFound extends StatelessWidget {
+  const _RouteNotFound();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.explore_off_outlined,
+                  size: 56,
+                  color: Color(0xFFC89844),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'الصفحة غير متاحة',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'ربما نُقل المحتوى أو انتهى الرابط.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    color: Color(0xFF565D68),
+                  ),
+                ),
+                const SizedBox(height: 22),
+                FilledButton(
+                  onPressed: () => context.go('/home'),
+                  child: const Text(
+                    'العودة للرئيسية',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

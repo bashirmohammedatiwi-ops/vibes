@@ -31,18 +31,17 @@ export class AccountDeletionService {
     if (user.role === UserRole.ADMIN || user.role === UserRole.STAFF) {
       throw new BadRequestException('حسابات الموظفين تُدار من لوحة التحكم.');
     }
-    // صاحب مكان: أماكنه وحجوزات ضيوفه مرتبطة بحسابه — نسجّل طلب حذف يصل للدعم
-    // فوراً (من داخل التطبيق) ويُنفَّذ بعد ترتيب الحجوزات القائمة.
+    // صاحب مكان: يُحذف حسابه الشخصي فوراً مثل الزبون. الأماكن نفسها (بيانات تجارية
+    // ربطها فريق VIBES) تبقى وحجوزات ضيوفها محفوظة — نُبلغ الدعم لإعادة ربطها أو إيقافها.
     if (user.role !== UserRole.CUSTOMER || user.provider) {
-      const conv = await this.conversations.openSupport(authUser);
-      await this.conversations.send(authUser, conv.id, {
-        body: 'طلب حذف الحساب: أرجو حذف حسابي (صاحب مكان) وبياناتي الشخصية نهائياً.',
-      });
-      return {
-        deleted: false,
-        requested: true,
-        message: 'استلمنا طلب حذف حسابك. سيُحذف خلال 7 أيام بعد ترتيب حجوزات أماكنك القائمة، وسنبلغك في محادثة الدعم.',
-      };
+      try {
+        const conv = await this.conversations.openSupport(authUser);
+        await this.conversations.send(authUser, conv.id, {
+          body: 'حذف حساب صاحب مكان: حذف المالك حسابه من التطبيق. راجعوا أماكنه وحجوزاتها القائمة (أعيدوا ربطها أو أوقفوها).',
+        });
+      } catch {
+        // الحذف يكمل حتى لو تعذّرت الرسالة
+      }
     }
 
     await this.prisma.$transaction(async (tx) => {

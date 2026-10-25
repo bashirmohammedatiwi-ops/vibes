@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/moderation/moderation.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../features/auth/auth_controller.dart';
@@ -285,6 +286,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       onPressed: () => context.push('/booking/$bookingId'),
                       icon: const Icon(Icons.receipt_long_outlined),
                     ),
+                  if (thread?.kind != 'SUPPORT')
+                    IconButton(
+                      tooltip: 'إبلاغ أو حظر',
+                      icon: const Icon(Icons.more_vert),
+                      onPressed: () async {
+                        // الطرف الآخر = أول مرسل غيري في المحادثة
+                        final peerId = messages.valueOrNull
+                            ?.where(
+                              (m) =>
+                                  !m.isSystem &&
+                                  m.senderId != null &&
+                                  m.senderId != myId,
+                            )
+                            .map((m) => m.senderId)
+                            .firstOrNull;
+                        final hidden = await showModerationSheet(
+                          context,
+                          ref,
+                          type: 'CONVERSATION',
+                          targetId: widget.conversationId,
+                          userId: peerId,
+                        );
+                        if (hidden && context.mounted) context.pop();
+                      },
+                    ),
                 ],
               ),
             ),
@@ -430,7 +456,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     chatMessagesProvider(widget.conversationId),
                   ),
                 ),
-                data: (list) {
+                data: (all) {
+                  final mod = ref.watch(moderationProvider);
+                  final list = [
+                    for (final m in all)
+                      if (!mod.isBlocked(m.senderId)) m,
+                  ];
                   if (list.isEmpty) {
                     return const EmptyCanvas(
                       icon: Icons.chat_outlined,

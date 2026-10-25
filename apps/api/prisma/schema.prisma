@@ -1122,3 +1122,21 @@ model NadeemSession {
   @@index([occasion])
   @@map("nadeem_sessions")
 }
+
+/// بلاغات المحتوى والمستخدمين (Apple 1.2 / سياسة Google للمحتوى) — تصل للدعم فوراً.
+model ContentReport {
+  id             String    @id @default(uuid())
+  reporterId     String    @map("reporter_id")
+  targetType     String    @map("target_type")
+  targetId       String    @map("target_id")
+  reportedUserId String?   @map("reported_user_id")
+  reason         String    @default("")
+  blocked        Boolean   @default(false)
+  status         String    @default("OPEN")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  resolvedAt     DateTime? @map("resolved_at")
+
+  @@index([status, createdAt])
+  @@index([targetType, targetId])
+  @@map("content_reports")
+}

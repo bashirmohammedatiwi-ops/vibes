@@ -238,7 +238,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   String get _subtitle => switch (_phase) {
     _PinPhase.phone =>
       'رقم هاتفك العراقي يكفي. الحساب يُنشأ تلقائياً عند أول دخول.',
-    _PinPhase.create => 'ستة أرقام تتذكرها بسهولة. تُحفظ مشفّرة على جهازك.',
+    _PinPhase.create =>
+      'ستة أرقام تتذكرها بسهولة. تُحفظ مشفّرة ولا يطّلع عليها أحد.',
     _PinPhase.confirm => 'أعد كتابة الأرقام نفسها لتثبيتها.',
     _PinPhase.unlock => 'نفس الأرقام التي اخترتها لهذا الرقم.',
   };
@@ -441,6 +442,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         ],
                                       ),
                               ),
+                              if (_phase == _PinPhase.unlock) ...[
+                                const SizedBox(height: 10),
+                                Center(
+                                  child: TextButton(
+                                    onPressed: () => context.push('/support'),
+                                    child: Text(
+                                      'نسيت الرقم السري؟ تواصل مع الدعم',
+                                      style: TextStyle(
+                                        fontFamily: 'Cairo',
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: p.accentDeep,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ] else ...[
                               _PhoneField(
                                 controller: _phoneController,
