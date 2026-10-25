@@ -726,10 +726,10 @@ class _MonthCalendar extends StatelessWidget {
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
+          // بلا فراغ أفقي: شريط المدة يتصل من خلية لأخرى بلا انقطاع
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 7,
             mainAxisSpacing: 8,
-            crossAxisSpacing: 6,
             mainAxisExtent: 46,
           ),
           itemCount: leading + monthLength - skipCells,
@@ -742,19 +742,40 @@ class _MonthCalendar extends StatelessWidget {
             final disabled = !isFree(date, pricing, shift);
             final isStart = _sameDate(date, start);
             final isEnd = _sameDate(date, endInclusive);
-            final inRange =
+            final multi =
                 start != null &&
                 endInclusive != null &&
-                date.isAfter(start!) &&
-                date.isBefore(endInclusive!);
+                endInclusive!.isAfter(start!);
+
+            // الشريط يمتد من أول يوم حتى يوم المغادرة (أو آخر يوم)
+            final bandLast = departure ?? endInclusive;
+            final inBand =
+                start != null &&
+                bandLast != null &&
+                bandLast.isAfter(start!) &&
+                !date.isBefore(start!) &&
+                !date.isAfter(bandLast);
+            final column = index % 7;
 
             return _DayCell(
               date: date,
               past: pricing == null || pricing.isPast,
               available: !disabled,
               selected: isStart || isEnd,
+              caption: !multi
+                  ? null
+                  : isStart
+                  ? 'البداية'
+                  : isEnd
+                  ? 'آخر يوم'
+                  : null,
               departure: _sameDate(date, departure),
-              inRange: inRange,
+              inRange:
+                  inBand && !isStart && !isEnd && !_sameDate(date, departure),
+              bandPrev: inBand && !isStart,
+              bandNext: inBand && !_sameDate(date, bandLast),
+              roundStart: column == 0 || number == 1,
+              roundEnd: column == 6 || number == monthLength,
               onTap: pricing == null || pricing.isPast
                   ? null
                   : () => onSelect(date, pricing),
@@ -779,7 +800,12 @@ class _DayCell extends StatelessWidget {
     required this.available,
     required this.selected,
     required this.inRange,
+    this.caption,
     this.departure = false,
+    this.bandPrev = false,
+    this.bandNext = false,
+    this.roundStart = false,
+    this.roundEnd = false,
     this.onTap,
   });
 
@@ -791,11 +817,27 @@ class _DayCell extends StatelessWidget {
   /// متاح للفترة المختارة (أخضر) — وإلا غير متاح (أحمر).
   final bool available;
   final bool selected;
+
+  /// يوم داخل المدة (بين البداية والنهاية).
   final bool inRange;
+
+  /// عنوان صغير تحت الرقم لطرفي المدة («البداية» / «آخر يوم»).
+  final String? caption;
+
+  /// شريط المدة يتصل باليوم السابق / التالي.
+  final bool bandPrev;
+  final bool bandNext;
+
+  /// طرف صف الأسبوع أو الشهر — يُدوَّر الشريط عنده.
+  final bool roundStart;
+  final bool roundEnd;
   final VoidCallback? onTap;
 
   static const green = Color(0xFF16A34A);
+  static const greenDeep = Color(0xFF15803D);
   static const red = Color(0xFFDC2626);
+  static const band = Color(0xFFDDF6E6);
+  static const _r = Radius.circular(14);
 
   @override
   Widget build(BuildContext context) {
@@ -807,12 +849,12 @@ class _DayCell extends StatelessWidget {
       fg = Colors.white;
       border = green;
     } else if (inRange) {
-      bg = green.withValues(alpha: .18);
-      fg = const Color(0xFF15803D);
-      border = green.withValues(alpha: .4);
+      bg = Colors.transparent;
+      fg = greenDeep;
+      border = Colors.transparent;
     } else if (departure) {
       bg = Colors.white;
-      fg = const Color(0xFF15803D);
+      fg = greenDeep;
       border = green;
     } else if (past) {
       bg = Colors.transparent;
@@ -820,7 +862,7 @@ class _DayCell extends StatelessWidget {
       border = Colors.transparent;
     } else if (available) {
       bg = green.withValues(alpha: .10);
-      fg = const Color(0xFF15803D);
+      fg = greenDeep;
       border = green.withValues(alpha: .35);
     } else {
       bg = red.withValues(alpha: .08);
@@ -828,94 +870,131 @@ class _DayCell extends StatelessWidget {
       border = red.withValues(alpha: .28);
     }
 
+    Widget half(bool on, {required bool startSide}) => Expanded(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          color: on ? band : band.withValues(alpha: 0),
+          borderRadius: BorderRadiusDirectional.horizontal(
+            start: startSide && roundStart ? _r : Radius.zero,
+            end: !startSide && roundEnd ? _r : Radius.zero,
+          ),
+        ),
+      ),
+    );
+
+    final label = departure && !selected ? 'مغادرة' : caption;
+
+    final number = Text(
+      '${date.day}',
+      style: TextStyle(
+        fontFamily: 'Montserrat',
+        fontSize: label != null ? 13.5 : 15,
+        fontWeight: FontWeight.w800,
+        color: fg,
+        height: 1.1,
+      ),
+    );
+
+    final Widget content;
+    if (label != null) {
+      content = Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          number,
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 8.5,
+              fontWeight: FontWeight.w800,
+              color: selected ? Colors.white.withValues(alpha: .92) : fg,
+              height: 1.25,
+            ),
+          ),
+        ],
+      );
+    } else if (selected) {
+      content = Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.check_rounded, size: 14, color: Colors.white),
+          const SizedBox(width: 2),
+          number,
+        ],
+      );
+    } else if (inRange) {
+      // نقطة صغيرة تؤكد أن اليوم ضمن المدة
+      content = Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          number,
+          const SizedBox(height: 3),
+          Container(
+            width: 4,
+            height: 4,
+            decoration: const BoxDecoration(
+              color: green,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ],
+      );
+    } else {
+      content = number;
+    }
+
     return Semantics(
       button: !past,
+      selected: selected || inRange,
       label:
           '${date.day} ${past
               ? ''
               : available
               ? 'متاح'
               : 'غير متاح'}',
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: border,
-              width: selected || departure ? 1.8 : 1,
-            ),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: green.withValues(alpha: .35),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : null,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // شريط المدة خلف الأيام — متصل عبر الأسبوع
+          Row(
+            children: [
+              half(bandPrev, startSide: true),
+              half(bandNext, startSide: false),
+            ],
           ),
-          child: departure && !selected
-              ? Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '${date.day}',
-                      style: TextStyle(
-                        fontFamily: 'Montserrat',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: fg,
-                        height: 1.1,
-                      ),
-                    ),
-                    const Text(
-                      'مغادرة',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF15803D),
-                        height: 1.2,
-                      ),
-                    ),
-                  ],
-                )
-              : selected
-              ? Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.check_rounded,
-                      size: 14,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 2),
-                    Text(
-                      '${date.day}',
-                      style: const TextStyle(
-                        fontFamily: 'Montserrat',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                )
-              : Text(
-                  '${date.day}',
-                  style: TextStyle(
-                    fontFamily: 'Montserrat',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: fg,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(12),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: border,
+                    width: selected || departure ? 1.8 : 1,
                   ),
+                  boxShadow: selected
+                      ? [
+                          BoxShadow(
+                            color: green.withValues(alpha: .35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
                 ),
-        ),
+                child: content,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1243,6 +1322,7 @@ class _SummaryBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ready = start != null && endInclusive != null && !awaitingEnd;
+    final stay = ready && !singleDay && days > 1;
 
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -1263,71 +1343,98 @@ class _SummaryBar extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          ready
-                              ? (singleDay || days == 1
-                                    ? dateLabel(start!)
-                                    : '${dateLabel(start!)} — ${dateLabel(endInclusive!)}')
-                              : (awaitingEnd
-                                    ? 'اختر يوم المغادرة'
-                                    : (singleDay
-                                          ? 'اضغط يوماً واحداً'
-                                          : 'اختر يوم الوصول')),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: placeInk,
-                          ),
+              if (stay) ...[
+                _StayStrip(
+                  from: dateLabel(start!),
+                  to: departureLabel ?? dateLabel(endInclusive!),
+                  toTitle: departureLabel != null ? 'المغادرة' : 'آخر يوم',
+                  days: days,
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        periodLabel ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: placeInk2,
                         ),
-                        if (periodLabel != null)
+                      ),
+                    ),
+                    PlaceFullPriceText(total, size: 18),
+                  ],
+                ),
+              ] else
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            periodLabel!,
+                            ready
+                                ? (singleDay || days == 1
+                                      ? dateLabel(start!)
+                                      : '${dateLabel(start!)} — ${dateLabel(endInclusive!)}')
+                                : (awaitingEnd
+                                      ? 'اختر يوم المغادرة'
+                                      : (singleDay
+                                            ? 'اضغط يوماً واحداً'
+                                            : 'اختر يوم الوصول')),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontFamily: 'Cairo',
-                              fontSize: 11.5,
+                              fontSize: 13,
                               fontWeight: FontWeight.w800,
-                              color: placeInk2,
+                              color: placeInk,
                             ),
                           ),
-                        if (ready && departureLabel != null)
-                          Text(
-                            'المغادرة: $departureLabel',
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF15803D),
+                          if (periodLabel != null)
+                            Text(
+                              periodLabel!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                                color: placeInk2,
+                              ),
                             ),
-                          ),
-                        if (ready && !singleDay)
-                          Text(
-                            days > 1
-                                ? '$days أيام'
-                                : 'لأكثر من يوم: اضغط على يوم النهاية',
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w600,
-                              color: placeInk2,
+                          if (ready && departureLabel != null)
+                            Text(
+                              'المغادرة: $departureLabel',
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF15803D),
+                              ),
                             ),
-                          ),
-                      ],
+                          if (ready && !singleDay)
+                            Text(
+                              days > 1
+                                  ? '$days أيام'
+                                  : 'لأكثر من يوم: اضغط على يوم النهاية',
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                                color: placeInk2,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                  if (ready) PlaceFullPriceText(total, size: 18),
-                ],
-              ),
+                    if (ready) PlaceFullPriceText(total, size: 18),
+                  ],
+                ),
               const SizedBox(height: 10),
               SizedBox(
                 width: double.infinity,
@@ -1359,4 +1466,153 @@ class _SummaryBar extends StatelessWidget {
       ),
     );
   }
+}
+
+/// شريط الإقامة لعدة أيام: البداية ←  عدد الأيام  → المغادرة.
+class _StayStrip extends StatelessWidget {
+  const _StayStrip({
+    required this.from,
+    required this.to,
+    required this.toTitle,
+    required this.days,
+  });
+
+  final String from;
+  final String to;
+  final String toTitle;
+  final int days;
+
+  static const green = Color(0xFF16A34A);
+  static const greenDeep = Color(0xFF15803D);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1FBF4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: green.withValues(alpha: .22)),
+      ),
+      child: Row(
+        children: [
+          Expanded(child: _end('البداية', from, CrossAxisAlignment.start)),
+          // الخط الواصل وعدد الأيام في المنتصف
+          Expanded(
+            child: Row(
+              children: [
+                const _Dot(),
+                Expanded(
+                  child: Container(
+                    height: 2,
+                    color: green.withValues(alpha: .35),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: green,
+                    borderRadius: BorderRadius.circular(99),
+                    boxShadow: [
+                      BoxShadow(
+                        color: green.withValues(alpha: .3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    '$days أيام',
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    height: 2,
+                    color: green.withValues(alpha: .35),
+                  ),
+                ),
+                const _Dot(hollow: true),
+              ],
+            ),
+          ),
+          Expanded(child: _end(toTitle, to, CrossAxisAlignment.end)),
+        ],
+      ),
+    );
+  }
+
+  Widget _end(String title, String label, CrossAxisAlignment align) {
+    // «الأربعاء 4 تشرين الثاني» → اسم اليوم فوق والتاريخ تحته
+    final space = label.indexOf(' ');
+    final weekday = space > 0 ? label.substring(0, space) : label;
+    final date = space > 0 ? label.substring(space + 1) : '';
+    final textAlign = align == CrossAxisAlignment.start
+        ? TextAlign.start
+        : TextAlign.end;
+    return Column(
+      crossAxisAlignment: align,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            color: greenDeep,
+            height: 1.2,
+          ),
+        ),
+        Text(
+          date,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: textAlign,
+          style: const TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+            color: placeInk,
+            height: 1.35,
+          ),
+        ),
+        Text(
+          weekday,
+          style: const TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+            color: placeInk2,
+            height: 1.2,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Dot extends StatelessWidget {
+  const _Dot({this.hollow = false});
+
+  final bool hollow;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 8,
+    height: 8,
+    decoration: BoxDecoration(
+      color: hollow ? Colors.white : _StayStrip.green,
+      shape: BoxShape.circle,
+      border: Border.all(color: _StayStrip.green, width: 2),
+    ),
+  );
 }
