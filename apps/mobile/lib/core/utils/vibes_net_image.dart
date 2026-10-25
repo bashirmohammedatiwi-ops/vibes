@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
+import '../constants/api_constants.dart';
 import '../theme/app_theme.dart';
 import 'data_saver.dart';
 
@@ -34,6 +35,10 @@ int imageBucketFor(int px) {
 /// يحوّل رابط صورة الخادم إلى نسخة مصغّرة: /media/w/<عرض>/<ملف>.
 /// النسخ تُولَّد مرة واحدة وتُحفظ على الخادم، وصور Unsplash تُطلب بعرض أصغر.
 String sizedImageUrl(String url, int width) {
+  // روابط قديمة بعنوان IP — نحوّلها إلى الدومين (HTTPS)
+  if (url.startsWith(ApiConstants.legacyServer)) {
+    url = ApiConstants.server + url.substring(ApiConstants.legacyServer.length);
+  }
   final uri = Uri.tryParse(url);
   if (uri == null || !uri.hasScheme) return url;
   final bucket = imageBucketFor(width);

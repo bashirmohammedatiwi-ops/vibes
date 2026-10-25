@@ -1,7 +1,10 @@
 import 'package:flutter/foundation.dart';
 
 class ApiConstants {
-  static const server = 'http://187.127.88.146:6001';
+  static const server = 'https://vibesiraq.com';
+
+  /// العنوان القديم (قبل الدومين) — روابط محفوظة به تُحوَّل إلى الدومين.
+  static const legacyServer = 'http://187.127.88.146:6001';
 
   static String get baseUrl {
     const fromEnv = String.fromEnvironment('API_URL');

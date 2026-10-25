@@ -62,7 +62,7 @@ const staffCardShadow = [
   BoxShadow(color: Color(0x0A0F1B2D), blurRadius: 14, offset: Offset(0, 4)),
 ];
 
-const apiBase = 'http://187.127.88.146:6001';
+const apiBase = 'https://vibesiraq.com';
 
 ThemeData buildStaffTheme() {
   final scheme = ColorScheme.fromSeed(
