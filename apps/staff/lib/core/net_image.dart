@@ -29,6 +29,9 @@ int imageBucketFor(int px) {
 
 /// /media/<ملف> → /media/w/<عرض>/<ملف>. الروابط الأخرى (إيصالات، خارجية) كما هي.
 String sizedMediaUrl(String url, int px) {
+  // روابط قديمة بعنوان IP (قبل الدومين) → الدومين (HTTPS)
+  const legacy = 'http://187.127.88.146:6001';
+  if (url.startsWith(legacy)) url = 'https://vibesiraq.com${url.substring(legacy.length)}';
   final uri = Uri.tryParse(url);
   if (uri == null || !uri.hasScheme) return url;
   final s = uri.pathSegments;

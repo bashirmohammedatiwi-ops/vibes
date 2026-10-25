@@ -1,7 +1,7 @@
 name: vibes
 description: VIBES — حجز المزارع وقاعات الأعراس وخدمات التزيين في العراق
 publish_to: 'none'
-version: 1.0.0+5
+version: 1.0.0+6
 
 environment:
   sdk: ^3.11.3
@@ -33,7 +33,6 @@ dependencies:
   # Maps (Mapbox native SDK — GPU)
   mapbox_maps_flutter: ^2.31.1
   # Motion & delight
-  rive: ^0.13.20
   # Platform integration
   image_picker: ^1.1.2
   url_launcher: ^6.3.1

@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../profile/profile_screen.dart' show openLegal;
 import '../../core/app_mode/app_mode_controller.dart';
 import '../../core/theme/world_theme.dart';
 import '../../shared/widgets/maison_chrome.dart';
@@ -457,17 +458,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               const SizedBox(height: 22),
                               const _TrustRow(),
                               const SizedBox(height: 18),
-                              const Text(
-                                'بالمتابعة أنت توافق على شروط الاستخدام وسياسة الخصوصية.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontFamily: 'Cairo',
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF8A9099),
-                                  height: 1.6,
-                                ),
-                              ),
+                              const _LegalLine(),
                             ],
                           ],
                         ),
@@ -1019,6 +1010,41 @@ class _ErrorNote extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// «بالمتابعة أنت توافق على شروط الاستخدام وسياسة الخصوصية» — بروابط فعلية.
+class _LegalLine extends StatelessWidget {
+  const _LegalLine();
+
+  @override
+  Widget build(BuildContext context) {
+    const base = TextStyle(
+      fontFamily: 'Cairo',
+      fontSize: 11.5,
+      fontWeight: FontWeight.w600,
+      color: Color(0xFF8A9099),
+      height: 1.6,
+    );
+    final link = base.copyWith(
+      fontWeight: FontWeight.w800,
+      color: const Color(0xFF1B3857),
+      decoration: TextDecoration.underline,
+    );
+    Widget a(String label, String path) => GestureDetector(
+      onTap: () => openLegal(path),
+      child: Text(label, style: link),
+    );
+    return Wrap(
+      alignment: WrapAlignment.center,
+      children: [
+        const Text('بالمتابعة أنت توافق على ', style: base),
+        a('شروط الاستخدام', '/terms'),
+        const Text(' و', style: base),
+        a('سياسة الخصوصية', '/privacy'),
+        const Text('.', style: base),
+      ],
     );
   }
 }

@@ -113,6 +113,11 @@ function Account() {
       >
         <LogOut className="h-4 w-4" /> تسجيل الخروج
       </button>
+      <div className="mt-6 flex justify-center gap-4 text-xs font-bold text-ink-3">
+        <Link href="/privacy" className="hover:text-ink">سياسة الخصوصية</Link>
+        <Link href="/terms" className="hover:text-ink">شروط الاستخدام</Link>
+        <Link href="/delete-account" className="hover:text-danger">حذف الحساب</Link>
+      </div>
     </div>
   );
 }

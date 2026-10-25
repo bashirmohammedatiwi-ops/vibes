@@ -177,6 +177,14 @@ class AuthController extends StateNotifier<AuthState> {
     state = const AuthState(ready: true);
   }
 
+  /// حذف الحساب نهائياً (متطلب App Store و Google Play) ثم الخروج محلياً.
+  Future<void> deleteAccount() async {
+    await _client.delete('/api/users/me');
+    await _tokens.clear();
+    await _cacheUser(null);
+    state = const AuthState(ready: true);
+  }
+
   Future<void> refreshMe() async {
     try {
       final me = await _client.get('/api/users/me');

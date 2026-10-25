@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  سياسة أمان الشبكة — المرحلة الحالية (IP بدون دومين):
-  • المسار الافتراضي: مشفّر فقط (HTTPS/WSS) — يمنع نصاً صريحاً لأي دومين آخر.
-  • استثناء محدود النطاق: عنوان سيرفر VIBES فقط (ws:// عبر HTTP و WebRTC
-    عبر IP) — مطلوب للمكالمات الصوتية LiveKit قبل شراء الدومين والشهادة.
-  • عند الانتقال المستقبلي إلى wss://rtc.example.com احذف هذا الملف ومرجعه
-    من AndroidManifest (android:networkSecurityConfig) — لا حاجة للاستثناء.
+  سياسة أمان الشبكة: كل الاتصالات مشفّرة (HTTPS/WSS) — vibesiraq.com.
+  لا استثناءات للنص الصريح (أُزيل استثناء عنوان IP بعد الانتقال إلى الدومين).
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false">
@@ -13,8 +9,4 @@
             <certificates src="system" />
         </trust-anchors>
     </base-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <!-- IP سيرفر VIBES — الإشارة ws:// والمكالمات قبل توفر TLS -->
-        <domain includeSubdomains="false">187.127.88.146</domain>
-    </domain-config>
 </network-security-config>

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/world_theme.dart';
 import '../../shared/data/property_providers.dart';
@@ -196,6 +198,16 @@ class ProfileScreen extends ConsumerWidget {
                   onTap: () => context.push('/support'),
                 ),
                 MaisonMenuRow(
+                  icon: Icons.privacy_tip_outlined,
+                  label: 'سياسة الخصوصية',
+                  onTap: () => openLegal('/privacy'),
+                ),
+                MaisonMenuRow(
+                  icon: Icons.description_outlined,
+                  label: 'شروط الاستخدام',
+                  onTap: () => openLegal('/terms'),
+                ),
+                MaisonMenuRow(
                   icon: Icons.info_outline_rounded,
                   label: 'عن VIBES',
                   trailing: Text(
@@ -222,7 +234,26 @@ class ProfileScreen extends ConsumerWidget {
                 },
               ),
             ),
-            const SizedBox(height: 36),
+            const SizedBox(height: 10),
+            Center(
+              child: TextButton.icon(
+                onPressed: () => _deleteAccount(context, ref),
+                icon: Icon(
+                  Icons.delete_forever_outlined,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                label: Text(
+                  'حذف الحساب',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.w800,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 26),
             _OwnerWhisper(
               isOwner: auth.isProvider,
               onTap: () {
@@ -237,6 +268,39 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+/// صفحات الخصوصية والشروط على موقع VIBES.
+Future<void> openLegal(String path) => launchUrl(
+  Uri.parse('${ApiConstants.server}$path'),
+  mode: LaunchMode.inAppBrowserView,
+);
+
+Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
+  final ok = await showMaisonConfirm(
+    context: context,
+    title: 'حذف الحساب نهائياً؟',
+    message:
+        'سيُحذف رقمك واسمك ومفضلتك وإشعاراتك ومنشوراتك، وتُلغى الحجوزات غير المدفوعة. '
+        'الحجوزات المؤكدة تبقى لدى صاحب المكان دون هويتك. لا يمكن التراجع عن الحذف.',
+    confirmLabel: 'احذف حسابي',
+    destructive: true,
+  );
+  if (!ok || !context.mounted) return;
+  try {
+    await ref.read(authControllerProvider.notifier).deleteAccount();
+    await ref.read(appModeProvider.notifier).resetAfterLogout();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('حُذف حسابك وبياناتك الشخصية')),
+    );
+    context.go('/home');
+  } catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(maisonError(error))));
   }
 }
 
@@ -355,6 +419,16 @@ class _GuestProfile extends ConsumerWidget {
                   icon: Icons.support_agent_rounded,
                   label: 'الدعم والمساعدة',
                   onTap: () => context.push('/support'),
+                ),
+                MaisonMenuRow(
+                  icon: Icons.privacy_tip_outlined,
+                  label: 'سياسة الخصوصية',
+                  onTap: () => openLegal('/privacy'),
+                ),
+                MaisonMenuRow(
+                  icon: Icons.description_outlined,
+                  label: 'شروط الاستخدام',
+                  onTap: () => openLegal('/terms'),
                 ),
               ],
             ),

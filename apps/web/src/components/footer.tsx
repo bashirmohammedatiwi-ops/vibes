@@ -35,7 +35,11 @@ export function Footer() {
       <div className="border-t border-white/10">
         <div className="container-x flex flex-wrap items-center justify-between gap-2 py-5 text-xs text-white/50">
           <span>© {new Date().getFullYear()} VIBES — جميع الحقوق محفوظة</span>
-          <span>vibesiraq.com</span>
+          <span className="flex gap-4">
+            <Link href="/privacy" className="hover:text-white">سياسة الخصوصية</Link>
+            <Link href="/terms" className="hover:text-white">شروط الاستخدام</Link>
+            <Link href="/delete-account" className="hover:text-white">حذف الحساب</Link>
+          </span>
         </div>
       </div>
     </footer>

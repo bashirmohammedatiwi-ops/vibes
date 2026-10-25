@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Patch } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Patch } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { IsOptional, IsString } from 'class-validator';
 import { AuthUser, CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AccountDeletionService } from './account-deletion.service';
 
 class UpdateProfileDto {
   @IsOptional()
@@ -16,7 +17,10 @@ class UpdateProfileDto {
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly deletion: AccountDeletionService,
+  ) {}
 
   @Get('me')
   me(@CurrentUser() user: AuthUser) {
@@ -35,6 +39,12 @@ export class UsersController {
       include: { provider: true },
       omit: { pinHash: true },
     });
+  }
+
+  /** حذف الحساب نهائياً (متطلب المتاجر). */
+  @Delete('me')
+  deleteMe(@CurrentUser() user: AuthUser) {
+    return this.deletion.deleteAccount(user.id);
   }
 
   @Get()

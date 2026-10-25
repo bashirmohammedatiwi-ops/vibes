@@ -37,10 +37,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
-	</dict>
+	<dict/>
 	<key>NSCameraUsageDescription</key>
 	<string>يستخدم التطبيق الكاميرا لتصوير الأماكن وإرفاق الصور في المحادثات.</string>
 	<key>NSMicrophoneUsageDescription</key>
