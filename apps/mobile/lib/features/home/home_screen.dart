@@ -25,6 +25,7 @@ import '../auth/auth_controller.dart';
 import '../booking/booking_providers.dart';
 import 'home_editorial.dart';
 import '../concierge/nadeem_config.dart';
+import 'home_layout.dart';
 import 'home_sections.dart';
 
 /// ═══════════════════════════════════════════════════════════
@@ -81,6 +82,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final p = context.world;
     final top = MediaQuery.paddingOf(context).top;
     final bottom = MediaQuery.paddingOf(context).bottom;
+    final layout = homeLayoutNow(ref);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlayFor(darkBackground: true),
@@ -107,6 +109,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               color: p.accent,
               edgeOffset: top + 20,
               onRefresh: () async {
+                ref.invalidate(homeLayoutProvider);
                 ref.invalidate(bannersProvider);
                 ref.invalidate(spotlightsProvider);
                 ref.invalidate(newPropertiesProvider('FARM'));
@@ -134,27 +137,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   // الأقسام تُبنى بكسل — فقط ما يقترب من الشاشة يُبنى ويُرسم
                   DecoratedSliver(
                     decoration: BoxDecoration(color: p.canvas),
+                    // الأقسام وترتيبها من لوحة التحكم (الصفحة الرئيسية)
                     sliver: SliverList.list(
                       children: [
-                        const _ContinueBookingSection(),
-                        const _Reveal(order: 3, child: EditorsPicks()),
-                        const _OccasionsSection(),
-                        _WorldFade(builder: (s) => _NewArrivals(section: s)),
-                        _WorldFade(
-                          builder: (s) => s == HomeSection.farm
-                              ? const _WinterFarmsSection()
-                              : const SizedBox.shrink(),
-                        ),
-                        const _CouponTicket(),
-                        const _Band(child: TopRatedEditorial()),
-                        const _SpotlightStrip(),
-                        const Padding(
-                          padding: EdgeInsets.only(top: 18),
-                          child: MapPreviewCard(),
-                        ),
-                        const _RecentlyViewedSection(),
-                        const _FollowingProvidersStrip(),
-                        const _TrustStrip(),
+                        for (final key in layout.body)
+                          if (_bodySection(key) case final w?) w,
                       ],
                     ),
                   ),
@@ -166,7 +153,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           child: const SizedBox(height: 1),
                         ),
                       ),
-                      const _AllPlacesSection(),
+                      if (layout.shows('allPlaces')) const _AllPlacesSection(),
                     ],
                   ),
                   SliverToBoxAdapter(
@@ -174,7 +161,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       color: p.canvas,
                       child: Column(
                         children: [
-                          const _HomeFooter(),
+                          if (layout.shows('footer')) const _HomeFooter(),
                           SizedBox(height: 118 + bottom),
                         ],
                       ),
@@ -831,11 +818,19 @@ class _Sheet extends ConsumerWidget {
             child: _WorldTiles(),
           ),
           const SizedBox(height: 22),
-          const _Reveal(order: 0, child: _BannerCarousel()),
-          const SizedBox(height: 18),
-          const _Reveal(order: 1, child: _NearestCard()),
-          const _Reveal(order: 2, child: _QuickRail()),
-          _WorldFade(builder: (s) => _PopularDestinations(section: s)),
+          for (final key in homeLayoutNow(ref).header)
+            ...switch (key) {
+              'banners' => const [
+                _Reveal(order: 0, child: _BannerCarousel()),
+                SizedBox(height: 18),
+              ],
+              'nearest' => const [_Reveal(order: 1, child: _NearestCard())],
+              'quickLinks' => const [_Reveal(order: 2, child: _QuickRail())],
+              'destinations' => [
+                _WorldFade(builder: (s) => _PopularDestinations(section: s)),
+              ],
+              _ => const <Widget>[],
+            },
         ],
       ),
     );
@@ -1668,15 +1663,22 @@ class _QuickRail extends ConsumerWidget {
     final offers = ref.watch(offersProvider).valueOrNull?.length ?? 0;
     final coupons = ref.watch(publicCouponsProvider).valueOrNull?.length ?? 0;
     final nadeem = nadeemConfigNow(ref);
+    final layout = homeLayoutNow(ref);
     final items = <(IconData, String, String, int)>[
-      (Icons.map_rounded, 'الخريطة', '/map?type=${section.typeFilter}', 0),
-      (Icons.local_offer_rounded, 'العروض', '/offers', offers),
-      (Icons.confirmation_number_rounded, 'الكوبونات', '/coupons', coupons),
+      if (layout.link('map'))
+        (Icons.map_rounded, 'الخريطة', '/map?type=${section.typeFilter}', 0),
+      if (layout.link('offers'))
+        (Icons.local_offer_rounded, 'العروض', '/offers', offers),
+      if (layout.link('coupons'))
+        (Icons.confirmation_number_rounded, 'الكوبونات', '/coupons', coupons),
       if (nadeem.showOnHome && nadeem.enabled)
         (Icons.auto_awesome_rounded, nadeem.name, '/nadeem', 0),
-      (Icons.celebration_rounded, 'التجارب', '/experiences', 0),
-      (Icons.compare_arrows_rounded, 'المقارنة', '/compare', 0),
+      if (layout.link('experiences'))
+        (Icons.celebration_rounded, 'التجارب', '/experiences', 0),
+      if (layout.link('compare'))
+        (Icons.compare_arrows_rounded, 'المقارنة', '/compare', 0),
     ];
+    if (items.isEmpty) return const SizedBox.shrink();
     return SizedBox(
       height: 52,
       child: ListView.separated(
@@ -3981,3 +3983,27 @@ class _RailSnapPhysics extends ScrollPhysics {
   @override
   bool get allowImplicitScrolling => false;
 }
+
+/// قسم المحتوى المطابق لمفتاح لوحة التحكم — null للأقسام التي تُبنى خارج القائمة.
+Widget? _bodySection(String key) => switch (key) {
+  'continueBooking' => const _ContinueBookingSection(),
+  'editorsPicks' => const _Reveal(order: 3, child: EditorsPicks()),
+  'occasions' => const _OccasionsSection(),
+  'newArrivals' => _WorldFade(builder: (s) => _NewArrivals(section: s)),
+  'winterFarms' => _WorldFade(
+    builder: (s) => s == HomeSection.farm
+        ? const _WinterFarmsSection()
+        : const SizedBox.shrink(),
+  ),
+  'coupon' => const _CouponTicket(),
+  'topRated' => const _Band(child: TopRatedEditorial()),
+  'spotlights' => const _SpotlightStrip(),
+  'map' => const Padding(
+    padding: EdgeInsets.only(top: 18),
+    child: MapPreviewCard(),
+  ),
+  'recentlyViewed' => const _RecentlyViewedSection(),
+  'following' => const _FollowingProvidersStrip(),
+  'trust' => const _TrustStrip(),
+  _ => null,
+};

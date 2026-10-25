@@ -48,6 +48,7 @@ const sections: Array<{ title: string; links: NavLink[] }> = [
         { href: "/properties", label: "الأماكن" },
         { href: "/amenities", label: "المزايا", adminOnly: true },
         { href: "/map", label: "الخريطة" },
+        { href: "/home-layout", label: "الصفحة الرئيسية" },
         { href: "/banners", label: "البانرات" },
         { href: "/spotlights", label: "أماكن مميزة" },
         { href: "/nadeem", label: "نديم" },

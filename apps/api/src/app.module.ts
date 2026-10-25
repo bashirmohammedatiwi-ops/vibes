@@ -22,6 +22,7 @@ import { MarketplaceModule } from './modules/marketplace/marketplace.module';
 import { MediaModule } from './modules/media/media.module';
 import { NadeemModule } from './modules/nadeem/nadeem.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
+import { HomeLayoutModule } from './modules/home-layout/home-layout.module';
 import { ReelsModule } from './modules/reels/reels.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { PropertiesModule } from './modules/properties/properties.module';
@@ -69,6 +70,7 @@ import { RedisModule } from './redis/redis.module';
     AdminModule,
     NadeemModule,
     ModerationModule,
+    HomeLayoutModule,
     DashboardModule,
     UsersModule,
     ProvidersModule,

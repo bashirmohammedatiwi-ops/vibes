@@ -28,6 +28,7 @@ import {
   Bookmark,
   Sparkles,
   Bot,
+  LayoutDashboard,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -68,6 +69,7 @@ export const IconCollection = wrap(Bookmark);
 export const IconSocial = wrap(Sparkles);
 export const IconOffer = wrap(Tag);
 export const IconNadeem = wrap(Bot);
+export const IconHomeLayout = wrap(LayoutDashboard);
 
 export const NAV_ICONS: Record<string, ComponentType<IconProps>> = {
   "/": IconHome,
@@ -90,6 +92,7 @@ export const NAV_ICONS: Record<string, ComponentType<IconProps>> = {
   "/banners": IconBanner,
   "/spotlights": IconBanner,
   "/nadeem": IconNadeem,
+  "/home-layout": IconHomeLayout,
   "/reviews": IconStar,
   "/collections": IconCollection,
   "/social": IconSocial,
@@ -121,6 +124,7 @@ export const NAV_COLORS: Record<string, string> = {
   "/banners": "violet",
   "/spotlights": "amber",
   "/nadeem": "violet",
+  "/home-layout": "teal",
   "/reviews": "amber",
   "/collections": "indigo",
   "/social": "rose",
