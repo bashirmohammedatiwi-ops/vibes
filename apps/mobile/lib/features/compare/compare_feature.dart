@@ -436,7 +436,7 @@ class _Row {
     String Function(num) format, {
     bool lowerIsBetter = false,
   }) {
-    final known = values.where((v) => v > 0).toList();
+    final known = <num>[...values.where((v) => v > 0)];
     var best = <int>{};
     if (known.toSet().length > 1) {
       final target = lowerIsBetter
@@ -475,26 +475,32 @@ class _PlaceHeaders extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final canAdd = places.length < CompareSelectionController.maxItems;
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final (i, p) in places.indexed) ...[
-            if (i > 0) const SizedBox(width: 8),
-            Expanded(
-              child: _PlaceHeader(
-                property: p,
-                onRemove: () =>
-                    ref.read(compareSelectionProvider.notifier).toggle(p),
-              ),
-            ),
-          ],
-          if (canAdd) ...[
-            const SizedBox(width: 8),
-            Expanded(child: _AddSlot(places: places)),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // الأعمدة بعدد الأماكن تماماً حتى تحاذي القيم صورها
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final (i, p) in places.indexed) ...[
+                if (i > 0) const SizedBox(width: 6),
+                Expanded(
+                  child: _PlaceHeader(
+                    property: p,
+                    onRemove: () =>
+                        ref.read(compareSelectionProvider.notifier).toggle(p),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (canAdd) ...[
+          const SizedBox(height: 8),
+          _AddPlace(places: places),
         ],
-      ),
+      ],
     );
   }
 }
@@ -582,8 +588,8 @@ class _PlaceHeader extends StatelessWidget {
   );
 }
 
-class _AddSlot extends StatelessWidget {
-  const _AddSlot({required this.places});
+class _AddPlace extends StatelessWidget {
+  const _AddPlace({required this.places});
 
   final List<Property> places;
 
@@ -592,25 +598,24 @@ class _AddSlot extends StatelessWidget {
     onTap: () =>
         context.push('/search?type=${places.first.type.name.toUpperCase()}'),
     child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 11),
       decoration: BoxDecoration(
         color: Vibes.surfaceMuted,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Vibes.hairlineStrong),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Vibes.hairline),
       ),
-      padding: const EdgeInsets.all(6),
-      child: Column(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.add_circle_outline_rounded, color: Vibes.teal, size: 26),
-          const SizedBox(height: 6),
+          Icon(Icons.add_circle_outline_rounded, color: Vibes.teal, size: 19),
+          const SizedBox(width: 7),
           Text(
             'أضف مكاناً'.tr,
-            textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: VibesFont.ui,
-              fontSize: 11.5,
+              fontSize: 13,
               fontWeight: FontWeight.w800,
-              color: Vibes.inkSecondary,
+              color: Vibes.ink,
             ),
           ),
         ],

@@ -121,6 +121,7 @@ Future<bool> showModerationSheet(
   if (!context.mounted) return false;
 
   final action = await showModalBottomSheet<String>(
+    useRootNavigator: true,
     context: context,
     showDragHandle: true,
     builder: (ctx) => SafeArea(
@@ -170,6 +171,7 @@ Future<bool> showModerationSheet(
   String? reason;
   if (action == 'report') {
     reason = await showModalBottomSheet<String>(
+      useRootNavigator: true,
       context: context,
       showDragHandle: true,
       builder: (ctx) => SafeArea(

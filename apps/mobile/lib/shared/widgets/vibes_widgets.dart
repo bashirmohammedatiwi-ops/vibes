@@ -60,9 +60,7 @@ class _VibesButtonState extends State<VibesButton> {
       style: Theme.of(context).textTheme.titleSmall?.copyWith(
         fontWeight: FontWeight.w700,
         fontSize: widget.small ? 13 : null,
-        color: widget.ghost
-            ? context.world.accentDeep
-            : context.world.onAccent,
+        color: widget.ghost ? context.world.accentDeep : context.world.onAccent,
       ),
     );
 
@@ -93,7 +91,8 @@ class _VibesButtonState extends State<VibesButton> {
           ),
           const SizedBox(width: VibesSpacing.sm),
         ],
-        Flexible(child: _fitEnglish(label)),
+        // بلا عرض محدد (زر مضغوط داخل صف) لا يصح تمديد النص
+        if (widget.expanded) Flexible(child: _fitEnglish(label)) else label,
       ],
     );
 
@@ -145,44 +144,57 @@ class _VibesButtonState extends State<VibesButton> {
           child: AnimatedOpacity(
             opacity: widget.onPressed == null ? 0.5 : 1,
             duration: VibesMotion.fast,
-            child: Material(
-              color: Colors.transparent,
-              child: Ink(
-                decoration: ShapeDecoration(
-                  gradient: context.world.fill,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(18)),
-                  ),
-                  shadows: [
-                    BoxShadow(
-                      color: context.world.glow.withValues(
-                        alpha: _pressed || _hovering ? .42 : .28,
-                      ),
-                      blurRadius: _pressed || _hovering ? 26 : 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
+            child: DecoratedBox(
+              // الظل خارج Material حتى لا يُقص مربعاً حول الزر
+              decoration: ShapeDecoration(
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(18)),
                 ),
-                child: InkWell(
-                  onTap: widget.loading ? null : _tap,
-                  customBorder: shape,
-                  child: SizedBox(
-                    height: height,
-                    child: Column(
-                      children: [
-                        const ColoredBox(
-                          color: Color(0x66FFFFFF),
-                          child: SizedBox(height: 1.2, width: double.infinity),
-                        ),
-                        Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: widget.small ? 14 : 20,
+                shadows: [
+                  BoxShadow(
+                    color: context.world.glow.withValues(
+                      alpha: _pressed || _hovering ? .42 : .28,
+                    ),
+                    blurRadius: _pressed || _hovering ? 26 : 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: Ink(
+                  decoration: ShapeDecoration(
+                    gradient: context.world.fill,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(18)),
+                    ),
+                  ),
+                  child: InkWell(
+                    onTap: widget.loading ? null : _tap,
+                    customBorder: shape,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.all(Radius.circular(18)),
+                      child: SizedBox(
+                        height: height,
+                        child: Column(
+                          children: [
+                            // بلا عرض محدد لا يصح خط اللمعة بعرض لا نهائي
+                            if (widget.expanded)
+                              const ColoredBox(
+                                color: Color(0x66FFFFFF),
+                                child: SizedBox(height: 1.2, width: double.infinity),
+                              ),
+                            Expanded(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: widget.small ? 14 : 20,
+                                ),
+                                child: Center(child: child),
+                              ),
                             ),
-                            child: Center(child: child),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -605,7 +617,9 @@ class _ShimmerBoxState extends State<ShimmerBox>
           width: widget.width,
           height: widget.height,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.radius < 10 ? widget.radius : widget.radius + 6),
+            borderRadius: BorderRadius.circular(
+              widget.radius < 10 ? widget.radius : widget.radius + 6,
+            ),
             gradient: LinearGradient(
               begin: Alignment(-1 - 2 + 4 * t, 0),
               end: Alignment(1 - 2 + 4 * t, 0),
@@ -705,7 +719,9 @@ class _EmptyStamp extends StatelessWidget {
       height: 112,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: RadialGradient(colors: [p.accentSoft, p.accent.withValues(alpha: 0)]),
+        gradient: RadialGradient(
+          colors: [p.accentSoft, p.accent.withValues(alpha: 0)],
+        ),
       ),
       child: Center(
         child: Container(
@@ -715,7 +731,13 @@ class _EmptyStamp extends StatelessWidget {
             shape: BoxShape.circle,
             color: Vibes.surface,
             border: Border.all(color: p.accent.withValues(alpha: .22)),
-            boxShadow: [BoxShadow(color: p.glow.withValues(alpha: .18), blurRadius: 22, offset: const Offset(0, 8))],
+            boxShadow: [
+              BoxShadow(
+                color: p.glow.withValues(alpha: .18),
+                blurRadius: 22,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
           child: Icon(icon, size: 30, color: p.accentDeep),
         ),

@@ -795,6 +795,9 @@ class _PinBoxes extends StatelessWidget {
                   decoration: const InputDecoration(
                     counterText: '',
                     border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
                   ),
                 ),
               ),

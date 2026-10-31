@@ -822,6 +822,7 @@ Future<T?> showMaisonSheet<T>({
   required Widget child,
 }) {
   return showModalBottomSheet<T>(
+    useRootNavigator: true,
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

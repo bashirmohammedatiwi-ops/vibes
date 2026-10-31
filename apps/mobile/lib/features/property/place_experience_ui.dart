@@ -1025,6 +1025,7 @@ Future<void> showPlaceDayPricingSheet({
   PlaceDayBookHandler? onDayBook,
 }) {
   return showModalBottomSheet<void>(
+    useRootNavigator: true,
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

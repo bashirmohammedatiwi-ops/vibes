@@ -28,6 +28,7 @@ Future<void> showDirectionsSheet(
   HapticFeedback.selectionClick();
   final theme = Theme.of(context);
   return showModalBottomSheet<void>(
+    useRootNavigator: true,
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,

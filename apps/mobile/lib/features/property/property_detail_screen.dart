@@ -1223,6 +1223,7 @@ class _AnchorTabsState extends State<_AnchorTabs> {
 Future<void> _shareAsCard(BuildContext context, dynamic p) async {
   final cardKey = GlobalKey();
   await showModalBottomSheet<void>(
+    useRootNavigator: true,
     context: context,
     builder: (sheetContext) => Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
@@ -1669,6 +1670,7 @@ Future<void> _showAllAmenities(
 ) {
   final theme = Theme.of(context);
   return showModalBottomSheet<void>(
+    useRootNavigator: true,
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
@@ -2910,8 +2912,7 @@ class _BookingBar extends ConsumerWidget {
                                 child: PlaceFullPriceText(
                                   placeReferencePrice(property, dayPrices),
                                   size: 19,
-                                  // الوحدة بجانبه؛ العربية تحتفظ بمظهرها الحالي.
-                                  unit: !I18n.isEn,
+                                  unit: false,
                                 ),
                               ),
                             ),
@@ -3037,6 +3038,7 @@ Future<void> _pickCollection(
   }
   final note = TextEditingController();
   final chosen = await showModalBottomSheet<String>(
+    useRootNavigator: true,
     context: context,
     builder: (ctx) => SafeArea(
       child: Padding(

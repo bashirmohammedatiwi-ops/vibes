@@ -204,6 +204,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final bookingId = widget.payHintBookingId;
     if (bookingId == null) return;
     final choice = await showModalBottomSheet<String>(
+      useRootNavigator: true,
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => _PayHintSheet(),

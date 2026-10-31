@@ -41,6 +41,10 @@ if [[ "$DO_API" == 1 ]]; then
   echo "→ مزامنة apps/api/prisma"
   rsync -az -e "$RSYNC_E" \
     "$ROOT/apps/api/prisma/" "$SERVER:$REMOTE_DIR/apps/api/prisma/"
+
+  echo "→ مزامنة تبعيات apps/api"
+  rsync -az -e "$RSYNC_E" \
+    "$ROOT/apps/api/package.json" "$ROOT/apps/api/package-lock.json" "$SERVER:$REMOTE_DIR/apps/api/"
 fi
 
 if [[ "$DO_ADMIN" == 1 ]]; then

@@ -178,6 +178,9 @@ class MapHud extends StatelessWidget {
                               minHeight: 36,
                             ),
                             border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: false,
                             contentPadding: const EdgeInsets.symmetric(
                               vertical: 10,
                             ),

@@ -1310,6 +1310,7 @@ class _ProviderBookingsScreenState
 
   Future<bool> _confirmCancel(Booking booking) async {
     final ok = await showModalBottomSheet<bool>(
+      useRootNavigator: true,
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(

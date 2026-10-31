@@ -27,6 +27,11 @@ abstract final class I18n {
   static String t(String key) => isEn ? (_en[key] ?? key) : key;
 }
 
+/// يعزل جزءاً عربياً داخل سطر إنجليزي (أو العكس) حتى لا تختلط الأرقام والفواصل
+/// بترتيبه. العربية تبقى كما هي.
+String bidiIsolate(String part) =>
+    I18n.isEn ? '\u2068$part\u2069' : part;
+
 extension VibesTr on String {
   /// النص باللغة الحالية: `'الحجوزات'.tr`
   String get tr => I18n.t(this).split('|').last;

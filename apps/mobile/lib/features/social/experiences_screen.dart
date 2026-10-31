@@ -75,6 +75,7 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
       return;
     }
     await showModalBottomSheet<void>(
+      useRootNavigator: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: VibesTheme.surfaceOf(context),

@@ -26,6 +26,7 @@ Future<bool> showReviewSheet(
   final palette = WorldPalette.forType(booking.propertyType);
   final theme = applyWorld(Theme.of(context), palette);
   final submitted = await showModalBottomSheet<bool>(
+    useRootNavigator: true,
     context: context,
     isScrollControlled: true,
     backgroundColor: Vibes.surface,

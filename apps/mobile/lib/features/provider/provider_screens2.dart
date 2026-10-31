@@ -61,6 +61,7 @@ class _ProviderCalendarScreenState
 
   Future<void> _openExternalForm(String propertyId, DateTime day) async {
     final saved = await showModalBottomSheet<bool>(
+      useRootNavigator: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Vibes.surface,
@@ -669,6 +670,7 @@ class _ExternalBookingCard extends ConsumerStatefulWidget {
 class _ExternalBookingCardState extends ConsumerState<_ExternalBookingCard> {
   Future<void> _open() async {
     final saved = await showModalBottomSheet<bool>(
+      useRootNavigator: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: VibesTheme.surfaceOf(context),
@@ -2440,6 +2442,7 @@ Future<void> _openRuleSheet(
   final days = <int>{};
 
   await showModalBottomSheet<void>(
+    useRootNavigator: true,
     context: context,
     isScrollControlled: true,
     backgroundColor: VibesTheme.surfaceOf(context),

@@ -147,28 +147,7 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 10),
             MaisonMenuGroup(
               children: [
-                MaisonMenuRow(
-                  icon: switch (prefs.themeMode) {
-                    ThemeMode.dark => Icons.dark_mode_outlined,
-                    ThemeMode.light => Icons.light_mode_outlined,
-                    ThemeMode.system => Icons.brightness_auto_outlined,
-                  },
-                  label: 'المظهر'.tr,
-                  trailing: _ValueMark(switch (prefs.themeMode) {
-                    ThemeMode.dark => 'داكن'.tr,
-                    ThemeMode.light => 'فاتح'.tr,
-                    ThemeMode.system => 'حسب الجهاز'.tr,
-                  }),
-                  onTap: () => _pickTheme(context, ref),
-                ),
-                MaisonMenuRow(
-                  icon: Icons.language_rounded,
-                  label: 'اللغة'.tr,
-                  trailing: _ValueMark(
-                    I18n.isEn ? 'English' : 'العربية', // i18n-ok
-                  ),
-                  onTap: () => _pickLanguage(context, ref),
-                ),
+                ..._preferenceRows(context, ref),
                 MaisonMenuRow(
                   icon: Icons.data_saver_on_outlined,
                   label: 'توفير البيانات'.tr,
@@ -275,7 +254,8 @@ Future<void> confirmDeleteAccount(BuildContext context, WidgetRef ref) async {
     context: context,
     title: 'حذف الحساب نهائياً؟'.tr,
     message:
-        'سيُحذف رقمك واسمك ومفضلتك وإشعاراتك ومنشوراتك، وتُلغى الحجوزات غير المدفوعة. الحجوزات المؤكدة تبقى لدى صاحب المكان دون هويتك. لا يمكن التراجع عن الحذف.'.tr,
+        'سيُحذف رقمك واسمك ومفضلتك وإشعاراتك ومنشوراتك، وتُلغى الحجوزات غير المدفوعة. الحجوزات المؤكدة تبقى لدى صاحب المكان دون هويتك. لا يمكن التراجع عن الحذف.'
+            .tr,
     confirmLabel: 'احذف حسابي'.tr,
     destructive: true,
   );
@@ -361,7 +341,8 @@ class _GuestProfile extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'الدخول يُطلب عند إتمام الحجز. تستطيع الدخول من هنا متى شئت.'.tr,
+                      'الدخول يُطلب عند إتمام الحجز. تستطيع الدخول من هنا متى شئت.'
+                          .tr,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: VibesTheme.textSecondaryOf(context),
                         height: 1.6,
@@ -376,6 +357,8 @@ class _GuestProfile extends ConsumerWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 18),
+            const _PreferencesGroup(),
             const SizedBox(height: 18),
             MaisonMenuGroup(
               children: [
@@ -797,6 +780,7 @@ void _pickOne<T>(
 }) {
   showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     backgroundColor: Vibes.surface,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(
@@ -844,4 +828,40 @@ void _pickOne<T>(
       ),
     ),
   );
+}
+
+class _PreferencesGroup extends ConsumerWidget {
+  const _PreferencesGroup();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) =>
+      MaisonMenuGroup(children: _preferenceRows(context, ref));
+}
+
+List<Widget> _preferenceRows(BuildContext context, WidgetRef ref) {
+  final prefs = ref.watch(prefsControllerProvider);
+  return [
+    MaisonMenuRow(
+      icon: switch (prefs.themeMode) {
+        ThemeMode.dark => Icons.dark_mode_outlined,
+        ThemeMode.light => Icons.light_mode_outlined,
+        ThemeMode.system => Icons.brightness_auto_outlined,
+      },
+      label: 'المظهر'.tr,
+      trailing: _ValueMark(switch (prefs.themeMode) {
+        ThemeMode.dark => 'داكن'.tr,
+        ThemeMode.light => 'فاتح'.tr,
+        ThemeMode.system => 'حسب الجهاز'.tr,
+      }),
+      onTap: () => _pickTheme(context, ref),
+    ),
+    MaisonMenuRow(
+      icon: Icons.language_rounded,
+      label: 'اللغة'.tr,
+      trailing: _ValueMark(
+        I18n.isEn ? 'English' : 'العربية', // i18n-ok
+      ),
+      onTap: () => _pickLanguage(context, ref),
+    ),
+  ];
 }

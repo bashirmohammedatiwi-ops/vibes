@@ -50,6 +50,7 @@ Future<BookingDateSelection?> showBookingDatePicker({
           ? BookingDatePickMode.range
           : BookingDatePickMode.singleDay);
   return showModalBottomSheet<BookingDateSelection>(
+    useRootNavigator: true,
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
@@ -231,6 +232,7 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
       return;
     }
     final chosen = await showModalBottomSheet<ShiftType>(
+      useRootNavigator: true,
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => _AlternativeSheet(

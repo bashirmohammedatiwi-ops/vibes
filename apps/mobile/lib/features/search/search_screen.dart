@@ -322,6 +322,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Future<void> _openFilterSheet() async {
     HapticFeedback.selectionClick();
     await showModalBottomSheet<void>(
+      useRootNavigator: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Vibes.surface,
@@ -720,6 +721,9 @@ class _SearchBarState extends State<_SearchBar> {
                 ),
                 isDense: true,
                 border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: false,
                 contentPadding: const EdgeInsets.symmetric(vertical: 13),
               ),
             ),

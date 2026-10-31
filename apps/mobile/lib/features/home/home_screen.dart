@@ -1141,6 +1141,7 @@ Future<void> _pickProvince(BuildContext context) {
   final theme = Theme.of(context);
   HapticFeedback.selectionClick();
   return showModalBottomSheet<void>(
+    useRootNavigator: true,
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
@@ -1267,7 +1268,7 @@ class _ProvinceSheet extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
             child: Text(
-              'اختر محافظة ليبحث البحث فيها مباشرة'.tr,
+              'اختر محافظة ليبدأ البحث فيها مباشرة'.tr,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontSize: 12.5,
@@ -3652,6 +3653,7 @@ class _OccasionTile extends StatelessWidget {
 Future<void> _showOccasionSheet(BuildContext context, _Occasion occasion) {
   final theme = Theme.of(context);
   return showModalBottomSheet<void>(
+    useRootNavigator: true,
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,

@@ -171,6 +171,7 @@ Future<ShiftType?> showPlaceShiftSheet({
   required List<DayPricing> days,
 }) {
   return showModalBottomSheet<ShiftType>(
+    useRootNavigator: true,
     context: context,
     backgroundColor: Vibes.surface,
     shape: const RoundedRectangleBorder(
@@ -464,6 +465,7 @@ Future<int?> showPlaceGuestsSheet({
   required int capacity,
 }) {
   return showModalBottomSheet<int>(
+    useRootNavigator: true,
     context: context,
     backgroundColor: Vibes.surface,
     shape: const RoundedRectangleBorder(
@@ -829,6 +831,7 @@ Future<String?> showPlaceNotesSheet({
   required String initial,
 }) {
   return showModalBottomSheet<String>(
+    useRootNavigator: true,
     context: context,
     isScrollControlled: true,
     backgroundColor: Vibes.surface,
@@ -880,6 +883,7 @@ Future<String?> showPlaceCouponSheet({
   required String? error,
 }) {
   return showModalBottomSheet<String>(
+    useRootNavigator: true,
     context: context,
     isScrollControlled: true,
     backgroundColor: Vibes.surface,

@@ -49,6 +49,7 @@ Future<PlaceBookingDraft?> showPlaceBookingWizard({
   bool editOnly = false,
 }) {
   return showModalBottomSheet<PlaceBookingDraft>(
+    useRootNavigator: true,
     context: context,
     isScrollControlled: true,
     useSafeArea: true,

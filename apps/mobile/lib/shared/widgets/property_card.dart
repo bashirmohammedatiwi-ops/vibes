@@ -33,7 +33,7 @@ String _propertyMeta(Property property) => [
   if (property.hasIndoorPool) '🏊 مسبح مغلق'.tr,
   if (property.capacity > 0) '{n} ضيف'.trN(property.capacity),
   if (property.ratingCount > 0) '★ ${property.ratingAvg.toStringAsFixed(1)}',
-].where((part) => part.isNotEmpty).join('  ·  ');
+].where((part) => part.isNotEmpty).map(bidiIsolate).join('  ·  ');
 
 VibesCategory _categoryFor(PropertyType type) => switch (type) {
   PropertyType.hall => VibesCategory.hall,
@@ -181,7 +181,9 @@ class _CardPhoto extends StatelessWidget {
         if (property.featured && !fullBleed)
           PositionedDirectional(
             top: 10,
-            end: 10,
+            // أزرار المقارنة والمفضلة تأخذ الطرف الآخر
+            start: showCompare ? 10 : null,
+            end: showCompare ? null : 10,
             child: RibbonChip(label: 'مميّز'.tr, color: accent),
           ),
         if (rank != null)
@@ -268,7 +270,10 @@ class _CardBody extends StatelessWidget {
     final guests = property.capacity > 0
         ? '{n} ضيف'.trN(property.capacity)
         : '';
-    final meta = [place, guests].where((s) => s.isNotEmpty).join('  ·  ');
+    final meta = [
+      place,
+      guests,
+    ].where((s) => s.isNotEmpty).map(bidiIsolate).join('  ·  ');
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 13),

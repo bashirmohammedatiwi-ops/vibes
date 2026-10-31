@@ -268,6 +268,7 @@ Future<void> _createOffer(BuildContext context, WidgetRef ref) async {
   DateTime end = start.add(const Duration(days: 1));
 
   final created = await showModalBottomSheet<bool>(
+    useRootNavigator: true,
     context: context,
     isScrollControlled: true,
     builder: (ctx) {
