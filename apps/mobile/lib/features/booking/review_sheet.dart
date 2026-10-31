@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -27,7 +28,7 @@ Future<bool> showReviewSheet(
   final submitted = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.white,
+    backgroundColor: Vibes.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
@@ -64,7 +65,9 @@ Future<bool> showReviewSheet(
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'قيّم ${booking.propertyName ?? 'تجربتك'}',
+                        'قيّم {name}'.trArgs({
+                          'name': booking.propertyName ?? 'تجربتك'.tr,
+                        }),
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 19,
@@ -77,7 +80,7 @@ Future<bool> showReviewSheet(
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'تقييمك يساعد غيرك على الاختيار الصحيح',
+                  'تقييمك يساعد غيرك على الاختيار الصحيح'.tr,
                   style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
                     color: VibesTheme.textTertiaryOf(sheetContext),
                   ),
@@ -109,9 +112,9 @@ Future<bool> showReviewSheet(
                 if (stars > 0) ...[
                   const SizedBox(height: 18),
                   MaisonField(
-                    label: 'تعليق اختياري',
+                    label: 'تعليق اختياري'.tr,
                     controller: comment,
-                    hint: 'ما أعجبك أكثر؟',
+                    hint: 'ما أعجبك أكثر؟'.tr,
                     maxLines: 2,
                   ),
                 ],
@@ -119,7 +122,7 @@ Future<bool> showReviewSheet(
                 SizedBox(
                   width: double.infinity,
                   child: WorldButton(
-                    label: 'إرسال التقييم',
+                    label: 'إرسال التقييم'.tr,
                     icon: Icons.send_rounded,
                     palette: palette,
                     loading: saving,
@@ -173,15 +176,15 @@ Future<bool> showReviewSheet(
 }
 
 const _starLabels = {
-  1: 'لم يعجبنا — نخطط للأفضل',
-  2: 'مقبول — تجربة تحتاج تحسيناً',
-  3: 'جيد — أجزاء أعجبتنا',
-  4: 'جيد جداً — تجربة تليق',
-  5: 'ممتاز — لحظة تُروى',
+  1: 'لم يعجبنا — نخطط للأفضل', // i18n-ok
+  2: 'مقبول — تجربة تحتاج تحسيناً', // i18n-ok
+  3: 'جيد — أجزاء أعجبتنا', // i18n-ok
+  4: 'جيد جداً — تجربة تليق', // i18n-ok
+  5: 'ممتاز — لحظة تُروى', // i18n-ok
 };
 
 String _starLabel(int stars) =>
-    stars > 0 ? (_starLabels[stars] ?? '') : 'اضغط على النجوم للتقييم';
+    stars > 0 ? (_starLabels[stars]?.tr ?? '') : 'اضغط على النجوم للتقييم'.tr;
 
 /// نجوم تقفز — كل نجمة مختارة تنبض elasticOut مع هزة لمسية
 class _BouncingStars extends StatelessWidget {

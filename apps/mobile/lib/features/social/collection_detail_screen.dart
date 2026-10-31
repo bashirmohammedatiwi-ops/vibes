@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/network/api_client.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/vibes_net_image.dart';
 import '../../shared/data/marketplace_providers.dart';
@@ -36,21 +37,21 @@ class CollectionDetailScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'تعديل القائمة',
+              'تعديل القائمة'.tr,
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 16),
-            MaisonField(label: 'الاسم', controller: name),
+            MaisonField(label: 'الاسم'.tr, controller: name),
             const SizedBox(height: 12),
-            MaisonField(label: 'وصف أو ملاحظات', controller: description),
+            MaisonField(label: 'وصف أو ملاحظات'.tr, controller: description),
             const SizedBox(height: 8),
             ValueListenableBuilder(
               valueListenable: visibility,
               builder: (context, value, _) => SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('قائمة عامة'),
+                title: Text('قائمة عامة'.tr),
                 value: value == 'PUBLIC',
                 onChanged: (on) => visibility.value = on ? 'PUBLIC' : 'PRIVATE',
               ),
@@ -59,7 +60,7 @@ class CollectionDetailScreen extends ConsumerWidget {
               children: [
                 Expanded(
                   child: VibesButton(
-                    label: 'تراجع',
+                    label: 'تراجع'.tr,
                     ghost: true,
                     small: true,
                     onPressed: () => Navigator.pop(context, false),
@@ -68,7 +69,7 @@ class CollectionDetailScreen extends ConsumerWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: VibesButton(
-                    label: 'حفظ',
+                    label: 'حفظ'.tr,
                     small: true,
                     onPressed: () => Navigator.pop(context, true),
                   ),
@@ -122,9 +123,9 @@ class CollectionDetailScreen extends ConsumerWidget {
   ) async {
     final text = await showMaisonPrompt(
       context: context,
-      title: 'ملاحظة على ${entry.property.name}',
+      title: 'ملاحظة على {name}'.trArgs({'name': entry.property.name}),
       initial: entry.note,
-      hint: 'لماذا حفظت هذا المكان؟',
+      hint: 'لماذا حفظت هذا المكان؟'.tr,
     );
     if (text == null) return;
     await ref
@@ -143,10 +144,10 @@ class CollectionDetailScreen extends ConsumerWidget {
   ) async {
     final ok = await showMaisonConfirm(
       context: context,
-      title: 'حذف القائمة',
-      message: 'سيتم حذف القائمة دون حذف الأماكن نفسها.',
-      confirmLabel: 'حذف',
-      cancelLabel: 'تراجع',
+      title: 'حذف القائمة'.tr,
+      message: 'سيتم حذف القائمة دون حذف الأماكن نفسها.'.tr,
+      confirmLabel: 'حذف'.tr,
+      cancelLabel: 'تراجع'.tr,
       destructive: true,
     );
     if (ok != true) return;
@@ -179,7 +180,7 @@ class CollectionDetailScreen extends ConsumerWidget {
         child: Column(
           children: [
             MaisonPageHeader(
-              title: detail.valueOrNull?.name ?? 'القائمة',
+              title: detail.valueOrNull?.name ?? 'القائمة'.tr,
               onBack: () => context.pop(),
               trailing: detail.valueOrNull == null
                   ? null
@@ -192,9 +193,13 @@ class CollectionDetailScreen extends ConsumerWidget {
                             break;
                           case 'share':
                             await Share.share(
-                              'قائمة ${collection.name} على VIBES\n'
-                              'افتحها من التطبيق عبر /collections/${collection.id}\n'
-                              '${collection.items.map((e) => e.property.name).join('\n')}',
+                              'قائمة {name} على أجواء\nافتحها من التطبيق عبر /collections/{id}\n{places}'.trArgs({
+                                    'name': collection.name,
+                                    'id': collection.id,
+                                    'places': collection.items
+                                        .map((e) => e.property.name)
+                                        .join('\n'),
+                                  }),
                             );
                             break;
                           case 'delete':
@@ -208,19 +213,19 @@ class CollectionDetailScreen extends ConsumerWidget {
                             collection.userId.isEmpty ||
                             collection.userId == userId;
                         return [
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: 'share',
-                            child: Text('مشاركة'),
+                            child: Text('مشاركة'.tr),
                           ),
                           if (mine)
-                            const PopupMenuItem(
+                            PopupMenuItem(
                               value: 'edit',
-                              child: Text('تعديل'),
+                              child: Text('تعديل'.tr),
                             ),
                           if (mine && !collection.isDefault)
-                            const PopupMenuItem(
+                            PopupMenuItem(
                               value: 'delete',
-                              child: Text('حذف'),
+                              child: Text('حذف'.tr),
                             ),
                         ];
                       },
@@ -265,7 +270,7 @@ class CollectionDetailScreen extends ConsumerWidget {
                         Padding(
                           padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
                           child: Align(
-                            alignment: Alignment.centerRight,
+                            alignment: AlignmentDirectional.centerStart,
                             child: Text(collection.description),
                           ),
                         ),
@@ -275,7 +280,7 @@ class CollectionDetailScreen extends ConsumerWidget {
                                 icon: Icons.bookmark_outline_rounded,
                                 title: collection.name,
                                 subtitle:
-                                    'أضف أماكن إلى هذه القائمة من صفحة المكان',
+                                    'أضف أماكن إلى هذه القائمة من صفحة المكان'.tr,
                               )
                             : ListView.builder(
                                 padding: const EdgeInsets.fromLTRB(
@@ -300,9 +305,9 @@ class CollectionDetailScreen extends ConsumerWidget {
                                               heroNamespace: 'col',
                                             ),
                                             if (mine)
-                                              Positioned(
+                                              PositionedDirectional(
                                                 top: 8,
-                                                left: 8,
+                                                end: 8,
                                                 child: IconButton.filledTonal(
                                                   onPressed: () => _removeItem(
                                                     context,
@@ -338,7 +343,7 @@ class CollectionDetailScreen extends ConsumerWidget {
                                                   ),
                                                   label: Text(
                                                     entry.note.isEmpty
-                                                        ? 'أضف ملاحظة'
+                                                        ? 'أضف ملاحظة'.tr
                                                         : entry.note,
                                                   ),
                                                 ),
@@ -366,8 +371,8 @@ class CollectionDetailScreen extends ConsumerWidget {
                                                             entry
                                                                 .property
                                                                 .coverUrl
-                                                        ? 'الغلاف الحالي'
-                                                        : 'تعيين غلاف',
+                                                        ? 'الغلاف الحالي'.tr
+                                                        : 'تعيين غلاف'.tr,
                                                   ),
                                                 ),
                                             ],
@@ -430,7 +435,7 @@ final collectionDetailProvider =
       final user = data['user'] as Map<String, dynamic>?;
       return CollectionDetail(
         id: data['id'] as String? ?? id,
-        name: data['name'] as String? ?? 'قائمة',
+        name: data['name'] as String? ?? 'قائمة'.tr,
         description: data['description'] as String? ?? '',
         visibility: data['visibility'] as String? ?? 'PRIVATE',
         isDefault: data['isDefault'] == true,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/i18n/i18n.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -31,11 +32,14 @@ class ExperienceModeSwitcherBar extends ConsumerWidget {
     }
 
     final toProvider = showPortalEntry;
-    final label = toProvider ? 'بوابة المالك' : 'تطبيق VIBES';
+    final label = toProvider ? 'بوابة المالك'.tr : 'تطبيق أجواء'.tr;
     final icon = toProvider
         ? Icons.space_dashboard_rounded
         : Icons.explore_rounded;
-    final bg = toProvider ? placeInk : Colors.white;
+    // ليلاً placeInk حبر فاتح، فالشريط يأخذ سطحاً مرفوعاً بدل تعبئة كريمية.
+    final bg = toProvider
+        ? themed(placeInk, VibesDark.surfaceMuted)
+        : Vibes.surface;
     final fg = toProvider ? Colors.white : placeInk;
     final border = toProvider ? placeBrass.withValues(alpha: .5) : placeLine;
 

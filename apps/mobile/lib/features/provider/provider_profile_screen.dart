@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../auth/auth_controller.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/data/marketplace_providers.dart';
@@ -54,7 +55,7 @@ class ProviderProfileScreen extends ConsumerWidget {
             final name =
                 data['businessName'] as String? ??
                 user?['name'] as String? ??
-                'مالك VIBES';
+                'مالك أجواء'.tr;
             final avatar = user?['avatar'] as String?;
             final properties =
                 (data['properties'] as List<dynamic>? ?? const [])
@@ -104,7 +105,7 @@ class ProviderProfileScreen extends ConsumerWidget {
                                           ),
                                     ),
                                     Text(
-                                      '$count متابع',
+                                      '{n} متابع'.trN(count),
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodySmall
@@ -158,20 +159,20 @@ class ProviderProfileScreen extends ConsumerWidget {
                                 },
                                 child: Text(
                                   follow.valueOrNull?.following == true
-                                      ? 'إلغاء المتابعة'
-                                      : 'متابعة',
+                                      ? 'إلغاء المتابعة'.tr
+                                      : 'متابعة'.tr,
                                 ),
                               ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 22),
-                        const SectionHeader('أماكن هذا المالك'),
+                        SectionHeader('أماكن هذا المالك'.tr),
                         if (properties.isEmpty)
-                          const WorldEmpty(
+                          WorldEmpty(
                             icon: Icons.home_work_outlined,
-                            title: 'لا أماكن ظاهرة',
-                            subtitle: 'لم ينشر هذا المالك أماكن بعد',
+                            title: 'لا أماكن ظاهرة'.tr,
+                            subtitle: 'لم ينشر هذا المالك أماكن بعد'.tr,
                           )
                         else
                           for (final property in properties)

@@ -177,14 +177,17 @@ class _VibesNetImageState extends State<VibesNetImage> {
           filterQuality: FilterQuality.medium,
           fadeInDuration: widget.fade,
           fadeOutDuration: Duration.zero,
-          placeholder: (context, _) =>
-              const ColoredBox(color: Color(0xFFF3F0EA)),
+          placeholder: (context, _) => ColoredBox(
+            color: themed(const Color(0xFFF3F0EA), VibesDark.surfaceMuted),
+          ),
           errorWidget: (context, _, __) {
             if (!_original && request != widget.url) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted && !_original) setState(() => _original = true);
               });
-              return const ColoredBox(color: Color(0xFFF3F0EA));
+              return ColoredBox(
+                color: themed(const Color(0xFFF3F0EA), VibesDark.surfaceMuted),
+              );
             }
             // الأصل فشل أيضاً — أعد المحاولة لاحقاً بدل البقاء فارغة
             _scheduleRetry();

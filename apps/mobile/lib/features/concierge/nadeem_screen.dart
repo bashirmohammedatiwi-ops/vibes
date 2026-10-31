@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../shared/widgets/vibes_widgets.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/network/api_client.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/world_theme.dart';
 import '../../shared/data/property_providers.dart';
@@ -55,7 +57,7 @@ class _Answers {
     return null;
   }
 
-  String get occasionLabel => occasion?.label ?? 'مناسبتك';
+  String get occasionLabel => occasion?.label ?? 'مناسبتك'.tr;
 }
 
 /// رسالة في المحادثة.
@@ -194,7 +196,7 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
       _answers.provinceName == null
           ? _c.provinceReactionAll
           : fillTokens(_c.provinceReactionOne, {
-              'province': _answers.provinceName!,
+              'province': _answers.provinceName!.tr,
             }),
     3 => _c.guestsReaction,
     4 => _c.shiftReaction,
@@ -483,21 +485,23 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
     final r = <String>[];
     if (_answers.provinceName != null &&
         p.provinceName == _answers.provinceName)
-      r.add('في ${p.provinceName}');
+      r.add('في {place}'.trArgs({'place': p.provinceName!.tr}));
     if (_answers.minCapacity != null && p.capacity >= _answers.minCapacity!)
-      r.add('يتسع لـ ${p.capacity}');
+      r.add('يتسع لـ {n}'.trN(p.capacity));
     if (_answers.maxPrice != null &&
         !_answers.budgetOpen &&
         _fromPrice(p) <= _answers.maxPrice!) {
-      r.add('ضمن ميزانيتك');
+      r.add('ضمن ميزانيتك'.tr);
     }
     if (_answers.shift == _Shift.evening && p.priceEveningShift != null)
-      r.add('شفت مسائي');
+      r.add('شفت مسائي'.tr);
     if (_answers.shift == _Shift.morning && p.priceMorningShift != null)
-      r.add('شفت صباحي');
+      r.add('شفت صباحي'.tr);
     if (p.ratingCount > 0 && p.ratingAvg >= 4.5)
-      r.add('تقييم ${p.ratingAvg.toStringAsFixed(1)}');
-    if (p.featured) r.add('مختار');
+      r.add(
+        'تقييم {rating}'.trArgs({'rating': p.ratingAvg.toStringAsFixed(1)}),
+      );
+    if (p.featured) r.add('مختار'.tr);
     return r.take(3).toList();
   }
 
@@ -517,7 +521,7 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
       duration: const Duration(milliseconds: 500),
       data: applyWorld(Theme.of(context), p),
       child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: overlayFor(darkBackground: false),
+        value: overlayFor(darkBackground: Appearance.isDark),
         child: Scaffold(
           backgroundColor: p.canvas,
           body: Column(
@@ -616,7 +620,7 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
             ),
             const SizedBox(height: 20),
             WorldButton(
-              label: 'ابحث عن مكان',
+              label: 'ابحث عن مكان'.tr,
               icon: Icons.search_rounded,
               height: 50,
               onTap: () => context.push('/search'),
@@ -633,7 +637,10 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: const Color(0xFFFEF2F2),
+          color: themed(
+            const Color(0xFFFEF2F2),
+            Vibes.danger.withValues(alpha: .12),
+          ),
           borderRadius: BorderRadius.circular(18),
         ),
         child: Column(
@@ -645,7 +652,7 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
                 fontFamily: VibesFont.ui,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFFB91C1C),
+                color: themed(const Color(0xFFB91C1C), Vibes.danger),
               ),
             ),
             const SizedBox(height: 10),
@@ -680,7 +687,7 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
       2 => _ProvincePicker(
         config: _c,
         type: _answers.impliedType,
-        onPick: (slug, name) => _answer(2, name ?? _c.provinceAnyLabel, () {
+        onPick: (slug, name) => _answer(2, name?.tr ?? _c.provinceAnyLabel, () {
           _answers.provinceSlug = slug;
           _answers.provinceName = name;
         }),
@@ -740,13 +747,15 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
                 width: double.infinity,
                 padding: EdgeInsets.fromLTRB(16, 14, 16, 14 + bottom),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Vibes.surface,
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(28),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: .08),
+                      color: Colors.black.withValues(
+                        alpha: Appearance.isDark ? .35 : .08,
+                      ),
                       blurRadius: 30,
                       offset: const Offset(0, -8),
                     ),
@@ -774,9 +783,13 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
         else
           (1, Icons.auto_awesome_rounded, c.autoTypeChip),
       if (c.provinceEnabled)
-        (2, Icons.location_on_rounded, _answers.provinceName ?? 'كل العراق'),
+        (
+          2,
+          Icons.location_on_rounded,
+          _answers.provinceName?.tr ?? 'كل العراق'.tr,
+        ),
       if (_answers.minCapacity != null)
-        (3, Icons.groups_rounded, '${_answers.minCapacity} ضيف'),
+        (3, Icons.groups_rounded, '{n} ضيف'.trN(_answers.minCapacity!)),
       if (_answers.shift != null)
         (4, Icons.schedule_rounded, _shiftLabel(_answers.shift!)),
       if (c.budgetEnabled)
@@ -785,7 +798,7 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
           Icons.payments_rounded,
           _answers.budgetOpen || _answers.maxPrice == null
               ? c.budgetOpenLabel
-              : 'حتى ${_money(_answers.maxPrice!)}',
+              : 'حتى {amount}'.trArgs({'amount': _money(_answers.maxPrice!)}),
         ),
     ];
 
@@ -801,11 +814,18 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
-                colors: [
-                  Color.lerp(p.accent, p.accentDeep, .2)!,
-                  p.accentDeep,
-                  Color.lerp(p.accentDeep, p.night, .5)!,
-                ],
+                // ليلاً اللون العميق فاتح: تدرّج ليل العالم حتى يبقى النص الأبيض مقروءاً
+                colors: Appearance.isDark
+                    ? [
+                        p.nightHigh,
+                        p.night,
+                        Color.lerp(p.night, VibesDark.canvas, .6)!,
+                      ]
+                    : [
+                        Color.lerp(p.accent, p.accentDeep, .2)!,
+                        p.accentDeep,
+                        Color.lerp(p.accentDeep, p.night, .5)!,
+                      ],
               ),
               borderRadius: BorderRadius.circular(24),
               boxShadow: p.glowShadow,
@@ -831,7 +851,7 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
                       ),
                     ),
                     Text(
-                      list.isEmpty ? '' : '${list.length} اقتراح',
+                      list.isEmpty ? '' : '{n} اقتراح'.trN(list.length),
                       style: TextStyle(
                         fontFamily: VibesFont.ui,
                         fontSize: 12,
@@ -866,13 +886,17 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
                             children: [
                               Icon(c.$2, size: 13, color: Colors.white),
                               const SizedBox(width: 4),
-                              Text(
-                                c.$3,
-                                style: TextStyle(
-                                  fontFamily: VibesFont.ui,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
+                              Flexible(
+                                child: Text(
+                                  c.$3,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontFamily: VibesFont.ui,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ],
@@ -921,7 +945,7 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
                       ? _matchPercent(list[i].score)
                       : null,
                   best: i == 0,
-                  bestLabel: 'اختيار ${c.name} الأول',
+                  bestLabel: 'اختيار {name} الأول'.trArgs({'name': c.name}),
                   onOpen: () => _logClick(list[i].property.id),
                 ),
               ),
@@ -998,9 +1022,11 @@ num _fromPrice(Property p) {
 String _money(num v) {
   if (v >= 1000000) {
     final m = v / 1000000;
-    return '${m == m.roundToDouble() ? m.toInt() : m.toStringAsFixed(1)} مليون';
+    return '{n} مليون'.trArgs({
+      'n': m == m.roundToDouble() ? m.toInt() : m.toStringAsFixed(1),
+    });
   }
-  if (v >= 1000) return '${(v / 1000).round()} ألف';
+  if (v >= 1000) return '{n} ألف'.trArgs({'n': (v / 1000).round()});
   return formatIqdShort(v);
 }
 
@@ -1011,16 +1037,16 @@ String _typeKey(PropertyType t) => switch (t) {
 };
 
 String _typeLabel(PropertyType t) => switch (t) {
-  PropertyType.farm => 'مزرعة',
-  PropertyType.hall => 'قاعة',
-  PropertyType.decoration => 'تزيين',
+  PropertyType.farm => 'مزرعة'.tr,
+  PropertyType.hall => 'قاعة'.tr,
+  PropertyType.decoration => 'تزيين'.tr,
 };
 
 String _shiftLabel(_Shift s) => switch (s) {
-  _Shift.full => 'يوم كامل',
-  _Shift.morning => 'صباحاً',
-  _Shift.evening => 'مساءً',
-  _Shift.flex => 'توقيت مرن',
+  _Shift.full => 'يوم كامل'.tr,
+  _Shift.morning => 'صباحاً'.tr,
+  _Shift.evening => 'مساءً'.tr,
+  _Shift.flex => 'توقيت مرن'.tr,
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -1053,7 +1079,7 @@ class _TopBar extends StatelessWidget {
     return Container(
       padding: EdgeInsets.fromLTRB(14, top + 8, 14, 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: .04),
@@ -1089,6 +1115,8 @@ class _TopBar extends StatelessWidget {
                       child: Text(
                         typing ? typingLabel : subtitle,
                         key: ValueKey(typing),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 12,
@@ -1113,7 +1141,10 @@ class _TopBar extends StatelessWidget {
               builder: (context, v, _) => LinearProgressIndicator(
                 value: v,
                 minHeight: 3,
-                backgroundColor: const Color(0xFFF0F1F3),
+                backgroundColor: themed(
+                  const Color(0xFFF0F1F3),
+                  Vibes.hairline,
+                ),
                 valueColor: AlwaysStoppedAnimation(p.accent),
               ),
             ),
@@ -1137,8 +1168,8 @@ class _Round extends StatelessWidget {
       child: Container(
         width: 40,
         height: 40,
-        decoration: const BoxDecoration(
-          color: Color(0xFFF2F3F5),
+        decoration: BoxDecoration(
+          color: themed(const Color(0xFFF2F3F5), Vibes.surfaceMuted),
           shape: BoxShape.circle,
         ),
         child: Icon(icon, size: 20, color: Vibes.ink),
@@ -1210,7 +1241,7 @@ class _OrbState extends State<_Orb> with SingleTickerProviderStateMixin {
             ),
             child: Padding(
               padding: EdgeInsets.all(s * .22),
-              child: const VibesLogo.mark(color: Colors.white),
+              child: VibesLogo.mark(color: themed(Colors.white, p.onAccent)),
             ),
           ),
         ],
@@ -1247,14 +1278,18 @@ class _Bubble extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       decoration: BoxDecoration(
         gradient: mine ? p.fill : null,
-        color: mine ? null : Colors.white,
+        color: mine ? null : Vibes.surface,
         borderRadius: BorderRadiusDirectional.only(
           topStart: const Radius.circular(20),
           topEnd: const Radius.circular(20),
           bottomStart: Radius.circular(mine ? 20 : 6),
           bottomEnd: Radius.circular(mine ? 6 : 20),
         ),
-        border: mine ? null : Border.all(color: const Color(0xFFEDEEF1)),
+        border: mine
+            ? null
+            : Border.all(
+                color: themed(const Color(0xFFEDEEF1), Vibes.hairline),
+              ),
         boxShadow: [
           BoxShadow(
             color: mine
@@ -1358,14 +1393,16 @@ class _TypingBubbleState extends State<_TypingBubble>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Vibes.surface,
               borderRadius: const BorderRadiusDirectional.only(
                 topStart: Radius.circular(20),
                 topEnd: Radius.circular(20),
                 bottomStart: Radius.circular(6),
                 bottomEnd: Radius.circular(20),
               ),
-              border: Border.all(color: const Color(0xFFEDEEF1)),
+              border: Border.all(
+                color: themed(const Color(0xFFEDEEF1), Vibes.hairline),
+              ),
             ),
             child: AnimatedBuilder(
               animation: _c,
@@ -1466,6 +1503,7 @@ class _ThinkingCardState extends State<_ThinkingCard>
           const SizedBox(height: 8),
           Text(
             widget.text,
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: VibesFont.ui,
               fontSize: 13,
@@ -1527,23 +1565,27 @@ class _OccasionPicker extends StatelessWidget {
                     child: Icon(it.$4, color: it.$5.palette.onAccent, size: 22),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    it.$2,
-                    style: TextStyle(
-                      fontFamily: VibesFont.ui,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      color: Vibes.ink,
-                      height: 1.2,
+                  _Fit(
+                    child: Text(
+                      it.$2,
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: Vibes.ink,
+                        height: 1.2,
+                      ),
                     ),
                   ),
-                  Text(
-                    it.$3,
-                    style: TextStyle(
-                      fontFamily: VibesFont.ui,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      color: Vibes.inkTertiary,
+                  _Fit(
+                    child: Text(
+                      it.$3,
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: Vibes.inkTertiary,
+                      ),
                     ),
                   ),
                 ],
@@ -1597,13 +1639,15 @@ class _TypePicker extends ConsumerWidget {
                           secondary: it.$2.palette.accentLight,
                         ),
                         const SizedBox(height: 6),
-                        Text(
-                          it.$3,
-                          style: TextStyle(
-                            fontFamily: VibesFont.ui,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                            color: Vibes.ink,
+                        _Fit(
+                          child: Text(
+                            it.$3,
+                            style: TextStyle(
+                              fontFamily: VibesFont.ui,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                              color: Vibes.ink,
+                            ),
                           ),
                         ),
                       ],
@@ -1625,6 +1669,19 @@ class _TypePicker extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// يصغّر النص فقط إن تجاوز عرض البطاقة (الإنجليزية أطول) — بلا أي أثر غير ذلك.
+class _Fit extends StatelessWidget {
+  const _Fit({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 4),
+    child: FittedBox(fit: BoxFit.scaleDown, child: child),
+  );
 }
 
 class _SoftLink extends StatelessWidget {
@@ -1654,13 +1711,17 @@ class _SoftLink extends StatelessWidget {
           children: [
             Icon(icon, size: 17, color: p.accentDeep),
             const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: VibesFont.ui,
-                fontSize: 13.5,
-                fontWeight: FontWeight.w800,
-                color: p.accentDeep,
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w800,
+                  color: p.accentDeep,
+                ),
               ),
             ),
           ],
@@ -1693,10 +1754,13 @@ class _ProvincePicker extends ConsumerWidget {
     final props =
         ref.watch(propertiesProvider(null)).valueOrNull ?? const <Property>[];
     final provinces = <String, ({String name, String slug})>{};
+    final open = <String>{};
     for (final c in cities) {
       final slug = c.provinceSlug;
-      if (slug != null && slug.isNotEmpty && c.provinceName.isNotEmpty)
+      if (slug != null && slug.isNotEmpty && c.provinceName.isNotEmpty) {
         provinces[slug] = (name: c.provinceName, slug: slug);
+        if (c.provinceOpenFor(type?.name)) open.add(slug);
+      }
     }
     int count(String name) => props
         .where(
@@ -1722,7 +1786,9 @@ class _ProvincePicker extends ConsumerWidget {
               children: [
                 for (final pr in list)
                   PressScale(
-                    onTap: () => onPick(pr.slug, pr.name),
+                    onTap: open.contains(pr.slug)
+                        ? () => onPick(pr.slug, pr.name)
+                        : null,
                     child: Container(
                       padding: const EdgeInsetsDirectional.fromSTEB(
                         12,
@@ -1731,7 +1797,10 @@ class _ProvincePicker extends ConsumerWidget {
                         9,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF6F7F9),
+                        color: themed(
+                          const Color(0xFFF6F7F9),
+                          Vibes.surfaceMuted,
+                        ),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(
@@ -1744,14 +1813,20 @@ class _ProvincePicker extends ConsumerWidget {
                           ),
                           const SizedBox(width: 5),
                           Text(
-                            pr.name,
+                            pr.name.tr,
                             style: TextStyle(
                               fontFamily: VibesFont.ui,
                               fontSize: 14,
                               fontWeight: FontWeight.w800,
-                              color: Vibes.ink,
+                              color: open.contains(pr.slug)
+                                  ? Vibes.ink
+                                  : Vibes.inkTertiary,
                             ),
                           ),
+                          if (!open.contains(pr.slug)) ...[
+                            const SizedBox(width: 6),
+                            const ComingSoonPill(),
+                          ],
                         ],
                       ),
                     ),
@@ -1843,8 +1918,9 @@ class _GuestDialState extends State<_GuestDial> {
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
                     child: Text(
-                      'ضيف · $_scale',
+                      'ضيف · {scale}'.trArgs({'scale': _scale}),
                       key: ValueKey(_scale),
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         fontFamily: VibesFont.ui,
                         fontSize: 13,
@@ -1928,7 +2004,7 @@ class _StepBtn extends StatelessWidget {
         width: 52,
         height: 52,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Vibes.surface,
           shape: BoxShape.circle,
           border: Border.all(color: p.accent.withValues(alpha: .3)),
         ),
@@ -1986,22 +2062,29 @@ class _DayPicker extends StatelessWidget {
               const Spacer(),
               Text(
                 title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
                   fontSize: 15,
                   fontWeight: FontWeight.w900,
-                  color: dark ? Colors.white : Vibes.ink,
+                  color: dark ? Colors.white : VibesLight.ink,
                 ),
               ),
               Text(
                 sub,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: dark
                       ? Colors.white.withValues(alpha: .75)
-                      : Vibes.inkSecondary,
+                      : themed(
+                          VibesLight.inkSecondary,
+                          const Color(0xFF3A3F47),
+                        ),
                 ),
               ),
             ],
@@ -2014,9 +2097,12 @@ class _DayPicker extends StatelessWidget {
     final skies = <Widget>[
       if (m.enabled)
         sky(
-          colors: const [Color(0xFFFFF4D6), Color(0xFFFFD98A)],
+          // سماء الصباح أهدأ قليلاً ليلاً حتى لا تبهر
+          colors: Appearance.isDark
+              ? const [Color(0xFFF0D7A4), Color(0xFFE0B568)]
+              : const [Color(0xFFFFF4D6), Color(0xFFFFD98A)],
           icon: Icons.wb_sunny_rounded,
-          iconColor: const Color(0xFFF59E0B),
+          iconColor: themed(const Color(0xFFF59E0B), const Color(0xFF8D6324)),
           title: m.title,
           sub: m.sub,
           dark: false,
@@ -2129,7 +2215,7 @@ class _BudgetPickerState extends ConsumerState<_BudgetPicker> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              'حتى ',
+              'حتى '.tr,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontSize: 14,
@@ -2149,7 +2235,7 @@ class _BudgetPickerState extends ConsumerState<_BudgetPicker> {
             ),
             const SizedBox(width: 4),
             Text(
-              'د.ع',
+              'د.ع'.tr,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontSize: 13,
@@ -2157,20 +2243,30 @@ class _BudgetPickerState extends ConsumerState<_BudgetPicker> {
                 color: p.accentDeep,
               ),
             ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: p.accentFaint,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                within == 0 ? 'لا أماكن بعد' : 'ضمن ميزانيتك',
-                style: TextStyle(
-                  fontFamily: VibesFont.ui,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: p.accentDeep,
+            const SizedBox(width: 6),
+            Expanded(
+              child: Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: p.accentFaint,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    within == 0 ? 'لا أماكن بعد'.tr : 'ضمن ميزانيتك'.tr,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: p.accentDeep,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -2203,7 +2299,7 @@ class _BudgetPickerState extends ConsumerState<_BudgetPicker> {
                           : null,
                       color: (i + .5) / bins <= _t
                           ? null
-                          : const Color(0xFFE9EBEE),
+                          : themed(const Color(0xFFE9EBEE), Vibes.surfaceMuted),
                     ),
                   ),
                 ),
@@ -2295,10 +2391,12 @@ class _MatchCard extends StatelessWidget {
       child: Container(
         width: width,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Vibes.surface,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: best ? p.accent : const Color(0xFFEDEEF1),
+            color: best
+                ? p.accent
+                : themed(const Color(0xFFEDEEF1), Vibes.hairline),
             width: best ? 1.6 : 1,
           ),
           boxShadow: [
@@ -2387,13 +2485,17 @@ class _MatchCard extends StatelessWidget {
                               color: p.accent,
                             ),
                             const SizedBox(width: 3),
-                            Text(
-                              r,
-                              style: TextStyle(
-                                fontFamily: VibesFont.ui,
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w700,
-                                color: Vibes.inkSecondary,
+                            Flexible(
+                              child: Text(
+                                r,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontFamily: VibesFont.ui,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Vibes.inkSecondary,
+                                ),
                               ),
                             ),
                           ],
@@ -2414,7 +2516,7 @@ class _MatchCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 3),
                       Text(
-                        'د.ع',
+                        'د.ع'.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 11,
@@ -2433,7 +2535,7 @@ class _MatchCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
-                          'احجز',
+                          'احجز'.tr,
                           style: TextStyle(
                             fontFamily: VibesFont.ui,
                             fontSize: 12.5,
@@ -2467,10 +2569,7 @@ class _MatchRing extends StatelessWidget {
       width: 50,
       height: 50,
       padding: const EdgeInsets.all(3),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: Vibes.surface, shape: BoxShape.circle),
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0, end: percent / 100),
         duration: const Duration(milliseconds: 900),
@@ -2482,12 +2581,15 @@ class _MatchRing extends StatelessWidget {
               child: CircularProgressIndicator(
                 value: v,
                 strokeWidth: 3.5,
-                backgroundColor: const Color(0xFFEFF0F2),
+                backgroundColor: themed(
+                  const Color(0xFFEFF0F2),
+                  Vibes.hairline,
+                ),
                 valueColor: AlwaysStoppedAnimation(color),
               ),
             ),
             Text(
-              '${(v * 100).round()}٪',
+              '{n}٪'.trArgs({'n': (v * 100).round()}),
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontSize: 11.5,
@@ -2520,7 +2622,7 @@ class _MiniPlace extends StatelessWidget {
         width: 230,
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Vibes.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: p.accent.withValues(alpha: .18)),
         ),
@@ -2552,7 +2654,9 @@ class _MiniPlace extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    property.cityName ?? property.provinceName ?? '',
+                    (property.cityName ?? property.provinceName ?? '').tr,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 11.5,
@@ -2562,7 +2666,11 @@ class _MiniPlace extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${formatIqdShort(_fromPrice(property))} د.ع',
+                    '{amount} د.ع'.trArgs({
+                      'amount': formatIqdShort(_fromPrice(property)),
+                    }),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 12,

@@ -12,6 +12,9 @@ abstract final class I18n {
 
   static bool get isEn => locale == 'en';
 
+  /// اسم التطبيق: «أجواء» بالعربية و VIBES بالإنجليزية.
+  static String get appName => isEn ? 'VIBES' : 'أجواء'; // i18n-ok
+
   /// تُستدعى قبل runApp: اللغة المحفوظة، وإلا لغة الجهاز (العربية افتراضياً).
   static Future<void> init(SharedPreferences prefs) async {
     final saved = prefs.getString('locale');
@@ -26,11 +29,11 @@ abstract final class I18n {
 
 extension VibesTr on String {
   /// النص باللغة الحالية: `'الحجوزات'.tr`
-  String get tr => I18n.t(this);
+  String get tr => I18n.t(this).split('|').last;
 
   /// نص بمتغيرات مسماة: `'مرحباً {name}'.trArgs({'name': name})`
   String trArgs(Map<String, Object?> args) {
-    var out = I18n.t(this);
+    var out = I18n.t(this).split('|').last;
     args.forEach((k, v) => out = out.replaceAll('{$k}', '$v'));
     return out;
   }

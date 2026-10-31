@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/world_theme.dart';
@@ -32,15 +33,21 @@ import '../../core/perf/perf.dart';
 // ── 1) الرئيسية ──
 
 WorldPalette get _p => WorldPalette.owner;
-const _hInk = Color(0xFF0F1B2D);
-const _hInk2 = Color(0xFF5B6576);
-const _hLine = Color(0xFFEDEEF1);
+Color get _hInk => themed(const Color(0xFF0F1B2D), VibesDark.ink);
+Color get _hInk2 => themed(const Color(0xFF5B6576), VibesDark.inkSecondary);
+Color get _hLine => themed(const Color(0xFFEDEEF1), VibesDark.hairline);
 
-String _greeting() {
+String _greeting(String? name) {
   final h = DateTime.now().hour;
-  if (h < 12) return 'صباح الخير';
-  if (h < 18) return 'نهارك سعيد';
-  return 'مساء الخير';
+  if (name == null) {
+    if (h < 12) return 'صباح الخير'.tr;
+    if (h < 18) return 'نهارك سعيد'.tr;
+    return 'مساء الخير'.tr;
+  }
+  final args = {'name': name};
+  if (h < 12) return 'صباح الخير، {name}'.trArgs(args);
+  if (h < 18) return 'نهارك سعيد، {name}'.trArgs(args);
+  return 'مساء الخير، {name}'.trArgs(args);
 }
 
 class ProviderHomeScreen extends ConsumerWidget {
@@ -155,13 +162,13 @@ class ProviderHomeScreen extends ConsumerWidget {
                   children: [
                     OwnerQuickAction(
                       icon: Icons.calendar_month_rounded,
-                      label: 'التقويم',
+                      label: 'التقويم'.tr,
                       onTap: () => context.go('/provider/calendar'),
                     ),
                     const SizedBox(width: 6),
                     OwnerQuickAction(
                       icon: Icons.edit_calendar_rounded,
-                      label: 'حجز خارجي',
+                      label: 'حجز خارجي'.tr,
                       onTap: () {
                         ref
                                 .read(
@@ -175,13 +182,13 @@ class ProviderHomeScreen extends ConsumerWidget {
                     const SizedBox(width: 6),
                     OwnerQuickAction(
                       icon: Icons.sell_rounded,
-                      label: 'الأسعار',
+                      label: 'الأسعار'.tr,
                       onTap: () => context.go('/provider/properties'),
                     ),
                     const SizedBox(width: 6),
                     OwnerQuickAction(
                       icon: Icons.forum_rounded,
-                      label: 'الرسائل',
+                      label: 'الرسائل'.tr,
                       badge: unread,
                       onTap: () => context.push('/conversations'),
                     ),
@@ -193,7 +200,7 @@ class ProviderHomeScreen extends ConsumerWidget {
                     Expanded(
                       child: OwnerMetricTile(
                         icon: Icons.hourglass_top_rounded,
-                        label: 'بانتظار ردّك',
+                        label: 'بانتظار ردّك'.tr,
                         value: '${o.pendingBookings}',
                         highlight: o.pendingBookings > 0,
                         onTap: openPending,
@@ -203,7 +210,7 @@ class ProviderHomeScreen extends ConsumerWidget {
                     Expanded(
                       child: OwnerMetricTile(
                         icon: Icons.event_available_rounded,
-                        label: 'حجوزات نشطة',
+                        label: 'حجوزات نشطة'.tr,
                         value: '${o.activeBookings}',
                         onTap: () => context.go('/provider/bookings'),
                       ),
@@ -216,7 +223,7 @@ class ProviderHomeScreen extends ConsumerWidget {
                     Expanded(
                       child: OwnerMetricTile(
                         icon: Icons.villa_rounded,
-                        label: 'أماكنك',
+                        label: 'أماكنك'.tr,
                         value: '${o.propertyCount}',
                         onTap: () => context.go('/provider/properties'),
                       ),
@@ -225,7 +232,7 @@ class ProviderHomeScreen extends ConsumerWidget {
                     Expanded(
                       child: OwnerMetricTile(
                         icon: Icons.favorite_rounded,
-                        label: 'متابعون',
+                        label: 'متابعون'.tr,
                         value: '${o.followersCount}',
                       ),
                     ),
@@ -240,10 +247,12 @@ class ProviderHomeScreen extends ConsumerWidget {
                 ],
                 const SizedBox(height: 24),
                 OwnerSectionTitle(
-                  'برنامج اليوم',
+                  'برنامج اليوم'.tr,
                   subtitle: todayArrivals.isEmpty
-                      ? 'لا وصول مسجّل اليوم'
-                      : '${todayArrivals.length} ${todayArrivals.length == 1 ? 'وصول' : 'وصولات'} اليوم',
+                      ? 'لا وصول مسجّل اليوم'.tr
+                      : todayArrivals.length == 1
+                      ? '{n} وصول اليوم'.trN(todayArrivals.length)
+                      : '{n} وصولات اليوم'.trN(todayArrivals.length),
                 ),
                 if (todayArrivals.isEmpty)
                   const _QuietDay()
@@ -262,12 +271,12 @@ class ProviderHomeScreen extends ConsumerWidget {
                 if (laterArrivals.isNotEmpty) ...[
                   const SizedBox(height: 24),
                   OwnerSectionTitle(
-                    'القادمون',
-                    subtitle: 'خلال الأيام القريبة',
+                    'القادمون'.tr,
+                    subtitle: 'خلال الأيام القريبة'.tr,
                     trailing: GestureDetector(
                       onTap: () => context.go('/provider/bookings'),
                       child: Text(
-                        'الكل',
+                        'الكل'.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 13,
@@ -285,14 +294,14 @@ class ProviderHomeScreen extends ConsumerWidget {
                         )
                         .animate(delay: (60 * i).ms)
                         .fadeIn(duration: 300.ms)
-                        .slideX(begin: -.03, end: 0),
+                        .slideX(begin: I18n.isEn ? .03 : -.03, end: 0),
                 ],
                 const SizedBox(height: 24),
-                const OwnerSectionTitle('الإدارة'),
+                OwnerSectionTitle('الإدارة'.tr),
                 Container(
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Vibes.surface,
                     borderRadius: BorderRadius.circular(22),
                     border: Border.all(color: _hLine),
                   ),
@@ -300,39 +309,39 @@ class ProviderHomeScreen extends ConsumerWidget {
                     children: [
                       OwnerMenuTile(
                         icon: Icons.insights_rounded,
-                        label: 'الأرباح والتقارير',
+                        label: 'الأرباح والتقارير'.tr,
                         onTap: () => context.push('/provider/earnings'),
                       ),
                       const _MenuDivider(),
                       OwnerMenuTile(
                         icon: Icons.local_offer_rounded,
-                        label: 'العروض السعرية',
+                        label: 'العروض السعرية'.tr,
                         trailing: _CountMark(pendingOffers),
                         onTap: () => context.push('/offers'),
                       ),
                       const _MenuDivider(),
                       OwnerMenuTile(
                         icon: Icons.assignment_return_rounded,
-                        label: 'طلبات الإلغاء والاسترداد',
+                        label: 'طلبات الإلغاء والاسترداد'.tr,
                         trailing: _CountMark(pendingRequests),
                         onTap: () => context.push('/provider/requests'),
                       ),
                       const _MenuDivider(),
                       OwnerMenuTile(
                         icon: Icons.receipt_long_rounded,
-                        label: 'الفواتير',
+                        label: 'الفواتير'.tr,
                         onTap: () => context.push('/invoices'),
                       ),
                       const _MenuDivider(),
                       OwnerMenuTile(
                         icon: Icons.support_agent_rounded,
-                        label: 'الدعم',
+                        label: 'الدعم'.tr,
                         onTap: () => context.push('/support'),
                       ),
                       const _MenuDivider(),
                       OwnerMenuTile(
                         icon: Icons.manage_accounts_rounded,
-                        label: 'حساب المالك',
+                        label: 'حساب المالك'.tr,
                         onTap: () => context.push('/provider/account'),
                       ),
                     ],
@@ -344,7 +353,7 @@ class ProviderHomeScreen extends ConsumerWidget {
                     onPressed: () => providerLogout(context, ref),
                     icon: const Icon(Icons.logout_rounded, size: 18),
                     label: Text(
-                      'تسجيل الخروج',
+                      'تسجيل الخروج'.tr,
                       style: TextStyle(
                         fontFamily: VibesFont.ui,
                         fontWeight: FontWeight.w800,
@@ -417,7 +426,7 @@ class _OwnerTopBar extends StatelessWidget {
                 ),
               ),
               Text(
-                hasName ? '${_greeting()}، $name' : _greeting(),
+                _greeting(hasName ? name : null),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -454,7 +463,7 @@ class _RoundIcon extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Vibes.surface,
           shape: BoxShape.circle,
           border: Border.all(color: _hLine),
           boxShadow: [
@@ -495,7 +504,7 @@ class _ActionCenter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: _p.accent.withValues(alpha: .4), width: 1.3),
         boxShadow: [
@@ -524,8 +533,8 @@ class _ActionCenter extends StatelessWidget {
               Expanded(
                 child: Text(
                   total == 1
-                      ? 'أمر واحد ينتظر قرارك'
-                      : '$total أمور تنتظر قرارك',
+                      ? 'أمر واحد ينتظر قرارك'.tr
+                      : '{n} أمور تنتظر قرارك'.trN(total),
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
                     fontSize: 15,
@@ -540,21 +549,21 @@ class _ActionCenter extends StatelessWidget {
           if (pendingBookings > 0)
             _TaskRow(
               icon: Icons.event_note_rounded,
-              label: 'حجوزات جديدة للتأكيد',
+              label: 'حجوزات جديدة للتأكيد'.tr,
               count: pendingBookings,
               onTap: onBookings,
             ),
           if (pendingRequests > 0)
             _TaskRow(
               icon: Icons.assignment_return_rounded,
-              label: 'طلبات إلغاء أو استرداد',
+              label: 'طلبات إلغاء أو استرداد'.tr,
               count: pendingRequests,
               onTap: onRequests,
             ),
           if (pendingOffers > 0)
             _TaskRow(
               icon: Icons.local_offer_rounded,
-              label: 'عروض سعرية بانتظار الرد',
+              label: 'عروض سعرية بانتظار الرد'.tr,
               count: pendingOffers,
               onTap: onOffers,
             ),
@@ -602,7 +611,7 @@ class _TaskRow extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               decoration: BoxDecoration(
-                color: _p.night,
+                color: themed(_p.night, _p.nightHigh),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
@@ -616,7 +625,7 @@ class _TaskRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_left_rounded, size: 20, color: _hInk2),
+            Icon(ownerForwardChevron, size: 20, color: _hInk2),
           ],
         ),
       ),
@@ -632,7 +641,7 @@ class _QuietDay extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _hLine),
       ),
@@ -650,7 +659,7 @@ class _QuietDay extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'يوم هادئ — استغله لتحديث الصور والأسعار أو تسجيل حجوزاتك الخارجية.',
+              'يوم هادئ — استغله لتحديث الصور والأسعار أو تسجيل حجوزاتك الخارجية.'.tr,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontSize: 12.5,
@@ -667,9 +676,9 @@ class _QuietDay extends StatelessWidget {
 }
 
 String _shiftLabel(ShiftType s) => switch (s) {
-  ShiftType.morning => 'صباحي',
-  ShiftType.evening => 'مسائي',
-  ShiftType.full => 'يوم كامل',
+  ShiftType.morning => 'صباحي'.tr,
+  ShiftType.evening => 'مسائي'.tr,
+  ShiftType.full => 'يوم كامل'.tr,
 };
 
 /// خط زمني لوصول اليوم.
@@ -689,7 +698,7 @@ class _TimelineTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = placeShiftColor(booking.shift);
-    final guest = booking.guestName ?? booking.userName ?? 'ضيف';
+    final guest = booking.guestName ?? booking.userName ?? 'ضيف'.tr;
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -708,7 +717,7 @@ class _TimelineTile extends StatelessWidget {
                   width: 14,
                   height: 14,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Vibes.surface,
                     shape: BoxShape.circle,
                     border: Border.all(color: color, width: 3.5),
                   ),
@@ -731,7 +740,7 @@ class _TimelineTile extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Vibes.surface,
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: _hLine),
                   ),
@@ -753,7 +762,10 @@ class _TimelineTile extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              '${booking.propertyName ?? 'مكان'} · ${booking.guests} ضيف',
+                              [
+                                booking.propertyName ?? 'مكان'.tr,
+                                '{n} ضيف'.trN(booking.guests),
+                              ].join(' · '),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -777,7 +789,10 @@ class _TimelineTile extends StatelessWidget {
                         ),
                         child: Text(
                           booking.isExternal
-                              ? '${_shiftLabel(booking.shift)} · خارجي'
+                              ? [
+                                  _shiftLabel(booking.shift),
+                                  'خارجي'.tr,
+                                ].join(' · ')
                               : _shiftLabel(booking.shift),
                           style: TextStyle(
                             fontFamily: VibesFont.ui,
@@ -820,7 +835,10 @@ class _CallButton extends StatelessWidget {
       child: Container(
         width: 34,
         height: 34,
-        decoration: BoxDecoration(color: _p.night, shape: BoxShape.circle),
+        decoration: BoxDecoration(
+          color: themed(_p.night, _p.nightHigh),
+          shape: BoxShape.circle,
+        ),
         child: Icon(Icons.call_rounded, size: 17, color: _p.accentLight),
       ),
     );
@@ -842,7 +860,7 @@ class _OccupancyCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: _hLine),
         boxShadow: [
@@ -866,11 +884,19 @@ class _OccupancyCard extends StatelessWidget {
                   duration: const Duration(milliseconds: 900),
                   curve: Curves.easeOutCubic,
                   builder: (_, v, _) => CustomPaint(
-                    painter: _RingPainter(v),
+                    painter: _RingPainter(
+                      v,
+                      track: themed(
+                        const Color(0xFFEFF1F4),
+                        Vibes.surfaceMuted,
+                      ),
+                      from: _p.accentLight,
+                      to: _p.accentDeep,
+                    ),
                     child: Center(
                       child: Text(
-                        '${(v * 100).round()}٪',
-                        style: const TextStyle(
+                        '{pct}٪'.trArgs({'pct': (v * 100).round()}),
+                        style: TextStyle(
                           fontFamily: 'Montserrat',
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
@@ -887,7 +913,7 @@ class _OccupancyCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'الإشغال — ٣٠ يوماً',
+                      'الإشغال — ٣٠ يوماً'.tr,
                       style: TextStyle(
                         fontFamily: VibesFont.ui,
                         fontSize: 15.5,
@@ -897,10 +923,10 @@ class _OccupancyCard extends StatelessWidget {
                     ),
                     Text(
                       c.propertyCount == 0
-                          ? 'اربط مكانك مع الدعم لتبدأ'
+                          ? 'اربط مكانك مع الدعم لتبدأ'.tr
                           : c.openDays > 0
-                          ? '${c.openDays} يوماً ما زال متاحاً للضيوف'
-                          : 'تقويمك ممتلئ بالكامل',
+                          ? '{n} يوماً ما زال متاحاً للضيوف'.trN(c.openDays)
+                          : 'تقويمك ممتلئ بالكامل'.tr,
                       style: TextStyle(
                         fontFamily: VibesFont.ui,
                         fontSize: 12.5,
@@ -939,7 +965,7 @@ class _OccupancyCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'سجّل حجوزاتك خارج التطبيق ليختفي اليوم عن الضيوف.',
+                    'سجّل حجوزاتك خارج التطبيق ليختفي اليوم عن الضيوف.'.tr,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 11.5,
@@ -951,7 +977,7 @@ class _OccupancyCard extends StatelessWidget {
                 GestureDetector(
                   onTap: () => context.go('/provider/calendar'),
                   child: Text(
-                    'سجّل',
+                    'سجّل'.tr,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 12.5,
@@ -970,9 +996,17 @@ class _OccupancyCard extends StatelessWidget {
 }
 
 class _RingPainter extends CustomPainter {
-  _RingPainter(this.value);
+  _RingPainter(
+    this.value, {
+    required this.track,
+    required this.from,
+    required this.to,
+  });
 
   final double value;
+  final Color track;
+  final Color from;
+  final Color to;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -983,7 +1017,7 @@ class _RingPainter extends CustomPainter {
       6.2832,
       false,
       Paint()
-        ..color = const Color(0xFFEFF1F4)
+        ..color = track
         ..style = PaintingStyle.stroke
         ..strokeWidth = 8,
     );
@@ -995,7 +1029,7 @@ class _RingPainter extends CustomPainter {
       false,
       Paint()
         ..shader = SweepGradient(
-          colors: [_p.accentLight, _p.accentDeep],
+          colors: [from, to],
           transform: const GradientRotation(-1.5708),
         ).createShader(rect)
         ..style = PaintingStyle.stroke
@@ -1005,7 +1039,11 @@ class _RingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_RingPainter old) => old.value != value;
+  bool shouldRepaint(_RingPainter old) =>
+      old.value != value ||
+      old.track != track ||
+      old.from != from ||
+      old.to != to;
 }
 
 class _MenuDivider extends StatelessWidget {
@@ -1013,7 +1051,7 @@ class _MenuDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      const Divider(height: 1, indent: 64, color: _hLine);
+      Divider(height: 1, indent: 64, color: _hLine);
 }
 
 class _CountMark extends StatelessWidget {
@@ -1025,7 +1063,7 @@ class _CountMark extends StatelessWidget {
   Widget build(BuildContext context) {
     if (count <= 0) {
       return Icon(
-        Icons.chevron_left_rounded,
+        ownerForwardChevron,
         color: _p.accentDeep.withValues(alpha: .6),
         size: 22,
       );
@@ -1058,18 +1096,18 @@ class _UpcomingTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const months = [
-      'يناير',
-      'فبراير',
-      'مارس',
-      'أبريل',
-      'مايو',
-      'يونيو',
-      'يوليو',
-      'أغسطس',
-      'سبتمبر',
-      'أكتوبر',
-      'نوفمبر',
-      'ديسمبر',
+      'يناير', // i18n-ok
+      'فبراير', // i18n-ok
+      'مارس', // i18n-ok
+      'أبريل', // i18n-ok
+      'مايو', // i18n-ok
+      'يونيو', // i18n-ok
+      'يوليو', // i18n-ok
+      'أغسطس', // i18n-ok
+      'سبتمبر', // i18n-ok
+      'أكتوبر', // i18n-ok
+      'نوفمبر', // i18n-ok
+      'ديسمبر', // i18n-ok
     ];
     final d = booking.startDate;
     return Padding(
@@ -1079,7 +1117,7 @@ class _UpcomingTile extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Vibes.surface,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: _hLine),
           ),
@@ -1110,7 +1148,9 @@ class _UpcomingTile extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      months[d.month - 1],
+                      I18n.isEn
+                          ? ownerMonthEnShort(d.month)
+                          : months[d.month - 1],
                       style: TextStyle(
                         fontFamily: VibesFont.ui,
                         fontSize: 10,
@@ -1128,7 +1168,7 @@ class _UpcomingTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      booking.guestName ?? booking.userName ?? 'ضيف',
+                      booking.guestName ?? booking.userName ?? 'ضيف'.tr,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -1139,7 +1179,10 @@ class _UpcomingTile extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '${ownerRelativeBookingDay(d)} · ${booking.propertyName ?? 'مكان'}',
+                      [
+                        ownerRelativeBookingDay(d),
+                        booking.propertyName ?? 'مكان'.tr,
+                      ].join(' · '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -1175,7 +1218,7 @@ class _UpcomingTile extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       formatIqdShort(booking.totalPrice),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Montserrat',
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
@@ -1252,17 +1295,17 @@ class _ProviderBookingsScreenState
   }
 
   static const _filters = [
-    (null, 'الكل'),
-    ('PENDING', 'بانتظار التأكيد'),
-    ('CONFIRMED', 'مؤكدة'),
-    ('COMPLETED', 'مكتملة'),
-    ('CANCELLED', 'ملغاة'),
+    (null, 'الكل'), // i18n-ok
+    ('PENDING', 'بانتظار التأكيد'), // i18n-ok
+    ('CONFIRMED', 'مؤكدة'), // i18n-ok
+    ('COMPLETED', 'مكتملة'), // i18n-ok
+    ('CANCELLED', 'ملغاة'), // i18n-ok
   ];
 
   static const _origins = [
-    (null, 'كل المصادر'),
-    ('PLATFORM', 'تطبيق VIBES'),
-    ('EXTERNAL', 'خارجي'),
+    (null, 'كل المصادر'), // i18n-ok
+    ('PLATFORM', 'تطبيق أجواء'), // i18n-ok
+    ('EXTERNAL', 'خارجي'), // i18n-ok
   ];
 
   Future<bool> _confirmCancel(Booking booking) async {
@@ -1276,8 +1319,8 @@ class _ProviderBookingsScreenState
           20,
           18 + MediaQuery.paddingOf(ctx).bottom,
         ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: Vibes.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: Column(
@@ -1302,8 +1345,8 @@ class _ProviderBookingsScreenState
             const SizedBox(height: 12),
             Text(
               booking.status == BookingStatus.pending && !booking.isExternal
-                  ? 'رفض هذا الحجز؟'
-                  : 'إلغاء هذا الحجز؟',
+                  ? 'رفض هذا الحجز؟'.tr
+                  : 'إلغاء هذا الحجز؟'.tr,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
@@ -1314,7 +1357,11 @@ class _ProviderBookingsScreenState
             ),
             const SizedBox(height: 4),
             Text(
-              '${booking.guestName ?? booking.userName ?? 'ضيف'} · ${booking.propertyName ?? ''} · ${ownerFormatDayLong(booking.startDate)}',
+              [
+                booking.guestName ?? booking.userName ?? 'ضيف'.tr,
+                booking.propertyName ?? '',
+                ownerFormatDayLong(booking.startDate),
+              ].join(' · '),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
@@ -1333,7 +1380,7 @@ class _ProviderBookingsScreenState
                 shape: const StadiumBorder(),
               ),
               child: Text(
-                'نعم، تابع',
+                'نعم، تابع'.tr,
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
                   fontWeight: FontWeight.w900,
@@ -1345,7 +1392,7 @@ class _ProviderBookingsScreenState
               onPressed: () => Navigator.pop(ctx, false),
               style: TextButton.styleFrom(foregroundColor: _hInk),
               child: Text(
-                'تراجع',
+                'تراجع'.tr,
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
                   fontWeight: FontWeight.w800,
@@ -1375,7 +1422,7 @@ class _ProviderBookingsScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              status == 'CONFIRMED' ? 'تم تأكيد الحجز' : 'تم إلغاء الحجز',
+              status == 'CONFIRMED' ? 'تم تأكيد الحجز'.tr : 'تم إلغاء الحجز'.tr,
             ),
           ),
         );
@@ -1415,14 +1462,14 @@ class _ProviderBookingsScreenState
         child: Column(
           children: [
             MaisonPageHeader(
-              title: 'حجوزات ممتلكاتي',
+              title: 'حجوزات ممتلكاتي'.tr,
               safe: true,
               trailing: bookings.maybeWhen(
                 data: (page) => Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     '${page.total}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Montserrat',
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
@@ -1437,7 +1484,7 @@ class _ProviderBookingsScreenState
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
               child: OwnerSearchField(
                 controller: _search,
-                hint: 'بحث باسم الضيف أو المكان أو الهاتف',
+                hint: 'بحث باسم الضيف أو المكان أو الهاتف'.tr,
                 onChanged: (_) => setState(() {}),
               ),
             ),
@@ -1451,7 +1498,7 @@ class _ProviderBookingsScreenState
                   return Padding(
                     padding: const EdgeInsetsDirectional.only(end: 8),
                     child: MaisonChip(
-                      label: f.$2,
+                      label: f.$2.tr,
                       active: active,
                       onTap: () => setState(() => _status = f.$1),
                     ),
@@ -1469,7 +1516,7 @@ class _ProviderBookingsScreenState
                   return Padding(
                     padding: const EdgeInsetsDirectional.only(end: 8),
                     child: MaisonChip(
-                      label: f.$2,
+                      label: f.$2.tr,
                       active: active,
                       onTap: () => setState(() => _origin = f.$1),
                     ),
@@ -1502,18 +1549,18 @@ class _ProviderBookingsScreenState
                 data: (page) {
                   final items = _filterItems(page.items);
                   if (page.items.isEmpty) {
-                    return const WorldEmpty(
+                    return WorldEmpty(
                       icon: Icons.calendar_month_rounded,
-                      title: 'لا حجوزات',
+                      title: 'لا حجوزات'.tr,
                       subtitle:
-                          'حجوزات التطبيق والخارجية تظهر هنا. سجّل الخارجي من التقويم ليُغلق اليوم عن الضيوف',
+                          'حجوزات التطبيق والخارجية تظهر هنا. سجّل الخارجي من التقويم ليُغلق اليوم عن الضيوف'.tr,
                     );
                   }
                   if (items.isEmpty) {
-                    return const WorldEmpty(
+                    return WorldEmpty(
                       icon: Icons.search_off_rounded,
-                      title: 'لا نتائج',
-                      subtitle: 'جرّب كلمات أخرى أو غيّر الفلتر',
+                      title: 'لا نتائج'.tr,
+                      subtitle: 'جرّب كلمات أخرى أو غيّر الفلتر'.tr,
                     );
                   }
 
@@ -1579,22 +1626,22 @@ class _ProviderBookingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const months = [
-      'يناير',
-      'فبراير',
-      'مارس',
-      'أبريل',
-      'مايو',
-      'يونيو',
-      'يوليو',
-      'أغسطس',
-      'سبتمبر',
-      'أكتوبر',
-      'نوفمبر',
-      'ديسمبر',
+      'يناير', // i18n-ok
+      'فبراير', // i18n-ok
+      'مارس', // i18n-ok
+      'أبريل', // i18n-ok
+      'مايو', // i18n-ok
+      'يونيو', // i18n-ok
+      'يوليو', // i18n-ok
+      'أغسطس', // i18n-ok
+      'سبتمبر', // i18n-ok
+      'أكتوبر', // i18n-ok
+      'نوفمبر', // i18n-ok
+      'ديسمبر', // i18n-ok
     ];
     final b = booking;
     final phone = _phoneOf(b);
-    final guest = b.guestName ?? b.userName ?? 'ضيف';
+    final guest = b.guestName ?? b.userName ?? 'ضيف'.tr;
     final pending = b.status == BookingStatus.pending && !b.isExternal;
     final cancelled = b.status == BookingStatus.cancelled;
     final statusColor = switch (b.status) {
@@ -1612,7 +1659,7 @@ class _ProviderBookingCard extends StatelessWidget {
           opacity: cancelled ? .62 : 1,
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Vibes.surface,
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
                 color: pending ? _p.accent.withValues(alpha: .5) : _hLine,
@@ -1653,7 +1700,9 @@ class _ProviderBookingCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            months[b.startDate.month - 1],
+                            I18n.isEn
+                                ? ownerMonthEnShort(b.startDate.month)
+                                : months[b.startDate.month - 1],
                             style: TextStyle(
                               fontFamily: VibesFont.ui,
                               fontSize: 10,
@@ -1691,7 +1740,10 @@ class _ProviderBookingCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '${b.propertyName ?? 'مكان'} · ${ownerRelativeBookingDay(b.startDate)}',
+                            [
+                              b.propertyName ?? 'مكان'.tr,
+                              ownerRelativeBookingDay(b.startDate),
+                            ].join(' · '),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -1718,7 +1770,7 @@ class _ProviderBookingCard extends StatelessWidget {
                               const SizedBox(width: 2),
                               Text(
                                 '${b.guests}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'Montserrat',
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w700,
@@ -1742,7 +1794,7 @@ class _ProviderBookingCard extends StatelessWidget {
                         const SizedBox(height: 8),
                         Text(
                           formatIqdShort(b.totalPrice),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'Montserrat',
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
@@ -1750,7 +1802,7 @@ class _ProviderBookingCard extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'د.ع',
+                          'د.ع'.tr,
                           style: TextStyle(
                             fontFamily: VibesFont.ui,
                             fontSize: 10,
@@ -1766,53 +1818,61 @@ class _ProviderBookingCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 Container(height: 1, color: _hLine),
                 const SizedBox(height: 10),
-                Row(
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  runSpacing: 8,
                   children: [
-                    if (phone != null) ...[
-                      _ContactDot(
-                        icon: Icons.call_rounded,
-                        tooltip: 'اتصال',
-                        onTap: () => _call(phone),
-                      ),
-                      const SizedBox(width: 8),
-                      _ContactDot(
-                        icon: Icons.chat_rounded,
-                        tooltip: 'واتساب',
-                        color: const Color(0xFF25D366),
-                        onTap: () => _whatsapp(phone),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    if (!b.isExternal) ...[
-                      _ContactDot(
-                        icon: Icons.forum_rounded,
-                        tooltip: 'رسالة',
-                        onTap: onChat,
-                      ),
-                      const SizedBox(width: 8),
-                      _ContactDot(
-                        icon: Icons.videocam_rounded,
-                        tooltip: 'مكالمة',
-                        onTap: onCall,
-                      ),
-                    ],
-                    const Spacer(),
-                    if (pending) ...[
-                      _PillAction(label: 'رفض', onTap: onCancel),
-                      const SizedBox(width: 8),
-                      _PillAction(
-                        label: 'تأكيد',
-                        primary: true,
-                        onTap: onConfirm,
-                      ),
-                    ] else if (b.isExternal && !cancelled)
-                      _PillAction(label: 'إلغاء', onTap: onCancel)
-                    else
-                      const Icon(
-                        Icons.chevron_left_rounded,
-                        color: _hInk2,
-                        size: 22,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (phone != null) ...[
+                          _ContactDot(
+                            icon: Icons.call_rounded,
+                            tooltip: 'اتصال'.tr,
+                            onTap: () => _call(phone),
+                          ),
+                          const SizedBox(width: 8),
+                          _ContactDot(
+                            icon: Icons.chat_rounded,
+                            tooltip: 'واتساب'.tr,
+                            color: const Color(0xFF25D366),
+                            onTap: () => _whatsapp(phone),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        if (!b.isExternal) ...[
+                          _ContactDot(
+                            icon: Icons.forum_rounded,
+                            tooltip: 'رسالة'.tr,
+                            onTap: onChat,
+                          ),
+                          const SizedBox(width: 8),
+                          _ContactDot(
+                            icon: Icons.videocam_rounded,
+                            tooltip: 'مكالمة'.tr,
+                            onTap: onCall,
+                          ),
+                        ],
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (pending) ...[
+                          _PillAction(label: 'رفض'.tr, onTap: onCancel),
+                          const SizedBox(width: 8),
+                          _PillAction(
+                            label: 'تأكيد'.tr,
+                            primary: true,
+                            onTap: onConfirm,
+                          ),
+                        ] else if (b.isExternal && !cancelled)
+                          _PillAction(label: 'إلغاء'.tr, onTap: onCancel)
+                        else
+                          Icon(ownerForwardChevron, color: _hInk2, size: 22),
+                      ],
+                    ),
                   ],
                 ),
               ],
@@ -1878,7 +1938,7 @@ class _PillAction extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           gradient: primary ? ownerNavyFill : null,
-          color: primary ? null : Colors.white,
+          color: primary ? null : Vibes.surface,
           borderRadius: BorderRadius.circular(999),
           border: primary ? null : Border.all(color: _hLine, width: 1.2),
         ),

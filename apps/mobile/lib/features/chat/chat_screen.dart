@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/moderation/moderation.dart';
 import '../../core/network/api_client.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../features/auth/auth_controller.dart';
 import '../../shared/data/marketplace_providers.dart';
@@ -265,14 +266,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 conversationTitleProvider(widget.conversationId),
               ),
               kicker: peerActive
-                  ? 'متصل الآن'
-                  : (thread?.stage ?? 'محادثة خاصة'),
+                  ? 'متصل الآن'.tr
+                  : (thread?.stage ?? 'محادثة خاصة'.tr),
               onBack: () => context.pop(),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    tooltip: 'اتصل',
+                    tooltip: 'اتصل'.tr,
                     onPressed: () => startCall(
                       ref,
                       context,
@@ -282,13 +283,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
                   if (bookingId != null && bookingId.isNotEmpty)
                     IconButton(
-                      tooltip: 'الحجز',
+                      tooltip: 'الحجز'.tr,
                       onPressed: () => context.push('/booking/$bookingId'),
                       icon: const Icon(Icons.receipt_long_outlined),
                     ),
                   if (thread?.kind != 'SUPPORT')
                     IconButton(
-                      tooltip: 'إبلاغ أو حظر',
+                      tooltip: 'إبلاغ أو حظر'.tr,
                       icon: const Icon(Icons.more_vert),
                       onPressed: () async {
                         // الطرف الآخر = أول مرسل غيري في المحادثة
@@ -337,7 +338,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             if (thread.cityName != null &&
                                 thread.cityName!.isNotEmpty)
                               Text(
-                                thread.cityName!,
+                                thread.cityName!.tr,
                                 style: Theme.of(context).textTheme.labelSmall
                                     ?.copyWith(
                                       color: VibesTheme.textTertiaryOf(context),
@@ -379,13 +380,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'وصل طلبك للفريق',
+                              'وصل طلبك للفريق'.tr,
                               style: Theme.of(context).textTheme.titleSmall
                                   ?.copyWith(fontWeight: FontWeight.w900),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'أرفق إثبات الدفع بالصورة (📎) هنا ليؤكد الفريق حجزك فوراً',
+                              'أرفق إثبات الدفع بالصورة (📎) هنا ليؤكد الفريق حجزك فوراً'.tr,
                               style: Theme.of(context).textTheme.labelSmall
                                   ?.copyWith(
                                     color: VibesTheme.textTertiaryOf(context),
@@ -396,7 +397,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         ),
                       ),
                       IconButton(
-                        tooltip: 'إخفاء',
+                        tooltip: 'إخفاء'.tr,
                         visualDensity: VisualDensity.compact,
                         onPressed: _confirmHidePayHint,
                         icon: Icon(
@@ -418,11 +419,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
                     child: Row(
                       children: [
-                        const Expanded(child: Text('مكالمة واردة')),
+                        Expanded(child: Text('مكالمة واردة'.tr)),
                         TextButton(
                           onPressed: () =>
                               joinCall(ref, context, widget.incomingCallId!),
-                          child: const Text('انضمام'),
+                          child: Text('انضمام'.tr),
                         ),
                       ],
                     ),
@@ -463,10 +464,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       if (!mod.isBlocked(m.senderId)) m,
                   ];
                   if (list.isEmpty) {
-                    return const EmptyCanvas(
+                    return EmptyCanvas(
                       icon: Icons.chat_outlined,
-                      title: 'ابدأ المحادثة',
-                      subtitle: 'اكتب سؤالك للمالك أو لفريق VIBES',
+                      title: 'ابدأ المحادثة'.tr,
+                      subtitle: 'اكتب سؤالك للمالك أو لفريق أجواء'.tr,
                     );
                   }
                   return ListView.builder(
@@ -544,8 +545,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 controller: _controller,
                                 textInputAction: TextInputAction.send,
                                 onSubmitted: (_) => _send(),
-                                decoration: const InputDecoration(
-                                  hintText: 'اكتب رسالة...',
+                                decoration: InputDecoration(
+                                  hintText: 'اكتب رسالة...'.tr,
                                   border: InputBorder.none,
                                   enabledBorder: InputBorder.none,
                                   focusedBorder: InputBorder.none,
@@ -569,12 +570,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               child: IconButton(
                                 onPressed: _sending ? null : _send,
                                 icon: _sending
-                                    ? const SizedBox(
+                                    ? SizedBox(
                                         width: 18,
                                         height: 18,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          color: Colors.white,
+                                          color: themed(
+                                            Colors.white,
+                                            VibesTheme.onActionOf(context),
+                                          ),
                                         ),
                                       )
                                     : Icon(
@@ -598,6 +602,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 }
 
+const _months = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
 bool _sameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 
@@ -607,7 +626,8 @@ String _timeLabel(DateTime d) {
     return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
   }
   final yesterday = now.subtract(const Duration(days: 1));
-  if (_sameDay(d, yesterday)) return 'أمس';
+  if (_sameDay(d, yesterday)) return 'أمس'.tr;
+  if (I18n.isEn) return '${_months[d.month - 1]} ${d.day}';
   return '${d.day}/${d.month}';
 }
 
@@ -643,11 +663,11 @@ class _MessageBubble extends StatelessWidget {
             ),
           ],
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(4),
-              topRight: const Radius.circular(14),
-              bottomLeft: const Radius.circular(14),
-              bottomRight: const Radius.circular(14),
+            borderRadius: const BorderRadiusDirectional.only(
+              topEnd: Radius.circular(4),
+              topStart: Radius.circular(14),
+              bottomEnd: Radius.circular(14),
+              bottomStart: Radius.circular(14),
             ),
             side: BorderSide(
               color: mine
@@ -708,7 +728,9 @@ class _CallChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final missed = body.contains('لم يُرد') || body.contains('مرفوضة');
+    // منطق على نص الخادم العربي — لا يُترجم
+    final missed =
+        body.contains('لم يُرد') || body.contains('مرفوضة'); // i18n-ok
     final color = missed
         ? SemanticColors.danger
         : outgoing
@@ -730,7 +752,14 @@ class _CallChip extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              outgoing ? Icons.north_west_rounded : Icons.south_east_rounded,
+              // اتجاه السهم يتبع القراءة: الصادر نحو نهاية السطر
+              I18n.isEn
+                  ? (outgoing
+                        ? Icons.north_east_rounded
+                        : Icons.south_west_rounded)
+                  : (outgoing
+                        ? Icons.north_west_rounded
+                        : Icons.south_east_rounded),
               size: 13,
               color: color,
             ),
@@ -741,11 +770,13 @@ class _CallChip extends StatelessWidget {
               color: color,
             ),
             const SizedBox(width: 6),
-            Text(
-              body,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w700,
+            Flexible(
+              child: Text(
+                callBodyLabel(body),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],
@@ -765,9 +796,11 @@ class _DayDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final label = _sameDay(date, now)
-        ? 'اليوم'
+        ? 'اليوم'.tr
         : _sameDay(date, now.subtract(const Duration(days: 1)))
-        ? 'أمس'
+        ? 'أمس'.tr
+        : I18n.isEn
+        ? '${_months[date.month - 1]} ${date.day}${date.year != now.year ? ', ${date.year}' : ''}'
         : '${date.day}/${date.month}${date.year != now.year ? '/${date.year}' : ''}';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -833,7 +866,7 @@ class _PayHintSheet extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Material(
-          color: const Color(0xFFF6F7F9),
+          color: themed(const Color(0xFFF6F7F9), Vibes.surfaceMuted),
           borderRadius: BorderRadius.circular(18),
           child: InkWell(
             borderRadius: BorderRadius.circular(18),
@@ -892,9 +925,9 @@ class _PayHintSheet extends StatelessWidget {
         20,
         16 + MediaQuery.paddingOf(context).bottom,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: Vibes.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -905,7 +938,7 @@ class _PayHintSheet extends StatelessWidget {
               width: 38,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFFDDDFE3),
+                color: themed(const Color(0xFFDDDFE3), Vibes.hairlineStrong),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -928,7 +961,7 @@ class _PayHintSheet extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'حجزك محفوظ',
+            'حجزك محفوظ'.tr,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: VibesFont.ui,
@@ -938,7 +971,7 @@ class _PayHintSheet extends StatelessWidget {
             ),
           ),
           Text(
-            'طلبك بانتظار التأكيد وتجده دائماً في «حجوزاتي». إخفاء هذا التنبيه لا يلغي الحجز.',
+            'طلبك بانتظار التأكيد وتجده دائماً في «حجوزاتي». إخفاء هذا التنبيه لا يلغي الحجز.'.tr,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: VibesFont.ui,
@@ -952,21 +985,21 @@ class _PayHintSheet extends StatelessWidget {
           option(
             'view',
             Icons.receipt_long_rounded,
-            'عرض الحجز',
-            'التفاصيل والدفع وحالة التأكيد',
+            'عرض الحجز'.tr,
+            'التفاصيل والدفع وحالة التأكيد'.tr,
           ),
           option(
             'hide',
             Icons.visibility_off_rounded,
-            'إخفاء التنبيه فقط',
-            'يبقى حجزك كما هو',
+            'إخفاء التنبيه فقط'.tr,
+            'يبقى حجزك كما هو'.tr,
           ),
           option(
             'cancel',
             Icons.event_busy_rounded,
-            'إلغاء الحجز',
-            'سنطلب تأكيدك قبل الإلغاء',
-            color: const Color(0xFFDC2626),
+            'إلغاء الحجز'.tr,
+            'سنطلب تأكيدك قبل الإلغاء'.tr,
+            color: themed(const Color(0xFFDC2626), Vibes.danger),
           ),
         ],
       ),

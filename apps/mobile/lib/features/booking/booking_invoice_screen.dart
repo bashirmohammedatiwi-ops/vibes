@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
@@ -43,7 +44,7 @@ class BookingInvoiceScreen extends ConsumerWidget {
     return AnimatedTheme(
       data: applyWorld(Theme.of(context), palette),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF4F5F7),
+        backgroundColor: themed(const Color(0xFFF4F5F7), VibesDark.canvas),
         body: SafeArea(
           bottom: false,
           child: Column(
@@ -57,8 +58,8 @@ class BookingInvoiceScreen extends ConsumerWidget {
                       child: Container(
                         width: 42,
                         height: 42,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
+                        decoration: BoxDecoration(
+                          color: Vibes.surface,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -71,7 +72,7 @@ class BookingInvoiceScreen extends ConsumerWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'الفاتورة',
+                        'الفاتورة'.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 19,
@@ -141,8 +142,12 @@ class BookingInvoiceScreen extends ConsumerWidget {
                           booking: value,
                           invoice: row,
                         ).shareText,
-                        subject:
-                            'فاتورة ${_InvoiceContent(booking: value, invoice: row).number}',
+                        subject: 'فاتورة {number}'.trArgs({
+                          'number': _InvoiceContent(
+                            booking: value,
+                            invoice: row,
+                          ).number,
+                        }),
                       ),
                     ),
                   ),
@@ -154,6 +159,20 @@ class BookingInvoiceScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// بنود الفاتورة يكتبها الخادم بالعربية (marketplace.util.ts): تُترجم صيغتاها
+/// المعروفتان في الإنجليزية، وأي نص آخر يبقى كما وصل.
+String _localizedItemLabel(String label) {
+  if (!I18n.isEn) return label;
+  final stay = RegExp(
+    r'^إقامة — (.+) \((\d+) يوم\)$', // i18n-ok
+  ).firstMatch(label);
+  if (stay == null) return label.tr;
+  return 'إقامة — {name} ({duration})'.trArgs({
+    'name': stay.group(1),
+    'duration': '{n} يوم'.trN(int.parse(stay.group(2)!)),
+  });
 }
 
 class _InvoiceContent extends StatelessWidget {
@@ -207,7 +226,7 @@ class _InvoiceContent extends StatelessWidget {
           .whereType<Map>()
           .map(
             (item) => (
-              label: '${item['label'] ?? ''}',
+              label: _localizedItemLabel('${item['label'] ?? ''}'),
               amount: item['amount'] is num
                   ? item['amount'] as num
                   : num.tryParse('${item['amount']}') ?? 0,
@@ -218,26 +237,38 @@ class _InvoiceContent extends StatelessWidget {
     }
     return [
       (
-        label:
-            'إقامة — ${booking.propertyName ?? 'مكان VIBES'} (${booking.nights} يوم)',
+        label: 'إقامة — {name} ({duration})'.trArgs({
+          'name': _placeName,
+          'duration': '{n} يوم'.trN(booking.nights),
+        }),
         amount: _subtotal,
       ),
-      if (_discount > 0) (label: 'خصم', amount: -_discount),
+      if (_discount > 0) (label: 'خصم'.tr, amount: -_discount),
     ];
   }
 
+  String get _placeName => booking.propertyName ?? 'مكان أجواء'.tr;
+
+  /// نص يُرسل لشخص آخر: يتبع لغة المُرسل.
   String get shareText {
+    final duration = booking.nights == 1
+        ? '{n} يوم'.trN(booking.nights)
+        : '{n} أيام'.trN(booking.nights);
+    final payment = _paid ? 'مدفوعة'.tr : 'بانتظار الدفع'.tr;
     return [
-      'فاتورة حجز VIBES',
-      'رقم الفاتورة: $number',
-      'المكان: ${booking.propertyName ?? 'مكان VIBES'}',
-      'التاريخ: ${_date(booking.startDate)}',
-      'المدة: ${booking.nights} ${booking.nights == 1 ? 'يوم' : 'أيام'}',
+      'فاتورة حجز أجواء'.tr,
+      'رقم الفاتورة: {number}'.trArgs({'number': number}),
+      'المكان: {name}'.trArgs({'name': _placeName}),
+      'التاريخ: {date}'.trArgs({'date': _date(booking.startDate)}),
+      'المدة: {duration}'.trArgs({'duration': duration}),
       ..._items.map(
-        (item) => '${item.label}: ${PriceText.format(item.amount)} د.ع',
+        (item) => '{label}: {amount} د.ع'.trArgs({
+          'label': item.label,
+          'amount': PriceText.format(item.amount),
+        }),
       ),
-      'الإجمالي: ${PriceText.format(_total)} د.ع',
-      'حالة الدفع: ${_paid ? 'مدفوعة' : 'بانتظار الدفع'}',
+      'الإجمالي: {amount} د.ع'.trArgs({'amount': PriceText.format(_total)}),
+      'حالة الدفع: {status}'.trArgs({'status': payment}),
     ].join('\n');
   }
 
@@ -246,7 +277,10 @@ class _InvoiceContent extends StatelessWidget {
       await onPrint!();
       return;
     }
-    await Share.share(shareText, subject: 'فاتورة $number');
+    await Share.share(
+      shareText,
+      subject: 'فاتورة {number}'.trArgs({'number': number}),
+    );
   }
 
   @override
@@ -260,7 +294,8 @@ class _InvoiceContent extends StatelessWidget {
         ClipPath(
           clipper: const _ZigzagBottom(),
           child: Container(
-            color: Colors.white,
+            // الورقة على الشاشة تتبع المظهر؛ الطباعة HTML من الخادم فتبقى فاتحة.
+            color: Vibes.surface,
             padding: const EdgeInsets.only(bottom: 22),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -276,19 +311,19 @@ class _InvoiceContent extends StatelessWidget {
                         children: [
                           const VibesLogo.mark(size: 30, color: Colors.white),
                           const SizedBox(width: 10),
-                          const Text(
-                            'VIBES',
+                          Text(
+                            I18n.appName,
                             style: TextStyle(
-                              fontFamily: 'Montserrat',
+                              fontFamily: VibesFont.ui,
                               fontSize: 15,
                               fontWeight: FontWeight.w800,
-                              letterSpacing: 3,
+                              letterSpacing: I18n.isEn ? 3 : 0,
                               color: Colors.white,
                             ),
                           ),
                           const Spacer(),
                           WorldStatusChip(
-                            label: _paid ? 'مدفوعة' : 'غير مدفوعة',
+                            label: _paid ? 'مدفوعة'.tr : 'غير مدفوعة'.tr,
                             color: _paid
                                 ? const Color(0xFF34D399)
                                 : const Color(0xFFFBBF24),
@@ -297,7 +332,7 @@ class _InvoiceContent extends StatelessWidget {
                       ),
                       const SizedBox(height: 18),
                       Text(
-                        'فاتورة إلكترونية',
+                        'فاتورة إلكترونية'.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 22,
@@ -324,35 +359,38 @@ class _InvoiceContent extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _Label('تفاصيل الحجز'),
+                      _Label('تفاصيل الحجز'.tr),
+                      _InvoiceRow(label: 'المكان'.tr, value: _placeName),
                       _InvoiceRow(
-                        label: 'المكان',
-                        value: booking.propertyName ?? 'مكان VIBES',
-                      ),
-                      _InvoiceRow(
-                        label: 'تاريخ الوصول',
+                        label: 'تاريخ الوصول'.tr,
                         value: _date(booking.startDate),
                       ),
                       _InvoiceRow(
-                        label: 'تاريخ النهاية',
+                        label: 'تاريخ النهاية'.tr,
                         value: _date(
                           booking.endDate.subtract(const Duration(days: 1)),
                         ),
                       ),
-                      _InvoiceRow(label: 'الفترة', value: booking.shiftLabelAr),
                       _InvoiceRow(
-                        label: 'الضيوف',
-                        value: '${booking.guests} ضيف',
+                        label: 'الفترة'.tr,
+                        value: booking.shiftLabelAr.tr,
+                      ),
+                      _InvoiceRow(
+                        label: 'الضيوف'.tr,
+                        value: '{n} ضيف'.trN(booking.guests),
                         last: true,
                       ),
                       const SizedBox(height: 18),
-                      _Label('الملخص المالي'),
+                      _Label('الملخص المالي'.tr),
                       for (final item in _items)
                         _MoneyRow(
                           label: item.label,
                           amount: item.amount,
                           color: item.amount < 0
-                              ? const Color(0xFF0E9F6E)
+                              ? themed(
+                                  const Color(0xFF0E9F6E),
+                                  VibesDark.success,
+                                )
                               : null,
                         ),
                       const SizedBox(height: 10),
@@ -373,7 +411,7 @@ class _InvoiceContent extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    'الإجمالي',
+                                    'الإجمالي'.tr,
                                     style: TextStyle(
                                       fontFamily: VibesFont.ui,
                                       fontSize: 15,
@@ -394,7 +432,7 @@ class _InvoiceContent extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'د.ع',
+                                  'د.ع'.tr,
                                   style: TextStyle(
                                     fontFamily: VibesFont.ui,
                                     fontSize: 12.5,
@@ -425,19 +463,20 @@ class _InvoiceContent extends StatelessWidget {
         ),
         const SizedBox(height: 22),
         WorldButton(
-          label: 'مشاركة الفاتورة',
+          label: 'مشاركة الفاتورة'.tr,
           icon: Icons.ios_share_rounded,
           onTap: () => Share.share(shareText),
         ),
         const SizedBox(height: 10),
         WorldGhostButton(
-          label: 'طباعة أو حفظ PDF',
+          label: 'طباعة أو حفظ PDF'.tr,
           icon: Icons.picture_as_pdf_outlined,
           onTap: _print,
         ),
         const SizedBox(height: 12),
         Text(
-          'احفظ الفاتورة كملف PDF من خيار الطباعة. يُعتمد إثبات الدفع النهائي بعد مراجعة العملية.',
+          'احفظ الفاتورة كملف PDF من خيار الطباعة. يُعتمد إثبات الدفع النهائي بعد مراجعة العملية.' // i18n-ok
+              .tr,
           textAlign: TextAlign.center,
           style: TextStyle(
             fontFamily: VibesFont.ui,
@@ -481,7 +520,7 @@ class _PaidStamp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const c = Color(0xFF0E9F6E);
+    final c = themed(const Color(0xFF0E9F6E), VibesDark.success);
     return Container(
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
@@ -491,12 +530,12 @@ class _PaidStamp extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: .85),
+          color: themed(Colors.white, VibesDark.surface).withValues(alpha: .85),
           border: Border.all(color: c.withValues(alpha: .8), width: 1),
           borderRadius: BorderRadius.circular(7),
         ),
         child: Text(
-          'مدفوعة',
+          'مدفوعة'.tr,
           style: TextStyle(
             fontFamily: VibesFont.ui,
             fontSize: 15,
@@ -599,6 +638,9 @@ class _MoneyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final negative = amount < 0;
+    final formatted = '{amount} د.ع'.trArgs({
+      'amount': PriceText.format(amount.abs()),
+    });
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -612,7 +654,7 @@ class _MoneyRow extends StatelessWidget {
             ),
           ),
           Text(
-            '${negative ? '− ' : ''}${PriceText.format(amount.abs())} د.ع',
+            '${negative ? '− ' : ''}$formatted',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: color ?? VibesTheme.textPrimaryOf(context),
               fontWeight: FontWeight.w800,

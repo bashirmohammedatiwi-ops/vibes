@@ -20,6 +20,9 @@ import { LocationsModule } from './modules/locations/locations.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { MarketplaceModule } from './modules/marketplace/marketplace.module';
 import { MediaModule } from './modules/media/media.module';
+import { TranslationInterceptor } from './modules/translation/translation.interceptor';
+import { TranslationModule } from './modules/translation/translation.module';
+import { LoyaltyModule } from './modules/loyalty/loyalty.module';
 import { NadeemModule } from './modules/nadeem/nadeem.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
 import { HomeLayoutModule } from './modules/home-layout/home-layout.module';
@@ -68,6 +71,8 @@ import { RedisModule } from './redis/redis.module';
     JobsModule,
     AuthModule,
     AdminModule,
+    TranslationModule,
+    LoyaltyModule,
     NadeemModule,
     ModerationModule,
     HomeLayoutModule,
@@ -94,6 +99,8 @@ import { RedisModule } from './redis/redis.module';
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: StaffPermissionsGuard },
+    // الترتيب مهم: الترجمة تعمل على الرد بعد تسلسله
+    { provide: APP_INTERCEPTOR, useClass: TranslationInterceptor },
     { provide: APP_INTERCEPTOR, useClass: BigIntSerializerInterceptor },
   ],
 })

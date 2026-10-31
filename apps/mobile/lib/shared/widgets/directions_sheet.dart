@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/world_theme.dart';
 import 'vibes_graphics.dart';
 
@@ -75,40 +76,40 @@ class _DirectionsSheet extends StatelessWidget {
     final apps = <_App>[
       if (ios)
         _App(
-          'خرائط Apple',
-          'الاتجاهات بالسيارة',
+          'خرائط Apple'.tr,
+          'الاتجاهات بالسيارة'.tr,
           Icons.map_rounded,
           const Color(0xFF34C759),
           'https://maps.apple.com/?daddr=$lat,$lng&dirflg=d',
         ),
       _App(
         'Google Maps',
-        'المسار والوقت المتوقع',
+        'المسار والوقت المتوقع'.tr,
         Icons.location_on_rounded,
         const Color(0xFF4285F4),
         'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving',
       ),
       _App(
         'Waze',
-        'ملاحة وتنبيهات الطريق',
+        'ملاحة وتنبيهات الطريق'.tr,
         Icons.navigation_rounded,
         const Color(0xFF33CCFF),
         'https://waze.com/ul?ll=$lat,$lng&navigate=yes',
       ),
       if (!ios)
         _App(
-          'تطبيقات أخرى',
-          'اختر أي تطبيق خرائط مثبّت',
+          'تطبيقات أخرى'.tr,
+          'اختر أي تطبيق خرائط مثبّت'.tr,
           Icons.apps_rounded,
-          const Color(0xFF7C3AED),
+          themed(const Color(0xFF7C3AED), const Color(0xFFA78BFA)),
           'geo:$lat,$lng?q=$lat,$lng($label)',
         ),
     ];
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: Vibes.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       padding: EdgeInsets.fromLTRB(20, 10, 20, 18 + bottom),
       child: Column(
@@ -120,7 +121,7 @@ class _DirectionsSheet extends StatelessWidget {
               width: 38,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFFDDDFE3),
+                color: themed(const Color(0xFFDDDFE3), VibesDark.hairlineStrong),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -148,7 +149,7 @@ class _DirectionsSheet extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'الاتجاهات إلى المكان',
+                      'الاتجاهات إلى المكان'.tr,
                       style: TextStyle(
                         fontFamily: VibesFont.ui,
                         fontSize: 18,
@@ -181,7 +182,7 @@ class _DirectionsSheet extends StatelessWidget {
               Expanded(
                 child: _SmallAction(
                   icon: Icons.ios_share_rounded,
-                  label: 'مشاركة الموقع',
+                  label: 'مشاركة الموقع'.tr,
                   onTap: () {
                     Navigator.of(context).pop();
                     Share.share('$name\n${placeMapLink(lat, lng)}');
@@ -192,7 +193,7 @@ class _DirectionsSheet extends StatelessWidget {
               Expanded(
                 child: _SmallAction(
                   icon: Icons.copy_rounded,
-                  label: 'نسخ الإحداثيات',
+                  label: 'نسخ الإحداثيات'.tr,
                   onTap: () {
                     Clipboard.setData(
                       ClipboardData(
@@ -203,8 +204,8 @@ class _DirectionsSheet extends StatelessWidget {
                     HapticFeedback.selectionClick();
                     Navigator.of(context).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('نُسخت الإحداثيات'),
+                      SnackBar(
+                        content: Text('نُسخت الإحداثيات'.tr),
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
@@ -244,7 +245,7 @@ class _AppRow extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFFF6F7F9),
+            color: themed(const Color(0xFFF6F7F9), VibesDark.surfaceMuted),
             borderRadius: BorderRadius.circular(18),
           ),
           child: Row(
@@ -316,7 +317,7 @@ class _SmallAction extends StatelessWidget {
       child: Container(
         height: 48,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Vibes.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: p.accent.withValues(alpha: .3)),
         ),
@@ -325,13 +326,18 @@ class _SmallAction extends StatelessWidget {
           children: [
             Icon(icon, size: 18, color: p.accentDeep),
             const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: VibesFont.ui,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: p.accentDeep,
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: p.accentDeep,
+                  ),
+                ),
               ),
             ),
           ],

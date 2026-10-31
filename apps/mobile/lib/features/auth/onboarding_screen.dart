@@ -5,11 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/world_theme.dart';
 import '../../shared/widgets/maison_shapes.dart';
 import '../../shared/widgets/vibes_graphics.dart';
 import '../../shared/widgets/world_glyphs.dart';
 import '../home/home_sections.dart';
+import 'auth_controller.dart';
 import 'onboarding_scenes.dart';
 
 /// ═══════════════════════════════════════════════════════════
@@ -34,8 +36,10 @@ class _Slide {
   final List<(IconData, String)> points;
 }
 
-const _ink = Color(0xFF0F1B2D);
-const _ink2 = Color(0xFF5B6576);
+Color get _ink => themed(const Color(0xFF0F1B2D), Vibes.ink);
+Color get _ink2 => themed(const Color(0xFF5B6576), Vibes.inkSecondary);
+Color get _chipLine => themed(const Color(0xFFE6E8EC), Vibes.hairline);
+Color get _dotOff => themed(const Color(0xFFDDE0E5), Vibes.hairlineStrong);
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     with SingleTickerProviderStateMixin {
@@ -49,35 +53,35 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   static const _slides = [
     _Slide(
       HomeSection.farm,
-      'المزارع',
-      'يومٌ كامل\nتحت الشمس',
-      'مسابح وجلسات عائلية وإطلالات خضراء — احجز شفتك الصباحي أو المسائي في ثوانٍ.',
+      'المزارع', // i18n-ok
+      'يومٌ كامل\nتحت الشمس', // i18n-ok
+      'مسابح وجلسات عائلية وإطلالات خضراء — احجز شفتك الصباحي أو المسائي في ثوانٍ.', // i18n-ok
       [
-        (Icons.wb_sunny_rounded, 'صباحي أو مسائي'),
-        (Icons.pool_rounded, 'مسابح وألعاب'),
-        (Icons.family_restroom_rounded, 'للعائلات'),
+        (Icons.wb_sunny_rounded, 'صباحي أو مسائي'), // i18n-ok
+        (Icons.pool_rounded, 'مسابح وألعاب'), // i18n-ok
+        (Icons.family_restroom_rounded, 'للعائلات'), // i18n-ok
       ],
     ),
     _Slide(
       HomeSection.hall,
-      'القاعات',
-      'ليلة العمر\nتستحق قاعة',
-      'قاعات أعراس ومناسبات بجولات 360° وفيديو حقيقي — شاهدها كأنك فيها قبل أن تحجز.',
+      'القاعات', // i18n-ok
+      'ليلة العمر\nتستحق قاعة', // i18n-ok
+      'قاعات أعراس ومناسبات بجولات 360° وفيديو حقيقي — شاهدها كأنك فيها قبل أن تحجز.', // i18n-ok
       [
-        (Icons.threesixty_rounded, 'جولات 360°'),
-        (Icons.groups_2_rounded, 'سعات كبيرة'),
-        (Icons.verified_rounded, 'أسعار واضحة'),
+        (Icons.threesixty_rounded, 'جولات 360°'), // i18n-ok
+        (Icons.groups_2_rounded, 'سعات كبيرة'), // i18n-ok
+        (Icons.verified_rounded, 'أسعار واضحة'), // i18n-ok
       ],
     ),
     _Slide(
       HomeSection.decoration,
-      'التزيين',
-      'تفاصيل\nتصنع الفرح',
-      'كوش وورد وإضاءة — فرق تزيين محترفة تحوّل مناسبتك إلى لوحة لا تُنسى.',
+      'التزيين', // i18n-ok
+      'تفاصيل\nتصنع الفرح', // i18n-ok
+      'كوش وورد وإضاءة — فرق تزيين محترفة تحوّل مناسبتك إلى لوحة لا تُنسى.', // i18n-ok
       [
-        (Icons.local_florist_rounded, 'ورد وكوش'),
-        (Icons.light_rounded, 'إضاءة'),
-        (Icons.auto_awesome_rounded, 'تصاميم خاصة'),
+        (Icons.local_florist_rounded, 'ورد وكوش'), // i18n-ok
+        (Icons.light_rounded, 'إضاءة'), // i18n-ok
+        (Icons.auto_awesome_rounded, 'تصاميم خاصة'), // i18n-ok
       ],
     ),
   ];
@@ -133,13 +137,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-        systemNavigationBarColor: Colors.white,
-        systemNavigationBarIconBrightness: Brightness.dark,
-      ),
+      value:
+          (Appearance.isDark
+                  ? SystemUiOverlayStyle.light
+                  : SystemUiOverlayStyle.dark)
+              .copyWith(
+                statusBarColor: Colors.transparent,
+                systemNavigationBarColor: Vibes.canvas,
+                systemNavigationBarIconBrightness: Appearance.isDark
+                    ? Brightness.light
+                    : Brightness.dark,
+              ),
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Vibes.canvas,
         body: Stack(
           fit: StackFit.expand,
           children: [
@@ -149,7 +159,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [p.canvasTint, p.canvas, Colors.white],
+                  colors: [p.canvasTint, p.canvas, Vibes.canvas],
                   stops: const [0, .45, 1],
                 ),
               ),
@@ -175,22 +185,64 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
               child: SafeArea(
                 bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 16, 0),
+                  padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 20, 0),
                   child: Row(
                     children: [
-                      const VibesLogo.brand(size: 28),
+                      Appearance.isDark
+                          ? VibesLogo.mark(size: 28, color: Vibes.ink)
+                          : const VibesLogo.brand(size: 28),
                       const SizedBox(width: 9),
-                      const Text(
-                        'VIBES',
+                      Text(
+                        I18n.appName,
                         style: TextStyle(
-                          fontFamily: 'Montserrat',
+                          fontFamily: VibesFont.ui,
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: 4,
+                          letterSpacing: I18n.isEn ? 4 : 0,
                           color: _ink,
                         ),
                       ),
                       const Spacer(),
+                      // اختيار اللغة من أول شاشة — يعيد تشغيل الواجهة باللغة الأخرى
+                      PressScale(
+                        onTap: () => ref
+                            .read(prefsControllerProvider.notifier)
+                            .setLocale(I18n.isEn ? 'ar' : 'en'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Vibes.surface,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: _chipLine),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.language_rounded,
+                                size: 15,
+                                color: _ink2,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                I18n.isEn ? 'العربية' : 'English', // i18n-ok
+                                style: TextStyle(
+                                  fontFamily: I18n.isEn
+                                      ? 'Cairo'
+                                      : 'Montserrat',
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: _ink2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       AnimatedOpacity(
                         duration: const Duration(milliseconds: 250),
                         opacity: isLast ? 0 : 1,
@@ -204,14 +256,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                 vertical: 8,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: Vibes.surface,
                                 borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: const Color(0xFFE6E8EC),
-                                ),
+                                border: Border.all(color: _chipLine),
                               ),
                               child: Text(
-                                'تخطٍّ',
+                                'تخطٍّ'.tr,
                                 style: TextStyle(
                                   fontFamily: VibesFont.ui,
                                   fontSize: 13,
@@ -260,20 +310,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                     gradient: d > .05
                                         ? LinearGradient(
                                             colors: [
+                                              Color.lerp(_dotOff, p.accent, d)!,
                                               Color.lerp(
-                                                const Color(0xFFDDE0E5),
-                                                p.accent,
-                                                d,
-                                              )!,
-                                              Color.lerp(
-                                                const Color(0xFFDDE0E5),
+                                                _dotOff,
                                                 p.accentDeep,
                                                 d,
                                               )!,
                                             ],
                                           )
                                         : null,
-                                    color: const Color(0xFFDDE0E5),
+                                    color: _dotOff,
                                   ),
                                 );
                               },
@@ -282,7 +328,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                           Text(
                             '${_index + 1} / ${_slides.length}',
                             textDirection: TextDirection.ltr,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Montserrat',
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -296,7 +342,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                         children: [
                           Expanded(
                             child: _GlowButton(
-                              label: 'ابدأ ب${slide.kicker}',
+                              label: 'ابدأ ب{world}'.trArgs({
+                                'world': slide.kicker.tr,
+                              }),
                               palette: p,
                               onTap: () => _start(slide.world),
                             ),
@@ -309,7 +357,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'يمكنك التنقّل بين العوالم الثلاثة في أي وقت',
+                        'يمكنك التنقّل بين العوالم الثلاثة في أي وقت'.tr,
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 11.5,
@@ -348,6 +397,8 @@ class _SlideView extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = slide.world.palette;
     final size = MediaQuery.sizeOf(context);
+    // البارالاكس يتبع اتجاه السحب: اللوحات تتقدم عكس العربية في الإنجليزية
+    final offset = I18n.isEn ? -this.offset : this.offset;
     final visible = (1 - offset.abs()).clamp(0.0, 1.0);
     final sceneH = (size.height * .4).clamp(240.0, 380.0);
 
@@ -422,8 +473,8 @@ class _SlideView extends StatelessWidget {
                         width: 26,
                         height: 26,
                         alignment: Alignment.center,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
+                        decoration: BoxDecoration(
+                          color: Vibes.surface,
                           shape: BoxShape.circle,
                         ),
                         child: WorldGlyph(
@@ -435,7 +486,7 @@ class _SlideView extends StatelessWidget {
                       ),
                       const SizedBox(width: 7),
                       Text(
-                        slide.kicker,
+                        slide.kicker.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 12.5,
@@ -454,7 +505,7 @@ class _SlideView extends StatelessWidget {
               child: Transform.translate(
                 offset: Offset(offset * 80, 0),
                 child: Text(
-                  slide.title,
+                  slide.title.tr,
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
                     fontSize: 32,
@@ -471,7 +522,7 @@ class _SlideView extends StatelessWidget {
               child: Transform.translate(
                 offset: Offset(offset * 110, 0),
                 child: Text(
-                  slide.body,
+                  slide.body.tr,
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
                     fontSize: 14,
@@ -498,9 +549,14 @@ class _SlideView extends StatelessWidget {
                           vertical: 7,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Vibes.surface,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFEDEEF1)),
+                          border: Border.all(
+                            color: themed(
+                              const Color(0xFFEDEEF1),
+                              Vibes.hairline,
+                            ),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -508,7 +564,7 @@ class _SlideView extends StatelessWidget {
                             Icon(icon, size: 15, color: p.accentDeep),
                             const SizedBox(width: 6),
                             Text(
-                              label,
+                              label.tr,
                               style: TextStyle(
                                 fontFamily: VibesFont.ui,
                                 fontSize: 12,
@@ -562,13 +618,17 @@ class _GlowButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: VibesFont.ui,
-                fontSize: 16.5,
-                fontWeight: FontWeight.w900,
-                color: palette.onAccent,
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
+                  fontSize: 16.5,
+                  fontWeight: FontWeight.w900,
+                  color: palette.onAccent,
+                ),
               ),
             ),
             const SizedBox(width: 8),
@@ -598,8 +658,8 @@ class _RoundNext extends StatelessWidget {
         height: 58,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFE6E8EC)),
+          color: Vibes.surface,
+          border: Border.all(color: _chipLine),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: .05),
@@ -608,11 +668,7 @@ class _RoundNext extends StatelessWidget {
             ),
           ],
         ),
-        child: const Icon(
-          Icons.arrow_forward_rounded,
-          color: Color(0xFF0F1B2D),
-          size: 24,
-        ),
+        child: Icon(Icons.arrow_forward_rounded, color: _ink, size: 24),
       ),
     );
   }

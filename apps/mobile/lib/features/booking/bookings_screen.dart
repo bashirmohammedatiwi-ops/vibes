@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -68,12 +69,12 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen> {
         body: Column(
           children: [
             WorldPageHeader(
-              title: 'حجوزاتي',
+              title: 'حجوزاتي'.tr,
               subtitle: counts[0] > 0
-                  ? 'لديك ${counts[0]} حجز نشط'
-                  : 'كل مناسباتك في مكان واحد',
+                  ? 'لديك {n} حجز نشط'.trN(counts[0])
+                  : 'كل مناسباتك في مكان واحد'.tr,
               bottom: WorldPillTabs(
-                labels: const ['النشطة', 'المكتملة', 'الملغاة'],
+                labels: ['النشطة'.tr, 'المكتملة'.tr, 'الملغاة'.tr],
                 index: _tab,
                 counts: counts,
                 onChanged: (i) => setState(() => _tab = i),
@@ -99,9 +100,9 @@ class _BookingsList extends ConsumerWidget {
       return Center(
         child: WorldEmpty(
           icon: Icons.event_available_rounded,
-          title: 'حجوزاتك هنا',
-          subtitle: 'سجّل دخولك لترى حجوزاتك وتتابع الدفع والتأكيد',
-          actionLabel: 'تسجيل الدخول',
+          title: 'حجوزاتك هنا'.tr,
+          subtitle: 'سجّل دخولك لترى حجوزاتك وتتابع الدفع والتأكيد'.tr,
+          actionLabel: 'تسجيل الدخول'.tr,
           onAction: () => context.push('/login'),
         ),
       );
@@ -122,9 +123,9 @@ class _BookingsList extends ConsumerWidget {
       error: (e, _) => Center(
         child: WorldEmpty(
           icon: Icons.wifi_off_rounded,
-          title: 'تعذّر التحميل',
+          title: 'تعذّر التحميل'.tr,
           subtitle: maisonError(e),
-          actionLabel: 'إعادة المحاولة',
+          actionLabel: 'إعادة المحاولة'.tr,
           onAction: () => ref.invalidate(myBookingsProvider),
         ),
       ),
@@ -140,15 +141,16 @@ class _BookingsList extends ConsumerWidget {
                   _StatusFilter.cancelled => Icons.event_busy_outlined,
                 },
                 title: switch (filter) {
-                  _StatusFilter.active => 'لا حجوزات نشطة',
-                  _StatusFilter.completed => 'لا حجوزات مكتملة بعد',
-                  _StatusFilter.cancelled => 'لا حجوزات ملغاة',
+                  _StatusFilter.active => 'لا حجوزات نشطة'.tr,
+                  _StatusFilter.completed => 'لا حجوزات مكتملة بعد'.tr,
+                  _StatusFilter.cancelled => 'لا حجوزات ملغاة'.tr,
                 },
                 subtitle: filter == _StatusFilter.active
-                    ? 'مناسبتك القادمة تبدأ من هنا — اختر مكاناً واحجز بدقيقة'
+                    ? 'مناسبتك القادمة تبدأ من هنا — اختر مكاناً واحجز بدقيقة' // i18n-ok
+                          .tr
                     : null,
                 actionLabel: filter == _StatusFilter.active
-                    ? 'استكشف الأماكن'
+                    ? 'استكشف الأماكن'.tr
                     : null,
                 onAction: filter == _StatusFilter.active
                     ? () => context.go('/home')
@@ -179,27 +181,27 @@ class _BookingsList extends ConsumerWidget {
 }
 
 const _months = [
-  'كانون٢',
-  'شباط',
-  'آذار',
-  'نيسان',
-  'أيار',
-  'حزيران',
-  'تموز',
-  'آب',
-  'أيلول',
-  'تشرين١',
-  'تشرين٢',
-  'كانون١',
+  'كانون٢', // i18n-ok
+  'شباط', // i18n-ok
+  'آذار', // i18n-ok
+  'نيسان', // i18n-ok
+  'أيار', // i18n-ok
+  'حزيران', // i18n-ok
+  'تموز', // i18n-ok
+  'آب', // i18n-ok
+  'أيلول', // i18n-ok
+  'تشرين١', // i18n-ok
+  'تشرين٢', // i18n-ok
+  'كانون١', // i18n-ok
 ];
 const _weekdays = [
-  'الاثنين',
-  'الثلاثاء',
-  'الأربعاء',
-  'الخميس',
-  'الجمعة',
-  'السبت',
-  'الأحد',
+  'الاثنين', // i18n-ok
+  'الثلاثاء', // i18n-ok
+  'الأربعاء', // i18n-ok
+  'الخميس', // i18n-ok
+  'الجمعة', // i18n-ok
+  'السبت', // i18n-ok
+  'الأحد', // i18n-ok
 ];
 
 class _BookingCard extends ConsumerStatefulWidget {
@@ -218,7 +220,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
 
   Color get _statusColor => switch (b.status) {
     BookingStatus.pending => Vibes.warning,
-    BookingStatus.awaitingPayment => Brand.sapphireLight,
+    BookingStatus.awaitingPayment => Vibes.info,
     BookingStatus.confirmed => Vibes.success,
     BookingStatus.completed => Vibes.success,
     BookingStatus.cancelled => Vibes.danger,
@@ -238,11 +240,11 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
     );
     final days = start.difference(today).inDays;
     if (days < 0) return null;
-    if (days == 0) return 'اليوم';
-    if (days == 1) return 'غداً';
-    if (days == 2) return 'بعد يومين';
-    if (days <= 10) return 'بعد $days أيام';
-    return 'بعد $days يوماً';
+    if (days == 0) return 'اليوم'.tr;
+    if (days == 1) return 'غداً'.tr;
+    if (days == 2) return 'بعد يومين'.tr;
+    if (days <= 10) return 'بعد {n} أيام'.trN(days);
+    return 'بعد {n} يوماً'.trN(days);
   }
 
   @override
@@ -257,12 +259,32 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
     final canRate =
         b.status == BookingStatus.completed && b.canReview && !_rated;
     final countdown = _countdown;
+    final shiftText = Text(
+      b.shiftLabelAr.tr,
+      maxLines: I18n.isEn ? 1 : null,
+      overflow: I18n.isEn ? TextOverflow.ellipsis : null,
+      style: TextStyle(
+        fontFamily: VibesFont.ui,
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        color: Vibes.inkSecondary,
+      ),
+    );
+    final totalText = Text(
+      '{amount} د.ع'.trArgs({'amount': formatIqdShort(b.totalPrice)}),
+      style: TextStyle(
+        fontFamily: VibesFont.ui,
+        fontSize: 14,
+        fontWeight: FontWeight.w900,
+        color: p.accentDeep,
+      ),
+    );
 
     return PressScale(
       onTap: () => context.push('/booking/${b.id}'),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Vibes.surface,
           borderRadius: BorderRadius.circular(22),
           border: Border.all(color: p.accent.withValues(alpha: .14)),
           boxShadow: [
@@ -289,7 +311,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          _weekdays[d.weekday - 1],
+                          _weekdays[d.weekday - 1].tr,
                           style: TextStyle(
                             fontFamily: VibesFont.ui,
                             fontSize: 11,
@@ -308,7 +330,9 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                           ),
                         ),
                         Text(
-                          _months[d.month - 1],
+                          I18n.isEn
+                              ? _short(_months[d.month - 1].tr)
+                              : _months[d.month - 1],
                           style: TextStyle(
                             fontFamily: VibesFont.ui,
                             fontSize: 12,
@@ -320,7 +344,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                           Padding(
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(
-                              '${b.nights} أيام',
+                              '{n} أيام'.trN(b.nights),
                               style: TextStyle(
                                 fontFamily: VibesFont.ui,
                                 fontSize: 10.5,
@@ -343,7 +367,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  b.propertyName ?? 'مكان',
+                                  b.propertyName ?? 'مكان'.tr,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
@@ -376,7 +400,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                             runSpacing: 6,
                             children: [
                               WorldStatusChip(
-                                label: b.statusLabelAr,
+                                label: b.statusLabelAr.tr,
                                 color: _statusColor,
                               ),
                               if (countdown != null)
@@ -396,15 +420,10 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                                 color: p.accentDeep,
                               ),
                               const SizedBox(width: 4),
-                              Text(
-                                b.shiftLabelAr,
-                                style: TextStyle(
-                                  fontFamily: VibesFont.ui,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: Vibes.inkSecondary,
-                                ),
-                              ),
+                              if (I18n.isEn)
+                                Flexible(child: shiftText)
+                              else
+                                shiftText,
                               const SizedBox(width: 10),
                               Icon(
                                 Icons.groups_outlined,
@@ -421,18 +440,17 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                                   color: Vibes.inkSecondary,
                                 ),
                               ),
-                              const Spacer(),
-                              Text(
-                                '${formatIqdShort(b.totalPrice)} د.ع',
-                                style: TextStyle(
-                                  fontFamily: VibesFont.ui,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w900,
-                                  color: p.accentDeep,
-                                ),
-                              ),
+                              if (!I18n.isEn) ...[const Spacer(), totalText],
                             ],
                           ),
+                          // الإنجليزية أعرض: الإجمالي في سطره كي لا يقتطع شيء.
+                          if (I18n.isEn) ...[
+                            const SizedBox(height: 4),
+                            Align(
+                              alignment: AlignmentDirectional.centerEnd,
+                              child: totalText,
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -460,7 +478,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                     if (payNow)
                       Expanded(
                         child: WorldButton(
-                          label: 'أكمل الدفع',
+                          label: 'أكمل الدفع'.tr,
                           icon: Icons.lock_outline_rounded,
                           height: 44,
                           palette: p,
@@ -470,7 +488,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                     else if (canRate)
                       Expanded(
                         child: WorldButton(
-                          label: 'قيّم تجربتك',
+                          label: 'قيّم تجربتك'.tr,
                           icon: Icons.star_rounded,
                           height: 44,
                           palette: p,
@@ -501,16 +519,16 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                     if (canCancelDirectly(b)) ...[
                       const SizedBox(width: 8),
                       _CancelPill(
-                        label: 'إلغاء',
+                        label: 'إلغاء'.tr,
                         onTap: () => cancelBookingFlow(context, ref, b),
                       ),
                     ] else if (refundRequestPending(b)) ...[
                       const SizedBox(width: 8),
-                      const _CancelPill(label: 'الإلغاء قيد المراجعة'),
+                      _CancelPill(label: 'الإلغاء قيد المراجعة'.tr),
                     ] else if (canRequestRefund(b)) ...[
                       const SizedBox(width: 8),
                       _CancelPill(
-                        label: 'طلب إلغاء',
+                        label: 'طلب إلغاء'.tr,
                         onTap: () => requestRefundFlow(context, ref, b),
                       ),
                     ],
@@ -533,8 +551,8 @@ class _CancelPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const red = Color(0xFFDC2626);
-    const amber = Color(0xFFB45309);
+    final red = themed(const Color(0xFFDC2626), VibesDark.danger);
+    final amber = themed(const Color(0xFFB45309), VibesDark.warning);
     final c = onTap == null ? amber : red;
     return PressScale(
       onTap: onTap,
@@ -543,7 +561,7 @@ class _CancelPill extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: c.withValues(alpha: .07),
+          color: c.withValues(alpha: Appearance.isDark ? .14 : .07),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: c.withValues(alpha: .22)),
         ),
@@ -593,7 +611,7 @@ class _MiniAction extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: color.withValues(alpha: .08),
+          color: color.withValues(alpha: Appearance.isDark ? .14 : .08),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Icon(icon, size: 20, color: color),
@@ -601,3 +619,5 @@ class _MiniAction extends StatelessWidget {
     );
   }
 }
+
+String _short(String s) => s.length > 3 ? s.substring(0, 3) : s;

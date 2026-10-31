@@ -1,4 +1,6 @@
 import 'dart:async';
+import '../compare/compare_feature.dart';
+import '../loyalty/loyalty_widgets.dart';
 
 import 'package:flutter/material.dart' hide Banner;
 import 'package:flutter/scheduler.dart';
@@ -7,6 +9,7 @@ import 'package:flutter/services.dart'
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/perf/perf.dart';
 import '../../core/theme/world_theme.dart';
@@ -195,14 +198,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
+/// ليلاً: مسرح بليل العالم نفسه (نحاسي/ياقوتي/وردي) ينحدر نحو خلفية الصفحة،
+/// بدل تعبئة اللون الفاتح التي تطمس النص الأبيض.
 LinearGradient _heroGradient(WorldPalette p) => LinearGradient(
   begin: Alignment.topRight,
   end: Alignment.bottomLeft,
-  colors: [
-    Color.lerp(p.accent, p.accentDeep, .25)!,
-    p.accentDeep,
-    Color.lerp(p.accentDeep, p.night, .45)!,
-  ],
+  colors: Appearance.isDark
+      ? [
+          Color.lerp(p.nightHigh, p.glow, .24)!,
+          Color.lerp(p.nightHigh, p.night, .55)!,
+          Color.lerp(p.night, p.canvas, .6)!,
+        ]
+      : [
+          Color.lerp(p.accent, p.accentDeep, .25)!,
+          p.accentDeep,
+          Color.lerp(p.accentDeep, p.night, .45)!,
+        ],
   stops: const [0, .55, 1],
 );
 
@@ -212,9 +223,9 @@ LinearGradient _heroGradient(WorldPalette p) => LinearGradient(
 
 String _greeting() {
   final h = DateTime.now().hour;
-  if (h >= 4 && h < 12) return 'صباح الخير';
-  if (h >= 12 && h < 17) return 'نهارك سعيد';
-  return 'مساء الخير';
+  if (h >= 4 && h < 12) return 'صباح الخير'.tr;
+  if (h >= 12 && h < 17) return 'نهارك سعيد'.tr;
+  return 'مساء الخير'.tr;
 }
 
 void _selectWorld(WidgetRef ref, HomeSection world) {
@@ -244,29 +255,47 @@ num _fromPrice(Property p) {
 }
 
 String _priceUnit(Property p) {
-  if (p.type == PropertyType.decoration) return 'للخدمة';
-  return p.supportsShifts ? 'للفترة' : 'لليوم';
+  if (p.type == PropertyType.decoration) return 'للخدمة'.tr;
+  return p.supportsShifts ? 'للفترة'.tr : 'لليوم'.tr;
 }
 
 String _placeWhere(Property p) => [
   p.cityName ?? p.provinceName ?? '',
-  if (p.capacity > 0) 'حتى ${p.capacity} ضيف',
+  if (p.capacity > 0) 'حتى {n} ضيف'.trN(p.capacity),
 ].where((s) => s.isNotEmpty).join(' · ');
 
 const _arMonthsShort = [
-  'يناير',
-  'فبراير',
-  'مارس',
-  'أبريل',
-  'مايو',
-  'يونيو',
-  'يوليو',
-  'أغسطس',
-  'سبتمبر',
-  'أكتوبر',
-  'نوفمبر',
-  'ديسمبر',
+  'يناير', // i18n-ok
+  'فبراير', // i18n-ok
+  'مارس', // i18n-ok
+  'أبريل', // i18n-ok
+  'مايو', // i18n-ok
+  'يونيو', // i18n-ok
+  'يوليو', // i18n-ok
+  'أغسطس', // i18n-ok
+  'سبتمبر', // i18n-ok
+  'أكتوبر', // i18n-ok
+  'نوفمبر', // i18n-ok
+  'ديسمبر', // i18n-ok
 ];
+
+const _enMonthsShort = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+String _monthShort(int month) =>
+    (I18n.isEn ? _enMonthsShort : _arMonthsShort)[month - 1];
 
 /// يبدّل محتوى القسم بتلاشٍ وانزلاق ناعم عند تغيير العالم.
 /// المحتوى الخارج يحتفظ بعالمه القديم حتى يختفي.
@@ -309,7 +338,7 @@ class _Head extends StatelessWidget {
       child: SectionHead(
         title: title,
         subtitle: subtitle,
-        actionLabel: onMore == null ? null : 'الكل',
+        actionLabel: onMore == null ? null : 'الكل'.tr,
         onAction: onMore,
       ),
     );
@@ -329,7 +358,7 @@ class _WhitePill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: themed(Colors.white, const Color(0xE6101E32)),
         borderRadius: BorderRadius.circular(999),
         boxShadow: [
           BoxShadow(
@@ -449,9 +478,32 @@ class _HeroHeader extends ConsumerWidget {
           // الزخارف
           Positioned.fill(
             child: IgnorePointer(
-              child: CustomPaint(painter: _SwirlPainter(Colors.white)),
+              child: CustomPaint(
+                painter: _SwirlPainter(themed(Colors.white, p.accentLight)),
+              ),
             ),
           ),
+          // هالة ضوء ليلية خلف رمز العالم
+          if (Appearance.isDark)
+            PositionedDirectional(
+              end: -90,
+              top: top - 110,
+              child: IgnorePointer(
+                child: Container(
+                  width: 340,
+                  height: 340,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        p.glow.withValues(alpha: .34),
+                        p.glow.withValues(alpha: 0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           PositionedDirectional(
             end: -34,
             top: top + 34,
@@ -460,12 +512,12 @@ class _HeroHeader extends ConsumerWidget {
                 duration: const Duration(milliseconds: 500),
                 child: Opacity(
                   key: ValueKey(section),
-                  opacity: .12,
+                  opacity: Appearance.isDark ? .2 : .12,
                   child: WorldGlyph(
                     section: section,
                     size: 190,
-                    primary: Colors.white,
-                    secondary: Colors.white,
+                    primary: themed(Colors.white, p.accentLight),
+                    secondary: themed(Colors.white, p.accentLight),
                   ),
                 ),
               ),
@@ -528,13 +580,13 @@ class _Headline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (a, b) = switch (section) {
-      HomeSection.farm => ('احجز مزرعتك', 'ليومٍ لا يُنسى.'),
-      HomeSection.hall => ('اختر قاعتك', 'لليلة العمر.'),
-      HomeSection.decoration => ('زيّن مناسبتك', 'بأجمل التفاصيل.'),
+      HomeSection.farm => ('احجز مزرعتك'.tr, 'ليومٍ لا يُنسى.'.tr),
+      HomeSection.hall => ('اختر قاعتك'.tr, 'لليلة العمر.'.tr),
+      HomeSection.decoration => ('زيّن مناسبتك'.tr, 'بأجمل التفاصيل.'.tr),
     };
     final style = TextStyle(
       fontFamily: VibesFont.ui,
-      fontSize: 31,
+      fontSize: I18n.isEn ? 27 : 31,
       fontWeight: FontWeight.w900,
       color: Colors.white,
       height: 1.22,
@@ -546,7 +598,12 @@ class _Headline extends StatelessWidget {
           TextSpan(text: '$a\n'),
           TextSpan(
             text: b,
-            style: style.copyWith(color: Colors.white.withValues(alpha: .58)),
+            style: style.copyWith(
+              color: themed(
+                Colors.white.withValues(alpha: .58),
+                section.palette.accentLight,
+              ),
+            ),
           ),
         ],
       ),
@@ -569,66 +626,84 @@ class _HeroTopRow extends ConsumerWidget {
     return Row(
       children: [
         // الموقع
-        PressScale(
-          onTap: () => _pickProvince(context),
-          child: Row(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: .55),
-                    width: 1.4,
-                  ),
-                ),
-                child: const Icon(
-                  Icons.location_on_rounded,
-                  color: Colors.white,
-                  size: 21,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    first.isEmpty ? _greeting() : '${_greeting()}، $first',
-                    style: TextStyle(
-                      fontFamily: VibesFont.ui,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white.withValues(alpha: .75),
-                      height: 1.2,
+        Expanded(
+          child: PressScale(
+            onTap: () => _pickProvince(context),
+            child: Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: themed(
+                        Colors.white.withValues(alpha: .55),
+                        context.world.accentLight.withValues(alpha: .55),
+                      ),
+                      width: 1.4,
                     ),
                   ),
-                  Row(
+                  child: Icon(
+                    Icons.location_on_rounded,
+                    color: themed(Colors.white, context.world.accentLight),
+                    size: 21,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        province?.name ?? 'كل العراق',
+                        first.isEmpty
+                            ? _greeting()
+                            : '{greeting}، {name}'.trArgs({
+                                'greeting': _greeting(),
+                                'name': first,
+                              }),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          height: 1.3,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white.withValues(alpha: .75),
+                          height: 1.2,
                         ),
                       ),
-                      const SizedBox(width: 2),
-                      const Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: Colors.white,
-                        size: 20,
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              province?.name ?? 'كل العراق'.tr,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                height: 1.3,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
-        const Spacer(),
+        const SizedBox(width: 8),
         _HeroIcon(
           icon: Icons.chat_bubble_outline_rounded,
           dot: chatUnread > 0,
@@ -660,9 +735,9 @@ class _HeroTopRow extends ConsumerWidget {
                   width: 48,
                   height: 48,
                   padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white,
+                    color: themed(Colors.white, context.world.accent),
                   ),
                   child: ClipOval(
                     child: ColoredBox(
@@ -784,17 +859,45 @@ class _Sheet extends ConsumerWidget {
       decoration: BoxDecoration(
         color: p.canvas,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        // ليلاً: توهّج خافت يصعد من حافة الورقة نحو المسرح
+        boxShadow: Appearance.isDark
+            ? [
+                BoxShadow(
+                  color: p.glow.withValues(alpha: .22),
+                  blurRadius: 34,
+                  offset: const Offset(0, -8),
+                ),
+              ]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // خيط ضوء نحاسي على حافة الورقة — ليلاً فقط
+          if (Appearance.isDark)
+            Container(
+              height: 1,
+              margin: const EdgeInsets.symmetric(horizontal: 40),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    p.accent.withValues(alpha: 0),
+                    p.accent.withValues(alpha: .55),
+                    p.accent.withValues(alpha: 0),
+                  ],
+                ),
+              ),
+            ),
           Center(
             child: Container(
               margin: const EdgeInsets.only(top: 10),
               width: 38,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFFDDDFE3),
+                color: themed(
+                  const Color(0xFFDDDFE3),
+                  p.accent.withValues(alpha: .35),
+                ),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -804,7 +907,7 @@ class _Sheet extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: _SearchField(section: section),
           ),
-          const _SheetTitle('اختر عالمك'),
+          _SheetTitle('اختر عالمك'.tr),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20),
             child: _WorldTiles(),
@@ -817,7 +920,10 @@ class _Sheet extends ConsumerWidget {
                 SizedBox(height: 18),
               ],
               'nearest' => const [_Reveal(order: 1, child: _NearestCard())],
-              'quickLinks' => const [_Reveal(order: 2, child: _QuickRail())],
+              'quickLinks' => [
+                _Reveal(order: 2, child: LoyaltyHomeBanner(section: section)),
+                const _Reveal(order: 2, child: _QuickRail()),
+              ],
               'destinations' => [
                 _WorldFade(builder: (s) => _PopularDestinations(section: s)),
               ],
@@ -868,22 +974,22 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
 
   static const _hints = {
     HomeSection.farm: [
-      'ابحث عن مزرعة…',
-      'مزرعة بمسبح في بغداد',
-      'شفت مسائي لعائلتك',
-      'مزرعة تتسع لـ 50 ضيفاً',
+      'ابحث عن مزرعة…', // i18n-ok
+      'مزرعة بمسبح في بغداد', // i18n-ok
+      'شفت مسائي لعائلتك', // i18n-ok
+      'مزرعة تتسع لـ 50 ضيفاً', // i18n-ok
     ],
     HomeSection.hall: [
-      'ابحث عن قاعة…',
-      'قاعة أعراس لـ 400 ضيف',
-      'قاعة بجولة 360°',
-      'قاعة خطوبة أنيقة',
+      'ابحث عن قاعة…', // i18n-ok
+      'قاعة أعراس لـ 400 ضيف', // i18n-ok
+      'قاعة بجولة 360°', // i18n-ok
+      'قاعة خطوبة أنيقة', // i18n-ok
     ],
     HomeSection.decoration: [
-      'ابحث عن خدمة تزيين…',
-      'كوشة عرس فاخرة',
-      'زينة عيد ميلاد',
-      'تنسيق ورد طبيعي',
+      'ابحث عن خدمة تزيين…', // i18n-ok
+      'كوشة عرس فاخرة', // i18n-ok
+      'زينة عيد ميلاد', // i18n-ok
+      'تنسيق ورد طبيعي', // i18n-ok
     ],
   };
 
@@ -912,7 +1018,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
   Widget build(BuildContext context) {
     final p = context.world;
     final province = ref.watch(homeProvinceProvider);
-    final hint = _hints[widget.section]![_hint];
+    final hint = _hints[widget.section]![_hint].tr;
     final query =
         'type=${widget.section.typeFilter}${province == null ? '' : '&province=${province.slug}'}';
     return PressScale(
@@ -921,8 +1027,10 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
         height: 56,
         padding: const EdgeInsetsDirectional.only(start: 18, end: 7),
         decoration: BoxDecoration(
-          color: const Color(0xFFF3F4F6),
+          color: themed(const Color(0xFFF3F4F6), Vibes.surface),
           borderRadius: BorderRadius.circular(18),
+          border: Appearance.isDark ? Border.all(color: Vibes.hairline) : null,
+          boxShadow: Appearance.isDark ? Vibes.card : null,
         ),
         child: Row(
           children: [
@@ -951,7 +1059,12 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
                   child: Text(
                     province == null || _hint != 0
                         ? hint
-                        : '${hint.replaceAll('…', '')} في ${province.name}',
+                        : switch (widget.section) {
+                            HomeSection.farm => 'ابحث عن مزرعة في {province}', // i18n-ok
+                            HomeSection.hall => 'ابحث عن قاعة في {province}', // i18n-ok
+                            HomeSection.decoration =>
+                              'ابحث عن خدمة تزيين في {province}', // i18n-ok
+                          }.trArgs({'province': province.name}),
                     key: ValueKey(
                       '${widget.section.name}-$_hint-${province?.slug}',
                     ),
@@ -971,7 +1084,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: themed(Colors.white, Vibes.surfaceMuted),
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
@@ -1045,37 +1158,40 @@ class _ProvinceSheet extends ConsumerWidget {
     final selected = ref.watch(homeProvinceProvider);
     final cities =
         ref.watch(locationsProvider).valueOrNull ?? const <CityOption>[];
-    final props =
-        ref.watch(propertiesProvider(null)).valueOrNull ?? const <Property>[];
     final provinces = <String, ({String name, String slug})>{};
+    final open = <String>{};
     for (final c in cities) {
       final slug = c.provinceSlug;
       if (slug != null && slug.isNotEmpty && c.provinceName.isNotEmpty) {
         provinces[slug] = (name: c.provinceName, slug: slug);
+        if (c.provinceOpenFor(section.typeFilter)) open.add(slug);
       }
     }
-    int countFor(String name) => props
-        .where((x) => x.provinceName == name && _inWorld(x, section))
-        .length;
+    int rank(String slug) => open.contains(slug) ? 0 : 1;
     final list = provinces.values.toList()
-      ..sort((a, b) => countFor(b.name).compareTo(countFor(a.name)));
+      ..sort((a, b) {
+        final byOpen = rank(a.slug).compareTo(rank(b.slug));
+        return byOpen != 0 ? byOpen : a.name.compareTo(b.name);
+      });
     final bottom = MediaQuery.paddingOf(context).bottom;
 
     Widget row({
       required String title,
-      required int count,
+      required bool available,
       required bool on,
       required VoidCallback onTap,
       IconData icon = Icons.location_on_outlined,
     }) {
-      return PressScale(
-        onTap: onTap,
+      final body = Opacity(
+        opacity: available ? 1 : .62,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: on ? p.accentSoft : const Color(0xFFF6F7F9),
+            color: on
+                ? p.accentSoft
+                : themed(const Color(0xFFF6F7F9), Vibes.surfaceMuted),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: on ? p.accent : Colors.transparent,
@@ -1101,16 +1217,7 @@ class _ProvinceSheet extends ConsumerWidget {
                   ),
                 ),
               ),
-              if (count == 0)
-                Text(
-                  'لا أماكن بعد',
-                  style: TextStyle(
-                    fontFamily: VibesFont.ui,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Vibes.inkTertiary,
-                  ),
-                ),
+              if (!available) const ComingSoonPill(),
               if (on) ...[
                 const SizedBox(width: 8),
                 Icon(Icons.check_circle_rounded, size: 20, color: p.accent),
@@ -1119,15 +1226,16 @@ class _ProvinceSheet extends ConsumerWidget {
           ),
         ),
       );
+      return available ? PressScale(onTap: onTap, child: body) : body;
     }
 
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.sizeOf(context).height * .75,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: Vibes.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1139,7 +1247,7 @@ class _ProvinceSheet extends ConsumerWidget {
               width: 38,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFFDDDFE3),
+                color: themed(const Color(0xFFDDDFE3), Vibes.hairlineStrong),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1147,7 +1255,7 @@ class _ProvinceSheet extends ConsumerWidget {
           Padding(
             padding: EdgeInsets.fromLTRB(20, 0, 20, 4),
             child: Text(
-              'أين تبحث؟',
+              'أين تبحث؟'.tr,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontSize: 20,
@@ -1159,12 +1267,12 @@ class _ProvinceSheet extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
             child: Text(
-              'اختر محافظة ليبحث البحث فيها مباشرة',
+              'اختر محافظة ليبحث البحث فيها مباشرة'.tr,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey.shade600,
+                color: themed(Colors.grey.shade600, Vibes.inkSecondary),
               ),
             ),
           ),
@@ -1174,9 +1282,9 @@ class _ProvinceSheet extends ConsumerWidget {
               padding: EdgeInsets.fromLTRB(20, 0, 20, 16 + bottom),
               children: [
                 row(
-                  title: 'كل العراق',
+                  title: 'كل العراق'.tr,
                   icon: Icons.public_rounded,
-                  count: props.where((x) => _inWorld(x, section)).length,
+                  available: true,
                   on: selected == null,
                   onTap: () {
                     ref.read(homeProvinceProvider.notifier).state = null;
@@ -1186,7 +1294,7 @@ class _ProvinceSheet extends ConsumerWidget {
                 for (final pr in list)
                   row(
                     title: pr.name,
-                    count: countFor(pr.name),
+                    available: open.contains(pr.slug),
                     on: selected?.slug == pr.slug,
                     onTap: () {
                       ref.read(homeProvinceProvider.notifier).state = pr;
@@ -1221,6 +1329,9 @@ class _NearestCard extends ConsumerWidget {
           decoration: BoxDecoration(
             gradient: p.nightfall,
             borderRadius: BorderRadius.circular(22),
+            border: Appearance.isDark
+                ? Border.all(color: p.accent.withValues(alpha: .2))
+                : null,
             boxShadow: [
               BoxShadow(
                 color: p.night.withValues(alpha: .25),
@@ -1236,20 +1347,37 @@ class _NearestCard extends ConsumerWidget {
                 child: SizedBox(
                   width: 112,
                   height: double.infinity,
-                  child: CustomPaint(painter: _MiniMapPainter(p.accent)),
+                  child: CustomPaint(
+                    painter: _MiniMapPainter(
+                      accent: p.accent,
+                      ground: themed(
+                        const Color(0xFFEDEFF2),
+                        const Color(0xFF1A2C44),
+                      ),
+                      water: themed(
+                        const Color(0xFFC9DDEB),
+                        const Color(0xFF2B4F73),
+                      ),
+                      road: themed(Colors.white, const Color(0xFF3A5473)),
+                      pin: themed(const Color(0xFF1E2430), p.accent),
+                      pinDot: themed(Colors.white, p.onAccent),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   switch (section) {
-                    HomeSection.farm => 'اعثر على أقرب\nمزرعة إليك',
-                    HomeSection.hall => 'اعثر على أقرب\nقاعة إليك',
-                    HomeSection.decoration => 'اعثر على أقرب\nفريق تزيين',
+                    HomeSection.farm => 'اعثر على أقرب\nمزرعة إليك'.tr,
+                    HomeSection.hall => 'اعثر على أقرب\nقاعة إليك'.tr,
+                    HomeSection.decoration => 'اعثر على أقرب\nفريق تزيين'.tr,
                   },
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
-                    fontSize: 15.5,
+                    fontSize: I18n.isEn ? 14 : 15.5,
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
                     height: 1.35,
@@ -1263,11 +1391,7 @@ class _NearestCard extends ConsumerWidget {
                   gradient: p.fill,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  Icons.chevron_left_rounded,
-                  color: p.onAccent,
-                  size: 22,
-                ),
+                child: Icon(forwardChevron, color: p.onAccent, size: 22),
               ),
               const SizedBox(width: 6),
             ],
@@ -1280,17 +1404,26 @@ class _NearestCard extends ConsumerWidget {
 
 /// خريطة مصغّرة مرسومة — طرق بيضاء ونهر ودبوس بلون العالم.
 class _MiniMapPainter extends CustomPainter {
-  _MiniMapPainter(this.accent);
+  _MiniMapPainter({
+    required this.accent,
+    required this.ground,
+    required this.water,
+    required this.road,
+    required this.pin,
+    required this.pinDot,
+  });
 
   final Color accent;
+  final Color ground;
+  final Color water;
+  final Color road;
+  final Color pin;
+  final Color pinDot;
 
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width, h = size.height;
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = const Color(0xFFEDEFF2),
-    );
+    canvas.drawRect(Offset.zero & size, Paint()..color = ground);
     canvas.drawPath(
       Path()
         ..moveTo(0, h * .72)
@@ -1299,42 +1432,44 @@ class _MiniMapPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 7
-        ..color = const Color(0xFFC9DDEB),
+        ..color = water,
     );
-    final road = Paint()
+    final roads = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
-      ..color = Colors.white;
-    canvas.drawLine(Offset(w * .2, 0), Offset(w * .32, h), road);
-    canvas.drawLine(Offset(0, h * .3), Offset(w, h * .22), road);
+      ..color = road;
+    canvas.drawLine(Offset(w * .2, 0), Offset(w * .32, h), roads);
+    canvas.drawLine(Offset(0, h * .3), Offset(w, h * .22), roads);
     canvas.drawLine(
       Offset(w * .7, 0),
       Offset(w * .55, h),
-      road..strokeWidth = 2,
+      roads..strokeWidth = 2,
     );
     canvas.drawLine(
       Offset(0, h * .55),
       Offset(w, h * .5),
-      road..strokeWidth = 1.6,
+      roads..strokeWidth = 1.6,
     );
     final c = Offset(w * .5, h * .42);
     canvas.drawCircle(c, 13, Paint()..color = accent.withValues(alpha: .22));
-    final pin = Path()
+    final marker = Path()
       ..moveTo(c.dx, c.dy + 9)
       ..quadraticBezierTo(c.dx - 9, c.dy - 1, c.dx - 7, c.dy - 6)
       ..arcToPoint(Offset(c.dx + 7, c.dy - 6), radius: const Radius.circular(8))
       ..quadraticBezierTo(c.dx + 9, c.dy - 1, c.dx, c.dy + 9)
       ..close();
-    canvas.drawPath(pin, Paint()..color = const Color(0xFF1E2430));
-    canvas.drawCircle(
-      Offset(c.dx, c.dy - 3.5),
-      3,
-      Paint()..color = Colors.white,
-    );
+    canvas.drawPath(marker, Paint()..color = pin);
+    canvas.drawCircle(Offset(c.dx, c.dy - 3.5), 3, Paint()..color = pinDot);
   }
 
   @override
-  bool shouldRepaint(_MiniMapPainter old) => old.accent != accent;
+  bool shouldRepaint(_MiniMapPainter old) =>
+      old.accent != accent ||
+      old.ground != ground ||
+      old.water != water ||
+      old.road != road ||
+      old.pin != pin ||
+      old.pinDot != pinDot;
 }
 
 /// مبدّل العوالم — لوحة بيضاء واحدة ومؤشر متدرّج ينزلق بين العوالم
@@ -1369,8 +1504,9 @@ class _WorldTiles extends ConsumerWidget {
         height: 62,
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: const Color(0xFFF3F4F6),
+          color: themed(const Color(0xFFF3F4F6), Vibes.surface),
           borderRadius: BorderRadius.circular(22),
+          border: Appearance.isDark ? Border.all(color: Vibes.hairline) : null,
         ),
         child: LayoutBuilder(
           builder: (context, c) {
@@ -1474,10 +1610,12 @@ class _WorldSegment extends StatelessWidget {
           duration: _WorldTiles._duration,
           curve: _WorldTiles._curve,
           builder: (context, t, _) {
-            final primary = Color.lerp(p.accentDeep, Colors.white, t)!;
+            // ليلاً المؤشر فاتح، فالمختار بحبر العالم الداكن لا بالأبيض
+            final onActive = themed(Colors.white, p.onAccent);
+            final primary = Color.lerp(p.accentDeep, onActive, t)!;
             final secondary = Color.lerp(
               p.accent,
-              Colors.white.withValues(alpha: .7),
+              onActive.withValues(alpha: .7),
               t,
             )!;
             return Padding(
@@ -1508,7 +1646,7 @@ class _WorldSegment extends StatelessWidget {
                             fontFamily: VibesFont.ui,
                             fontSize: 14,
                             fontWeight: FontWeight.w900,
-                            color: Color.lerp(Vibes.ink, Colors.white, t),
+                            color: Color.lerp(Vibes.ink, onActive, t),
                             height: 1.15,
                           ),
                         ),
@@ -1544,42 +1682,54 @@ class _WorldSwitcher extends ConsumerWidget {
                 height: 40,
                 decoration: BoxDecoration(
                   color: s == current
-                      ? Colors.white
+                      ? themed(Colors.white, s.palette.accent)
                       : Colors.white.withValues(alpha: .14),
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(
-                    color: Colors.white.withValues(
-                      alpha: s == current ? 1 : .25,
-                    ),
+                    color: s == current
+                        ? themed(Colors.white, s.palette.accent)
+                        : Colors.white.withValues(alpha: .25),
                   ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    WorldGlyph(
-                      section: s,
-                      size: 21,
-                      primary: s == current
-                          ? s.palette.accentDeep
-                          : Colors.white,
-                      secondary: s == current
-                          ? s.palette.accentLight
-                          : Colors.white.withValues(alpha: .6),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        WorldGlyph(
+                          section: s,
+                          size: 21,
+                          primary: s == current
+                              ? themed(s.palette.accentDeep, s.palette.onAccent)
+                              : Colors.white,
+                          secondary: s == current
+                              ? themed(
+                                  s.palette.accentLight,
+                                  s.palette.onAccent.withValues(alpha: .6),
+                                )
+                              : Colors.white.withValues(alpha: .6),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          s.label,
+                          style: TextStyle(
+                            fontFamily: VibesFont.ui,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: s == current
+                                ? themed(
+                                    s.palette.accentDeep,
+                                    s.palette.onAccent,
+                                  )
+                                : Colors.white,
+                            height: 1.2,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 5),
-                    Text(
-                      s.label,
-                      style: TextStyle(
-                        fontFamily: VibesFont.ui,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                        color: s == current
-                            ? s.palette.accentDeep
-                            : Colors.white,
-                        height: 1.2,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -1607,7 +1757,7 @@ class _CompactBar extends ConsumerWidget {
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(22)),
         boxShadow: [
           BoxShadow(
-            color: p.glow.withValues(alpha: .3),
+            color: p.glow.withValues(alpha: Appearance.isDark ? .16 : .3),
             blurRadius: 18,
             offset: const Offset(0, 6),
           ),
@@ -1643,18 +1793,28 @@ class _QuickRail extends ConsumerWidget {
     final nadeem = nadeemConfigNow(ref);
     final layout = homeLayoutNow(ref);
     final items = <(IconData, String, String, int)>[
+      if (layout.link('compare'))
+        (
+          Icons.compare_arrows_rounded,
+          'المقارنة'.tr,
+          '/compare',
+          ref.watch(compareSelectionProvider).length,
+        ),
       if (layout.link('map'))
-        (Icons.map_rounded, 'الخريطة', '/map?type=${section.typeFilter}', 0),
+        (Icons.map_rounded, 'الخريطة'.tr, '/map?type=${section.typeFilter}', 0),
       if (layout.link('offers'))
-        (Icons.local_offer_rounded, 'العروض', '/offers', offers),
+        (Icons.local_offer_rounded, 'العروض'.tr, '/offers', offers),
       if (layout.link('coupons'))
-        (Icons.confirmation_number_rounded, 'الكوبونات', '/coupons', coupons),
+        (
+          Icons.confirmation_number_rounded,
+          'الكوبونات'.tr,
+          '/coupons',
+          coupons,
+        ),
       if (nadeem.showOnHome && nadeem.enabled)
         (Icons.auto_awesome_rounded, nadeem.name, '/nadeem', 0),
       if (layout.link('experiences'))
-        (Icons.celebration_rounded, 'التجارب', '/experiences', 0),
-      if (layout.link('compare'))
-        (Icons.compare_arrows_rounded, 'المقارنة', '/compare', 0),
+        (Icons.celebration_rounded, 'التجارب'.tr, '/experiences', 0),
     ];
     if (items.isEmpty) return const SizedBox.shrink();
     return SizedBox(
@@ -1673,8 +1833,11 @@ class _QuickRail extends ConsumerWidget {
               duration: const Duration(milliseconds: 400),
               padding: const EdgeInsetsDirectional.fromSTEB(5, 0, 12, 0),
               decoration: BoxDecoration(
-                color: const Color(0xFFF4F5F7),
+                color: themed(const Color(0xFFF4F5F7), Vibes.surface),
                 borderRadius: BorderRadius.circular(999),
+                border: Appearance.isDark
+                    ? Border.all(color: Vibes.hairline)
+                    : null,
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1683,8 +1846,8 @@ class _QuickRail extends ConsumerWidget {
                     duration: const Duration(milliseconds: 400),
                     width: 26,
                     height: 26,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
+                    decoration: BoxDecoration(
+                      color: themed(Colors.white, p.accentSoft),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(item.$1, size: 15, color: p.accentDeep),
@@ -1731,12 +1894,12 @@ class _ContinueBookingSection extends ConsumerWidget {
   String _when(DateTime start) {
     final today = DateUtils.dateOnly(DateTime.now());
     final days = DateUtils.dateOnly(start).difference(today).inDays;
-    if (days < 0) return 'جارٍ الآن';
-    if (days == 0) return 'اليوم';
-    if (days == 1) return 'غداً';
-    if (days == 2) return 'بعد يومين';
-    if (days <= 10) return 'بعد $days أيام';
-    return 'بعد $days يوماً';
+    if (days < 0) return 'جارٍ الآن'.tr;
+    if (days == 0) return 'اليوم'.tr;
+    if (days == 1) return 'غداً'.tr;
+    if (days == 2) return 'بعد يومين'.tr;
+    if (days <= 10) return 'بعد {n} أيام'.trN(days);
+    return 'بعد {n} يوماً'.trN(days);
   }
 
   @override
@@ -1758,9 +1921,9 @@ class _ContinueBookingSection extends ConsumerWidget {
         final p = WorldPalette.forType(b.propertyType);
         final needsPayment = b.status == BookingStatus.awaitingPayment;
         final status = switch (b.status) {
-          BookingStatus.awaitingPayment => 'بانتظار الدفع',
-          BookingStatus.pending => 'بانتظار تأكيد المضيف',
-          _ => 'حجز مؤكد',
+          BookingStatus.awaitingPayment => 'بانتظار الدفع'.tr,
+          BookingStatus.pending => 'بانتظار تأكيد المضيف'.tr,
+          _ => 'حجز مؤكد'.tr,
         };
 
         return Padding(
@@ -1772,6 +1935,9 @@ class _ContinueBookingSection extends ConsumerWidget {
               decoration: BoxDecoration(
                 gradient: p.nightfall,
                 borderRadius: BorderRadius.circular(24),
+                border: Appearance.isDark
+                    ? Border.all(color: p.accent.withValues(alpha: .22))
+                    : null,
                 boxShadow: p.glowShadow,
               ),
               child: Row(
@@ -1800,7 +1966,7 @@ class _ContinueBookingSection extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          _arMonthsShort[b.startDate.month - 1],
+                          _monthShort(b.startDate.month),
                           style: TextStyle(
                             fontFamily: VibesFont.ui,
                             fontSize: 10.5,
@@ -1818,7 +1984,7 @@ class _ContinueBookingSection extends ConsumerWidget {
                       children: [
                         Text(
                           needsPayment
-                              ? 'أكمل الدفع لتأكيد حجزك'
+                              ? 'أكمل الدفع لتأكيد حجزك'.tr
                               : '${_when(b.startDate)} · $status',
                           style: TextStyle(
                             fontFamily: VibesFont.ui,
@@ -1831,7 +1997,7 @@ class _ContinueBookingSection extends ConsumerWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          b.propertyName ?? 'حجزك',
+                          b.propertyName ?? 'حجزك'.tr,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -1862,17 +2028,15 @@ class _ContinueBookingSection extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: needsPayment
                           ? const Color(0xFFFFC27A)
-                          : Colors.white,
+                          : themed(Colors.white, p.accent),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      needsPayment
-                          ? Icons.payments_rounded
-                          : Icons.chevron_left_rounded,
+                      needsPayment ? Icons.payments_rounded : forwardChevron,
                       size: 20,
                       color: needsPayment
                           ? const Color(0xFF5A3200)
-                          : p.accentDeep,
+                          : themed(p.accentDeep, p.onAccent),
                     ),
                   ),
                 ],
@@ -1907,6 +2071,7 @@ class _PopularDestinations extends ConsumerWidget {
 
     return locations.maybeWhen(
       data: (cities) {
+        final open = <String>{};
         final unique =
             <String, ({String name, String slug, String? imageUrl})>{};
         for (final city in cities) {
@@ -1917,14 +2082,21 @@ class _PopularDestinations extends ConsumerWidget {
               slug: slug,
               imageUrl: city.provinceImageUrl,
             );
+            if (city.provinceOpenFor(section.typeFilter)) open.add(slug);
           }
         }
         if (unique.isEmpty) return const SizedBox.shrink();
         int countFor(String name) => properties
             .where((p) => p.provinceName == name && _inWorld(p, section))
             .length;
+        int rank(String slug) => open.contains(slug) ? 0 : 1;
         final provinces = unique.values.toList()
-          ..sort((a, b) => countFor(b.name).compareTo(countFor(a.name)));
+          ..sort((a, b) {
+            final byOpen = rank(a.slug).compareTo(rank(b.slug));
+            return byOpen != 0
+                ? byOpen
+                : countFor(b.name).compareTo(countFor(a.name));
+          });
 
         return Padding(
           padding: const EdgeInsets.only(top: 14),
@@ -1943,7 +2115,7 @@ class _PopularDestinations extends ConsumerWidget {
                   section: section,
                   name: d.name,
                   slug: d.slug,
-                  count: countFor(d.name),
+                  available: open.contains(d.slug),
                   imageUrl: d.imageUrl,
                 );
               },
@@ -1961,23 +2133,20 @@ class _DestinationTile extends StatelessWidget {
     required this.section,
     required this.name,
     required this.slug,
-    required this.count,
+    required this.available,
     this.imageUrl,
   });
 
   final HomeSection section;
   final String name;
   final String slug;
-  final int count;
+  final bool available;
   final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
     final p = section.palette;
-    return PressScale(
-      onTap: () =>
-          context.push('/search?province=$slug&type=${section.typeFilter}'),
-      child: Container(
+    final tile = Container(
         width: 128,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
@@ -2044,10 +2213,29 @@ class _DestinationTile extends StatelessWidget {
                   ],
                 ),
               ),
+              if (!available) ...[
+                ColoredBox(color: Colors.black.withValues(alpha: .38)),
+                const PositionedDirectional(
+                  top: 8,
+                  start: 8,
+                  child: ComingSoonPill(),
+                ),
+              ],
             ],
           ),
         ),
-      ),
+    );
+    if (!available) {
+      return Semantics(
+        enabled: false,
+        label: '{province} — قريباً'.trArgs({'province': name}),
+        child: tile,
+      );
+    }
+    return PressScale(
+      onTap: () =>
+          context.push('/search?province=$slug&type=${section.typeFilter}'),
+      child: tile,
     );
   }
 }
@@ -2170,7 +2358,12 @@ class _BannerCarouselState extends ConsumerState<_BannerCarousel> {
                     width: i == _index ? 18 : 6,
                     height: 6,
                     decoration: BoxDecoration(
-                      color: i == _index ? p.accent : const Color(0xFFDADDE2),
+                      color: i == _index
+                          ? p.accent
+                          : themed(
+                              const Color(0xFFDADDE2),
+                              Vibes.hairlineStrong,
+                            ),
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),
@@ -2219,7 +2412,9 @@ class _BannerCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(26),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: .12),
+                color: Colors.black.withValues(
+                  alpha: Appearance.isDark ? .4 : .12,
+                ),
                 blurRadius: 22,
                 offset: const Offset(0, 10),
               ),
@@ -2292,14 +2487,14 @@ class _BannerCard extends StatelessWidget {
                       Container(
                         width: 38,
                         height: 38,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
+                        decoration: BoxDecoration(
+                          color: themed(Colors.white, context.world.accent),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          Icons.arrow_back_rounded,
+                          forwardArrow,
                           size: 19,
-                          color: Vibes.ink,
+                          color: themed(Vibes.ink, context.world.onAccent),
                         ),
                       ),
                     ],
@@ -2367,26 +2562,35 @@ class _RailCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             if (property.isNew)
-                              const _WhitePill(
-                                label: 'جديد',
+                              _WhitePill(
+                                label: 'جديد'.tr,
                                 icon: Icons.fiber_new_rounded,
-                                iconColor: Color(0xFF0E9F6E),
+                                iconColor: themed(
+                                  const Color(0xFF0E9F6E),
+                                  Vibes.success,
+                                ),
                               ),
                             if (property.isWinter) ...[
                               if (property.isNew) const SizedBox(height: 6),
-                              const _WhitePill(
-                                label: 'شتوية',
+                              _WhitePill(
+                                label: 'شتوية'.tr,
                                 icon: Icons.ac_unit_rounded,
-                                iconColor: Color(0xFF0284C7),
+                                iconColor: themed(
+                                  const Color(0xFF0284C7),
+                                  const Color(0xFF7CC4F0),
+                                ),
                               ),
                             ],
                             if (property.hasIndoorPool) ...[
                               if (property.isNew || property.isWinter)
                                 const SizedBox(height: 6),
-                              const _WhitePill(
-                                label: 'مسبح مغلق',
+                              _WhitePill(
+                                label: 'مسبح مغلق'.tr,
                                 icon: Icons.pool_rounded,
-                                iconColor: Color(0xFF0D9488),
+                                iconColor: themed(
+                                  const Color(0xFF0D9488),
+                                  const Color(0xFF5CD6C9),
+                                ),
                               ),
                             ],
                           ],
@@ -2431,7 +2635,7 @@ class _RailCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    where.isEmpty ? property.typeLabelAr : where,
+                    where.isEmpty ? property.typeLabelAr.tr : where,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -2476,13 +2680,17 @@ class _PriceLine extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 4),
-        Text(
-          'د.ع · ${_priceUnit(property)}',
-          style: TextStyle(
-            fontFamily: VibesFont.ui,
-            fontSize: 11.5,
-            fontWeight: FontWeight.w700,
-            color: Vibes.inkTertiary,
+        Flexible(
+          child: Text(
+            'د.ع · {unit}'.trArgs({'unit': _priceUnit(property)}),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: VibesFont.ui,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: Vibes.inkTertiary,
+            ),
           ),
         ),
       ],
@@ -2559,8 +2767,8 @@ class _WinterFarmsSection extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _Head(
-            'مزارع شتوية ❄️',
-            subtitle: 'دافئة ومجهّزة للشتاء — بعضها بمسبح مغلق',
+            'مزارع شتوية ❄️'.tr,
+            subtitle: 'دافئة ومجهّزة للشتاء — بعضها بمسبح مغلق'.tr,
             onMore: () => context.push('/search?winter=true'),
           ),
           _Rail(items: winter.take(12).toList()),
@@ -2580,7 +2788,7 @@ class _RecentlyViewedSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _Head('شاهدتها مؤخراً', subtitle: 'عُد إلى ما لفت انتباهك'),
+        _Head('شاهدتها مؤخراً'.tr, subtitle: 'عُد إلى ما لفت انتباهك'.tr),
         _Rail(items: recent),
       ],
     );
@@ -2600,6 +2808,8 @@ class _CouponTicket extends ConsumerWidget {
     if (coupons.isEmpty) return const SizedBox.shrink();
     final p = context.world;
     final coupon = coupons.first;
+    // خط القطع يتبع الاتجاه: الجزء الأكبر في بداية القراءة دائماً
+    final cut = Directionality.of(context) == TextDirection.rtl ? .74 : .26;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 34, 20, 0),
       child: PressScale(
@@ -2610,14 +2820,14 @@ class _CouponTicket extends ConsumerWidget {
             boxShadow: p.glowShadow,
           ),
           child: ClipPath(
-            clipper: const _TicketClipper(cut: .74),
+            clipper: _TicketClipper(cut: cut),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 600),
               height: 92,
               decoration: BoxDecoration(gradient: p.nightfall),
               child: CustomPaint(
                 painter: _TicketDashPainter(
-                  cut: .74,
+                  cut: cut,
                   color: Colors.white.withValues(alpha: .28),
                 ),
                 child: Row(
@@ -2653,7 +2863,7 @@ class _CouponTicket extends ConsumerWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'خصم فوري بكوبون',
+                                    'خصم فوري بكوبون'.tr,
                                     style: TextStyle(
                                       fontFamily: VibesFont.ui,
                                       fontSize: 11.5,
@@ -2707,8 +2917,8 @@ class _CouponTicket extends ConsumerWidget {
                           const SizedBox(height: 4),
                           Text(
                             coupons.length > 1
-                                ? '+${coupons.length - 1} أخرى'
-                                : 'استخدمه',
+                                ? '+{n} أخرى'.trN(coupons.length - 1)
+                                : 'استخدمه'.tr,
                             style: TextStyle(
                               fontFamily: VibesFont.ui,
                               fontSize: 11.5,
@@ -2734,14 +2944,14 @@ class _CouponTicket extends ConsumerWidget {
 class _TicketClipper extends CustomClipper<Path> {
   const _TicketClipper({required this.cut});
 
-  /// موضع خط القطع من بداية الاتجاه (0..1).
+  /// موضع خط القطع من الطرف الأيمن للبطاقة (0..1).
   final double cut;
 
   @override
   Path getClip(Size size) {
     const r = 22.0;
     const notch = 11.0;
-    final x = size.width * (1 - cut); // في RTL البداية يمين
+    final x = size.width * (1 - cut);
     final body = Path()
       ..addRRect(
         RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(r)),
@@ -2858,9 +3068,9 @@ class _SpotlightStripState extends ConsumerState<_SpotlightStrip>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _Head(
-              'لقطات من أماكننا',
-              subtitle: 'المس أي لقطة لزيارة المكان',
+            _Head(
+              'لقطات من أماكننا'.tr,
+              subtitle: 'المس أي لقطة لزيارة المكان'.tr,
             ),
             SizedBox(
               height: _frameHeight,
@@ -2943,8 +3153,8 @@ class _SpotlightStripState extends ConsumerState<_SpotlightStrip>
                                           ),
                                           shape: BoxShape.circle,
                                         ),
-                                        child: const Icon(
-                                          Icons.chevron_left_rounded,
+                                        child: Icon(
+                                          forwardChevron,
                                           size: 18,
                                           color: Colors.white,
                                         ),
@@ -2988,8 +3198,8 @@ class _FollowingProvidersStrip extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _Head(
-          'مضيفون تتابعهم',
-          subtitle: 'جديدهم أولاً بأول',
+          'مضيفون تتابعهم'.tr,
+          subtitle: 'جديدهم أولاً بأول'.tr,
           onMore: () => context.push('/following'),
         ),
         SizedBox(
@@ -3002,7 +3212,7 @@ class _FollowingProvidersStrip extends ConsumerWidget {
             itemBuilder: (context, i) {
               final f = following[i];
               final initial = f.displayName.trim().isEmpty
-                  ? 'م'
+                  ? 'م'.tr
                   : f.displayName.trim().substring(0, 1);
               return PressScale(
                 onTap: () => context.push('/providers/${f.id}'),
@@ -3027,9 +3237,9 @@ class _FollowingProvidersStrip extends ConsumerWidget {
                         ),
                         child: Container(
                           padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.white,
+                            color: themed(Colors.white, p.canvas),
                           ),
                           child: ClipOval(
                             child: f.avatar != null
@@ -3122,8 +3332,8 @@ class _AllPlacesSection extends ConsumerWidget {
           slivers: [
             SliverToBoxAdapter(
               child: _Head(
-                'كل ${section.label}',
-                subtitle: list.isEmpty ? null : 'اختر ما يناسب مناسبتك',
+                section.allTitle,
+                subtitle: list.isEmpty ? null : 'اختر ما يناسب مناسبتك'.tr,
                 onMore: list.isEmpty
                     ? null
                     : () => context.push('/search?type=${section.typeFilter}'),
@@ -3133,10 +3343,11 @@ class _AllPlacesSection extends ConsumerWidget {
               SliverToBoxAdapter(
                 child: WorldEmpty(
                   icon: Icons.explore_outlined,
-                  title: 'لا ${section.label} بعد',
+                  title: section.emptyTitle,
                   subtitle:
-                      'نضيف أماكن جديدة كل أسبوع — جرّب عالماً آخر أو تصفّح الخريطة',
-                  actionLabel: 'افتح الخريطة',
+                      'نضيف أماكن جديدة كل أسبوع — جرّب عالماً آخر أو تصفّح الخريطة' // i18n-ok
+                          .tr,
+                  actionLabel: 'افتح الخريطة'.tr,
                   onAction: () => context.push('/map'),
                 ),
               )
@@ -3183,7 +3394,7 @@ class _HomeFooter extends ConsumerWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'مزارع · قاعات · تزيين — مناسبتك كلها في مكان واحد',
+            'مزارع · قاعات · تزيين — مناسبتك كلها في مكان واحد'.tr,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: VibesFont.ui,
@@ -3197,7 +3408,7 @@ class _HomeFooter extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'صُنع بحب في العراق',
+                'صُنع بحب في العراق'.tr,
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
                   fontSize: 11.5,
@@ -3220,45 +3431,56 @@ class _HomeFooter extends ConsumerWidget {
 // ═══════════════════════════════════════════════════════════
 
 class _Occasion {
-  const _Occasion(this.title, this.icon, this.line, this.worlds);
+  const _Occasion(this._title, this.icon, this._line, this.worlds);
 
-  final String title;
+  final String _title;
   final IconData icon;
-  final String line;
+  final String _line;
+
+  String get title => _title.tr;
+  String get line => _line.tr;
 
   /// العوالم بالترتيب الذي تُجهَّز به المناسبة.
   final List<HomeSection> worlds;
 }
 
 const _occasions = [
-  _Occasion('عرس', Icons.diamond_outlined, 'ليلة العمر من القاعة إلى الكوشة', [
-    HomeSection.hall,
-    HomeSection.decoration,
-  ]),
   _Occasion(
-    'خطوبة',
-    Icons.volunteer_activism_outlined,
-    'بداية الحكاية بأجمل تفاصيلها',
+    'عرس', // i18n-ok
+    Icons.diamond_outlined,
+    'ليلة العمر من القاعة إلى الكوشة', // i18n-ok
     [HomeSection.hall, HomeSection.decoration],
   ),
-  _Occasion('عيد ميلاد', Icons.cake_outlined, 'زينة ومكان يليق بالفرحة', [
-    HomeSection.decoration,
-    HomeSection.farm,
-  ]),
   _Occasion(
-    'تجمّع عائلي',
+    'خطوبة', // i18n-ok
+    Icons.volunteer_activism_outlined,
+    'بداية الحكاية بأجمل تفاصيلها', // i18n-ok
+    [HomeSection.hall, HomeSection.decoration],
+  ),
+  _Occasion(
+    'عيد ميلاد', // i18n-ok
+    Icons.cake_outlined,
+    'زينة ومكان يليق بالفرحة', // i18n-ok
+    [HomeSection.decoration, HomeSection.farm],
+  ),
+  _Occasion(
+    'تجمّع عائلي', // i18n-ok
     Icons.family_restroom_rounded,
-    'مسبح وجلسات ويوم كامل للعائلة',
+    'مسبح وجلسات ويوم كامل للعائلة', // i18n-ok
     [HomeSection.farm],
   ),
-  _Occasion('حفل تخرّج', Icons.school_outlined, 'احتفل بإنجازك مع من تحب', [
-    HomeSection.hall,
-    HomeSection.decoration,
-  ]),
-  _Occasion('سهرة', Icons.nightlife_rounded, 'شفت مسائي وأجواء لا تُنسى', [
-    HomeSection.farm,
-    HomeSection.decoration,
-  ]),
+  _Occasion(
+    'حفل تخرّج', // i18n-ok
+    Icons.school_outlined,
+    'احتفل بإنجازك مع من تحب', // i18n-ok
+    [HomeSection.hall, HomeSection.decoration],
+  ),
+  _Occasion(
+    'سهرة', // i18n-ok
+    Icons.nightlife_rounded,
+    'شفت مسائي وأجواء لا تُنسى', // i18n-ok
+    [HomeSection.farm, HomeSection.decoration],
+  ),
 ];
 
 class _OccasionsSection extends StatelessWidget {
@@ -3269,9 +3491,9 @@ class _OccasionsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _Head(
-          'خطّط لمناسبتك',
-          subtitle: 'اختر المناسبة ونجمع لك كل ما تحتاجه',
+        _Head(
+          'خطّط لمناسبتك'.tr,
+          subtitle: 'اختر المناسبة ونجمع لك كل ما تحتاجه'.tr,
         ),
         SizedBox(
           height: 118,
@@ -3308,6 +3530,9 @@ class _OccasionTile extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: p.nightfall,
           borderRadius: BorderRadius.circular(22),
+          border: Appearance.isDark
+              ? Border.all(color: p.accent.withValues(alpha: .2))
+              : null,
           boxShadow: [
             BoxShadow(
               color: p.glow.withValues(alpha: .22),
@@ -3366,6 +3591,8 @@ class _OccasionTile extends StatelessWidget {
                   const Spacer(),
                   Text(
                     occasion.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 16,
@@ -3375,36 +3602,41 @@ class _OccasionTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      for (var i = 0; i < occasion.worlds.length; i++) ...[
-                        if (i > 0)
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (var i = 0; i < occasion.worlds.length; i++) ...[
+                          if (i > 0)
+                            Text(
+                              ' + ',
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white.withValues(alpha: .6),
+                              ),
+                            ),
+                          VibesCategoryIcon(
+                            category: occasion.worlds[i].icon,
+                            size: 12,
+                            color: occasion.worlds[i].palette.accentLight,
+                          ),
+                          const SizedBox(width: 3),
                           Text(
-                            ' + ',
+                            occasion.worlds[i].label,
                             style: TextStyle(
                               fontFamily: VibesFont.ui,
                               fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white.withValues(alpha: .6),
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white.withValues(alpha: .78),
                             ),
                           ),
-                        VibesCategoryIcon(
-                          category: occasion.worlds[i].icon,
-                          size: 12,
-                          color: occasion.worlds[i].palette.accentLight,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          occasion.worlds[i].label,
-                          style: TextStyle(
-                            fontFamily: VibesFont.ui,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white.withValues(alpha: .78),
-                          ),
-                        ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -3443,9 +3675,9 @@ class _OccasionSheet extends ConsumerWidget {
     final bottom = MediaQuery.paddingOf(context).bottom;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      decoration: BoxDecoration(
+        color: Vibes.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -3488,7 +3720,11 @@ class _OccasionSheet extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'جهّز ${occasion.title}',
+                            'جهّز {occasion}'.trArgs({
+                              'occasion': I18n.isEn
+                                  ? occasion.title.toLowerCase()
+                                  : occasion.title,
+                            }),
                             style: TextStyle(
                               fontFamily: VibesFont.ui,
                               fontSize: 22,
@@ -3521,8 +3757,8 @@ class _OccasionSheet extends ConsumerWidget {
               children: [
                 Text(
                   occasion.worlds.length > 1
-                      ? '${occasion.worlds.length} خطوات بسيطة'
-                      : 'خطوة واحدة',
+                      ? '{n} خطوات بسيطة'.trN(occasion.worlds.length)
+                      : 'خطوة واحدة'.tr,
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
                     fontSize: 12.5,
@@ -3549,8 +3785,8 @@ class _OccasionSheet extends ConsumerWidget {
                 ],
                 const SizedBox(height: 16),
                 WorldButton(
-                  label: 'ابدأ بـ${occasion.worlds.first.label}',
-                  icon: Icons.arrow_back_rounded,
+                  label: occasion.worlds.first.startWith,
+                  icon: forwardArrow,
                   palette: p,
                   onTap: () {
                     Navigator.of(context).pop();
@@ -3591,16 +3827,16 @@ class _OccasionStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = world.palette;
     final what = switch (world) {
-      HomeSection.hall => 'اختر القاعة',
-      HomeSection.farm => 'اختر المزرعة',
-      HomeSection.decoration => 'اختر فريق التزيين',
+      HomeSection.hall => 'اختر القاعة'.tr,
+      HomeSection.farm => 'اختر المزرعة'.tr,
+      HomeSection.decoration => 'اختر فريق التزيين'.tr,
     };
     return PressScale(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: p.canvas,
+          color: themed(p.canvas, Vibes.surfaceMuted),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: p.accent.withValues(alpha: .18)),
         ),
@@ -3627,7 +3863,7 @@ class _OccasionStep extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'الخطوة $step',
+                    'الخطوة {n}'.trN(step),
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 11,
@@ -3646,7 +3882,7 @@ class _OccasionStep extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'تصفّح الأماكن المتاحة للحجز',
+                    'تصفّح الأماكن المتاحة للحجز'.tr,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 11.5,
@@ -3664,11 +3900,7 @@ class _OccasionStep extends StatelessWidget {
                 gradient: p.fill,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.chevron_left_rounded,
-                color: p.onAccent,
-                size: 20,
-              ),
+              child: Icon(forwardChevron, color: p.onAccent, size: 20),
             ),
           ],
         ),
@@ -3687,27 +3919,35 @@ class _TrustStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.world;
-    const items = [
+    final items = [
       (
         Icons.verified_user_outlined,
-        'مضيفون موثّقون',
-        'نراجع كل مكان قبل نشره',
+        'مضيفون موثّقون'.tr,
+        'نراجع كل مكان قبل نشره'.tr,
       ),
-      (Icons.lock_outline_rounded, 'دفع آمن', 'لا تُخصم أي رسوم قبل التأكيد'),
-      (Icons.bolt_rounded, 'تأكيد سريع', 'رد المضيف خلال وقت قصير'),
-      (Icons.support_agent_rounded, 'دعم دائم', 'فريقنا معك قبل الحجز وبعده'),
+      (
+        Icons.lock_outline_rounded,
+        'دفع آمن'.tr,
+        'لا تُخصم أي رسوم قبل التأكيد'.tr,
+      ),
+      (Icons.bolt_rounded, 'تأكيد سريع'.tr, 'رد المضيف خلال وقت قصير'.tr),
+      (
+        Icons.support_agent_rounded,
+        'دعم دائم'.tr,
+        'فريقنا معك قبل الحجز وبعده'.tr,
+      ),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _Head('لماذا VIBES', subtitle: 'احجز وأنت مطمئن'),
+        _Head('لماذا أجواء'.tr, subtitle: 'احجز وأنت مطمئن'.tr),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 500),
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Vibes.surface,
               borderRadius: BorderRadius.circular(26),
               border: Border.all(color: p.accent.withValues(alpha: .12)),
               boxShadow: [

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/data/marketplace_providers.dart';
@@ -24,28 +25,28 @@ class ProviderRequestsScreen extends ConsumerWidget {
     if (!approve) {
       note = await showMaisonPrompt(
         context: context,
-        title: 'رفض الطلب',
-        message: 'اكتب للضيف سبب الرفض',
-        hint: 'سبب الرفض',
-        confirmLabel: 'رفض',
+        title: 'رفض الطلب'.tr,
+        message: 'اكتب للضيف سبب الرفض'.tr,
+        hint: 'سبب الرفض'.tr,
+        confirmLabel: 'رفض'.tr,
       );
       if (note == null) return;
       if (note.isEmpty) {
         if (context.mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('أضف سبب الرفض')));
+          ).showSnackBar(SnackBar(content: Text('أضف سبب الرفض'.tr)));
         }
         return;
       }
     } else {
       final ok = await showMaisonConfirm(
         context: context,
-        title: 'الموافقة على الإلغاء',
+        title: 'الموافقة على الإلغاء'.tr,
         message:
-            'سيُلغى الحجز فوراً. إن وُجد دفع مؤكد يبقى الاسترداد المالي لمراجعة فريق VIBES.',
-        confirmLabel: 'موافقة',
-        cancelLabel: 'تراجع',
+            'سيُلغى الحجز فوراً. إن وُجد دفع مؤكد يبقى الاسترداد المالي لمراجعة فريق أجواء.'.tr,
+        confirmLabel: 'موافقة'.tr,
+        cancelLabel: 'تراجع'.tr,
       );
       if (!ok) return;
     }
@@ -66,8 +67,8 @@ class ProviderRequestsScreen extends ConsumerWidget {
         SnackBar(
           content: Text(
             approve
-                ? 'أُلغي الحجز — الاسترداد إن وُجد يراجعه الفريق'
-                : 'رُفض طلب الإلغاء',
+                ? 'أُلغي الحجز — الاسترداد إن وُجد يراجعه الفريق'.tr
+                : 'رُفض طلب الإلغاء'.tr,
           ),
         ),
       );
@@ -88,7 +89,7 @@ class ProviderRequestsScreen extends ConsumerWidget {
         child: Column(
           children: [
             MaisonPageHeader(
-              title: 'طلبات الإلغاء',
+              title: 'طلبات الإلغاء'.tr,
               onBack: () => context.pop(),
             ),
             Expanded(
@@ -110,16 +111,18 @@ class ProviderRequestsScreen extends ConsumerWidget {
                 data: (value) {
                   final items = [
                     ...value.cancellations.map(
-                      (row) => (kind: 'إلغاء', row: row),
+                      (row) => (kind: 'إلغاء', row: row), // i18n-ok
                     ),
-                    ...value.refunds.map((row) => (kind: 'استرداد', row: row)),
+                    ...value.refunds.map(
+                      (row) => (kind: 'استرداد', row: row), // i18n-ok
+                    ),
                   ];
                   if (items.isEmpty) {
-                    return const WorldEmpty(
+                    return WorldEmpty(
                       icon: Icons.assignment_outlined,
-                      title: 'لا طلبات معلّقة',
+                      title: 'لا طلبات معلّقة'.tr,
                       subtitle:
-                          'ستظهر هنا طلبات إلغاء واسترداد حجوزات ممتلكاتك',
+                          'ستظهر هنا طلبات إلغاء واسترداد حجوزات ممتلكاتك'.tr,
                     );
                   }
                   return RefreshIndicator(
@@ -136,17 +139,17 @@ class ProviderRequestsScreen extends ConsumerWidget {
                         final booking = item.row['booking'];
                         final user = item.row['user'];
                         final place = booking is Map
-                            ? '${booking['property'] is Map ? booking['property']['name'] : 'مكان'}'
-                            : 'مكان';
+                            ? '${booking['property'] is Map ? booking['property']['name'] : 'مكان'.tr}' // i18n-ok
+                            : 'مكان'.tr;
                         final guest = user is Map
-                            ? (user['name'] ?? user['phone'] ?? 'ضيف')
-                            : 'ضيف';
+                            ? (user['name'] ?? user['phone'] ?? 'ضيف'.tr)
+                            : 'ضيف'.tr;
                         final status = '${item.row['status'] ?? ''}';
                         final bookingId = booking is Map
                             ? booking['id'] as String?
                             : null;
                         final requestId = item.row['id'] as String?;
-                        final isCancel = item.kind == 'إلغاء';
+                        final isCancel = item.kind == 'إلغاء'; // i18n-ok
                         final pending = status == 'PENDING';
                         return VibesCard(
                           onTap: bookingId == null
@@ -163,7 +166,13 @@ class ProviderRequestsScreen extends ConsumerWidget {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          '$place · ${item.kind}',
+                                          isCancel
+                                              ? '{place} · إلغاء'.trArgs({
+                                                  'place': place,
+                                                })
+                                              : '{place} · استرداد'.trArgs({
+                                                  'place': place,
+                                                }),
                                           style: Theme.of(context)
                                               .textTheme
                                               .titleSmall
@@ -221,7 +230,7 @@ class ProviderRequestsScreen extends ConsumerWidget {
                                         requestId,
                                         approve: true,
                                       ),
-                                      child: const Text('موافقة'),
+                                      child: Text('موافقة'.tr),
                                     ),
                                     TextButton(
                                       onPressed: () => _review(
@@ -230,14 +239,14 @@ class ProviderRequestsScreen extends ConsumerWidget {
                                         requestId,
                                         approve: false,
                                       ),
-                                      child: const Text('رفض'),
+                                      child: Text('رفض'.tr),
                                     ),
                                   ],
                                 ),
                               ] else if (!isCancel && pending) ...[
                                 const SizedBox(height: 8),
                                 Text(
-                                  'الاسترداد المالي يراجعه فريق VIBES',
+                                  'الاسترداد المالي يراجعه فريق أجواء'.tr,
                                   style: Theme.of(context).textTheme.labelSmall,
                                 ),
                               ],
@@ -257,9 +266,9 @@ class ProviderRequestsScreen extends ConsumerWidget {
   }
 
   String _statusAr(String status) => switch (status) {
-    'PENDING' => 'معلّق',
-    'APPROVED' => 'مقبول',
-    'REJECTED' => 'مرفوض',
+    'PENDING' => 'معلّق'.tr,
+    'APPROVED' => 'مقبول'.tr,
+    'REJECTED' => 'مرفوض'.tr,
     _ => status,
   };
 }

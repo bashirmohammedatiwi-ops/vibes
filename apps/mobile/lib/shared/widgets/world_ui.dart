@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/world_theme.dart';
 import '../models/models.dart';
 import 'vibes_graphics.dart';
@@ -23,6 +24,10 @@ String formatIqdShort(num value) {
   }
   return buf.toString();
 }
+
+/// الإنجليزية أعرض من العربية: يصغر النص ليتسع بدل أن يُقص.
+Widget _fitEnglish(Widget text) =>
+    I18n.isEn ? FittedBox(fit: BoxFit.scaleDown, child: text) : text;
 
 /// زر رئيسي بتدرج العالم وتوهّجه.
 class WorldButton extends StatelessWidget {
@@ -79,15 +84,17 @@ class WorldButton extends StatelessWidget {
                       const SizedBox(width: 8),
                     ],
                     Flexible(
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: VibesFont.ui,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          color: p.onAccent,
+                      child: _fitEnglish(
+                        Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: VibesFont.ui,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: p.onAccent,
+                          ),
                         ),
                       ),
                     ),
@@ -126,7 +133,7 @@ class WorldGhostButton extends StatelessWidget {
         height: height,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: onDark ? Colors.white.withValues(alpha: .1) : Colors.white,
+          color: onDark ? Colors.white.withValues(alpha: .1) : Vibes.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: onDark
@@ -142,15 +149,17 @@ class WorldGhostButton extends StatelessWidget {
               const SizedBox(width: 7),
             ],
             Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: VibesFont.ui,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: fg,
+              child: _fitEnglish(
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: fg,
+                  ),
                 ),
               ),
             ),
@@ -192,10 +201,10 @@ class WorldPageHeader extends StatelessWidget {
         night: true,
         intensity: 1.2,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            20,
-            top + 12,
+          padding: EdgeInsetsDirectional.fromSTEB(
             16,
+            top + 12,
+            20,
             bottom == null ? 26 : 16,
           ),
           child: Column(
@@ -322,22 +331,28 @@ class WorldPillTabs extends StatelessWidget {
                   height: 38,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: i == index ? Colors.white : Colors.transparent,
+                    color: i == index
+                        ? themed(Colors.white, p.accent)
+                        : Colors.transparent,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Flexible(
-                        child: Text(
-                          labels[i],
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: VibesFont.ui,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: i == index ? p.accentDeep : Colors.white,
+                        child: _fitEnglish(
+                          Text(
+                            labels[i],
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: VibesFont.ui,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: i == index
+                                  ? themed(p.accentDeep, p.onAccent)
+                                  : Colors.white,
+                            ),
                           ),
                         ),
                       ),
@@ -350,7 +365,7 @@ class WorldPillTabs extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: i == index
-                                ? p.accent
+                                ? themed(p.accent, p.onAccent)
                                 : Colors.white.withValues(alpha: .2),
                             borderRadius: BorderRadius.circular(999),
                           ),
@@ -360,7 +375,9 @@ class WorldPillTabs extends StatelessWidget {
                               fontFamily: 'Montserrat',
                               fontSize: 10.5,
                               fontWeight: FontWeight.w800,
-                              color: i == index ? p.onAccent : Colors.white,
+                              color: i == index
+                                  ? themed(p.onAccent, p.accent)
+                                  : Colors.white,
                             ),
                           ),
                         ),
@@ -416,7 +433,7 @@ class WorldEmpty extends StatelessWidget {
                 height: 64,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white,
+                  color: Vibes.surface,
                   border: Border.all(color: p.accent.withValues(alpha: .25)),
                   boxShadow: [
                     BoxShadow(

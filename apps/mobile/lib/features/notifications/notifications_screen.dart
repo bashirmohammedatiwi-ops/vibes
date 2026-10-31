@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/network/api_client.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/data/marketplace_providers.dart';
 import '../../shared/models/models.dart';
@@ -18,19 +19,19 @@ class NotificationsScreen extends ConsumerWidget {
   String _relative(DateTime? at) {
     if (at == null) return '';
     final diff = DateTime.now().difference(at);
-    if (diff.inMinutes < 1) return 'الآن';
-    if (diff.inMinutes < 60) return 'قبل ${diff.inMinutes} دقيقة';
-    if (diff.inHours < 24) return 'قبل ${diff.inHours} ساعة';
-    return 'قبل ${diff.inDays} يوم';
+    if (diff.inMinutes < 1) return 'الآن'.tr;
+    if (diff.inMinutes < 60) return 'قبل {n} دقيقة'.trN(diff.inMinutes);
+    if (diff.inHours < 24) return 'قبل {n} ساعة'.trN(diff.inHours);
+    return 'قبل {n} يوم'.trN(diff.inDays);
   }
 
   Color _typeColor(String type) => switch (type) {
     'PAYMENT' || 'REFUND' => Vibes.success,
     'MESSAGE' => Vibes.coral,
-    'OFFER' => const Color(0xFFD97706),
+    'OFFER' => themed(const Color(0xFFD97706), Vibes.warning),
     'INVOICE' => Vibes.info,
     'SOCIAL' => Vibes.mapple,
-    _ => const Color(0xFF6B7280),
+    _ => themed(const Color(0xFF6B7280), Vibes.inkTertiary),
   };
 
   IconData _icon(String type) => switch (type) {
@@ -92,8 +93,8 @@ class NotificationsScreen extends ConsumerWidget {
         child: Column(
           children: [
             MaisonPageHeader(
-              title: 'الإشعارات',
-              kicker: 'آخر المستجدات',
+              title: 'الإشعارات'.tr,
+              kicker: 'آخر المستجدات'.tr,
               onBack: () => context.pop(),
               trailing: PressScale(
                 onTap: () async {
@@ -122,7 +123,7 @@ class NotificationsScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        'قراءة الكل',
+                        'قراءة الكل'.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 12.5,
@@ -153,12 +154,12 @@ class NotificationsScreen extends ConsumerWidget {
                 ),
                 data: (list) {
                   if (list.isEmpty) {
-                    return const Center(
+                    return Center(
                       child: WorldEmpty(
                         icon: Icons.notifications_none_rounded,
-                        title: 'لا إشعارات بعد',
+                        title: 'لا إشعارات بعد'.tr,
                         subtitle:
-                            'ستصلك هنا تحديثات حجوزاتك ورسائلك والعروض الجديدة',
+                            'ستصلك هنا تحديثات حجوزاتك ورسائلك والعروض الجديدة'.tr,
                       ),
                     );
                   }
@@ -202,7 +203,10 @@ class NotificationsScreen extends ConsumerWidget {
                                     ? VibesTheme.textTertiaryOf(context)
                                     : _typeColor(n.type),
                                 background: n.isRead
-                                    ? const Color(0xFFF4F5F7)
+                                    ? themed(
+                                        const Color(0xFFF4F5F7),
+                                        Vibes.surfaceMuted,
+                                      )
                                     : _typeColor(n.type).withValues(alpha: .10),
                               ),
                               const SizedBox(width: 12),
@@ -316,13 +320,30 @@ class NotificationsScreen extends ConsumerWidget {
     final now = DateTime.now();
     if (at == null) return '';
     if (at.year == now.year && at.month == now.month && at.day == now.day) {
-      return 'اليوم';
+      return 'اليوم'.tr;
     }
     final yesterday = now.subtract(const Duration(days: 1));
     if (at.year == yesterday.year &&
         at.month == yesterday.month &&
         at.day == yesterday.day) {
-      return 'أمس';
+      return 'أمس'.tr;
+    }
+    if (I18n.isEn) {
+      const months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      return '${months[at.month - 1]} ${at.day}${at.year != now.year ? ', ${at.year}' : ''}';
     }
     return '${at.day}/${at.month}${at.year != now.year ? '/${at.year}' : ''}';
   }

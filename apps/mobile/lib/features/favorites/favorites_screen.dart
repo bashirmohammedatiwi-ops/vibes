@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:go_router/go_router.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/world_theme.dart';
 import '../../core/network/api_client.dart';
@@ -26,10 +27,10 @@ class FavoritesScreen extends ConsumerWidget {
         child: Column(
           children: [
             MaisonPageHeader(
-              title: 'المفضلة',
-              kicker: 'محفوظاتك',
+              title: 'المفضلة'.tr,
+              kicker: 'محفوظاتك'.tr,
               trailing: IconButton(
-                tooltip: 'قائمة جديدة',
+                tooltip: 'قائمة جديدة'.tr,
                 onPressed: () => _createCollection(context, ref),
                 icon: const Icon(Icons.playlist_add_rounded),
               ),
@@ -58,10 +59,10 @@ class FavoritesScreen extends ConsumerWidget {
                   if (list.isEmpty &&
                       collections.isEmpty &&
                       publicLists.isEmpty) {
-                    return const EmptyCanvas(
+                    return EmptyCanvas(
                       icon: Icons.favorite_outline_rounded,
-                      title: 'لا مفضلة بعد',
-                      subtitle: 'اضغط القلب على أي مكان لحفظه هنا ومتابعته',
+                      title: 'لا مفضلة بعد'.tr,
+                      subtitle: 'اضغط القلب على أي مكان لحفظه هنا ومتابعته'.tr,
                     );
                   }
 
@@ -118,7 +119,7 @@ class FavoritesScreen extends ConsumerWidget {
                                   if (collections.isNotEmpty)
                                     const SizedBox(height: 12),
                                   SectionHeader(
-                                    'قوائم عامة',
+                                    'قوائم عامة'.tr,
                                     accent: context.world.accent,
                                   ),
                                   const SizedBox(height: 8),
@@ -151,16 +152,14 @@ class FavoritesScreen extends ConsumerWidget {
                         final property = list[i - 1];
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 14),
-                          child:
-                              PropertyCard(
-                                    property: property,
-                                    heroNamespace: 'fav',
-                                    isFavorite: true,
-                                    onFavorite: (_) => ref
-                                        .read(favoritesProvider.notifier)
-                                        .toggle(property),
-                                  )
-                                  .listEntrance(i),
+                          child: PropertyCard(
+                            property: property,
+                            heroNamespace: 'fav',
+                            isFavorite: true,
+                            onFavorite: (_) => ref
+                                .read(favoritesProvider.notifier)
+                                .toggle(property),
+                          ).listEntrance(i),
                         );
                       },
                     ),
@@ -187,21 +186,21 @@ Future<void> _createCollection(BuildContext context, WidgetRef ref) async {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'قائمة جديدة',
+            'قائمة جديدة'.tr,
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 16),
-          MaisonField(label: 'اسم القائمة', controller: name),
+          MaisonField(label: 'اسم القائمة'.tr, controller: name),
           const SizedBox(height: 12),
-          MaisonField(label: 'وصف اختياري', controller: description),
+          MaisonField(label: 'وصف اختياري'.tr, controller: description),
           const SizedBox(height: 18),
           Row(
             children: [
               Expanded(
                 child: VibesButton(
-                  label: 'إلغاء',
+                  label: 'إلغاء'.tr,
                   ghost: true,
                   small: true,
                   onPressed: () => Navigator.pop(context, false),
@@ -210,7 +209,7 @@ Future<void> _createCollection(BuildContext context, WidgetRef ref) async {
               const SizedBox(width: 10),
               Expanded(
                 child: VibesButton(
-                  label: 'إنشاء',
+                  label: 'إنشاء'.tr,
                   small: true,
                   onPressed: () => Navigator.pop(context, true),
                 ),
@@ -237,7 +236,7 @@ Future<void> _createCollection(BuildContext context, WidgetRef ref) async {
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('تم إنشاء القائمة')));
+      ).showSnackBar(SnackBar(content: Text('تم إنشاء القائمة'.tr)));
     }
   } catch (e) {
     if (context.mounted) {
@@ -303,7 +302,7 @@ class _CollectionChip extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       subtitle == null || subtitle!.isEmpty
-                          ? '$count مكان'
+                          ? '{n} مكان'.trN(count)
                           : '$count · $subtitle',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

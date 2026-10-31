@@ -284,7 +284,7 @@ export class MarketplaceLifecycleService {
       case BookingStatus.COMPLETED:
         return { title: 'اكتمل حجزك', body: `نتمنى أن تكون استمتعت في ${place}` };
       case BookingStatus.DISPUTED:
-        return { title: 'نزاع مفتوح', body: `فريق VIBES يتابع حجز ${place}` };
+        return { title: 'نزاع مفتوح', body: `فريق أجواء يتابع حجز ${place}` };
       case BookingStatus.AWAITING_PAYMENT:
         return { title: 'بانتظار الدفع', body: `أكمل التحويل لحجز ${place}` };
       default:

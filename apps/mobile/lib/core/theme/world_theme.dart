@@ -111,8 +111,8 @@ class WorldPalette {
     night: Color(0xFF2A1F0E),
     nightHigh: Color(0xFF4A3718),
     glow: Color(0xFFC89844),
-    mood: 'ضيافة الأرض والشمس',
-    verb: 'احجز مزرعتك',
+    mood: 'ضيافة الأرض والشمس', // i18n-ok
+    verb: 'احجز مزرعتك', // i18n-ok
   );
 
   static const _hallLight = WorldPalette(
@@ -126,8 +126,8 @@ class WorldPalette {
     night: Color(0xFF0F2138),
     nightHigh: Color(0xFF1B3857),
     glow: Color(0xFF315879),
-    mood: 'ليلة العمر تستحق قاعة',
-    verb: 'احجز قاعتك',
+    mood: 'ليلة العمر تستحق قاعة', // i18n-ok
+    verb: 'احجز قاعتك', // i18n-ok
   );
 
   static const _decorationLight = WorldPalette(
@@ -141,8 +141,8 @@ class WorldPalette {
     night: Color(0xFF3A1020),
     nightHigh: Color(0xFF6A1F3A),
     glow: Color(0xFFED5477),
-    mood: 'تفاصيل تصنع الفرح',
-    verb: 'زيّن مناسبتك',
+    mood: 'تفاصيل تصنع الفرح', // i18n-ok
+    verb: 'زيّن مناسبتك', // i18n-ok
   );
 
   /// بوابة المالك — هوية تنفيذية: كحلي عميق وذهب، مستقلة عن عوالم الضيف.
@@ -157,8 +157,8 @@ class WorldPalette {
     night: Color(0xFF0B1A2E),
     nightHigh: Color(0xFF1B3857),
     glow: Color(0xFFC89844),
-    mood: 'إدارة أماكنك بثقة',
-    verb: 'أدِر أماكنك',
+    mood: 'إدارة أماكنك بثقة', // i18n-ok
+    verb: 'أدِر أماكنك', // i18n-ok
   );
 
   static const _farmDark = WorldPalette(
@@ -172,8 +172,8 @@ class WorldPalette {
     night: Color(0xFF2A1F0E),
     nightHigh: Color(0xFF4A3718),
     glow: Color(0xFFC89844),
-    mood: 'ضيافة الأرض والشمس',
-    verb: 'احجز مزرعتك',
+    mood: 'ضيافة الأرض والشمس', // i18n-ok
+    verb: 'احجز مزرعتك', // i18n-ok
   );
 
   static const _hallDark = WorldPalette(
@@ -187,8 +187,8 @@ class WorldPalette {
     night: Color(0xFF0F2138),
     nightHigh: Color(0xFF1B3857),
     glow: Color(0xFF5E8AB0),
-    mood: 'ليلة العمر تستحق قاعة',
-    verb: 'احجز قاعتك',
+    mood: 'ليلة العمر تستحق قاعة', // i18n-ok
+    verb: 'احجز قاعتك', // i18n-ok
   );
 
   static const _decorationDark = WorldPalette(
@@ -202,8 +202,8 @@ class WorldPalette {
     night: Color(0xFF3A1020),
     nightHigh: Color(0xFF6A1F3A),
     glow: Color(0xFFED5477),
-    mood: 'تفاصيل تصنع الفرح',
-    verb: 'زيّن مناسبتك',
+    mood: 'تفاصيل تصنع الفرح', // i18n-ok
+    verb: 'زيّن مناسبتك', // i18n-ok
   );
 
   static const _ownerDark = WorldPalette(
@@ -217,8 +217,8 @@ class WorldPalette {
     night: Color(0xFF0B1A2E),
     nightHigh: Color(0xFF1B3857),
     glow: Color(0xFFC89844),
-    mood: 'إدارة أماكنك بثقة',
-    verb: 'أدِر أماكنك',
+    mood: 'إدارة أماكنك بثقة', // i18n-ok
+    verb: 'أدِر أماكنك', // i18n-ok
   );
 
   static WorldPalette get farm => Appearance.isDark ? _farmDark : _farmLight;

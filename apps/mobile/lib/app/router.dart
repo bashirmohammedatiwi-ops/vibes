@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
+import '../core/i18n/i18n.dart';
 import '../core/theme/app_theme.dart';
 
 import '../features/auth/auth_controller.dart';
@@ -32,6 +33,7 @@ import '../features/social/following_screen.dart';
 import '../features/booking/invoices_screen.dart';
 import '../features/map/map_screen.dart';
 import '../features/compare/compare_feature.dart';
+import '../features/loyalty/loyalty_screen.dart';
 import '../features/provider/provider_shell.dart';
 import '../features/provider/provider_booking_detail_screen.dart';
 import '../features/provider/provider_account_screen.dart';
@@ -394,6 +396,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: '/loyalty',
+        pageBuilder: (context, state) =>
+            _fadeSlide(state: state, child: const LoyaltyScreen()),
+      ),
+      GoRoute(
         path: '/compare',
         pageBuilder: (context, state) =>
             _fadeSlide(state: state, child: const CompareScreen()),
@@ -512,14 +519,14 @@ class _RouteNotFound extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
+                Icon(
                   Icons.explore_off_outlined,
                   size: 56,
-                  color: Color(0xFFC89844),
+                  color: Vibes.teal,
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'الصفحة غير متاحة',
+                  'الصفحة غير متاحة'.tr,
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
                     fontSize: 20,
@@ -528,18 +535,18 @@ class _RouteNotFound extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'ربما نُقل المحتوى أو انتهى الرابط.',
+                  'ربما نُقل المحتوى أو انتهى الرابط.'.tr,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
-                    color: Color(0xFF565D68),
+                    color: Vibes.inkSecondary,
                   ),
                 ),
                 const SizedBox(height: 22),
                 FilledButton(
                   onPressed: () => context.go('/home'),
                   child: Text(
-                    'العودة للرئيسية',
+                    'العودة للرئيسية'.tr,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontWeight: FontWeight.w800,

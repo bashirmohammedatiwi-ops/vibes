@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/vibes_net_image.dart';
 import '../../shared/data/marketplace_providers.dart';
@@ -20,8 +21,8 @@ class FollowingScreen extends ConsumerWidget {
         child: Column(
           children: [
             MaisonPageHeader(
-              title: 'أتابعهم',
-              kicker: 'أصحاب الأماكن',
+              title: 'أتابعهم'.tr,
+              kicker: 'أصحاب الأماكن'.tr,
               onBack: () => context.pop(),
             ),
             Expanded(
@@ -42,11 +43,11 @@ class FollowingScreen extends ConsumerWidget {
                 ),
                 data: (list) {
                   if (list.isEmpty) {
-                    return const EmptyCanvas(
+                    return EmptyCanvas(
                       icon: Icons.person_add_alt_1_outlined,
-                      title: 'لا تتابع أحداً بعد',
+                      title: 'لا تتابع أحداً بعد'.tr,
                       subtitle:
-                          'تابع مزوداً من صفحته لتصلك تجاربه وأماكنه الجديدة',
+                          'تابع مزوداً من صفحته لتصلك تجاربه وأماكنه الجديدة'.tr,
                     );
                   }
                   return RefreshIndicator(
@@ -101,7 +102,7 @@ class FollowingScreen extends ConsumerWidget {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '${p.followers} متابع',
+                                      '{n} متابع'.trN(p.followers),
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodySmall

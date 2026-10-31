@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/world_theme.dart';
 import '../../core/utils/vibes_net_image.dart';
 import 'maison_shapes.dart';
@@ -33,7 +34,9 @@ class MaisonChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
           gradient: active ? p.fill : null,
-          color: active ? null : const Color(0xFFF4F5F7),
+          color: active
+              ? null
+              : themed(const Color(0xFFF4F5F7), VibesDark.surfaceMuted),
           borderRadius: BorderRadius.circular(999),
         ),
         child: Text(
@@ -69,6 +72,11 @@ class MaisonSegmented extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bar = accent ?? Vibes.teal;
+    // ليلاً التعبئة فاتحة غالباً، فالنص فوقها حبر ليلي لا أبيض.
+    final selectedInk = themed(
+      Colors.white,
+      bar.computeLuminance() > .3 ? VibesDark.onTeal : Colors.white,
+    );
     return DecoratedBox(
       decoration: BoxDecoration(
         color: VibesTheme.surfaceOf(context),
@@ -109,18 +117,30 @@ class MaisonSegmented extends StatelessWidget {
                             onTap: () => onChanged(i),
                             behavior: HitTestBehavior.opaque,
                             child: Center(
-                              child: AnimatedDefaultTextStyle(
-                                duration: VibesMotion.fast,
-                                style: Theme.of(context).textTheme.labelMedium!
-                                    .copyWith(
-                                      fontWeight: FontWeight.w800,
-                                      color: i == index
-                                          ? Colors.white
-                                          : VibesTheme.textSecondaryOf(context),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                  ),
+                                  child: AnimatedDefaultTextStyle(
+                                    duration: VibesMotion.fast,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium!
+                                        .copyWith(
+                                          fontWeight: FontWeight.w800,
+                                          color: i == index
+                                              ? selectedInk
+                                              : VibesTheme.textSecondaryOf(
+                                                  context,
+                                                ),
+                                        ),
+                                    child: Text(
+                                      labels[i],
+                                      textAlign: TextAlign.center,
                                     ),
-                                child: Text(
-                                  labels[i],
-                                  textAlign: TextAlign.center,
+                                  ),
                                 ),
                               ),
                             ),
@@ -266,9 +286,9 @@ class MaisonPageHeader extends StatelessWidget {
               child: Container(
                 width: 42,
                 height: 42,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Color(0xFFF2F3F5),
+                  color: themed(const Color(0xFFF2F3F5), VibesDark.surfaceMuted),
                 ),
                 child: Icon(
                   Icons.arrow_back_rounded,
@@ -458,7 +478,7 @@ class MaisonMenuRow extends StatelessWidget {
                 ),
               ),
             ),
-            trailing ?? Icon(Icons.chevron_left_rounded, color: p.accentDeep.withValues(alpha: .6), size: 20),
+            trailing ?? Icon(I18n.isEn ? Icons.chevron_right_rounded : Icons.chevron_left_rounded, color: p.accentDeep.withValues(alpha: .6), size: 20),
           ],
         ),
       ),
@@ -611,9 +631,9 @@ class MaisonNightWash extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            const Positioned(
+            const PositionedDirectional(
               top: -20,
-              left: -10,
+              end: -10,
               child: IgnorePointer(
                 child: Opacity(
                   opacity: 0.08,
@@ -784,15 +804,15 @@ String maisonError(Object error) {
       lower.contains('err_name_not_resolved') ||
       lower.contains('err_internet_disconnected') ||
       lower.contains('err_connection_refused')) {
-    return 'لا اتصال بالإنترنت — تحقق من الشبكة وحاول مجدداً';
+    return 'لا اتصال بالإنترنت — تحقق من الشبكة وحاول مجدداً'.tr;
   }
   if (lower.contains('handshake') || lower.contains('certificate')) {
-    return 'تعذّر تأمين الاتصال بالخادم — حاول لاحقاً';
+    return 'تعذّر تأمين الاتصال بالخادم — حاول لاحقاً'.tr;
   }
 
-  if (text.isEmpty) return 'تعذّر إكمال الطلب. حاول مرة أخرى.';
+  if (text.isEmpty) return 'تعذّر إكمال الطلب. حاول مرة أخرى.'.tr;
   if (text.contains('Exception') || text.contains('Error:')) {
-    return 'تعذّر إكمال الطلب. حاول مرة أخرى.';
+    return 'تعذّر إكمال الطلب. حاول مرة أخرى.'.tr;
   }
   return text;
 }
@@ -835,15 +855,17 @@ Future<bool> showMaisonConfirm({
   required BuildContext context,
   required String title,
   String? message,
-  String confirmLabel = 'تأكيد',
-  String cancelLabel = 'إلغاء',
+  String? confirmLabel,
+  String? cancelLabel,
   bool destructive = false,
 }) async {
+  final confirmText = confirmLabel ?? 'تأكيد'.tr;
+  final cancelText = cancelLabel ?? 'إلغاء'.tr;
   final ok = await showGeneralDialog<bool>(
     context: context,
     barrierDismissible: true,
-    barrierLabel: cancelLabel,
-    barrierColor: const Color(0x661B3857),
+    barrierLabel: cancelText,
+    barrierColor: themed(const Color(0x661B3857), const Color(0x99000000)),
     transitionDuration: VibesMotion.base,
     pageBuilder: (ctx, _, __) {
       return Center(
@@ -882,7 +904,7 @@ Future<bool> showMaisonConfirm({
                       children: [
                         Expanded(
                           child: VibesButton(
-                            label: cancelLabel,
+                            label: cancelText,
                             ghost: true,
                             small: true,
                             onPressed: () => Navigator.of(ctx).pop(false),
@@ -891,7 +913,7 @@ Future<bool> showMaisonConfirm({
                         const SizedBox(width: 10),
                         Expanded(
                           child: VibesButton(
-                            label: confirmLabel,
+                            label: confirmText,
                             small: true,
                             onPressed: () => Navigator.of(ctx).pop(true),
                           ),
@@ -928,15 +950,17 @@ Future<String?> showMaisonPrompt({
   String? message,
   String? initial,
   String? hint,
-  String confirmLabel = 'حفظ',
-  String cancelLabel = 'إلغاء',
+  String? confirmLabel,
+  String? cancelLabel,
 }) {
+  final confirmText = confirmLabel ?? 'حفظ'.tr;
+  final cancelText = cancelLabel ?? 'إلغاء'.tr;
   final controller = TextEditingController(text: initial ?? '');
   return showGeneralDialog<String>(
     context: context,
     barrierDismissible: true,
-    barrierLabel: cancelLabel,
-    barrierColor: const Color(0x661B3857),
+    barrierLabel: cancelText,
+    barrierColor: themed(const Color(0x661B3857), const Color(0x99000000)),
     transitionDuration: VibesMotion.base,
     pageBuilder: (ctx, _, __) {
       return Center(
@@ -970,13 +994,13 @@ Future<String?> showMaisonPrompt({
                       ),
                     ],
                     const SizedBox(height: 16),
-                    MaisonField(label: hint ?? 'النص', controller: controller),
+                    MaisonField(label: hint ?? 'النص'.tr, controller: controller),
                     const SizedBox(height: 18),
                     Row(
                       children: [
                         Expanded(
                           child: VibesButton(
-                            label: cancelLabel,
+                            label: cancelText,
                             ghost: true,
                             small: true,
                             onPressed: () => Navigator.of(ctx).pop(),
@@ -985,7 +1009,7 @@ Future<String?> showMaisonPrompt({
                         const SizedBox(width: 10),
                         Expanded(
                           child: VibesButton(
-                            label: confirmLabel,
+                            label: confirmText,
                             small: true,
                             onPressed: () =>
                                 Navigator.of(ctx).pop(controller.text.trim()),

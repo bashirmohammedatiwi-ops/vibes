@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -15,18 +16,18 @@ class InvoicesScreen extends ConsumerWidget {
   const InvoicesScreen({super.key});
 
   String _statusAr(String status) => switch (status) {
-    'PAID' => 'مدفوعة',
-    'ISSUED' => 'صادرة',
-    'REFUNDED' => 'مستردة',
-    'VOID' => 'ملغاة',
+    'PAID' => 'مدفوعة'.tr,
+    'ISSUED' => 'صادرة'.tr,
+    'REFUNDED' => 'مستردة'.tr,
+    'VOID' => 'ملغاة'.tr,
     _ => status,
   };
 
   Color _statusColor(String status) => switch (status) {
-    'PAID' => const Color(0xFF0E9F6E),
-    'REFUNDED' => const Color(0xFFDC2626),
+    'PAID' => themed(const Color(0xFF0E9F6E), VibesDark.success),
+    'REFUNDED' => themed(const Color(0xFFDC2626), VibesDark.danger),
     'VOID' => Vibes.inkTertiary,
-    _ => const Color(0xFFD97706),
+    _ => themed(const Color(0xFFD97706), VibesDark.warning),
   };
 
   @override
@@ -41,10 +42,12 @@ class InvoicesScreen extends ConsumerWidget {
       body: Column(
         children: [
           WorldPageHeader(
-            title: 'الفواتير',
+            title: 'الفواتير'.tr,
             subtitle: invoices.hasValue && invoices.value!.isNotEmpty
-                ? '${invoices.value!.length} فاتورة · مدفوع ${formatIqdShort(paidTotal)} د.ع'
-                : 'سجلات الدفع لحجوزاتك',
+                ? '{n} فاتورة · مدفوع {amount} د.ع' // i18n-ok
+                      .trN(invoices.value!.length)
+                      .replaceAll('{amount}', formatIqdShort(paidTotal))
+                : 'سجلات الدفع لحجوزاتك'.tr,
             showBack: true,
             onBack: () => context.pop(),
           ),
@@ -66,11 +69,11 @@ class InvoicesScreen extends ConsumerWidget {
               ),
               data: (list) {
                 if (list.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: WorldEmpty(
                       icon: Icons.receipt_long_rounded,
-                      title: 'لا فواتير بعد',
-                      subtitle: 'تصدر الفاتورة تلقائياً بعد تأكيد دفع حجزك',
+                      title: 'لا فواتير بعد'.tr,
+                      subtitle: 'تصدر الفاتورة تلقائياً بعد تأكيد دفع حجزك'.tr,
                     ),
                   );
                 }
@@ -96,7 +99,7 @@ class InvoicesScreen extends ConsumerWidget {
                         child: Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Vibes.surface,
                             borderRadius: BorderRadius.circular(22),
                             border: Border.all(
                               color: p.accent.withValues(alpha: .10),
@@ -130,7 +133,7 @@ class InvoicesScreen extends ConsumerWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      row.propertyName ?? 'حجز',
+                                      row.propertyName ?? 'حجز'.tr,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
@@ -172,7 +175,7 @@ class InvoicesScreen extends ConsumerWidget {
                                     ),
                                   ),
                                   Text(
-                                    'د.ع',
+                                    'د.ع'.tr,
                                     style: TextStyle(
                                       fontFamily: VibesFont.ui,
                                       fontSize: 11,
@@ -187,17 +190,26 @@ class InvoicesScreen extends ConsumerWidget {
                                       ref.read(apiClientProvider),
                                       path: '/api/invoices/${row.id}/print',
                                       fallbackText: [
-                                        'فاتورة VIBES ${row.number}',
-                                        row.propertyName ?? 'حجز',
-                                        '${PriceText.format(row.total)} د.ع',
+                                        'فاتورة أجواء {number}'.trArgs({
+                                          'number': row.number,
+                                        }),
+                                        row.propertyName ?? 'حجز'.tr,
+                                        '{amount} د.ع'.trArgs({
+                                          'amount': PriceText.format(row.total),
+                                        }),
                                       ].join('\n'),
-                                      subject: 'فاتورة ${row.number}',
+                                      subject: 'فاتورة {number}'.trArgs({
+                                        'number': row.number,
+                                      }),
                                     ),
                                     child: Container(
                                       width: 34,
                                       height: 34,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFF4F5F7),
+                                        color: themed(
+                                          const Color(0xFFF4F5F7),
+                                          VibesDark.surfaceMuted,
+                                        ),
                                         borderRadius: BorderRadius.circular(11),
                                       ),
                                       child: Icon(

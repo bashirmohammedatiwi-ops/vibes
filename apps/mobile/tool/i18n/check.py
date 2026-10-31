@@ -5,7 +5,7 @@ Reports, under lib/:
   UNWRAPPED  Arabic string literal not wrapped in .tr / .trArgs / .trN
              (a literal that exists in en.json and is translated at its use
              site is fine: mark such lines `// i18n-ok`, e.g. const lists).
-  MISSING    wrapped key with no English in en.json or tool/i18n/parts/*.json
+  MISSING    wrapped key with no English in en.json
 """
 import glob, json, os, re, sys
 root = os.path.dirname(os.path.abspath(__file__))
@@ -25,21 +25,24 @@ for d, _, fs in os.walk(lib):
         rel = os.path.relpath(path, lib)
         if prefixes and not any(rel.startswith(x) for x in prefixes):
             continue
-        for no, line in enumerate(open(path, encoding='utf-8'), 1):
-            code = line.split(' //')[0] if not ar.search(line.split(' //')[0]) or "'" in line.split(' //')[0] else line
-            if line.strip().startswith('//') or 'i18n-ok' in line:
+        src = open(path, encoding='utf-8').read()
+        lines = src.split('\n')
+        for m in lit.finditer(src):
+            lit_text = m.group(1)[1:-1]
+            if not ar.search(lit_text):
                 continue
-            for m in lit.finditer(code):
-                s = m.group(1)[1:-1]
-                if not ar.search(s):
-                    continue
-                value = s.replace("\\'", "'").replace('\\n', '\n').replace('\\"', '"')
-                if m.group(2):
-                    if value not in known:
-                        missing += 1
-                        print(f'MISSING   {rel}:{no}: {value}')
-                else:
-                    unwrapped += 1
-                    print(f'UNWRAPPED {rel}:{no}: {s}')
+            no = src.count('\n', 0, m.start()) + 1
+            line = lines[no - 1]
+            before = line[:m.start() - src.rfind('\n', 0, m.start()) - 1]
+            if '//' in before or 'i18n-ok' in line or (no < len(lines) and 'i18n-ok' in lines[no].split("'")[0]):
+                continue
+            value = lit_text.replace("\\'", "'").replace('\\n', '\n').replace('\\"', '"')
+            if m.group(2):
+                if value not in known:
+                    missing += 1
+                    print(f'MISSING   {rel}:{no}: {value}')
+            else:
+                unwrapped += 1
+                print(f'UNWRAPPED {rel}:{no}: {lit_text}')
 print(f'unwrapped={unwrapped} missing={missing}')
 sys.exit(1 if unwrapped or missing else 0)

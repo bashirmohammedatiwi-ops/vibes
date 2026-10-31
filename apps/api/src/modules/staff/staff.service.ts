@@ -594,7 +594,7 @@ export class StaffService {
     const labelByConv = new Map(
       conversations.map((c) => [
         c.id,
-        c.property?.name ?? c.booking?.property?.name ?? (c.kind === 'SUPPORT' ? 'دعم VIBES' : 'محادثة'),
+        c.property?.name ?? c.booking?.property?.name ?? (c.kind === 'SUPPORT' ? 'دعم أجواء' : 'محادثة'),
       ]),
     );
     const primaryConversationId =

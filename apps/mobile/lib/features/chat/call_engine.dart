@@ -4,6 +4,8 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart';
 
+import '../../core/i18n/i18n.dart';
+
 /// ═══════════════════════════════════════════════════════════
 /// محرك الاتصال VIBES — طبقة احترافية فوق LiveKit:
 /// جودة تكيفية، مراقبة شبكة حية، استعادة تلقائية للانقطاعات،
@@ -18,10 +20,10 @@ enum CallLine {
   lost;
 
   String get label => switch (this) {
-    CallLine.excellent => 'ممتاز',
-    CallLine.good => 'جيد',
-    CallLine.poor => 'ضعيف',
-    CallLine.lost => 'منقطع',
+    CallLine.excellent => 'ممتاز'.tr,
+    CallLine.good => 'جيد'.tr,
+    CallLine.poor => 'ضعيف'.tr,
+    CallLine.lost => 'منقطع'.tr,
   };
 
   int get bars => switch (this) {
@@ -49,10 +51,10 @@ enum CallFailure {
 
   String get userMessage => switch (this) {
     CallFailure.network =>
-      'تعذّر الوصول لخادم المكالمات — تحقق من اتصال الإنترنت',
-    CallFailure.token => 'انتهت صلاحية المكالمة، أعد المحاولة',
-    CallFailure.server => 'خدمة المكالمات غير متاحة حالياً',
-    CallFailure.unknown => 'تعذّر بدء المكالمة',
+      'تعذّر الوصول لخادم المكالمات — تحقق من اتصال الإنترنت'.tr,
+    CallFailure.token => 'انتهت صلاحية المكالمة، أعد المحاولة'.tr,
+    CallFailure.server => 'خدمة المكالمات غير متاحة حالياً'.tr,
+    CallFailure.unknown => 'تعذّر بدء المكالمة'.tr,
   };
 
   /// هل يستحق الفشل إعادة محاولة تلقائية؟
@@ -168,7 +170,7 @@ class CallEngine {
         lastError = e;
         final failure = _classifyError(e);
         debugPrint(
-          '[CallEngine] محاولة $_connectAttempts/$_maxConnectAttempts فشلت: $e',
+          '[CallEngine] attempt $_connectAttempts/$_maxConnectAttempts failed: $e',
         );
         if (failure.retryable && _connectAttempts < _maxConnectAttempts) {
           final backoffMs =

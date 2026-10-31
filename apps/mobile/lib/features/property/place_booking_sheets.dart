@@ -1,4 +1,5 @@
 import '../../core/theme/world_theme.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -141,7 +142,7 @@ class PlaceSheetConfirm extends StatelessWidget {
         child: FilledButton(
           style: FilledButton.styleFrom(
             backgroundColor: context.world.accentDeep,
-            foregroundColor: Colors.white,
+            foregroundColor: themed(Colors.white, context.world.onAccent),
             padding: const EdgeInsets.symmetric(vertical: 15),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
@@ -171,7 +172,7 @@ Future<ShiftType?> showPlaceShiftSheet({
 }) {
   return showModalBottomSheet<ShiftType>(
     context: context,
-    backgroundColor: Colors.white,
+    backgroundColor: Vibes.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
@@ -181,8 +182,8 @@ Future<ShiftType?> showPlaceShiftSheet({
       return StatefulBuilder(
         builder: (ctx, setSheet) {
           return PlaceSheetFrame(
-            title: 'اختر فترة الإقامة',
-            subtitle: 'التوفر محسوب من تقويم المكان — الفرق في السعر واضح',
+            title: 'اختر فترة الإقامة'.tr,
+            subtitle: 'التوفر محسوب من تقويم المكان — الفرق في السعر واضح'.tr,
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
               child: _ShiftOptions(
@@ -193,7 +194,7 @@ Future<ShiftType?> showPlaceShiftSheet({
               ),
             ),
             footer: PlaceSheetConfirm(
-              label: 'اعتماد الفترة',
+              label: 'اعتماد الفترة'.tr,
               onPressed: () => Navigator.pop(ctx, current),
             ),
           );
@@ -224,7 +225,7 @@ class _ShiftOptions extends StatelessWidget {
     final options = <(ShiftType, String, String?, IconData, Color, num)>[
       (
         ShiftType.morning,
-        'الفترة الصباحية',
+        'الفترة الصباحية'.tr,
         labels.morning,
         Icons.wb_sunny_outlined,
         placeShiftMorning,
@@ -232,7 +233,7 @@ class _ShiftOptions extends StatelessWidget {
       ),
       (
         ShiftType.evening,
-        'الفترة المسائية',
+        'الفترة المسائية'.tr,
         labels.evening,
         Icons.dark_mode_outlined,
         placeShiftEvening,
@@ -240,7 +241,7 @@ class _ShiftOptions extends StatelessWidget {
       ),
       (
         ShiftType.full,
-        'اليوم الكامل',
+        'اليوم الكامل'.tr,
         null,
         Icons.calendar_today_rounded,
         placeShiftFull,
@@ -306,7 +307,7 @@ class _ShiftTile extends StatelessWidget {
     final available = availability.isAvailable;
 
     return Material(
-      color: selected ? tint.withValues(alpha: 0.05) : Colors.white,
+      color: selected ? tint.withValues(alpha: 0.05) : Vibes.surface,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: available
@@ -342,7 +343,7 @@ class _ShiftTile extends StatelessWidget {
                   child: Icon(
                     icon,
                     size: 21,
-                    color: selected ? Colors.white : tint,
+                    color: selected ? placeOnFill : tint,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -380,7 +381,10 @@ class _ShiftTile extends StatelessWidget {
                             height: 6,
                             decoration: BoxDecoration(
                               color: available
-                                  ? const Color(0xFF16A34A)
+                                  ? themed(
+                                      const Color(0xFF16A34A),
+                                      VibesDark.success,
+                                    )
                                   : placeInk2,
                               shape: BoxShape.circle,
                             ),
@@ -390,18 +394,25 @@ class _ShiftTile extends StatelessWidget {
                             child: Text(
                               available
                                   ? (availability.nextDate != null
-                                        ? '${availability.availableDays} يوم متاح · أقربها ${placeFormatDateShort(availability.nextDate!)}'
-                                        : '${availability.availableDays} يوم متاح')
-                                  : 'لا توفر حالياً لهذه الفترة',
+                                        ? '{n} يوم متاح · أقربها {date}'.tr
+                                              .trN(availability.availableDays)
+                                              .replaceAll(
+                                                '{date}',
+                                                placeFormatDateShort(
+                                                  availability.nextDate!,
+                                                ),
+                                              )
+                                        : '{n} يوم متاح'.trN(
+                                            availability.availableDays,
+                                          ))
+                                  : 'لا توفر حالياً لهذه الفترة'.tr,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontFamily: VibesFont.ui,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
-                                color: available
-                                    ? const Color(0xFF15803D)
-                                    : placeInk2,
+                                color: available ? placeSuccess : placeInk2,
                               ),
                             ),
                           ),
@@ -454,7 +465,7 @@ Future<int?> showPlaceGuestsSheet({
 }) {
   return showModalBottomSheet<int>(
     context: context,
-    backgroundColor: Colors.white,
+    backgroundColor: Vibes.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
@@ -467,17 +478,17 @@ Future<int?> showPlaceGuestsSheet({
           builder: (ctx, setSheet) {
             final max = capacity > 0 ? capacity : 200;
             return PlaceSheetFrame(
-              title: 'كم عدد الضيوف؟',
+              title: 'كم عدد الضيوف؟'.tr,
               subtitle: capacity > 0
-                  ? 'سعة المكان $capacity — اكتب الرقم مباشرة'
-                  : 'اكتب العدد من لوحة المفاتيح',
+                  ? 'سعة المكان {n} — اكتب الرقم مباشرة'.trArgs({'n': capacity})
+                  : 'اكتب العدد من لوحة المفاتيح'.tr,
               child: PlaceGuestsEditor(
                 value: value,
                 max: max,
                 onChanged: (v) => setSheet(() => value = v),
               ),
               footer: PlaceSheetConfirm(
-                label: 'اعتماد عدد الضيوف',
+                label: 'اعتماد عدد الضيوف'.tr,
                 onPressed: () => Navigator.pop(ctx, value),
               ),
             );
@@ -509,12 +520,12 @@ class _PlaceGuestsEditorState extends State<PlaceGuestsEditor> {
   late final TextEditingController _controller;
   late final FocusNode _focus;
 
-  static const _scenes = [
-    (1, 'شخصي', Icons.person_outline_rounded),
-    (2, 'ثنائي', Icons.people_outline_rounded),
-    (4, 'عائلي', Icons.family_restroom_rounded),
-    (8, 'حفلة', Icons.celebration_outlined),
-    (15, 'مناسبة كبيرة', Icons.groups_2_rounded),
+  static List<(int, String, IconData)> get _scenes => [
+    (1, 'شخصي'.tr, Icons.person_outline_rounded),
+    (2, 'ثنائي'.tr, Icons.people_outline_rounded),
+    (4, 'عائلي'.tr, Icons.family_restroom_rounded),
+    (8, 'حفلة'.tr, Icons.celebration_outlined),
+    (15, 'مناسبة كبيرة'.tr, Icons.groups_2_rounded),
   ];
 
   @override
@@ -635,7 +646,7 @@ class _PlaceGuestsEditorState extends State<PlaceGuestsEditor> {
                         ),
                         decoration: InputDecoration(
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: Vibes.surface,
                           contentPadding: const EdgeInsets.symmetric(
                             vertical: 12,
                           ),
@@ -674,7 +685,11 @@ class _PlaceGuestsEditorState extends State<PlaceGuestsEditor> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  value == 1 ? 'ضيف واحد' : '$value ضيوف · حد أقصى $max',
+                  value == 1
+                      ? 'ضيف واحد'.tr
+                      : '{n} ضيوف · حد أقصى {max}'.tr
+                            .trN(value)
+                            .replaceAll('{max}', '$max'),
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
                     fontSize: 12.5,
@@ -689,7 +704,7 @@ class _PlaceGuestsEditorState extends State<PlaceGuestsEditor> {
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: Text(
-              'اختيار سريع',
+              'اختيار سريع'.tr,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontSize: 12,
@@ -755,7 +770,9 @@ class _QuickCountChip extends StatelessWidget {
               fontFamily: 'Montserrat',
               fontSize: 12.5,
               fontWeight: FontWeight.w800,
-              color: selected ? Colors.white : placeInk,
+              color: selected
+                  ? themed(Colors.white, context.world.onAccent)
+                  : placeInk,
             ),
           ),
         ),
@@ -778,7 +795,9 @@ class _RoundBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: enabled ? context.world.accentDeep : const Color(0xFFEDF0F4),
+      color: enabled
+          ? context.world.accentDeep
+          : themed(const Color(0xFFEDF0F4), VibesDark.hairline),
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
         onTap: enabled
@@ -794,7 +813,9 @@ class _RoundBtn extends StatelessWidget {
           child: Icon(
             icon,
             size: 24,
-            color: enabled ? Colors.white : placeInk2,
+            color: enabled
+                ? themed(Colors.white, context.world.onAccent)
+                : placeInk2,
           ),
         ),
       ),
@@ -810,7 +831,7 @@ Future<String?> showPlaceNotesSheet({
   return showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.white,
+    backgroundColor: Vibes.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
@@ -819,8 +840,8 @@ Future<String?> showPlaceNotesSheet({
       return Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
         child: PlaceSheetFrame(
-          title: 'ملاحظة للمضيف',
-          subtitle: 'مناسبتك أو طلب خاص — تصل للمضيف مع الحجز',
+          title: 'ملاحظة للمضيف'.tr,
+          subtitle: 'مناسبتك أو طلب خاص — تصل للمضيف مع الحجز'.tr,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
             child: TextField(
@@ -828,7 +849,8 @@ Future<String?> showPlaceNotesSheet({
               maxLines: 4,
               textInputAction: TextInputAction.done,
               decoration: InputDecoration(
-                hintText: 'مثال: حفل تخرج — نحتاج الطاولة الرئيسية قبل الوصول',
+                hintText:
+                    'مثال: حفل تخرج — نحتاج الطاولة الرئيسية قبل الوصول'.tr,
                 hintStyle: TextStyle(fontFamily: VibesFont.ui, fontSize: 12.5),
                 filled: true,
                 fillColor: placePaper,
@@ -840,7 +862,7 @@ Future<String?> showPlaceNotesSheet({
             ),
           ),
           footer: PlaceSheetConfirm(
-            label: 'حفظ',
+            label: 'حفظ'.tr,
             onPressed: () => Navigator.pop(ctx, controller.text),
           ),
         ),
@@ -860,7 +882,7 @@ Future<String?> showPlaceCouponSheet({
   return showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.white,
+    backgroundColor: Vibes.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
@@ -869,8 +891,8 @@ Future<String?> showPlaceCouponSheet({
       return Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
         child: PlaceSheetFrame(
-          title: 'رمز خصم',
-          subtitle: 'يُطبَّق فوراً ويرى المضيف النتيجة',
+          title: 'رمز خصم'.tr,
+          subtitle: 'يُطبَّق فوراً ويرى المضيف النتيجة'.tr,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
             child: Column(
@@ -881,7 +903,7 @@ Future<String?> showPlaceCouponSheet({
                   textCapitalization: TextCapitalization.characters,
                   textInputAction: TextInputAction.done,
                   decoration: InputDecoration(
-                    hintText: 'أدخل الرمز',
+                    hintText: 'أدخل الرمز'.tr,
                     filled: true,
                     fillColor: placePaper,
                     border: OutlineInputBorder(
@@ -889,17 +911,14 @@ Future<String?> showPlaceCouponSheet({
                       borderSide: BorderSide.none,
                     ),
                     suffixIcon: applied
-                        ? const Icon(
-                            Icons.check_circle,
-                            color: Color(0xFF15803D),
-                          )
+                        ? Icon(Icons.check_circle, color: placeSuccess)
                         : null,
                   ),
                 ),
                 if (suggested.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Text(
-                    'رموز متاحة لهذا المكان',
+                    'رموز متاحة لهذا المكان'.tr,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 11,
@@ -928,7 +947,7 @@ Future<String?> showPlaceCouponSheet({
                       fontFamily: VibesFont.ui,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFFB45309),
+                      color: placeWarn,
                     ),
                   ),
                 ],
@@ -936,7 +955,7 @@ Future<String?> showPlaceCouponSheet({
             ),
           ),
           footer: PlaceSheetConfirm(
-            label: 'تطبيق',
+            label: 'تطبيق'.tr,
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
           ),
         ),

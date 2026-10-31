@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../i18n/i18n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -87,12 +88,12 @@ final moderationProvider =
     );
 
 const _reasons = [
-  'محتوى مسيء أو كراهية',
-  'محتوى جنسي أو غير لائق',
-  'تحرّش أو إزعاج',
-  'احتيال أو معلومات مضللة',
-  'رسائل مزعجة (سبام)',
-  'سبب آخر',
+  'محتوى مسيء أو كراهية', // i18n-ok
+  'محتوى جنسي أو غير لائق', // i18n-ok
+  'تحرّش أو إزعاج', // i18n-ok
+  'احتيال أو معلومات مضللة', // i18n-ok
+  'رسائل مزعجة (سبام)', // i18n-ok
+  'سبب آخر', // i18n-ok
 ];
 
 /// قائمة «⋯» موحّدة: إبلاغ / حظر المستخدم. [type]: POST, COMMENT, REVIEW,
@@ -114,7 +115,7 @@ Future<bool> showModerationSheet(
   if (auth.user != null && userId != null && auth.user!.id == userId) {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('هذا محتواك')));
+    ).showSnackBar(SnackBar(content: Text('هذا محتواك'.tr)));
     return false;
   }
   if (!context.mounted) return false;
@@ -127,37 +128,34 @@ Future<bool> showModerationSheet(
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            leading: const Icon(Icons.flag_outlined, color: Color(0xFFC2402F)),
+            leading: Icon(Icons.flag_outlined, color: Vibes.danger),
             title: Text(
-              'إبلاغ عن محتوى غير لائق',
+              'إبلاغ عن محتوى غير لائق'.tr,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontWeight: FontWeight.w800,
               ),
             ),
             subtitle: Text(
-              'يراجعه فريق VIBES خلال 24 ساعة',
+              'يراجعه فريق أجواء خلال 24 ساعة'.tr,
               style: TextStyle(fontFamily: VibesFont.ui),
             ),
             onTap: () => Navigator.pop(ctx, 'report'),
           ),
           if (allowBlock && userId != null)
             ListTile(
-              leading: const Icon(
-                Icons.block_rounded,
-                color: Color(0xFFC2402F),
-              ),
+              leading: Icon(Icons.block_rounded, color: Vibes.danger),
               title: Text(
                 userName == null || userName.isEmpty
-                    ? 'حظر هذا المستخدم'
-                    : 'حظر $userName',
+                    ? 'حظر هذا المستخدم'.tr
+                    : 'حظر {name}'.trArgs({'name': userName}),
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
                   fontWeight: FontWeight.w800,
                 ),
               ),
               subtitle: Text(
-                'لن ترى محتواه أو رسائله بعد الآن',
+                'لن ترى محتواه أو رسائله بعد الآن'.tr,
                 style: TextStyle(fontFamily: VibesFont.ui),
               ),
               onTap: () => Navigator.pop(ctx, 'block'),
@@ -181,7 +179,7 @@ Future<bool> showModerationSheet(
             Padding(
               padding: EdgeInsets.only(bottom: 6),
               child: Text(
-                'ما المشكلة؟',
+                'ما المشكلة؟'.tr,
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
                   fontSize: 16,
@@ -192,7 +190,8 @@ Future<bool> showModerationSheet(
             for (final r in _reasons)
               ListTile(
                 title: Text(
-                  r,
+                  // العربية تُرسل للخادم كما هي؛ الترجمة للعرض فقط.
+                  r.tr,
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
                     fontWeight: FontWeight.w700,
@@ -209,9 +208,9 @@ Future<bool> showModerationSheet(
   } else {
     final ok = await showMaisonConfirm(
       context: context,
-      title: 'حظر المستخدم؟',
-      message: 'سيختفي محتواه ورسائله عندك، وسيُبلغ فريق VIBES لمراجعة حسابه.',
-      confirmLabel: 'حظر',
+      title: 'حظر المستخدم؟'.tr,
+      message: 'سيختفي محتواه ورسائله عندك، وسيُبلغ فريق أجواء لمراجعة حسابه.'.tr,
+      confirmLabel: 'حظر'.tr,
       destructive: true,
     );
     if (!ok || !context.mounted) return false;
@@ -246,8 +245,8 @@ Future<bool> showModerationSheet(
       SnackBar(
         content: Text(
           action == 'block'
-              ? 'تم الحظر — لن ترى محتوى هذا المستخدم'
-              : 'شكراً — وصل بلاغك وأخفينا المحتوى عنك',
+              ? 'تم الحظر — لن ترى محتوى هذا المستخدم'.tr
+              : 'شكراً — وصل بلاغك وأخفينا المحتوى عنك'.tr,
         ),
       ),
     );

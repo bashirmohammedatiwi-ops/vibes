@@ -443,7 +443,7 @@ export class ConversationsService {
         messages: {
           create: {
             kind: MessageKind.SYSTEM,
-            body: 'مرحباً — فريق VIBES سيرد عليك هنا',
+            body: 'مرحباً — فريق أجواء سيرد عليك هنا',
           },
         },
       },
@@ -487,7 +487,7 @@ export class ConversationsService {
         messages: {
           create: {
             kind: MessageKind.SYSTEM,
-            body: 'فتح فريق VIBES محادثة دعم معك',
+            body: 'فتح فريق أجواء محادثة دعم معك',
           },
         },
       },
@@ -496,7 +496,7 @@ export class ConversationsService {
       userId,
       type: 'MESSAGE',
       title: 'رسالة من الدعم',
-      body: 'فريق VIBES يريد التواصل معك',
+      body: 'فريق أجواء يريد التواصل معك',
       linkUrl: `/chat/${created.id}`,
       entityType: 'conversation',
       entityId: created.id,

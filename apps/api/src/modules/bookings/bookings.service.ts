@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { BookingStatus, PaymentMethod, PaymentStatus, ShiftType, UserRole } from '@prisma/client';
 import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { CouponService } from '../../common/services/coupon.service';
+import { LoyaltyService } from '../loyalty/loyalty.service';
 import { NotificationService } from '../../common/services/notification.service';
 import { MarketplaceLifecycleService } from '../marketplace/marketplace-lifecycle.service';
 import { calculateBookingTotal, resolveBookingShift, type PriceRuleLike } from '../../common/utils/pricing.util';
@@ -17,6 +18,7 @@ export interface CreateBookingDto {
   notes?: string;
   proofUrl?: string;
   couponCode?: string;
+  useLoyalty?: boolean;
 }
 
 @Injectable()
@@ -25,6 +27,7 @@ export class BookingsService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationService,
     private readonly coupons: CouponService,
+    private readonly loyalty: LoyaltyService,
     private readonly lifecycle: MarketplaceLifecycleService,
   ) {}
 
@@ -74,13 +77,20 @@ export class BookingsService {
 
     // Coupon discount is validated against the pre-discount total, then applied
     // atomically together with the booking row.
+    if (dto.useLoyalty && dto.couponCode?.trim()) {
+      throw new BadRequestException('لا يمكن الجمع بين خصم الولاء والكوبون');
+    }
     let couponValidation: Awaited<ReturnType<CouponService['validate']>> | null = null;
     if (dto.couponCode?.trim()) {
       couponValidation = await this.coupons.validate(dto.couponCode, property, baseTotal, user.id);
     }
-    const totalPrice = couponValidation ? couponValidation.totalAfterDiscount : baseTotal;
+    const couponTotal = couponValidation ? couponValidation.totalAfterDiscount : baseTotal;
 
     const booking = await this.prisma.$transaction(async (tx) => {
+      const loyaltyDiscount = dto.useLoyalty
+        ? await this.loyalty.claim(tx, user.id, property.type, baseTotal)
+        : 0;
+      const totalPrice = couponTotal - loyaltyDiscount;
       const created = await tx.booking.create({
         data: {
           userId: user.id,
@@ -92,7 +102,8 @@ export class BookingsService {
           notes: dto.notes,
           status: dto.proofUrl ? BookingStatus.AWAITING_PAYMENT : BookingStatus.PENDING,
           totalPrice,
-          discountAmount: couponValidation?.discount ?? 0,
+          discountAmount: (couponValidation?.discount ?? 0) + loyaltyDiscount,
+          loyaltyDiscount,
           couponId: couponValidation?.coupon.id,
           payment: {
             create: {
@@ -240,7 +251,14 @@ export class BookingsService {
 
   async quote(
     user: AuthUser | null,
-    dto: { propertyId: string; startDate: string; endDate: string; shift?: ShiftType; couponCode?: string },
+    dto: {
+      propertyId: string;
+      startDate: string;
+      endDate: string;
+      shift?: ShiftType;
+      couponCode?: string;
+      useLoyalty?: boolean;
+    },
   ) {
     const property = await this.prisma.property.findUnique({ where: { id: dto.propertyId } });
     if (!property || property.status !== 'APPROVED') {
@@ -275,12 +293,18 @@ export class BookingsService {
       couponCode = validation.coupon.code;
     }
 
+    const loyalty = await this.loyalty.offer(user?.id, property.type, baseTotal);
+    const applyLoyalty = Boolean(dto.useLoyalty && !couponCode && loyalty?.eligible);
+    if (applyLoyalty) discount = loyalty!.discount;
+
     return {
       available: true,
       totalPrice: baseTotal - discount,
       originalTotal: baseTotal,
       discount,
       couponCode,
+      loyalty,
+      loyaltyApplied: applyLoyalty,
       nights,
       shift,
     };

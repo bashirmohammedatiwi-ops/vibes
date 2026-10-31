@@ -11,6 +11,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/models.dart';
 import '../../shared/widgets/maison_chrome.dart';
@@ -62,7 +63,7 @@ class _ProviderCalendarScreenState
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: Vibes.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -99,7 +100,7 @@ class _ProviderCalendarScreenState
       body: OwnerPortalCanvas(
         child: Column(
           children: [
-            const MaisonPageHeader(title: 'تقويم الحجوزات'),
+            MaisonPageHeader(title: 'تقويم الحجوزات'.tr),
             Expanded(
               child: properties.when(
                 loading: () => ListView(
@@ -118,11 +119,11 @@ class _ProviderCalendarScreenState
                 ),
                 data: (list) {
                   if (list.isEmpty) {
-                    return const WorldEmpty(
+                    return WorldEmpty(
                       icon: Icons.home_work_rounded,
-                      title: 'لا أماكن مربوطة',
+                      title: 'لا أماكن مربوطة'.tr,
                       subtitle:
-                          'راسل الدعم لربط مزرعتك أو قاعتك بحسابك ثم أدر التقويم من هنا',
+                          'راسل الدعم لربط مزرعتك أو قاعتك بحسابك ثم أدر التقويم من هنا'.tr,
                     );
                   }
 
@@ -212,7 +213,7 @@ class _ProviderCalendarScreenState
                                 ),
                                 FolioPanel(
                                   child: TableCalendar(
-                                    locale: 'ar',
+                                    locale: I18n.locale,
                                     firstDay: DateTime.now().subtract(
                                       const Duration(days: 365),
                                     ),
@@ -235,12 +236,16 @@ class _ProviderCalendarScreenState
                                         fontSize: 16,
                                       ),
                                       formatButtonVisible: false,
-                                      leftChevronIcon: const Icon(
-                                        Icons.chevron_right,
+                                      leftChevronIcon: Icon(
+                                        I18n.isEn
+                                            ? Icons.chevron_left
+                                            : Icons.chevron_right,
                                         color: ownerGoldDeep,
                                       ),
-                                      rightChevronIcon: const Icon(
-                                        Icons.chevron_left,
+                                      rightChevronIcon: Icon(
+                                        I18n.isEn
+                                            ? Icons.chevron_right
+                                            : Icons.chevron_left,
                                         color: ownerGoldDeep,
                                       ),
                                     ),
@@ -258,10 +263,10 @@ class _ProviderCalendarScreenState
                                           context,
                                         ),
                                       ),
-                                      weekendTextStyle: const TextStyle(
+                                      weekendTextStyle: TextStyle(
                                         color: ownerNavyHigh,
                                       ),
-                                      todayTextStyle: const TextStyle(
+                                      todayTextStyle: TextStyle(
                                         color: ownerGoldDeep,
                                         fontWeight: FontWeight.w800,
                                       ),
@@ -269,15 +274,15 @@ class _ProviderCalendarScreenState
                                         color: Vibes.surfaceMuted,
                                         borderRadius: Folio.compact,
                                       ),
-                                      selectedTextStyle: const TextStyle(
-                                        color: Colors.white,
+                                      selectedTextStyle: TextStyle(
+                                        color: ownerOnGold,
                                         fontWeight: FontWeight.w800,
                                       ),
-                                      selectedDecoration: const BoxDecoration(
+                                      selectedDecoration: BoxDecoration(
                                         color: ownerGoldDeep,
                                         borderRadius: Folio.compact,
                                       ),
-                                      markerDecoration: const BoxDecoration(
+                                      markerDecoration: BoxDecoration(
                                         color: ownerNavyHigh,
                                         borderRadius: BorderRadius.all(
                                           Radius.circular(2),
@@ -317,7 +322,7 @@ class _ProviderCalendarScreenState
                                           decoration: BoxDecoration(
                                             color: closed
                                                 ? ownerPaper
-                                                : Colors.white,
+                                                : Vibes.surface,
                                             borderRadius: BorderRadius.circular(
                                               8,
                                             ),
@@ -491,7 +496,9 @@ class _ProviderCalendarScreenState
 
                                 // حجوزات الشهر
                                 SectionHeader(
-                                  'حجوزات ${_monthLabel(_focused)}',
+                                  'حجوزات {month}'.trArgs({
+                                    'month': _monthLabel(_focused),
+                                  }),
                                 ),
                                 ...items
                                     .where(
@@ -533,9 +540,11 @@ class _ProviderCalendarScreenState
                                                                 child: Text(
                                                                   b.userName ??
                                                                       b.userPhone ??
-                                                                      'ضيف',
+                                                                      'ضيف'.tr,
                                                                   style: TextStyle(
-                                                                    fontFamily: VibesFont.ui,
+                                                                    fontFamily:
+                                                                        VibesFont
+                                                                            .ui,
                                                                     fontSize:
                                                                         15,
                                                                     fontWeight:
@@ -555,24 +564,34 @@ class _ProviderCalendarScreenState
                                                             ],
                                                           ),
                                                           Text(
-                                                            '${ownerRelativeBookingDay(b.startDate)}${b.isExternal ? ' · خارجي' : ''}',
-                                                            style:
-                                                                TextStyle(
-                                                                  fontFamily: VibesFont.ui,
-                                                                  fontSize: 12,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w600,
-                                                                  color:
-                                                                      placeInk2,
-                                                                ),
+                                                            [
+                                                              ownerRelativeBookingDay(
+                                                                b.startDate,
+                                                              ),
+                                                              if (b.isExternal)
+                                                                'خارجي'.tr,
+                                                            ].join(' · '),
+                                                            style: TextStyle(
+                                                              fontFamily:
+                                                                  VibesFont.ui,
+                                                              fontSize: 12,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                              color: placeInk2,
+                                                            ),
                                                           ),
                                                         ],
                                                       ),
                                                     ),
                                                     Text(
-                                                      '${PriceText.format(b.totalPrice)} د.ع',
-                                                      style: const TextStyle(
+                                                      '{amount} د.ع'.trArgs({
+                                                        'amount':
+                                                            PriceText.format(
+                                                              b.totalPrice,
+                                                            ),
+                                                      }),
+                                                      style: TextStyle(
                                                         fontFamily:
                                                             'Montserrat',
                                                         fontSize: 15,
@@ -583,8 +602,7 @@ class _ProviderCalendarScreenState
                                                     ),
                                                     const SizedBox(width: 4),
                                                     Icon(
-                                                      Icons
-                                                          .chevron_left_rounded,
+                                                      ownerForwardChevron,
                                                       color: placeInk2,
                                                       size: 20,
                                                     ),
@@ -613,19 +631,20 @@ class _ProviderCalendarScreenState
   }
 
   String _monthLabel(DateTime d) {
+    if (I18n.isEn) return ownerMonthEn(d.month);
     const months = [
-      'كانون الثاني',
-      'شباط',
-      'آذار',
-      'نيسان',
-      'أيار',
-      'حزيران',
-      'تموز',
-      'آب',
-      'أيلول',
-      'تشرين الأول',
-      'تشرين الثاني',
-      'كانون الأول',
+      'كانون الثاني', // i18n-ok
+      'شباط', // i18n-ok
+      'آذار', // i18n-ok
+      'نيسان', // i18n-ok
+      'أيار', // i18n-ok
+      'حزيران', // i18n-ok
+      'تموز', // i18n-ok
+      'آب', // i18n-ok
+      'أيلول', // i18n-ok
+      'تشرين الأول', // i18n-ok
+      'تشرين الثاني', // i18n-ok
+      'كانون الأول', // i18n-ok
     ];
     return months[d.month - 1];
   }
@@ -654,9 +673,9 @@ class _ExternalBookingCardState extends ConsumerState<_ExternalBookingCard> {
       isScrollControlled: true,
       backgroundColor: VibesTheme.surfaceOf(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(8),
-          topRight: Radius.circular(12),
+        borderRadius: BorderRadiusDirectional.only(
+          topStart: Radius.circular(12),
+          topEnd: Radius.circular(8),
         ),
       ),
       builder: (context) => _ExternalBookingForm(
@@ -679,14 +698,14 @@ class _ExternalBookingCardState extends ConsumerState<_ExternalBookingCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'سجّل الحجز الخارجي',
+              'سجّل الحجز الخارجي'.tr,
               style: Theme.of(
                 context,
               ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
             Text(
-              'إذا جاءك ضيف من واتساب أو مباشرة ولم تسجّله، سيظهر اليوم متاحاً على VIBES وقد يُحجز مرتين.',
+              'إذا جاءك ضيف من واتساب أو مباشرة ولم تسجّله، سيظهر اليوم متاحاً على أجواء وقد يُحجز مرتين.'.tr,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: VibesTheme.textTertiaryOf(context),
                 height: 1.45,
@@ -695,8 +714,10 @@ class _ExternalBookingCardState extends ConsumerState<_ExternalBookingCard> {
             const SizedBox(height: 12),
             VibesButton(
               label: widget.day == null
-                  ? 'حجز خارجي'
-                  : 'حجز خارجي ليوم ${widget.day!.day}/${widget.day!.month}',
+                  ? 'حجز خارجي'.tr
+                  : 'حجز خارجي ليوم {date}'.trArgs({
+                      'date': ownerShortDate(widget.day!),
+                    }),
               small: true,
               onPressed: _open,
             ),
@@ -786,14 +807,14 @@ class _ExternalBookingFormState extends ConsumerState<_ExternalBookingForm> {
         children: [
           const MaisonSheetHandle(),
           Text(
-            'حجز خارجي · ${widget.day.day}/${widget.day.month}',
+            'حجز خارجي · {date}'.trArgs({'date': ownerShortDate(widget.day)}),
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),
           Text(
-            'يُقفل هذا اليوم عن ضيوف التطبيق فور الحفظ.',
+            'يُقفل هذا اليوم عن ضيوف التطبيق فور الحفظ.'.tr,
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(color: Vibes.inkTertiary),
@@ -803,43 +824,43 @@ class _ExternalBookingFormState extends ConsumerState<_ExternalBookingForm> {
             spacing: 8,
             children:
                 [
-                  ('FULL', 'يوم كامل'),
-                  ('MORNING', 'صباح'),
-                  ('EVENING', 'مساء'),
+                  ('FULL', 'يوم كامل'), // i18n-ok
+                  ('MORNING', 'صباح'), // i18n-ok
+                  ('EVENING', 'مساء'), // i18n-ok
                 ].map((item) {
                   return OwnerShiftChip(
                     apiShift: item.$1,
-                    label: item.$2,
+                    label: item.$2.tr,
                     selected: _shift == item.$1,
                     onTap: () => setState(() => _shift = item.$1),
                   );
                 }).toList(),
           ),
           const SizedBox(height: 12),
-          MaisonField(label: 'اسم الضيف', controller: _name),
+          MaisonField(label: 'اسم الضيف'.tr, controller: _name),
           const SizedBox(height: 10),
           MaisonField(
-            label: 'هاتف الضيف',
+            label: 'هاتف الضيف'.tr,
             controller: _phone,
             keyboardType: TextInputType.phone,
           ),
           const SizedBox(height: 10),
           MaisonField(
-            label: 'المبلغ (اختياري)',
+            label: 'المبلغ (اختياري)'.tr,
             controller: _price,
             keyboardType: TextInputType.number,
           ),
           const SizedBox(height: 10),
           MaisonField(
-            label: 'عدد الضيوف',
+            label: 'عدد الضيوف'.tr,
             controller: _guests,
             keyboardType: TextInputType.number,
           ),
           const SizedBox(height: 10),
-          MaisonField(label: 'ملاحظة (اختياري)', controller: _notes),
+          MaisonField(label: 'ملاحظة (اختياري)'.tr, controller: _notes),
           const SizedBox(height: 16),
           VibesButton(
-            label: 'حفظ وإغلاق اليوم',
+            label: 'حفظ وإغلاق اليوم'.tr,
             loading: _saving,
             onPressed: _save,
           ),
@@ -901,14 +922,10 @@ class _BlockDaysCardState extends ConsumerState<_BlockDaysCard> {
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.event_busy_outlined,
-                size: 18,
-                color: ownerGoldDeep,
-              ),
+              Icon(Icons.event_busy_outlined, size: 18, color: ownerGoldDeep),
               const SizedBox(width: 8),
               Text(
-                'إدارة الإغلاق',
+                'إدارة الإغلاق'.tr,
                 style: Theme.of(
                   context,
                 ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
@@ -918,8 +935,10 @@ class _BlockDaysCardState extends ConsumerState<_BlockDaysCard> {
           const SizedBox(height: 6),
           Text(
             widget.day == null
-                ? 'اختر يوماً من التقويم أعلاه ثم أغلقه أو افتحه'
-                : 'اليوم المحدد: ${widget.day!.day}/${widget.day!.month}',
+                ? 'اختر يوماً من التقويم أعلاه ثم أغلقه أو افتحه'.tr
+                : 'اليوم المحدد: {date}'.trArgs({
+                    'date': ownerShortDate(widget.day!),
+                  }),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: VibesTheme.textTertiaryOf(context),
             ),
@@ -929,13 +948,13 @@ class _BlockDaysCardState extends ConsumerState<_BlockDaysCard> {
             spacing: 8,
             children:
                 [
-                  ('FULL', 'يوم كامل'),
-                  ('MORNING', 'صباح'),
-                  ('EVENING', 'مساء'),
+                  ('FULL', 'يوم كامل'), // i18n-ok
+                  ('MORNING', 'صباح'), // i18n-ok
+                  ('EVENING', 'مساء'), // i18n-ok
                 ].map((item) {
                   return OwnerShiftChip(
                     apiShift: item.$1,
-                    label: item.$2,
+                    label: item.$2.tr,
                     selected: _shift == item.$1,
                     onTap: () => setState(() => _shift = item.$1),
                   );
@@ -954,7 +973,7 @@ class _BlockDaysCardState extends ConsumerState<_BlockDaysCard> {
                   child: SizedBox(
                     height: 40,
                     child: VibesButton(
-                      label: 'إغلاق اليوم المحدد',
+                      label: 'إغلاق اليوم المحدد'.tr,
                       small: true,
                       onPressed: () =>
                           _block(widget.day ?? DateTime.now(), false),
@@ -966,7 +985,7 @@ class _BlockDaysCardState extends ConsumerState<_BlockDaysCard> {
                   child: SizedBox(
                     height: 40,
                     child: VibesButton(
-                      label: 'فتح اليوم',
+                      label: 'فتح اليوم'.tr,
                       small: true,
                       ghost: true,
                       onPressed: () =>
@@ -996,7 +1015,7 @@ class ProviderPropertiesScreen extends ConsumerWidget {
       body: OwnerPortalCanvas(
         child: Column(
           children: [
-            const MaisonPageHeader(title: 'أماكني', kicker: 'إدارة الممتلكات'),
+            MaisonPageHeader(title: 'أماكني'.tr, kicker: 'إدارة الممتلكات'.tr),
             Expanded(
               child: properties.when(
                 loading: () => ListView(
@@ -1013,11 +1032,11 @@ class ProviderPropertiesScreen extends ConsumerWidget {
                 ),
                 data: (list) {
                   if (list.isEmpty) {
-                    return const WorldEmpty(
+                    return WorldEmpty(
                       icon: Icons.home_work_rounded,
-                      title: 'لا أماكن مربوطة بعد',
+                      title: 'لا أماكن مربوطة بعد'.tr,
                       subtitle:
-                          'راسل الدعم باسم المكان. بعد التأكد من الملكية يظهر هنا.',
+                          'راسل الدعم باسم المكان. بعد التأكد من الملكية يظهر هنا.'.tr,
                     );
                   }
 
@@ -1056,12 +1075,12 @@ class _ProviderPropertyCard extends ConsumerWidget {
     final p = property;
     final approved = p.status == 'APPROVED';
     final statusLabel = approved
-        ? 'منشور'
+        ? 'منشور'.tr
         : p.status == 'PENDING'
-        ? 'بانتظار المراجعة'
+        ? 'بانتظار المراجعة'.tr
         : p.status == 'REJECTED'
-        ? 'مرفوض'
-        : 'مسودة';
+        ? 'مرفوض'.tr
+        : 'مسودة'.tr;
     final statusColor = approved
         ? const Color(0xFF34D399)
         : p.status == 'PENDING'
@@ -1073,12 +1092,12 @@ class _ProviderPropertyCard extends ConsumerWidget {
       child: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Vibes.surface,
           borderRadius: BorderRadius.circular(26),
           border: Border.all(color: ownerLine),
           boxShadow: [
             BoxShadow(
-              color: ownerNavy.withValues(alpha: .06),
+              color: ownerNavyDeep.withValues(alpha: .06),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -1114,7 +1133,7 @@ class _ProviderPropertyCard extends ConsumerWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: ownerNavy.withValues(alpha: .72),
+                          color: ownerNavyDeep.withValues(alpha: .72),
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Row(
@@ -1190,23 +1209,23 @@ class _ProviderPropertyCard extends ConsumerWidget {
                         ? p.ratingAvg.toStringAsFixed(1)
                         : '—',
                     label: p.ratingCount > 0
-                        ? '${p.ratingCount} تقييم'
-                        : 'لا تقييم',
+                        ? '{n} تقييم'.trN(p.ratingCount)
+                        : 'لا تقييم'.tr,
                   ),
                   _PropStat(
                     icon: Icons.event_available_rounded,
                     value: '${p.bookingsCount}',
-                    label: 'حجز',
+                    label: I18n.isEn ? 'Bookings' : 'حجز', // i18n-ok
                   ),
                   _PropStat(
                     icon: Icons.visibility_rounded,
                     value: formatIqdShort(p.viewCount),
-                    label: 'مشاهدة',
+                    label: 'مشاهدة'.tr,
                   ),
                   _PropStat(
                     icon: Icons.favorite_rounded,
                     value: '${p.followersCount}',
-                    label: 'متابع',
+                    label: 'متابع'.tr,
                   ),
                 ],
               ),
@@ -1217,7 +1236,7 @@ class _ProviderPropertyCard extends ConsumerWidget {
                 children: [
                   _PropAction(
                     icon: Icons.calendar_month_rounded,
-                    label: 'التقويم',
+                    label: 'التقويم'.tr,
                     primary: true,
                     onTap: () {
                       ref
@@ -1229,26 +1248,26 @@ class _ProviderPropertyCard extends ConsumerWidget {
                   ),
                   _PropAction(
                     icon: Icons.sell_rounded,
-                    label: 'الأسعار',
+                    label: 'الأسعار'.tr,
                     onTap: () =>
                         context.push('/provider/properties/${p.id}/pricing'),
                   ),
                   _PropAction(
                     icon: Icons.photo_library_rounded,
-                    label: 'الوسائط',
+                    label: 'الوسائط'.tr,
                     onTap: () =>
                         context.push('/provider/properties/${p.id}/media'),
                   ),
                   _PropAction(
                     icon: Icons.event_busy_rounded,
-                    label: 'التوفر',
+                    label: 'التوفر'.tr,
                     onTap: () => context.push(
                       '/provider/properties/${p.id}/availability',
                     ),
                   ),
                   _PropAction(
                     icon: Icons.visibility_rounded,
-                    label: 'معاينة',
+                    label: 'معاينة'.tr,
                     onTap: () => context.push('/property/${p.id}'),
                   ),
                 ],
@@ -1284,7 +1303,7 @@ class _PropStat extends StatelessWidget {
               const SizedBox(width: 3),
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Montserrat',
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
@@ -1295,6 +1314,8 @@ class _PropStat extends StatelessWidget {
           ),
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontFamily: VibesFont.ui,
               fontSize: 10.5,
@@ -1346,13 +1367,16 @@ class _PropAction extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: VibesFont.ui,
-                fontSize: 11.5,
-                fontWeight: FontWeight.w800,
-                color: ownerNavy,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800,
+                  color: ownerNavy,
+                ),
               ),
             ),
           ],
@@ -1365,18 +1389,18 @@ class _PropAction extends StatelessWidget {
 // ── 5) الأرباح ──
 
 const _arMonths = [
-  'يناير',
-  'فبراير',
-  'مارس',
-  'أبريل',
-  'مايو',
-  'يونيو',
-  'يوليو',
-  'أغسطس',
-  'سبتمبر',
-  'أكتوبر',
-  'نوفمبر',
-  'ديسمبر',
+  'يناير', // i18n-ok
+  'فبراير', // i18n-ok
+  'مارس', // i18n-ok
+  'أبريل', // i18n-ok
+  'مايو', // i18n-ok
+  'يونيو', // i18n-ok
+  'يوليو', // i18n-ok
+  'أغسطس', // i18n-ok
+  'سبتمبر', // i18n-ok
+  'أكتوبر', // i18n-ok
+  'نوفمبر', // i18n-ok
+  'ديسمبر', // i18n-ok
 ];
 
 /// "2026-10" → "أكتوبر" (و"أكتوبر 2025" عند [withYear]).
@@ -1384,7 +1408,16 @@ String _monthAr(String ym, {bool withYear = false}) {
   final parts = ym.split('-');
   final m = parts.length > 1 ? int.tryParse(parts[1]) : null;
   if (m == null || m < 1 || m > 12) return ym;
-  return withYear ? '${_arMonths[m - 1]} ${parts[0]}' : _arMonths[m - 1];
+  final name = I18n.isEn ? ownerMonthEn(m) : _arMonths[m - 1];
+  return withYear ? '$name ${parts[0]}' : name;
+}
+
+/// "2026-10" → "Oct" لمحور المخطط الضيق بالإنجليزية.
+String _monthEnShort(String ym) {
+  final parts = ym.split('-');
+  final m = parts.length > 1 ? int.tryParse(parts[1]) : null;
+  if (m == null || m < 1 || m > 12) return ym;
+  return ownerMonthEnShort(m);
 }
 
 class ProviderEarningsScreen extends ConsumerStatefulWidget {
@@ -1404,12 +1437,19 @@ class _ProviderEarningsScreenState
     final total = rows.fold<num>(0, (s, r) => s + r.revenue);
     final count = rows.fold<int>(0, (s, r) => s + r.bookings);
     final lines = [
-      'تقرير أرباح VIBES — آخر $_months أشهر',
+      'تقرير أرباح أجواء — آخر {n} أشهر'.trN(_months),
       '',
       for (final r in rows.reversed)
-        '${_monthAr(r.month, withYear: true)}: ${PriceText.format(r.revenue)} د.ع (${r.bookings} حجز)',
+        '{month}: {amount} د.ع ({bookings})'.trArgs({
+          'month': _monthAr(r.month, withYear: true),
+          'amount': PriceText.format(r.revenue),
+          'bookings': '{n} حجز'.trN(r.bookings),
+        }),
       '',
-      'الإجمالي: ${PriceText.format(total)} د.ع · $count حجز',
+      'الإجمالي: {amount} د.ع · {bookings}'.trArgs({
+        'amount': PriceText.format(total),
+        'bookings': '{n} حجز'.trN(count),
+      }),
     ];
     Share.share(lines.join('\n'));
   }
@@ -1425,10 +1465,10 @@ class _ProviderEarningsScreenState
       body: Column(
         children: [
           MaisonPageHeader(
-            title: 'الأرباح والتقارير',
+            title: 'الأرباح والتقارير'.tr,
             trailing: revenue.maybeWhen(
               data: (rows) => IconButton(
-                tooltip: 'مشاركة التقرير',
+                tooltip: 'مشاركة التقرير'.tr,
                 onPressed: () => _share(rows),
                 icon: const Icon(Icons.ios_share_rounded),
                 color: ownerNavy,
@@ -1489,7 +1529,7 @@ class _ProviderEarningsScreenState
                           Expanded(
                             child: OwnerMetricTile(
                               icon: Icons.account_balance_wallet_rounded,
-                              label: 'إجمالي $_months أشهر',
+                              label: 'إجمالي {n} أشهر'.trN(_months),
                               value: formatIqdShort(total),
                             ),
                           ),
@@ -1497,7 +1537,7 @@ class _ProviderEarningsScreenState
                           Expanded(
                             child: OwnerMetricTile(
                               icon: Icons.receipt_rounded,
-                              label: 'متوسط الحجز',
+                              label: 'متوسط الحجز'.tr,
                               value: count == 0
                                   ? '—'
                                   : formatIqdShort(total / count),
@@ -1508,8 +1548,10 @@ class _ProviderEarningsScreenState
                             child: OwnerMetricTile(
                               icon: Icons.emoji_events_rounded,
                               label: best == null || best.revenue == 0
-                                  ? 'أفضل شهر'
-                                  : 'أفضل: ${_monthAr(best.month)}',
+                                  ? 'أفضل شهر'.tr
+                                  : 'أفضل: {month}'.trArgs({
+                                      'month': _monthAr(best.month),
+                                    }),
                               value: best == null || best.revenue == 0
                                   ? '—'
                                   : formatIqdShort(best.revenue),
@@ -1523,10 +1565,16 @@ class _ProviderEarningsScreenState
                       ).animate().fadeIn(delay: 80.ms),
                       const SizedBox(height: 22),
                       OwnerSectionTitle(
-                        'الإيراد الشهري',
+                        'الإيراد الشهري'.tr,
                         subtitle: sel == null
-                            ? 'اضغط على شهر لعرض تفاصيله'
-                            : '${_monthAr(sel.month, withYear: true)} · ${PriceText.format(sel.revenue)} د.ع · ${sel.bookings} حجز',
+                            ? 'اضغط على شهر لعرض تفاصيله'.tr
+                            : [
+                                _monthAr(sel.month, withYear: true),
+                                '{amount} د.ع'.trArgs({
+                                  'amount': PriceText.format(sel.revenue),
+                                }),
+                                '{n} حجز'.trN(sel.bookings),
+                              ].join(' · '),
                         trailing: _PeriodToggle(
                           value: _months,
                           onChanged: (v) => setState(() {
@@ -1539,7 +1587,7 @@ class _ProviderEarningsScreenState
                         height: 230,
                         padding: const EdgeInsets.fromLTRB(12, 18, 12, 8),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Vibes.surface,
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(color: ownerLine),
                         ),
@@ -1555,11 +1603,11 @@ class _ProviderEarningsScreenState
                         ),
                       ),
                       const SizedBox(height: 22),
-                      const OwnerSectionTitle('التفاصيل'),
+                      OwnerSectionTitle('التفاصيل'.tr),
                       Container(
                         clipBehavior: Clip.antiAlias,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Vibes.surface,
                           borderRadius: BorderRadius.circular(22),
                           border: Border.all(color: ownerLine),
                         ),
@@ -1576,7 +1624,7 @@ class _ProviderEarningsScreenState
                                 highlight: sel != null && sel.month == r.month,
                               ),
                               if (i < rows.length - 1)
-                                const Divider(height: 1, color: ownerLine),
+                                Divider(height: 1, color: ownerLine),
                             ],
                           ],
                         ),
@@ -1627,7 +1675,7 @@ class _PeriodToggle extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  '$m أشهر',
+                  '{n} أشهر'.trN(m),
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
                     fontSize: 11.5,
@@ -1662,7 +1710,7 @@ class _MonthRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
-      color: highlight ? ownerGold.withValues(alpha: .08) : Colors.white,
+      color: highlight ? ownerGold.withValues(alpha: .08) : Vibes.surface,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Column(
         children: [
@@ -1680,7 +1728,7 @@ class _MonthRow extends StatelessWidget {
                 ),
               ),
               Text(
-                '$bookings حجز',
+                '{n} حجز'.trN(bookings),
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
                   fontSize: 12,
@@ -1690,8 +1738,8 @@ class _MonthRow extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                '${PriceText.format(revenue)} د.ع',
-                style: const TextStyle(
+                '{amount} د.ع'.trArgs({'amount': PriceText.format(revenue)}),
+                style: TextStyle(
                   fontFamily: 'Montserrat',
                   fontSize: 13.5,
                   fontWeight: FontWeight.w800,
@@ -1707,7 +1755,7 @@ class _MonthRow extends StatelessWidget {
               value: share.clamp(0.0, 1.0),
               minHeight: 5,
               backgroundColor: ownerPaper,
-              valueColor: const AlwaysStoppedAnimation(ownerGold),
+              valueColor: AlwaysStoppedAnimation(ownerGold),
             ),
           ),
         ],
@@ -1732,9 +1780,9 @@ class _RevenueChart extends StatelessWidget {
     if (rows.isEmpty || rows.every((r) => r.revenue == 0)) {
       return Center(
         child: Directionality(
-          textDirection: TextDirection.rtl,
+          textDirection: I18n.isEn ? TextDirection.ltr : TextDirection.rtl,
           child: Text(
-            'لا أرباح بعد — ستظهر هنا مع أول حجز مؤكد',
+            'لا أرباح بعد — ستظهر هنا مع أول حجز مؤكد'.tr,
             style: TextStyle(
               fontFamily: VibesFont.ui,
               color: placeInk2,
@@ -1751,6 +1799,8 @@ class _RevenueChart extends StatelessWidget {
         .reduce((a, b) => a > b ? a : b)
         .toDouble();
     final barWidth = rows.length > 8 ? 14.0 : 24.0;
+    final barHigh = themed(const Color(0xFF1B3857), const Color(0xFF8FB4D4));
+    final barLow = themed(ownerNavyDeep, const Color(0xFF5E8AB0));
 
     return BarChart(
       BarChartData(
@@ -1761,7 +1811,7 @@ class _RevenueChart extends StatelessWidget {
           drawVerticalLine: false,
           horizontalInterval: maxRevenue / 3,
           getDrawingHorizontalLine: (_) =>
-              const FlLine(color: ownerLine, strokeWidth: 1, dashArray: [4, 4]),
+              FlLine(color: ownerLine, strokeWidth: 1, dashArray: [4, 4]),
         ),
         borderData: FlBorderData(show: false),
         barTouchData: BarTouchData(
@@ -1790,11 +1840,15 @@ class _RevenueChart extends StatelessWidget {
               getTitlesWidget: (value, meta) {
                 final i = value.toInt();
                 if (i < 0 || i >= rows.length) return const SizedBox.shrink();
-                final label = _monthAr(rows[i].month);
+                final label = I18n.isEn
+                    ? _monthEnShort(rows[i].month)
+                    : _monthAr(rows[i].month);
                 return SideTitleWidget(
                   axisSide: meta.axisSide,
                   child: Text(
-                    rows.length > 8 ? label.substring(0, 3) : label,
+                    !I18n.isEn && rows.length > 8
+                        ? label.substring(0, 3)
+                        : label,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       color: selected == i ? ownerGoldDeep : placeInk2,
@@ -1821,11 +1875,11 @@ class _RevenueChart extends StatelessWidget {
                     end: Alignment.bottomCenter,
                     colors: selected == null || selected == i
                         ? (i == rows.length - 1 || selected == i
-                              ? const [ownerGoldLight, ownerGoldDeep]
-                              : const [ownerNavyHigh, ownerNavy])
+                              ? [ownerGoldLight, ownerGoldDeep]
+                              : [barHigh, barLow])
                         : [
-                            ownerNavyHigh.withValues(alpha: .25),
-                            ownerNavy.withValues(alpha: .25),
+                            barHigh.withValues(alpha: .25),
+                            barLow.withValues(alpha: .25),
                           ],
                   ),
                   backDrawRodData: BackgroundBarChartRodData(
@@ -1860,7 +1914,7 @@ class ProviderPricingScreen extends ConsumerWidget {
       body: OwnerPortalCanvas(
         child: Column(
           children: [
-            MaisonPageHeader(title: 'الأسعار', onBack: () => context.pop()),
+            MaisonPageHeader(title: 'الأسعار'.tr, onBack: () => context.pop()),
             Expanded(
               child: preview.when(
                 loading: () => ListView(
@@ -1885,9 +1939,9 @@ class ProviderPricingScreen extends ConsumerWidget {
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                     children: [
                       if (ruleList.isNotEmpty) ...[
-                        const OwnerSectionTitle(
-                          'قواعد الأسعار',
-                          subtitle: 'تُطبَّق تلقائياً على الأيام المطابقة',
+                        OwnerSectionTitle(
+                          'قواعد الأسعار'.tr,
+                          subtitle: 'تُطبَّق تلقائياً على الأيام المطابقة'.tr,
                         ),
                         for (final rule in ruleList)
                           _ProviderPriceRuleRow(
@@ -1902,9 +1956,9 @@ class ProviderPricingScreen extends ConsumerWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const OwnerSectionTitle(
-                                  'معاينة 21 يوماً',
-                                  subtitle: 'كما يراها الضيف في التطبيق',
+                                OwnerSectionTitle(
+                                  'معاينة 21 يوماً'.tr,
+                                  subtitle: 'كما يراها الضيف في التطبيق'.tr,
                                 ),
                               ],
                             ),
@@ -1912,7 +1966,7 @@ class ProviderPricingScreen extends ConsumerWidget {
                           SizedBox(
                             height: 40,
                             child: VibesButton(
-                              label: 'قاعدة جديدة',
+                              label: 'قاعدة جديدة'.tr,
                               small: true,
                               expanded: false,
                               onPressed: () =>
@@ -1942,41 +1996,57 @@ class ProviderPricingScreen extends ConsumerWidget {
                               children: [
                                 Text(
                                   d['date'] as String,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'Montserrat',
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
                                     color: ownerNavy,
                                   ),
                                 ),
-                                if ((d['ruleName'] as String?) != null) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: ownerGoldDeep.withValues(
-                                        alpha: .15,
-                                      ),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      d['ruleName'] as String,
-                                      style: TextStyle(
-                                        fontFamily: VibesFont.ui,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w800,
-                                        color: ownerGoldDeep,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                const Spacer(),
+                                Expanded(
+                                  child: (d['ruleName'] as String?) == null
+                                      ? const SizedBox.shrink()
+                                      : Align(
+                                          alignment:
+                                              AlignmentDirectional.centerStart,
+                                          child: Container(
+                                            margin:
+                                                const EdgeInsetsDirectional.only(
+                                                  start: 8,
+                                                  end: 8,
+                                                ),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: ownerGoldDeep.withValues(
+                                                alpha: .15,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              d['ruleName'] as String,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontFamily: VibesFont.ui,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w800,
+                                                color: ownerGoldDeep,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                ),
                                 Text(
-                                  '${PriceText.format((d['prices'] as Map)['full'])} د.ع',
-                                  style: const TextStyle(
+                                  '{amount} د.ع'.trArgs({
+                                    'amount': PriceText.format(
+                                      (d['prices'] as Map)['full'],
+                                    ),
+                                  }),
+                                  style: TextStyle(
                                     fontFamily: 'Montserrat',
                                     fontSize: 15,
                                     fontWeight: FontWeight.w800,
@@ -2017,7 +2087,7 @@ class _ProviderPriceRuleRow extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Vibes.surface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: ownerLine),
         ),
@@ -2028,7 +2098,7 @@ class _ProviderPriceRuleRow extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    name?.isNotEmpty == true ? name! : 'قاعدة أسعار',
+                    name?.isNotEmpty == true ? name! : 'قاعدة أسعار'.tr,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 14,
@@ -2038,8 +2108,12 @@ class _ProviderPriceRuleRow extends ConsumerWidget {
                   ),
                   Text(
                     full != null
-                        ? '${PriceText.format(full is num ? full : num.tryParse('$full') ?? 0)} د.ع · يوم كامل'
-                        : 'أسعار شفتات مخصّصة',
+                        ? '{amount} د.ع · يوم كامل'.trArgs({
+                            'amount': PriceText.format(
+                              full is num ? full : num.tryParse('$full') ?? 0,
+                            ),
+                          })
+                        : 'أسعار شفتات مخصّصة'.tr,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 12,
@@ -2051,7 +2125,7 @@ class _ProviderPriceRuleRow extends ConsumerWidget {
               ),
             ),
             IconButton(
-              tooltip: 'حذف القاعدة',
+              tooltip: 'حذف القاعدة'.tr,
               onPressed: () async {
                 final id = rule['id'] as String?;
                 if (id == null) return;
@@ -2065,7 +2139,7 @@ class _ProviderPriceRuleRow extends ConsumerWidget {
                   ref.invalidate(providerPricingPreviewProvider(propertyId));
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('تم حذف القاعدة')),
+                      SnackBar(content: Text('تم حذف القاعدة'.tr)),
                     );
                   }
                 } catch (e) {
@@ -2102,7 +2176,7 @@ class ProviderMediaScreen extends ConsumerWidget {
         child: Column(
           children: [
             MaisonPageHeader(
-              title: 'وسائط المكان',
+              title: 'وسائط المكان'.tr,
               onBack: () => context.pop(),
             ),
             Expanded(
@@ -2125,17 +2199,17 @@ class ProviderMediaScreen extends ConsumerWidget {
                 data: (p) => ListView(
                   padding: const EdgeInsets.all(20),
                   children: [
-                    const SectionHeader(
-                      'صور المكان',
+                    SectionHeader(
+                      'صور المكان'.tr,
                       subtitle:
-                          'فريق VIBES يصور المزرعة أو القاعة بعد الموافقة — لا ترفع صوراً بنفسك',
+                          'فريق أجواء يصور المزرعة أو القاعة بعد الموافقة — لا ترفع صوراً بنفسك'.tr,
                     ),
                     if (p.media.isEmpty)
-                      const WorldEmpty(
+                      WorldEmpty(
                         icon: Icons.photo_outlined,
-                        title: 'لا وسائط',
+                        title: 'لا وسائط'.tr,
                         subtitle:
-                            'فريق VIBES يلتقط الصور بعد الموافقة على المكان',
+                            'فريق أجواء يلتقط الصور بعد الموافقة على المكان'.tr,
                       )
                     else
                       GridView.builder(
@@ -2175,9 +2249,9 @@ class ProviderAvailabilityScreen extends ConsumerWidget {
   final String propertyId;
 
   static String _shiftAr(String? shift) => switch (shift) {
-    'MORNING' => 'صباح',
-    'EVENING' => 'مساء',
-    'FULL' => 'يوم كامل',
+    'MORNING' => 'صباح'.tr,
+    'EVENING' => 'مساء'.tr,
+    'FULL' => 'يوم كامل'.tr,
     _ => shift ?? '',
   };
 
@@ -2193,7 +2267,7 @@ class ProviderAvailabilityScreen extends ConsumerWidget {
         child: Column(
           children: [
             MaisonPageHeader(
-              title: 'إدارة التوفر',
+              title: 'إدارة التوفر'.tr,
               onBack: () => context.pop(),
             ),
             Expanded(
@@ -2216,10 +2290,10 @@ class ProviderAvailabilityScreen extends ConsumerWidget {
                   return ListView(
                     padding: const EdgeInsets.all(20),
                     children: [
-                      const OwnerSectionTitle(
-                        'الأيام والشفتات المغلقة',
+                      OwnerSectionTitle(
+                        'الأيام والشفتات المغلقة'.tr,
                         subtitle:
-                            'افتح يوماً ليعود متاحاً للضيوف، أو استخدم التقويم لإغلاق تواريخ جديدة',
+                            'افتح يوماً ليعود متاحاً للضيوف، أو استخدم التقويم لإغلاق تواريخ جديدة'.tr,
                       ),
                       TextButton.icon(
                         onPressed: () {
@@ -2232,14 +2306,14 @@ class ProviderAvailabilityScreen extends ConsumerWidget {
                           context.go('/provider/calendar');
                         },
                         icon: const Icon(Icons.calendar_month_outlined),
-                        label: const Text('فتح التقويم'),
+                        label: Text('فتح التقويم'.tr),
                         style: TextButton.styleFrom(foregroundColor: ownerNavy),
                       ),
                       if (closed.isEmpty)
-                        const WorldEmpty(
+                        WorldEmpty(
                           icon: Icons.event_available_outlined,
-                          title: 'كل الأيام مفتوحة',
-                          subtitle: 'لا توجد أيام مغلقة حالياً',
+                          title: 'كل الأيام مفتوحة'.tr,
+                          subtitle: 'لا توجد أيام مغلقة حالياً'.tr,
                         )
                       else
                         for (final s in closed)
@@ -2293,7 +2367,7 @@ class _AvailabilityClosedRow extends ConsumerWidget {
                 children: [
                   Text(
                     date,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Montserrat',
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
@@ -2326,7 +2400,7 @@ class _AvailabilityClosedRow extends ConsumerWidget {
                   );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('أُعيد اليوم للتوفر')),
+                      SnackBar(content: Text('أُعيد اليوم للتوفر'.tr)),
                     );
                   }
                 } catch (e) {
@@ -2338,7 +2412,7 @@ class _AvailabilityClosedRow extends ConsumerWidget {
                 }
               },
               child: Text(
-                'فتح',
+                'فتح'.tr,
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
                   fontWeight: FontWeight.w900,
@@ -2370,9 +2444,9 @@ Future<void> _openRuleSheet(
     isScrollControlled: true,
     backgroundColor: VibesTheme.surfaceOf(context),
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.only(
-        topLeft: Radius.circular(8),
-        topRight: Radius.circular(12),
+      borderRadius: BorderRadiusDirectional.only(
+        topStart: Radius.circular(12),
+        topEnd: Radius.circular(8),
       ),
     ),
     builder: (sheetContext) => StatefulBuilder(
@@ -2388,7 +2462,7 @@ Future<void> _openRuleSheet(
             children: [
               const MaisonSheetHandle(),
               Text(
-                'قاعدة أسعار جديدة',
+                'قاعدة أسعار جديدة'.tr,
                 style: Theme.of(
                   sheetContext,
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
@@ -2399,23 +2473,26 @@ Future<void> _openRuleSheet(
               Row(
                 children: [
                   MaisonChip(
-                    label: 'أيام أسبوع',
+                    label: 'أيام أسبوع'.tr,
                     active: ruleType == 'WEEKDAY',
                     onTap: () => setSheet(() => ruleType = 'WEEKDAY'),
                   ),
                   const SizedBox(width: 10),
                   MaisonChip(
-                    label: 'فترة/موسم',
+                    label: 'فترة/موسم'.tr,
                     active: ruleType == 'DATE_RANGE',
                     onTap: () => setSheet(() => ruleType = 'DATE_RANGE'),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              MaisonField(label: 'اسم القاعدة (اختياري)', controller: nameCtrl),
+              MaisonField(
+                label: 'اسم القاعدة (اختياري)'.tr,
+                controller: nameCtrl,
+              ),
               const SizedBox(height: 12),
               MaisonField(
-                label: 'سعر اليوم الكامل',
+                label: 'سعر اليوم الكامل'.tr,
                 controller: fullCtrl,
                 keyboardType: TextInputType.number,
               ),
@@ -2425,7 +2502,7 @@ Future<void> _openRuleSheet(
                 children: [
                   Expanded(
                     child: MaisonField(
-                      label: 'الصباحي',
+                      label: 'الصباحي'.tr,
                       controller: morningCtrl,
                       keyboardType: TextInputType.number,
                     ),
@@ -2433,7 +2510,7 @@ Future<void> _openRuleSheet(
                   const SizedBox(width: 8),
                   Expanded(
                     child: MaisonField(
-                      label: 'المسائي',
+                      label: 'المسائي'.tr,
                       controller: eveningCtrl,
                       keyboardType: TextInputType.number,
                     ),
@@ -2448,13 +2525,13 @@ Future<void> _openRuleSheet(
                   runSpacing: 6,
                   children: List.generate(7, (i) {
                     const labels = [
-                      'أحد',
-                      'إثن',
-                      'ثلا',
-                      'أرب',
-                      'خمي',
-                      'جمع',
-                      'سبت',
+                      'أحد', // i18n-ok
+                      'إثن', // i18n-ok
+                      'ثلا', // i18n-ok
+                      'أرب', // i18n-ok
+                      'خمي', // i18n-ok
+                      'جمع', // i18n-ok
+                      'سبت', // i18n-ok
                     ];
                     final active = days.contains(i);
                     return GestureDetector(
@@ -2477,7 +2554,7 @@ Future<void> _openRuleSheet(
                           ),
                         ),
                         child: Text(
-                          labels[i],
+                          labels[i].tr,
                           style: Theme.of(sheetContext).textTheme.labelSmall
                               ?.copyWith(
                                 fontWeight: FontWeight.w800,
@@ -2493,13 +2570,13 @@ Future<void> _openRuleSheet(
               ],
               const SizedBox(height: 18),
               VibesButton(
-                label: 'إضافة القاعدة',
+                label: 'إضافة القاعدة'.tr,
                 onPressed: () async {
                   final full = num.tryParse(fullCtrl.text);
                   if (ruleType == 'WEEKDAY' && days.isEmpty) {
                     ScaffoldMessenger.of(sheetContext).showSnackBar(
-                      const SnackBar(
-                        content: Text('اختر يوم اسبوع واحداً على الأقل'),
+                      SnackBar(
+                        content: Text('اختر يوم اسبوع واحداً على الأقل'.tr),
                       ),
                     );
                     return;
@@ -2508,9 +2585,7 @@ Future<void> _openRuleSheet(
                       num.tryParse(morningCtrl.text) == null &&
                       num.tryParse(eveningCtrl.text) == null) {
                     ScaffoldMessenger.of(sheetContext).showSnackBar(
-                      const SnackBar(
-                        content: Text('أدخل سعراً واحداً على الأقل'),
-                      ),
+                      SnackBar(content: Text('أدخل سعراً واحداً على الأقل'.tr)),
                     );
                     return;
                   }
@@ -2533,7 +2608,7 @@ Future<void> _openRuleSheet(
                     ref.invalidate(providerPricingRulesProvider(propertyId));
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('تمت إضافة القاعدة')),
+                        SnackBar(content: Text('تمت إضافة القاعدة'.tr)),
                       );
                     }
                   } catch (e) {

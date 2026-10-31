@@ -457,7 +457,7 @@ class _VibesToastCard extends StatelessWidget {
     };
     return DecoratedBox(
       decoration: ShapeDecoration(
-        color: Brand.midnight,
+        color: themed(Brand.midnight, VibesDark.surfaceMuted),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(8),

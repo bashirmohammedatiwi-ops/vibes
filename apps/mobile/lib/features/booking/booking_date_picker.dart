@@ -1,6 +1,7 @@
 import '../../core/theme/world_theme.dart';
 import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import 'package:flutter/services.dart';
 
 import '../../shared/models/models.dart';
@@ -52,7 +53,7 @@ Future<BookingDateSelection?> showBookingDatePicker({
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    backgroundColor: Colors.white,
+    backgroundColor: Vibes.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
@@ -119,28 +120,28 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
   String? _error;
 
   static const _months = [
-    'كانون الثاني',
-    'شباط',
-    'آذار',
-    'نيسان',
-    'أيار',
-    'حزيران',
-    'تموز',
-    'آب',
-    'أيلول',
-    'تشرين الأول',
-    'تشرين الثاني',
-    'كانون الأول',
+    'كانون الثاني', // i18n-ok
+    'شباط', // i18n-ok
+    'آذار', // i18n-ok
+    'نيسان', // i18n-ok
+    'أيار', // i18n-ok
+    'حزيران', // i18n-ok
+    'تموز', // i18n-ok
+    'آب', // i18n-ok
+    'أيلول', // i18n-ok
+    'تشرين الأول', // i18n-ok
+    'تشرين الثاني', // i18n-ok
+    'كانون الأول', // i18n-ok
   ];
 
   static const _weekdays = [
-    'الأحد',
-    'الإثنين',
-    'الثلاثاء',
-    'الأربعاء',
-    'الخميس',
-    'الجمعة',
-    'السبت',
+    'الأحد', // i18n-ok
+    'الإثنين', // i18n-ok
+    'الثلاثاء', // i18n-ok
+    'الأربعاء', // i18n-ok
+    'الخميس', // i18n-ok
+    'الجمعة', // i18n-ok
+    'السبت', // i18n-ok
   ];
 
   /// صباحي/مسائي: يوم واحد. اليوم الكامل: يوم أو أكثر (اضغط يوم النهاية).
@@ -181,9 +182,9 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
   }
 
   String _shiftName(ShiftType s) => switch (s) {
-    ShiftType.morning => 'الفترة الصباحية',
-    ShiftType.evening => 'الفترة المسائية',
-    ShiftType.full => 'اليوم الكامل',
+    ShiftType.morning => 'الفترة الصباحية'.tr,
+    ShiftType.evening => 'الفترة المسائية'.tr,
+    ShiftType.full => 'اليوم الكامل'.tr,
   };
 
   String? _shiftTime(ShiftType s) => switch (s) {
@@ -215,7 +216,7 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
   Future<void> _explainUnavailable(DateTime date, DayPricing? p) async {
     HapticFeedback.lightImpact();
     if (p == null || p.isPast) {
-      setState(() => _error = 'هذا اليوم مضى — اختر يوماً قادماً');
+      setState(() => _error = 'هذا اليوم مضى — اختر يوماً قادماً'.tr);
       return;
     }
     final alternatives = _allowedShifts
@@ -223,7 +224,9 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
         .toList();
     if (alternatives.isEmpty) {
       setState(
-        () => _error = '${_longDate(date)} محجوز بالكامل — اختر يوماً آخر',
+        () => _error = '{date} محجوز بالكامل — اختر يوماً آخر'.trArgs({
+          'date': _longDate(date),
+        }),
       );
       return;
     }
@@ -340,7 +343,8 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
         return;
       }
       if (!_rangeIsAvailable(start, date)) {
-        _error = 'يوجد يوم غير متاح بين اليومين — اخترنا لك اليوم الجديد فقط';
+        _error =
+            'يوجد يوم غير متاح بين اليومين — اخترنا لك اليوم الجديد فقط'.tr;
         _start = date;
         _endInclusive = date;
         _awaitingRangeEnd = false;
@@ -415,10 +419,10 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
                     children: [
                       Text(
                         _isService
-                            ? 'اختر يوم المناسبة'
+                            ? 'اختر يوم المناسبة'.tr
                             : _singleDay
-                            ? 'اختر اليوم'
-                            : 'اختر مدة الإقامة',
+                            ? 'اختر اليوم'.tr
+                            : 'اختر مدة الإقامة'.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 17,
@@ -473,9 +477,9 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
               allowed: _allowedShifts,
               selected: _shift,
               name: (s) => switch (s) {
-                ShiftType.morning => 'صباحي',
-                ShiftType.evening => 'مسائي',
-                ShiftType.full => 'يوم كامل',
+                ShiftType.morning => 'صباحي'.tr,
+                ShiftType.evening => 'مسائي'.tr,
+                ShiftType.full => 'يوم كامل'.tr,
               },
               time: _shiftTime,
               onChanged: _changeShift,
@@ -493,7 +497,10 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
               decoration: BoxDecoration(
-                color: const Color(0xFFB45309).withValues(alpha: 0.08),
+                color: themed(
+                  const Color(0xFFB45309),
+                  VibesDark.warning,
+                ).withValues(alpha: Appearance.isDark ? .14 : .08),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -502,7 +509,7 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
                   fontFamily: VibesFont.ui,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFFB45309),
+                  color: themed(const Color(0xFFB45309), VibesDark.warning),
                 ),
               ),
             ),
@@ -520,7 +527,7 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
                       ),
                       SizedBox(height: 10),
                       Text(
-                        'لا مواعيد متاحة',
+                        'لا مواعيد متاحة'.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 15,
@@ -530,7 +537,7 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        'جرّب لاحقاً أو تواصل مع المضيف',
+                        'جرّب لاحقاً أو تواصل مع المضيف'.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 11.5,
@@ -573,7 +580,7 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
           dateLabel: _longDate,
           departureLabel: _departure == null ? null : _longDate(_departure!),
           periodLabel: _isService
-              ? 'خدمة التزيين · سعر موحّد'
+              ? 'خدمة التزيين · سعر موحّد'.tr
               : [
                   _shiftName(_shift),
                   if (_shiftTime(_shift) != null) _shiftTime(_shift)!,
@@ -589,20 +596,28 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
 
   String _shiftHintLabel() {
     final period = switch (_shift) {
-      ShiftType.morning => 'الفترة الصباحية',
-      ShiftType.evening => 'الفترة المسائية',
-      ShiftType.full => 'اليوم الكامل',
+      ShiftType.morning => 'الفترة الصباحية'.tr,
+      ShiftType.evening => 'الفترة المسائية'.tr,
+      ShiftType.full => 'اليوم الكامل'.tr,
     };
     if (_singleDay) {
       return _shift == ShiftType.evening
-          ? '$period · المغادرة تلقائياً في اليوم التالي'
-          : '$period · يوم واحد · المغادرة اليوم التالي';
+          ? '{period} · المغادرة تلقائياً في اليوم التالي'.trArgs({
+              'period': period,
+            })
+          : '{period} · يوم واحد · المغادرة اليوم التالي'.trArgs({
+              'period': period,
+            });
     }
-    return '$period · اختر أول وآخر يوم';
+    return '{period} · اختر أول وآخر يوم'.trArgs({'period': period});
   }
 
-  String _longDate(DateTime date) =>
-      '${_weekdays[date.weekday % 7]} ${date.day} ${_months[date.month - 1]}';
+  String _longDate(DateTime date) {
+    final weekday = _weekdays[date.weekday % 7].tr;
+    final month = _months[date.month - 1].tr;
+    if (I18n.isEn) return '${_short(weekday)}, ${_short(month)} ${date.day}';
+    return '$weekday ${date.day} $month';
+  }
 
   static DateTime? _dateOnly(DateTime? value) =>
       value == null ? null : DateTime(value.year, value.month, value.day);
@@ -641,28 +656,28 @@ class _MonthCalendar extends StatelessWidget {
   final void Function(DateTime date, DayPricing pricing) onSelect;
 
   static const _months = [
-    'كانون الثاني',
-    'شباط',
-    'آذار',
-    'نيسان',
-    'أيار',
-    'حزيران',
-    'تموز',
-    'آب',
-    'أيلول',
-    'تشرين الأول',
-    'تشرين الثاني',
-    'كانون الأول',
+    'كانون الثاني', // i18n-ok
+    'شباط', // i18n-ok
+    'آذار', // i18n-ok
+    'نيسان', // i18n-ok
+    'أيار', // i18n-ok
+    'حزيران', // i18n-ok
+    'تموز', // i18n-ok
+    'آب', // i18n-ok
+    'أيلول', // i18n-ok
+    'تشرين الأول', // i18n-ok
+    'تشرين الثاني', // i18n-ok
+    'كانون الأول', // i18n-ok
   ];
 
   static const _weekdayShort = [
-    'أحد',
-    'إثن',
-    'ثلا',
-    'أرب',
-    'خمي',
-    'جمع',
-    'سبت',
+    'أحد', // i18n-ok
+    'إثن', // i18n-ok
+    'ثلا', // i18n-ok
+    'أرب', // i18n-ok
+    'خمي', // i18n-ok
+    'جمع', // i18n-ok
+    'سبت', // i18n-ok
   ];
 
   @override
@@ -695,7 +710,7 @@ class _MonthCalendar extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              '${_months[month.month - 1]} ${month.year}',
+              '${_months[month.month - 1].tr} ${month.year}',
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontSize: 14.5,
@@ -711,7 +726,7 @@ class _MonthCalendar extends StatelessWidget {
             for (final label in _weekdayShort)
               Expanded(
                 child: Text(
-                  label,
+                  label.tr,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
@@ -766,9 +781,9 @@ class _MonthCalendar extends StatelessWidget {
               caption: !multi
                   ? null
                   : isStart
-                  ? 'البداية'
+                  ? 'البداية'.tr
                   : isEnd
-                  ? 'آخر يوم'
+                  ? 'آخر يوم'.tr
                   : null,
               departure: _sameDate(date, departure),
               inRange:
@@ -834,10 +849,15 @@ class _DayCell extends StatelessWidget {
   final bool roundEnd;
   final VoidCallback? onTap;
 
-  static const green = Color(0xFF16A34A);
-  static const greenDeep = Color(0xFF15803D);
-  static const red = Color(0xFFDC2626);
-  static const band = Color(0xFFDDF6E6);
+  static Color get green => themed(const Color(0xFF16A34A), VibesDark.success);
+  static Color get greenDeep =>
+      themed(const Color(0xFF15803D), const Color(0xFF7FDDB3));
+  static Color get onGreen => themed(Colors.white, const Color(0xFF06231A));
+  static Color get red => themed(const Color(0xFFDC2626), VibesDark.danger);
+
+  /// شريط المدة: ليلاً أخضر عميق مشبع يقرأ كشريط، لا كتلة نعناع باهتة.
+  static Color get band =>
+      themed(const Color(0xFFDDF6E6), const Color(0xFF1C4F4A));
   static const _r = Radius.circular(14);
 
   @override
@@ -847,14 +867,14 @@ class _DayCell extends StatelessWidget {
     final Color border;
     if (selected) {
       bg = green;
-      fg = Colors.white;
+      fg = onGreen;
       border = green;
     } else if (inRange) {
       bg = Colors.transparent;
       fg = greenDeep;
       border = Colors.transparent;
     } else if (departure) {
-      bg = Colors.white;
+      bg = Vibes.surface;
       fg = greenDeep;
       border = green;
     } else if (past) {
@@ -885,7 +905,10 @@ class _DayCell extends StatelessWidget {
       ),
     );
 
-    final label = departure && !selected ? 'مغادرة' : caption;
+    // «Check-out» لا تتسع في خلية اليوم، فالاختصار للإنجليزية فقط.
+    final label = departure && !selected
+        ? (I18n.isEn ? 'Out' : 'مغادرة') // i18n-ok
+        : caption;
 
     final number = Text(
       '${date.day}',
@@ -904,15 +927,23 @@ class _DayCell extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           number,
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: VibesFont.ui,
-              fontSize: 8.5,
-              fontWeight: FontWeight.w800,
-              color: selected ? Colors.white.withValues(alpha: .92) : fg,
-              height: 1.25,
-            ),
+          Builder(
+            builder: (_) {
+              final text = Text(
+                label,
+                maxLines: I18n.isEn ? 1 : null,
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w800,
+                  color: selected ? onGreen.withValues(alpha: .92) : fg,
+                  height: 1.25,
+                ),
+              );
+              return I18n.isEn
+                  ? FittedBox(fit: BoxFit.scaleDown, child: text)
+                  : text;
+            },
           ),
         ],
       );
@@ -920,7 +951,7 @@ class _DayCell extends StatelessWidget {
       content = Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.check_rounded, size: 14, color: Colors.white),
+          Icon(Icons.check_rounded, size: 14, color: onGreen),
           const SizedBox(width: 2),
           number,
         ],
@@ -935,10 +966,7 @@ class _DayCell extends StatelessWidget {
           Container(
             width: 4,
             height: 4,
-            decoration: const BoxDecoration(
-              color: green,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: green, shape: BoxShape.circle),
           ),
         ],
       );
@@ -949,12 +977,11 @@ class _DayCell extends StatelessWidget {
     return Semantics(
       button: !past,
       selected: selected || inRange,
-      label:
-          '${date.day} ${past
-              ? ''
-              : available
-              ? 'متاح'
-              : 'غير متاح'}',
+      label: past
+          ? '${date.day} '
+          : available
+          ? '{day} متاح'.trArgs({'day': date.day})
+          : '{day} غير متاح'.trArgs({'day': date.day}),
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -984,7 +1011,9 @@ class _DayCell extends StatelessWidget {
                   boxShadow: selected
                       ? [
                           BoxShadow(
-                            color: green.withValues(alpha: .35),
+                            color: green.withValues(
+                              alpha: Appearance.isDark ? .22 : .35,
+                            ),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -1028,7 +1057,7 @@ class _PeriodSwitcher extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F7),
+        color: themed(const Color(0xFFF3F4F7), VibesDark.surfaceMuted),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -1044,7 +1073,9 @@ class _PeriodSwitcher extends StatelessWidget {
                     horizontal: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: s == selected ? Colors.white : Colors.transparent,
+                    color: s == selected
+                        ? themed(Colors.white, VibesDark.hairline)
+                        : Colors.transparent,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: s == selected
                         ? const [
@@ -1070,13 +1101,17 @@ class _PeriodSwitcher extends StatelessWidget {
                                 : placeInk2,
                           ),
                           const SizedBox(width: 5),
-                          Text(
-                            name(s),
-                            style: TextStyle(
-                              fontFamily: VibesFont.ui,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                              color: s == selected ? placeInk : placeInk2,
+                          Flexible(
+                            child: Text(
+                              name(s),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                                color: s == selected ? placeInk : placeInk2,
+                              ),
                             ),
                           ),
                         ],
@@ -1137,9 +1172,9 @@ class _AvailabilityLegend extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        item(_DayCell.green, 'متاح'),
+        item(_DayCell.green, 'متاح'.tr),
         const SizedBox(width: 22),
-        item(_DayCell.red, 'غير متاح'),
+        item(_DayCell.red, 'غير متاح'.tr),
       ],
     );
   }
@@ -1166,9 +1201,9 @@ class _AlternativeSheet extends StatelessWidget {
         20,
         16 + MediaQuery.paddingOf(context).bottom,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      decoration: BoxDecoration(
+        color: Vibes.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1196,7 +1231,9 @@ class _AlternativeSheet extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            '$unavailable محجوزة في هذا اليوم، لكن يمكنك الحجز في:',
+            '{shift} محجوزة في هذا اليوم، لكن يمكنك الحجز في:'.trArgs({
+              'shift': unavailable,
+            }),
             style: TextStyle(
               fontFamily: VibesFont.ui,
               fontSize: 13,
@@ -1210,7 +1247,7 @@ class _AlternativeSheet extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Material(
-                color: Colors.white,
+                color: themed(Colors.white, VibesDark.surfaceMuted),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                   side: BorderSide(
@@ -1282,7 +1319,7 @@ class _AlternativeSheet extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'اختيار يوم آخر',
+              'اختيار يوم آخر'.tr,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontWeight: FontWeight.w800,
@@ -1327,7 +1364,7 @@ class _SummaryBar extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         border: Border(top: BorderSide(color: placeLine)),
         boxShadow: [
           BoxShadow(
@@ -1348,7 +1385,9 @@ class _SummaryBar extends StatelessWidget {
                 _StayStrip(
                   from: dateLabel(start!),
                   to: departureLabel ?? dateLabel(endInclusive!),
-                  toTitle: departureLabel != null ? 'المغادرة' : 'آخر يوم',
+                  toTitle: departureLabel != null
+                      ? 'المغادرة'.tr
+                      : 'آخر يوم'.tr,
                   days: days,
                 ),
                 const SizedBox(height: 10),
@@ -1383,10 +1422,10 @@ class _SummaryBar extends StatelessWidget {
                                       ? dateLabel(start!)
                                       : '${dateLabel(start!)} — ${dateLabel(endInclusive!)}')
                                 : (awaitingEnd
-                                      ? 'اختر يوم المغادرة'
+                                      ? 'اختر يوم المغادرة'.tr
                                       : (singleDay
-                                            ? 'اضغط يوماً واحداً'
-                                            : 'اختر يوم الوصول')),
+                                            ? 'اضغط يوماً واحداً'.tr
+                                            : 'اختر يوم الوصول'.tr)),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -1410,19 +1449,21 @@ class _SummaryBar extends StatelessWidget {
                             ),
                           if (ready && departureLabel != null)
                             Text(
-                              'المغادرة: $departureLabel',
+                              'المغادرة: {date}'.trArgs({
+                                'date': departureLabel,
+                              }),
                               style: TextStyle(
                                 fontFamily: VibesFont.ui,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF15803D),
+                                color: _DayCell.greenDeep,
                               ),
                             ),
                           if (ready && !singleDay)
                             Text(
                               days > 1
-                                  ? '$days أيام'
-                                  : 'لأكثر من يوم: اضغط على يوم النهاية',
+                                  ? '{n} أيام'.trN(days)
+                                  : 'لأكثر من يوم: اضغط على يوم النهاية'.tr,
                               style: TextStyle(
                                 fontFamily: VibesFont.ui,
                                 fontSize: 10.5,
@@ -1442,9 +1483,12 @@ class _SummaryBar extends StatelessWidget {
                 child: FilledButton(
                   style: FilledButton.styleFrom(
                     backgroundColor: context.world.accentDeep,
-                    foregroundColor: Colors.white,
+                    foregroundColor: themed(Colors.white, Brand.midnight),
                     disabledBackgroundColor: context.world.accentDeep
                         .withValues(alpha: .25),
+                    disabledForegroundColor: Appearance.isDark
+                        ? VibesDark.inkSecondary
+                        : null,
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -1452,7 +1496,7 @@ class _SummaryBar extends StatelessWidget {
                   ),
                   onPressed: ready ? onConfirm : null,
                   child: Text(
-                    ready ? 'اعتماد الموعد' : 'اختر موعداً للمتابعة',
+                    ready ? 'اعتماد الموعد'.tr : 'اختر موعداً للمتابعة'.tr,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 15,
@@ -1483,21 +1527,23 @@ class _StayStrip extends StatelessWidget {
   final String toTitle;
   final int days;
 
-  static const green = Color(0xFF16A34A);
-  static const greenDeep = Color(0xFF15803D);
+  static Color get green => _DayCell.green;
+  static Color get greenDeep => _DayCell.greenDeep;
+  static Color get background =>
+      themed(const Color(0xFFF1FBF4), const Color(0xFF15363A));
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1FBF4),
+        color: background,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: green.withValues(alpha: .22)),
       ),
       child: Row(
         children: [
-          Expanded(child: _end('البداية', from, CrossAxisAlignment.start)),
+          Expanded(child: _end('البداية'.tr, from, CrossAxisAlignment.start)),
           // الخط الواصل وعدد الأيام في المنتصف
           Expanded(
             child: Row(
@@ -1510,8 +1556,8 @@ class _StayStrip extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: I18n.isEn ? 7 : 10,
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
@@ -1519,19 +1565,22 @@ class _StayStrip extends StatelessWidget {
                     borderRadius: BorderRadius.circular(99),
                     boxShadow: [
                       BoxShadow(
-                        color: green.withValues(alpha: .3),
+                        color: green.withValues(
+                          alpha: Appearance.isDark ? .18 : .3,
+                        ),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
                     ],
                   ),
                   child: Text(
-                    '$days أيام',
+                    '{n} أيام'.trN(days),
+                    maxLines: 1,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
-                      fontSize: 11.5,
+                      fontSize: I18n.isEn ? 10.5 : 11.5,
                       fontWeight: FontWeight.w900,
-                      color: Colors.white,
+                      color: _DayCell.onGreen,
                       height: 1.3,
                     ),
                   ),
@@ -1555,7 +1604,11 @@ class _StayStrip extends StatelessWidget {
   Widget _end(String title, String label, CrossAxisAlignment align) {
     // «الأربعاء 4 تشرين الثاني» → اسم اليوم فوق والتاريخ تحته
     final space = label.indexOf(' ');
-    final weekday = space > 0 ? label.substring(0, space) : label;
+    // الإنجليزية: «Wed, Nov 4» — الفاصلة لا تظهر حين يصبح اليوم سطراً مستقلاً.
+    final weekday = (space > 0 ? label.substring(0, space) : label).replaceAll(
+      ',',
+      '',
+    );
     final date = space > 0 ? label.substring(space + 1) : '';
     final textAlign = align == CrossAxisAlignment.start
         ? TextAlign.start
@@ -1611,9 +1664,13 @@ class _Dot extends StatelessWidget {
     width: 8,
     height: 8,
     decoration: BoxDecoration(
-      color: hollow ? Colors.white : _StayStrip.green,
+      color: hollow
+          ? themed(Colors.white, _StayStrip.background)
+          : _StayStrip.green,
       shape: BoxShape.circle,
       border: Border.all(color: _StayStrip.green, width: 2),
     ),
   );
 }
+
+String _short(String s) => s.length > 3 ? s.substring(0, 3) : s;

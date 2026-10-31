@@ -192,7 +192,7 @@ class AuthController extends StateNotifier<AuthState> {
   Future<String?> deleteAccount() async {
     final res = await _client.delete('/api/users/me');
     if (res is Map && res['requested'] == true) {
-      return res['message']?.toString() ?? 'استلمنا طلب حذف حسابك';
+      return res['message']?.toString() ?? 'استلمنا طلب حذف حسابك'.tr;
     }
     await _tokens.clear();
     await _cacheUser(null);

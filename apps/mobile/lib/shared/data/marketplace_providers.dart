@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/network/api_client.dart';
+import '../../core/i18n/i18n.dart';
 import '../../features/auth/auth_controller.dart';
 import '../models/models.dart';
 
@@ -39,7 +40,7 @@ final conversationTitleProvider = Provider.family<String, String>((ref, id) {
   if (match != null && match.isNotEmpty && match.first.title.isNotEmpty) {
     return match.first.title;
   }
-  return 'المحادثة';
+  return 'المحادثة'.tr;
 });
 
 final chatMessagesProvider = FutureProvider.family<List<ChatMessage>, String>((

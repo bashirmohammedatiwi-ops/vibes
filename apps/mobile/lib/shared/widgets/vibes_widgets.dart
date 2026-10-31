@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/world_theme.dart';
 import 'maison_shapes.dart';
 
@@ -34,6 +35,10 @@ class VibesButton extends StatefulWidget {
   State<VibesButton> createState() => _VibesButtonState();
 }
 
+/// الإنجليزية أعرض من العربية: يصغر النص ليتسع للزر بدل أن يُقص.
+Widget _fitEnglish(Widget text) =>
+    I18n.isEn ? FittedBox(fit: BoxFit.scaleDown, child: text) : text;
+
 class _VibesButtonState extends State<VibesButton> {
   bool _hovering = false;
   bool _pressed = false;
@@ -48,6 +53,18 @@ class _VibesButtonState extends State<VibesButton> {
   Widget build(BuildContext context) {
     final height = widget.small ? 42.0 : 56.0;
     const shape = Folio.shape;
+
+    final label = Text(
+      widget.label,
+      overflow: TextOverflow.ellipsis,
+      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+        fontWeight: FontWeight.w700,
+        fontSize: widget.small ? 13 : null,
+        color: widget.ghost
+            ? context.world.accentDeep
+            : context.world.onAccent,
+      ),
+    );
 
     final child = Row(
       mainAxisSize: widget.expanded ? MainAxisSize.max : MainAxisSize.min,
@@ -76,19 +93,7 @@ class _VibesButtonState extends State<VibesButton> {
           ),
           const SizedBox(width: VibesSpacing.sm),
         ],
-        Flexible(
-          child: Text(
-            widget.label,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              fontSize: widget.small ? 13 : null,
-              color: widget.ghost
-                  ? context.world.accentDeep
-                  : context.world.onAccent,
-            ),
-          ),
-        ),
+        Flexible(child: _fitEnglish(label)),
       ],
     );
 
@@ -108,7 +113,7 @@ class _VibesButtonState extends State<VibesButton> {
               height: height,
               padding: EdgeInsets.symmetric(horizontal: widget.small ? 14 : 20),
               decoration: ShapeDecoration(
-                color: _hovering ? context.world.accentFaint : Colors.white,
+                color: _hovering ? context.world.accentFaint : Vibes.surface,
                 shape: RoundedRectangleBorder(
                   borderRadius: const BorderRadius.all(Radius.circular(18)),
                   side: BorderSide(
@@ -298,6 +303,8 @@ class SectionHeader extends StatelessWidget {
                             height: 2,
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
+                                begin: AlignmentDirectional.centerEnd,
+                                end: AlignmentDirectional.centerStart,
                                 colors: [bar.withValues(alpha: 0.25), bar],
                               ),
                               borderRadius: BorderRadius.circular(1),
@@ -349,6 +356,8 @@ class SectionHeader extends StatelessWidget {
             height: 1,
             decoration: BoxDecoration(
               gradient: LinearGradient(
+                begin: AlignmentDirectional.centerEnd,
+                end: AlignmentDirectional.centerStart,
                 colors: [
                   bar.withValues(alpha: 0.45),
                   bar.withValues(alpha: 0.08),
@@ -704,7 +713,7 @@ class _EmptyStamp extends StatelessWidget {
           height: 68,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white,
+            color: Vibes.surface,
             border: Border.all(color: p.accent.withValues(alpha: .22)),
             boxShadow: [BoxShadow(color: p.glow.withValues(alpha: .18), blurRadius: 22, offset: const Offset(0, 8))],
           ),
@@ -803,11 +812,15 @@ class PriceText extends StatelessWidget {
     super.key,
     this.compact = false,
     this.onDark = false,
+    this.ink,
   });
 
   final num amount;
   final bool compact;
   final bool onDark;
+
+  /// لون موحّد للرقم والوحدة فوق تعبئة ملوّنة — يتجاوز الألوان الافتراضية.
+  final Color? ink;
 
   static String format(num value) {
     final fixed = value.round();
@@ -836,18 +849,24 @@ class PriceText extends StatelessWidget {
           style: style?.copyWith(
             fontWeight: FontWeight.w800,
             fontFeatures: const [FontFeature.tabularFigures()],
-            color: amount == 0
-                ? (onDark ? Colors.white54 : VibesTheme.textTertiaryOf(context))
-                : (onDark || VibesTheme.isDark(context)
-                      ? Vibes.tealBright
-                      : Vibes.honeyDeep),
+            color:
+                ink ??
+                (amount == 0
+                    ? (onDark
+                          ? Colors.white54
+                          : VibesTheme.textTertiaryOf(context))
+                    : (onDark || VibesTheme.isDark(context)
+                          ? Vibes.tealBright
+                          : Vibes.honeyDeep)),
           ),
         ),
         const SizedBox(width: 3),
         Text(
-          'د.ع',
+          'د.ع'.tr,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: onDark ? Colors.white70 : VibesTheme.textTertiaryOf(context),
+            color:
+                ink?.withValues(alpha: .75) ??
+                (onDark ? Colors.white70 : VibesTheme.textTertiaryOf(context)),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -867,11 +886,11 @@ class ErrorCanvas extends StatelessWidget {
   Widget build(BuildContext context) {
     return EmptyCanvas(
       icon: Icons.wifi_off_rounded,
-      title: 'تعذّر الاتصال',
+      title: 'تعذّر الاتصال'.tr,
       subtitle: message,
       action: onRetry != null
           ? VibesButton(
-              label: 'إعادة المحاولة',
+              label: 'إعادة المحاولة'.tr,
               small: true,
               ghost: true,
               onPressed: onRetry,
@@ -879,4 +898,35 @@ class ErrorCanvas extends StatelessWidget {
           : null,
     );
   }
+}
+
+/// شارة «قريباً» للمحافظات التي لم تُضف إليها أماكن بعد.
+class ComingSoonPill extends StatelessWidget {
+  const ComingSoonPill({super.key});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(colors: [Brand.brassLight, Brand.brass]),
+      borderRadius: BorderRadius.circular(99),
+      boxShadow: [
+        BoxShadow(
+          color: Brand.brass.withValues(alpha: .35),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Text(
+      'قريباً'.tr,
+      style: TextStyle(
+        fontFamily: VibesFont.ui,
+        fontSize: 10.5,
+        fontWeight: FontWeight.w900,
+        color: Brand.midnight,
+        height: 1.35,
+      ),
+    ),
+  );
 }

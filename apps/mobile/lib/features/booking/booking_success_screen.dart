@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import 'package:flutter/services.dart'
     show HapticFeedback, SystemUiOverlayStyle;
@@ -97,7 +98,7 @@ class _BookingSuccessScreenState extends ConsumerState<BookingSuccessScreen> {
                   ),
                   const SizedBox(height: 26),
                   Text(
-                        'تمّ استلام حجزك 🎉',
+                        'تمّ استلام حجزك 🎉'.tr,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
@@ -111,7 +112,7 @@ class _BookingSuccessScreenState extends ConsumerState<BookingSuccessScreen> {
                       .slideY(begin: .2, end: 0, delay: 300.ms),
                   const SizedBox(height: 8),
                   Text(
-                    'خطوة أخيرة: أكمل الدفع ليتأكد حجزك فوراً',
+                    'خطوة أخيرة: أكمل الدفع ليتأكد حجزك فوراً'.tr,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
@@ -139,7 +140,7 @@ class _BookingSuccessScreenState extends ConsumerState<BookingSuccessScreen> {
                   const SizedBox(height: 26),
                   if (id != null) ...[
                     WorldButton(
-                      label: 'إكمال الدفع والتفاصيل',
+                      label: 'إكمال الدفع والتفاصيل'.tr,
                       icon: Icons.lock_outline_rounded,
                       palette: p,
                       onTap: () => context.go('/booking/$id'),
@@ -149,7 +150,7 @@ class _BookingSuccessScreenState extends ConsumerState<BookingSuccessScreen> {
                       children: [
                         Expanded(
                           child: WorldGhostButton(
-                            label: 'الفاتورة',
+                            label: 'الفاتورة'.tr,
                             icon: Icons.receipt_long_outlined,
                             onDark: true,
                             onTap: () => context.go('/booking/$id/invoice'),
@@ -158,7 +159,7 @@ class _BookingSuccessScreenState extends ConsumerState<BookingSuccessScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: WorldGhostButton(
-                            label: 'حجوزاتي',
+                            label: 'حجوزاتي'.tr,
                             icon: Icons.calendar_month_outlined,
                             onDark: true,
                             onTap: () => context.go('/bookings'),
@@ -168,7 +169,7 @@ class _BookingSuccessScreenState extends ConsumerState<BookingSuccessScreen> {
                     ),
                   ] else
                     WorldButton(
-                      label: 'حجوزاتي',
+                      label: 'حجوزاتي'.tr,
                       icon: Icons.calendar_month_outlined,
                       palette: p,
                       onTap: () => context.go('/bookings'),
@@ -177,7 +178,7 @@ class _BookingSuccessScreenState extends ConsumerState<BookingSuccessScreen> {
                   TextButton(
                     onPressed: () => context.go('/home'),
                     child: Text(
-                      'العودة للرئيسية',
+                      'العودة للرئيسية'.tr,
                       style: TextStyle(
                         fontFamily: VibesFont.ui,
                         fontWeight: FontWeight.w700,
@@ -209,7 +210,7 @@ class _Ticket extends StatelessWidget {
     return ClipPath(
       clipper: const _TicketClipper(notchY: 108),
       child: Container(
-        color: Colors.white,
+        color: Vibes.surface,
         child: Column(
           children: [
             SizedBox(
@@ -237,14 +238,17 @@ class _Ticket extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            booking.propertyName ?? 'حجزك',
+                            booking.propertyName ?? 'حجزك'.tr,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontFamily: VibesFont.ui,
                               fontSize: 17,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFF141C2B),
+                              color: themed(
+                                const Color(0xFF141C2B),
+                                VibesDark.ink,
+                              ),
                             ),
                           ),
                           if ((booking.cityName ?? '').isNotEmpty)
@@ -254,12 +258,15 @@ class _Ticket extends StatelessWidget {
                                 fontFamily: VibesFont.ui,
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF5A6678),
+                                color: themed(
+                                  const Color(0xFF5A6678),
+                                  VibesDark.inkSecondary,
+                                ),
                               ),
                             ),
                           const SizedBox(height: 6),
                           WorldStatusChip(
-                            label: booking.statusLabelAr,
+                            label: booking.statusLabelAr.tr,
                             color: p.accentDeep,
                           ),
                         ],
@@ -273,7 +280,12 @@ class _Ticket extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 18),
               child: CustomPaint(
                 size: const Size(double.infinity, 1),
-                painter: _DashPainter(color: const Color(0xFFE4E9F0)),
+                painter: _DashPainter(
+                  color: themed(
+                    const Color(0xFFE4E9F0),
+                    VibesDark.hairlineStrong,
+                  ),
+                ),
               ),
             ),
             Padding(
@@ -281,13 +293,15 @@ class _Ticket extends StatelessWidget {
               child: Row(
                 children: [
                   _Cell(
-                    label: 'التاريخ',
+                    label: 'التاريخ'.tr,
                     value: placeFormatDateShort(booking.startDate),
                   ),
-                  _Cell(label: 'الفترة', value: booking.shiftLabelAr),
+                  _Cell(label: 'الفترة'.tr, value: booking.shiftLabelAr.tr),
                   _Cell(
-                    label: 'الإجمالي',
-                    value: '${formatIqdShort(booking.totalPrice)} د.ع',
+                    label: 'الإجمالي'.tr,
+                    value: '{amount} د.ع'.trArgs({
+                      'amount': formatIqdShort(booking.totalPrice),
+                    }),
                     color: p.accentDeep,
                   ),
                 ],
@@ -309,6 +323,17 @@ class _Cell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final valueText = Text(
+      value,
+      maxLines: 1,
+      overflow: I18n.isEn ? null : TextOverflow.ellipsis,
+      style: TextStyle(
+        fontFamily: VibesFont.ui,
+        fontSize: 13.5,
+        fontWeight: FontWeight.w900,
+        color: color ?? themed(const Color(0xFF141C2B), VibesDark.ink),
+      ),
+    );
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -319,21 +344,18 @@ class _Cell extends StatelessWidget {
               fontFamily: VibesFont.ui,
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF8A9099),
+              color: themed(const Color(0xFF8A9099), VibesDark.inkTertiary),
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: VibesFont.ui,
-              fontSize: 13.5,
-              fontWeight: FontWeight.w900,
-              color: color ?? const Color(0xFF141C2B),
-            ),
-          ),
+          // «1,800,000 IQD» أعرض من الخلية: تصغير بدل اقتطاع الرقم.
+          I18n.isEn
+              ? FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: valueText,
+                )
+              : valueText,
         ],
       ),
     );
@@ -349,7 +371,11 @@ class _Steps extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final steps = [('تم الطلب', true), ('الدفع', paid), ('التأكيد', false)];
+    final steps = [
+      ('تم الطلب'.tr, true),
+      ('الدفع'.tr, paid),
+      ('التأكيد'.tr, false),
+    ];
     return Row(
       children: [
         for (var i = 0; i < steps.length; i++) ...[

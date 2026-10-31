@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/i18n/i18n.dart';
 import '../../features/compare/compare_feature.dart';
 import '../../core/theme/world_theme.dart';
 import 'maison_shapes.dart';
@@ -31,11 +32,11 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   /// فهرس الفرع لكل تبويب — الاستكشاف جوهرة المنتصف (فرع 1)
   static const _slots = [
-    (Icons.home_rounded, 'الرئيسية', 0),
-    (Icons.calendar_month_rounded, 'حجوزاتي', 2),
-    (null, 'استكشف', 1),
-    (Icons.auto_awesome_rounded, 'نديم', -1),
-    (Icons.person_rounded, 'ملفي', 3),
+    (Icons.home_rounded, 'الرئيسية', 0), // i18n-ok
+    (Icons.calendar_month_rounded, 'حجوزاتي', 2), // i18n-ok
+    (null, 'استكشف', 1), // i18n-ok
+    (Icons.auto_awesome_rounded, 'نديم', -1), // i18n-ok
+    (Icons.person_rounded, 'ملفي', 3), // i18n-ok
   ];
 
   static String _routeOf(int branch) => switch (branch) {
@@ -68,12 +69,18 @@ class _AppShellState extends State<AppShell> {
     final current = widget.shell.currentIndex;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
+      value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-        systemNavigationBarColor: Colors.white,
-        systemNavigationBarIconBrightness: Brightness.dark,
+        statusBarIconBrightness: Appearance.isDark
+            ? Brightness.light
+            : Brightness.dark,
+        statusBarBrightness: Appearance.isDark
+            ? Brightness.dark
+            : Brightness.light,
+        systemNavigationBarColor: Vibes.canvas,
+        systemNavigationBarIconBrightness: Appearance.isDark
+            ? Brightness.light
+            : Brightness.dark,
       ),
       child: PopScope(
         // الرجوع من أي فرع غير الرئيسية يعيد إليها بدل إنهاء التطبيق —
@@ -87,7 +94,7 @@ class _AppShellState extends State<AppShell> {
           }
         },
         child: Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: Vibes.canvas,
           body: widget.shell,
           extendBody: current != 1,
           bottomNavigationBar: current == 1
@@ -136,7 +143,7 @@ class _GlassDock extends ConsumerWidget {
     final slots = [
       for (final s in _slots)
         if (s.$3 != -1)
-          s
+          (s.$1, s.$2.tr, s.$3)
         else if (nadeem.showInNav && nadeem.enabled)
           (s.$1, nadeem.name, s.$3),
     ];
@@ -151,12 +158,20 @@ class _GlassDock extends ConsumerWidget {
           child: Container(
             height: 66,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.97),
+              color: Vibes.surface.withValues(alpha: 0.97),
               borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
+              border: Border.all(
+                color: themed(
+                  Colors.white.withValues(alpha: 0.6),
+                  VibesDark.hairline,
+                ),
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0x1A0F2138),
+                  color: themed(
+                    const Color(0x1A0F2138),
+                    const Color(0x66000000),
+                  ),
                   blurRadius: 24,
                   offset: const Offset(0, 10),
                 ),

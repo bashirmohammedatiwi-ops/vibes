@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/app_mode/app_mode_controller.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/utils/data_warmup.dart';
 import '../../features/home/home_sections.dart';
 import '../../shared/widgets/vibes_map.dart';
@@ -134,13 +135,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-        systemNavigationBarColor: Colors.white,
-        systemNavigationBarIconBrightness: Brightness.dark,
-      ),
+      value:
+          (Appearance.isDark
+                  ? SystemUiOverlayStyle.light
+                  : SystemUiOverlayStyle.dark)
+              .copyWith(
+                statusBarColor: Colors.transparent,
+                systemNavigationBarColor: _background,
+                systemNavigationBarIconBrightness: Appearance.isDark
+                    ? Brightness.light
+                    : Brightness.dark,
+              ),
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: _background,
         body: LayoutBuilder(
           builder: (context, box) {
             final size = box.biggest;
@@ -172,7 +179,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                           height: h * 2,
                           child: RepaintBoundary(
                             child: CustomPaint(
-                              painter: _MorphPainter(t: t, w: w, h: h),
+                              painter: _MorphPainter(
+                                t: t,
+                                w: w,
+                                h: h,
+                                ink: _logoInk,
+                                trace: themed(Colors.white, Brand.brass),
+                                shadow: themed(
+                                  _navy.withValues(alpha: .12),
+                                  Colors.black.withValues(alpha: .35),
+                                ),
+                                worlds: _worldColors,
+                              ),
                             ),
                           ),
                         ),
@@ -202,6 +220,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 }
 
 const _navy = Color(0xFF1B3857);
+
+/// الفاتح أبيض بشعار كحلي، والداكن منتصف الليل بشعار فاتح.
+Color get _background => themed(Colors.white, Brand.midnight);
+Color get _logoInk => themed(_navy, VibesDark.ink);
 
 /// المحور الزمني 0→1.
 abstract final class _T {
@@ -309,14 +331,40 @@ class _Shapes {
   static final instance = _Shapes();
 }
 
-const _worldColors = [Color(0xFFC89844), Color(0xFF315879), Color(0xFFED5477)];
+const _worldColorsLight = [
+  Color(0xFFC89844),
+  Color(0xFF315879),
+  Color(0xFFED5477),
+];
+
+/// أزرق القاعات يضيع فوق منتصف الليل — نسخة أفتح للوضع الداكن.
+const _worldColorsDark = [
+  Color(0xFFE0B568),
+  Color(0xFF8FB4D4),
+  Color(0xFFF58AA3),
+];
+
+List<Color> get _worldColors =>
+    Appearance.isDark ? _worldColorsDark : _worldColorsLight;
 
 class _MorphPainter extends CustomPainter {
-  _MorphPainter({required this.t, required this.w, required this.h});
+  _MorphPainter({
+    required this.t,
+    required this.w,
+    required this.h,
+    required this.ink,
+    required this.trace,
+    required this.shadow,
+    required this.worlds,
+  });
 
   final double t;
   final double w;
   final double h;
+  final Color ink;
+  final Color trace;
+  final Color shadow;
+  final List<Color> worlds;
 
   static ui.PathMetric? _ribbon;
   static Rect? _ribbonFor;
@@ -377,17 +425,17 @@ class _MorphPainter extends CustomPainter {
       canvas.drawPath(
         path.shift(Offset(0, 4 + 6 * lift)),
         Paint()
-          ..color = _navy.withValues(alpha: .12 * lift)
+          ..color = shadow.withValues(alpha: shadow.a * lift)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14),
       );
     }
-    canvas.drawPath(path, Paint()..color = _navy);
+    canvas.drawPath(path, Paint()..color = ink);
 
     // ٥. خط ضوء يجري على مسار الشريط الحقيقي — توقيع الاكتمال
-    final trace = _T.raw(t, .66, .84);
-    if (trace > 0 && trace < 1 && open >= .98) {
+    final run = _T.raw(t, .66, .84);
+    if (run > 0 && run < 1 && open >= .98) {
       final rib = _ribbonPath(map, o);
-      final e = Curves.easeInOutCubic.transform(trace) * 1.28;
+      final e = Curves.easeInOutCubic.transform(run) * 1.28;
       final headLen = rib.length * e.clamp(0.0, 1.0);
       final tailLen = rib.length * (e - .26).clamp(0.0, 1.0);
       if (headLen > tailLen) {
@@ -403,10 +451,7 @@ class _MorphPainter extends CustomPainter {
             ..shader = ui.Gradient.linear(
               rib.getTangentForOffset(tailLen)!.position,
               rib.getTangentForOffset(headLen)!.position,
-              [
-                Colors.white.withValues(alpha: 0),
-                Colors.white.withValues(alpha: .95),
-              ],
+              [trace.withValues(alpha: 0), trace.withValues(alpha: .95)],
             ),
         );
         canvas.restore();
@@ -464,7 +509,7 @@ class _MorphPainter extends CustomPainter {
       final now = _dotAt(i, t, head, size);
       if (now == null) continue;
       final (pos, conv) = now;
-      final color = Color.lerp(_worldColors[i], _navy, conv)!;
+      final color = Color.lerp(worlds[i], ink, conv)!;
       // ذيل حركة أثناء الالتفاف
       if (conv > 0) {
         for (var j = 5; j >= 1; j--) {
@@ -510,7 +555,7 @@ class _MorphPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2.2 * (1 - q) + .4
-          ..color = _navy.withValues(alpha: .20 * (1 - q)),
+          ..color = ink.withValues(alpha: .20 * (1 - q)),
       );
     }
   }
@@ -529,8 +574,7 @@ class _MorphPainter extends CustomPainter {
           Offset(math.cos(ang), math.sin(ang)) * speed * e +
           Offset(0, w * .55 * q * q);
       final alpha = (1 - math.pow(q, 1.6)).toDouble();
-      final paint = Paint()
-        ..color = _worldColors[j % 3].withValues(alpha: alpha);
+      final paint = Paint()..color = worlds[j % 3].withValues(alpha: alpha);
       final sz = w * (.03 + .025 * rnd.nextDouble()) * (1 - .3 * q);
       canvas.save();
       canvas.translate(pos.dx, pos.dy);
@@ -552,7 +596,13 @@ class _MorphPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _MorphPainter old) =>
-      old.t != t || old.w != w || old.h != h;
+      old.t != t ||
+      old.w != w ||
+      old.h != h ||
+      old.ink != ink ||
+      old.trace != trace ||
+      old.shadow != shadow ||
+      old.worlds != worlds;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -577,12 +627,37 @@ class _Wordmark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final height = width * 98 / 505;
+    if (!I18n.isEn) {
+      // الاسم العربي: يصعد من خلف قناع بتوقيت حروف الشعار نفسه
+      final rise = _T.ease(t, .62, .86, _springSoft);
+      return SizedBox(
+        width: width,
+        height: height * 1.5,
+        child: ClipRect(
+          child: Transform.translate(
+            offset: Offset(0, height * 1.5 * (1 - rise)),
+            child: Center(
+              child: Text(
+                I18n.appName,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: height * 1.12,
+                  fontWeight: FontWeight.w900,
+                  color: _logoInk,
+                  height: 1.1,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     final image = Image.asset(
       'assets/brand/wordmark_gold.png',
       width: width,
       height: height,
       filterQuality: FilterQuality.high,
-      color: _navy,
+      color: _logoInk,
       colorBlendMode: BlendMode.srcIn,
     );
     return SizedBox(
@@ -663,15 +738,18 @@ class _Tagline extends StatelessWidget {
                   Opacity(
                     opacity: word,
                     child: Transform.translate(
-                      offset: Offset(6 * (1 - word), 0),
+                      offset: Offset((I18n.isEn ? -6 : 6) * (1 - word), 0),
                       child: Text(
-                        s.label,
+                        s.label.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
                           letterSpacing: .3,
-                          color: Color(0xFF5E6672),
+                          color: themed(
+                            const Color(0xFF5E6672),
+                            VibesDark.inkSecondary,
+                          ),
                         ),
                       ),
                     ),

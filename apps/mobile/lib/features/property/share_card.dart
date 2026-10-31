@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/models.dart';
 import '../../shared/widgets/maison_shapes.dart';
@@ -30,11 +31,14 @@ Future<void> sharePropertyAsImage(
     final file = File('${dir.path}/vibes-${property.id}.png');
     await file.writeAsBytes(bytes);
 
-    await Share.shareXFiles([
-      XFile(file.path),
-    ], text: '${property.name} — اكتشفها على تطبيق VIBES');
+    await Share.shareXFiles(
+      [XFile(file.path)],
+      text: '{name} — اكتشفها على تطبيق أجواء'.trArgs({'name': property.name}),
+    );
   } catch (_) {
-    await Share.share('${property.name} — اكتشفها على تطبيق VIBES');
+    await Share.share(
+      '{name} — اكتشفها على تطبيق أجواء'.trArgs({'name': property.name}),
+    );
   }
 }
 
@@ -72,22 +76,18 @@ class ShareablePropertyCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    'VIBES',
+                    I18n.appName,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w900,
-                      letterSpacing: 2,
-                      color: Brand.midnight,
+                      letterSpacing: I18n.isEn ? 2 : 0,
+                      color: themed(Brand.midnight, VibesDark.ink),
                     ),
                   ),
                   const Spacer(),
                   if (property.ratingCount > 0)
                     Row(
                       children: [
-                        Icon(
-                          Icons.star_rounded,
-                          size: 15,
-                          color: Vibes.teal,
-                        ),
+                        Icon(Icons.star_rounded, size: 15, color: Vibes.teal),
                         Text(
                           property.ratingAvg.toStringAsFixed(1),
                           style: TextStyle(
@@ -109,7 +109,11 @@ class ShareablePropertyCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '${property.typeLabelAr} · ${property.cityName ?? ''} · حتى ${property.capacity} ضيف',
+                '{type} · {city} · حتى {n} ضيف'.trArgs({
+                  'type': property.typeLabelAr.tr,
+                  'city': property.cityName ?? '',
+                  'n': property.capacity,
+                }),
                 style: Theme.of(
                   context,
                 ).textTheme.bodySmall?.copyWith(color: Vibes.inkSecondary),
@@ -127,13 +131,15 @@ class ShareablePropertyCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'يبدأ من  ',
+                        'يبدأ من  '.tr,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: Vibes.inkSecondary,
                         ),
                       ),
                       Text(
-                        '${PriceText.format(property.pricePerDay)} د.ع',
+                        '{amount} د.ع'.trArgs({
+                          'amount': PriceText.format(property.pricePerDay),
+                        }),
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               fontWeight: FontWeight.w900,

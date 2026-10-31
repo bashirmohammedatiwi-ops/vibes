@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/data/marketplace_providers.dart';
@@ -26,12 +27,12 @@ class OffersScreen extends ConsumerWidget {
         child: Column(
           children: [
             MaisonPageHeader(
-              title: 'العروض الخاصة',
-              kicker: 'مختارات الموسم',
+              title: 'العروض الخاصة'.tr,
+              kicker: 'مختارات الموسم'.tr,
               onBack: () => context.pop(),
               trailing: isProvider
                   ? IconButton(
-                      tooltip: 'عرض جديد',
+                      tooltip: 'عرض جديد'.tr,
                       onPressed: () => _createOffer(context, ref),
                       icon: const Icon(Icons.add_rounded),
                     )
@@ -55,13 +56,15 @@ class OffersScreen extends ConsumerWidget {
                   if (list.isEmpty) {
                     return EmptyCanvas(
                       icon: Icons.local_offer_outlined,
-                      title: isProvider ? 'لا عروض مرسلة' : 'لا عروض حالياً',
+                      title: isProvider
+                          ? 'لا عروض مرسلة'.tr
+                          : 'لا عروض حالياً'.tr,
                       subtitle: isProvider
-                          ? 'أرسل سعراً خاصاً لعميل وتاريخ محدد'
-                          : 'عندما يرسل المالك سعراً خاصاً سيظهر هنا',
+                          ? 'أرسل سعراً خاصاً لعميل وتاريخ محدد'.tr
+                          : 'عندما يرسل المالك سعراً خاصاً سيظهر هنا'.tr,
                       action: isProvider
                           ? VibesButton(
-                              label: 'إنشاء عرض',
+                              label: 'إنشاء عرض'.tr,
                               small: true,
                               expanded: false,
                               onPressed: () => _createOffer(context, ref),
@@ -105,7 +108,7 @@ class OffersScreen extends ConsumerWidget {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      o.propertyName ?? 'عرض سعر',
+                                      o.propertyName ?? 'عرض سعر'.tr,
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleSmall
@@ -116,10 +119,10 @@ class OffersScreen extends ConsumerWidget {
                                   ),
                                   StatusPill(
                                     label: pending
-                                        ? 'بانتظار الرد'
+                                        ? 'بانتظار الرد'.tr
                                         : o.status == 'ACCEPTED'
-                                        ? 'مقبول'
-                                        : 'منتهٍ',
+                                        ? 'مقبول'.tr
+                                        : 'منتهٍ'.tr,
                                     color: statusColor,
                                     compact: true,
                                   ),
@@ -130,7 +133,7 @@ class OffersScreen extends ConsumerWidget {
                               if (o.startDate != null && o.endDate != null) ...[
                                 const SizedBox(height: 4),
                                 Text(
-                                  '${o.startDate!.day}/${o.startDate!.month} → ${o.endDate!.subtract(const Duration(days: 1)).day}/${o.endDate!.subtract(const Duration(days: 1)).month}',
+                                  '${_short(o.startDate!)} → ${_short(o.endDate!.subtract(const Duration(days: 1)))}',
                                   style: Theme.of(context).textTheme.labelSmall,
                                 ),
                               ],
@@ -144,7 +147,7 @@ class OffersScreen extends ConsumerWidget {
                                   children: [
                                     Expanded(
                                       child: VibesButton(
-                                        label: 'قبول العرض',
+                                        label: 'قبول العرض'.tr,
                                         onPressed: () async {
                                           try {
                                             final data = await ref
@@ -170,9 +173,10 @@ class OffersScreen extends ConsumerWidget {
                                               ScaffoldMessenger.of(
                                                 context,
                                               ).showSnackBar(
-                                                const SnackBar(
+                                                SnackBar(
                                                   content: Text(
-                                                    'تم قبول العرض وإنشاء الحجز',
+                                                    'تم قبول العرض وإنشاء الحجز' // i18n-ok
+                                                        .tr,
                                                   ),
                                                 ),
                                               );
@@ -192,7 +196,7 @@ class OffersScreen extends ConsumerWidget {
                                     ),
                                     const SizedBox(width: 8),
                                     VibesButton(
-                                      label: 'رفض',
+                                      label: 'رفض'.tr,
                                       small: true,
                                       ghost: true,
                                       expanded: false,
@@ -212,7 +216,7 @@ class OffersScreen extends ConsumerWidget {
                               if (o.bookingId != null) ...[
                                 const SizedBox(height: 8),
                                 VibesButton(
-                                  label: 'فتح الحجز',
+                                  label: 'فتح الحجز'.tr,
                                   small: true,
                                   ghost: true,
                                   expanded: false,
@@ -224,7 +228,7 @@ class OffersScreen extends ConsumerWidget {
                                 Padding(
                                   padding: const EdgeInsets.only(top: 8),
                                   child: Text(
-                                    pending ? 'بانتظار رد العميل' : o.status,
+                                    pending ? 'بانتظار رد العميل'.tr : o.status,
                                     style: Theme.of(
                                       context,
                                     ).textTheme.labelSmall,
@@ -251,7 +255,7 @@ Future<void> _createOffer(BuildContext context, WidgetRef ref) async {
       ref.read(providerPropertiesProvider).valueOrNull ?? const [];
   if (properties.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('أضف مكاناً أولاً ثم أرسل عرضاً')),
+      SnackBar(content: Text('أضف مكاناً أولاً ثم أرسل عرضاً'.tr)),
     );
     return;
   }
@@ -283,12 +287,12 @@ Future<void> _createOffer(BuildContext context, WidgetRef ref) async {
                 children: [
                   const MaisonSheetHandle(),
                   Text(
-                    'عرض سعر خاص',
+                    'عرض سعر خاص'.tr,
                     style: Theme.of(ctx).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'المكان',
+                    'المكان'.tr,
                     style: Theme.of(ctx).textTheme.labelSmall?.copyWith(
                       color: Vibes.inkSecondary,
                       fontWeight: FontWeight.w800,
@@ -314,14 +318,14 @@ Future<void> _createOffer(BuildContext context, WidgetRef ref) async {
                   ),
                   const SizedBox(height: 12),
                   MaisonField(
-                    label: 'هاتف العميل',
+                    label: 'هاتف العميل'.tr,
                     controller: phone,
                     hint: '07XX XXX XXXX',
                     keyboardType: TextInputType.phone,
                   ),
                   const SizedBox(height: 12),
                   MaisonField(
-                    label: 'المبلغ د.ع',
+                    label: 'المبلغ د.ع'.tr,
                     controller: amount,
                     keyboardType: TextInputType.number,
                   ),
@@ -341,7 +345,9 @@ Future<void> _createOffer(BuildContext context, WidgetRef ref) async {
                             );
                             if (picked != null) setLocal(() => start = picked);
                           },
-                          child: Text('من ${_fmt(start)}'),
+                          child: Text(
+                            'من {date}'.trArgs({'date': _fmt(start)}),
+                          ),
                         ),
                       ),
                       Expanded(
@@ -357,19 +363,19 @@ Future<void> _createOffer(BuildContext context, WidgetRef ref) async {
                             );
                             if (picked != null) setLocal(() => end = picked);
                           },
-                          child: Text('إلى ${_fmt(end)}'),
+                          child: Text('إلى {date}'.trArgs({'date': _fmt(end)})),
                         ),
                       ),
                     ],
                   ),
                   MaisonField(
-                    label: 'رسالة اختيارية',
+                    label: 'رسالة اختيارية'.tr,
                     controller: message,
                     maxLines: 2,
                   ),
                   const SizedBox(height: 16),
                   VibesButton(
-                    label: 'إرسال العرض',
+                    label: 'إرسال العرض'.tr,
                     onPressed: () async {
                       var normalized = phone.text.trim().replaceAll(' ', '');
                       if (normalized.startsWith('07') &&
@@ -417,10 +423,29 @@ Future<void> _createOffer(BuildContext context, WidgetRef ref) async {
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('تم إرسال العرض')));
+      ).showSnackBar(SnackBar(content: Text('تم إرسال العرض'.tr)));
     }
   }
 }
 
 String _fmt(DateTime d) =>
     '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
+
+const _enMonths = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+/// تاريخ قصير: «4/11» بالعربية و«Nov 4» بالإنجليزية.
+String _short(DateTime d) =>
+    I18n.isEn ? '${_enMonths[d.month - 1]} ${d.day}' : '${d.day}/${d.month}';

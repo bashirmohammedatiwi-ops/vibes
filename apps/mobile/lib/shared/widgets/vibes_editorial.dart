@@ -86,7 +86,10 @@ class EditorialGlass extends StatelessWidget {
           decoration: BoxDecoration(
             color: dark
                 ? Colors.black.withValues(alpha: 0.42)
-                : Colors.white.withValues(alpha: 0.9),
+                : themed(
+                    Colors.white.withValues(alpha: 0.9),
+                    VibesDark.surface.withValues(alpha: 0.88),
+                  ),
             borderRadius: BorderRadius.circular(radius),
             border: Border.all(
               color: dark
@@ -116,6 +119,7 @@ class BrassPriceChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final night = Appearance.isDark;
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
@@ -126,7 +130,11 @@ class BrassPriceChip extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: [Brand.brassLight, Brand.brass],
               ),
-        color: onDark ? Colors.white.withValues(alpha: 0.96) : null,
+        color: onDark
+            ? (night
+                  ? VibesDark.canvas.withValues(alpha: 0.86)
+                  : Colors.white.withValues(alpha: 0.96))
+            : null,
         border: Border.all(
           color: onDark
               ? Brand.brass.withValues(alpha: 0.35)
@@ -145,7 +153,13 @@ class BrassPriceChip extends StatelessWidget {
           horizontal: compact ? 9 : 12,
           vertical: compact ? 5 : 7,
         ),
-        child: PriceText(amount, compact: compact, onDark: onDark),
+        child: PriceText(
+          amount,
+          compact: compact,
+          onDark: onDark,
+          // ليلاً: حبر ليلي فوق تعبئة النحاس.
+          ink: night && !onDark ? Brand.midnight : null,
+        ),
       ),
     );
   }
@@ -168,7 +182,11 @@ class EditorialEyebrow extends StatelessWidget {
           width: 18,
           height: 2,
           decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [bar.withValues(alpha: 0.3), bar]),
+            gradient: LinearGradient(
+              begin: AlignmentDirectional.centerEnd,
+              end: AlignmentDirectional.centerStart,
+              colors: [bar.withValues(alpha: 0.3), bar],
+            ),
             borderRadius: BorderRadius.circular(1),
           ),
         ),

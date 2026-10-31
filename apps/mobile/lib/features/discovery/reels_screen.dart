@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/world_theme.dart';
 import '../../core/utils/vibes_net_image.dart';
@@ -414,8 +415,9 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen>
                     error: (e, _) => Stack(
                       children: [
                         ErrorCanvas(
-                          message: e.toString().contains('الاتصال')
-                              ? 'لا اتصال بالإنترنت — تحقق من الشبكة'
+                          message:
+                              e.toString().contains('الاتصال') // i18n-ok
+                              ? 'لا اتصال بالإنترنت — تحقق من الشبكة'.tr
                               : maisonError(e),
                           onRetry: () =>
                               ref.read(reelsProvider.notifier).refresh(),
@@ -553,7 +555,7 @@ class _FloatingChrome extends StatelessWidget {
                         padding: EdgeInsets.zero,
                         children: [
                           _WorldChip(
-                            label: 'الكل',
+                            label: 'الكل'.tr,
                             selected: world == null,
                             onTap: () => onWorldChanged(null),
                           ),
@@ -600,7 +602,7 @@ class _ChromeIcon extends StatelessWidget {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: onDark ? Colors.black.withValues(alpha: .28) : Colors.white,
+          color: onDark ? Colors.black.withValues(alpha: .28) : Vibes.surface,
           shape: BoxShape.circle,
           border: Border.all(
             color: onDark
@@ -675,8 +677,8 @@ class _Tabs extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        item(_ExploreTab.tours, 'جولات'),
-        item(_ExploreTab.experiences, 'تجارب'),
+        item(_ExploreTab.tours, 'جولات'.tr),
+        item(_ExploreTab.experiences, 'تجارب'.tr),
       ],
     );
   }
@@ -699,7 +701,12 @@ class _WorldChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = selected ? (palette?.accentDeep ?? Vibes.ink) : Colors.white;
+    // الشريحة المختارة بيضاء فوق الفيديو في المظهرين، فحبرها داكن ليلاً
+    final fg = selected
+        ? (Appearance.isDark
+              ? (palette?.night ?? VibesDark.canvas)
+              : (palette?.accentDeep ?? Vibes.ink))
+        : Colors.white;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -1130,17 +1137,17 @@ class _ReelOverlay extends ConsumerWidget {
     );
     final meta = [
       property.cityName ?? property.provinceName ?? '',
-      if (property.capacity > 0) 'حتى ${property.capacity} ضيف',
+      if (property.capacity > 0) 'حتى {n} ضيف'.trN(property.capacity),
     ].where((s) => s.isNotEmpty).join(' · ');
     final unit = property.type == PropertyType.decoration
-        ? 'للخدمة'
+        ? 'للخدمة'.tr
         : property.supportsShifts
-        ? 'للفترة'
-        : 'لليوم';
+        ? 'للفترة'.tr
+        : 'لليوم'.tr;
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 12, 6),
+        padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 16, 6),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1166,7 +1173,7 @@ class _ReelOverlay extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
-                              property.typeLabelAr,
+                              property.typeLabelAr.tr,
                               style: TextStyle(
                                 fontFamily: VibesFont.ui,
                                 fontSize: 11.5,
@@ -1254,7 +1261,7 @@ class _ReelOverlay extends ConsumerWidget {
                         textBaseline: TextBaseline.alphabetic,
                         children: [
                           Text(
-                            'يبدأ من ',
+                            'يبدأ من '.tr,
                             style: TextStyle(
                               fontFamily: VibesFont.ui,
                               fontSize: 11.5,
@@ -1272,13 +1279,17 @@ class _ReelOverlay extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            'د.ع $unit',
-                            style: TextStyle(
-                              fontFamily: VibesFont.ui,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white.withValues(alpha: .7),
+                          Flexible(
+                            child: Text(
+                              'د.ع {unit}'.trArgs({'unit': unit}),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white.withValues(alpha: .7),
+                              ),
                             ),
                           ),
                         ],
@@ -1295,7 +1306,7 @@ class _ReelOverlay extends ConsumerWidget {
                       icon: saved
                           ? Icons.favorite_rounded
                           : Icons.favorite_border_rounded,
-                      label: saved ? 'محفوظ' : 'حفظ',
+                      label: saved ? 'محفوظ'.tr : 'حفظ'.tr,
                       tint: saved ? const Color(0xFFFF4D6D) : Colors.white,
                       onTap: () => _toggleFav(context, ref),
                     ),
@@ -1305,7 +1316,7 @@ class _ReelOverlay extends ConsumerWidget {
                         icon: muted
                             ? Icons.volume_off_rounded
                             : Icons.volume_up_rounded,
-                        label: muted ? 'صامت' : 'الصوت',
+                        label: muted ? 'صامت'.tr : 'الصوت'.tr,
                         tint: Colors.white,
                         onTap: () {
                           HapticFeedback.selectionClick();
@@ -1315,7 +1326,7 @@ class _ReelOverlay extends ConsumerWidget {
                     ),
                     _SideAction(
                       icon: Icons.ios_share_rounded,
-                      label: 'مشاركة',
+                      label: 'مشاركة'.tr,
                       tint: Colors.white,
                       onTap: () => Share.share(property.name),
                     ),
@@ -1335,7 +1346,7 @@ class _ReelOverlay extends ConsumerWidget {
                     child: Container(
                       height: 50,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: themed(Colors.white, palette.accentLight),
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: [
                           BoxShadow(
@@ -1351,16 +1362,16 @@ class _ReelOverlay extends ConsumerWidget {
                           Icon(
                             Icons.event_available_rounded,
                             size: 19,
-                            color: palette.accentDeep,
+                            color: themed(palette.accentDeep, palette.night),
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'احجز الآن',
+                            'احجز الآن'.tr,
                             style: TextStyle(
                               fontFamily: VibesFont.ui,
                               fontSize: 15.5,
                               fontWeight: FontWeight.w900,
-                              color: palette.accentDeep,
+                              color: themed(palette.accentDeep, palette.night),
                             ),
                           ),
                         ],
@@ -1371,7 +1382,7 @@ class _ReelOverlay extends ConsumerWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: WorldGhostButton(
-                    label: 'تفاصيل المكان',
+                    label: 'تفاصيل المكان'.tr,
                     icon: Icons.info_outline_rounded,
                     height: 50,
                     onDark: true,
@@ -1526,9 +1537,7 @@ class _NoReels extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               Text(
-                world == null
-                    ? 'لا جولات فيديو بعد'
-                    : 'لا جولات فيديو لـ${world!.label} بعد',
+                world == null ? 'لا جولات فيديو بعد'.tr : world!.noReelsTitle,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
@@ -1539,7 +1548,8 @@ class _NoReels extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'تظهر هنا الأماكن التي نشرت جولة فيديو عمودية — نضيف جولات جديدة باستمرار',
+                'تظهر هنا الأماكن التي نشرت جولة فيديو عمودية — نضيف جولات جديدة باستمرار' // i18n-ok
+                    .tr,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
@@ -1554,7 +1564,7 @@ class _NoReels extends StatelessWidget {
                 SizedBox(
                   width: 200,
                   child: WorldButton(
-                    label: 'كل الجولات',
+                    label: 'كل الجولات'.tr,
                     icon: Icons.play_circle_rounded,
                     palette: p,
                     onTap: onShowAll,

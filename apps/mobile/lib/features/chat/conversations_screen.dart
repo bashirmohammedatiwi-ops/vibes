@@ -8,6 +8,7 @@ import '../../core/moderation/moderation.dart';
 
 import '../../core/network/api_client.dart';
 import '../../shared/models/models.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/data/marketplace_providers.dart';
 import '../../shared/widgets/maison_chrome.dart';
@@ -40,12 +41,29 @@ bool _isMineBy(String? myId, ConversationSummary c) =>
 
 String _relative(DateTime at) {
   final diff = DateTime.now().difference(at);
-  if (diff.inMinutes < 1) return 'الآن';
-  if (diff.inMinutes < 60) return '${diff.inMinutes} د';
-  if (diff.inHours < 24) return '${diff.inHours} س';
+  if (diff.inMinutes < 1) return 'الآن'.tr;
+  if (diff.inMinutes < 60) return '{n} د'.trArgs({'n': diff.inMinutes});
+  if (diff.inHours < 24) return '{n} س'.trArgs({'n': diff.inHours});
   final days = diff.inDays;
-  if (days == 1) return 'أمس';
-  if (days < 7) return '$days أيام';
+  if (days == 1) return 'أمس'.tr;
+  if (days < 7) return '{n} أيام'.trN(days);
+  if (I18n.isEn) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[at.month - 1]} ${at.day}';
+  }
   return '${at.day}/${at.month}';
 }
 
@@ -98,14 +116,14 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
         child: Column(
           children: [
             MaisonPageHeader(
-              title: 'الرسائل',
-              kicker: 'محادثاتك',
+              title: 'الرسائل'.tr,
+              kicker: 'محادثاتك'.tr,
               onBack: () => context.pop(),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    tooltip: 'قراءة الكل',
+                    tooltip: 'قراءة الكل'.tr,
                     onPressed: () async {
                       await ref
                           .read(apiClientProvider)
@@ -116,7 +134,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                     icon: const Icon(Icons.done_all_rounded),
                   ),
                   IconButton(
-                    tooltip: 'دعم VIBES',
+                    tooltip: 'دعم أجواء'.tr,
                     onPressed: () => openSupportChat(context, ref),
                     icon: const Icon(Icons.support_agent_rounded),
                   ),
@@ -151,9 +169,9 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                     return Center(
                       child: WorldEmpty(
                         icon: Icons.forum_outlined,
-                        title: 'لا رسائل بعد',
-                        subtitle: 'ستظهر هنا محادثات حجوزاتك مع المضيفين',
-                        actionLabel: 'راسل الدعم',
+                        title: 'لا رسائل بعد'.tr,
+                        subtitle: 'ستظهر هنا محادثات حجوزاتك مع المضيفين'.tr,
+                        actionLabel: 'راسل الدعم'.tr,
                         onAction: () => openSupportChat(context, ref),
                       ),
                     );
@@ -199,7 +217,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                                     color: context.world.canvasTint,
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: Colors.white,
+                                      color: Vibes.surface,
                                       width: 2,
                                     ),
                                   ),
@@ -212,7 +230,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                                         )
                                       : Text(
                                           c.title.trim().isEmpty
-                                              ? 'م'
+                                              ? 'م'.tr
                                               : c.title.trim().substring(0, 1),
                                           style: TextStyle(
                                             fontFamily: VibesFont.ui,
@@ -271,7 +289,9 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                                               size: 12,
                                               color:
                                                   (c.lastMessage ?? '')
-                                                      .contains('لم يُرد')
+                                                      .contains(
+                                                        'لم يُرد', // i18n-ok
+                                                      )
                                                   ? SemanticColors.danger
                                                   : context.world.accentDeep,
                                             ),
@@ -280,7 +300,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                                           if (_isMineBy(myId, c) &&
                                               c.lastMessageKind != 'CALL') ...[
                                             Text(
-                                              'أنت: ',
+                                              'أنت: '.tr,
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodySmall
@@ -294,7 +314,11 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                                           ],
                                           Expanded(
                                             child: Text(
-                                              c.lastMessage!,
+                                              c.lastMessageKind == 'CALL'
+                                                  ? callBodyLabel(
+                                                      c.lastMessage!,
+                                                    )
+                                                  : c.lastMessage!,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: Theme.of(context)

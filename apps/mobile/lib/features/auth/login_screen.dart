@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -92,7 +93,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _phoneFocus.unfocus();
     final phone = _normalizedPhone;
     if (phone.length < 12) {
-      setState(() => _error = 'أدخل رقم هاتف عراقي صحيح، مثل 07XXXXXXXXX');
+      setState(() => _error = 'أدخل رقم هاتف عراقي صحيح، مثل 07XXXXXXXXX'.tr);
       return;
     }
 
@@ -148,7 +149,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     if (_phase == _PinPhase.confirm && pin != _draftPin) {
       setState(() {
-        _error = 'الرقمان غير متطابقين — أعد الاختيار';
+        _error = 'الرقمان غير متطابقين — أعد الاختيار'.tr;
         _phase = _PinPhase.create;
         _draftPin = '';
         _pinController.clear();
@@ -223,26 +224,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   String get _kicker => switch (_phase) {
-    _PinPhase.phone => 'VIBES',
-    _PinPhase.create => 'خطوة ١ من ٢',
-    _PinPhase.confirm => 'خطوة ٢ من ٢',
-    _PinPhase.unlock => 'مرحباً بعودتك',
+    _PinPhase.phone => I18n.appName,
+    _PinPhase.create => 'خطوة ١ من ٢'.tr,
+    _PinPhase.confirm => 'خطوة ٢ من ٢'.tr,
+    _PinPhase.unlock => 'مرحباً بعودتك'.tr,
   };
 
   String get _headline => switch (_phase) {
-    _PinPhase.phone => 'سجّل دخولك',
-    _PinPhase.create => 'اختر رقماً سرياً',
-    _PinPhase.confirm => 'أكّد الرقم السري',
-    _PinPhase.unlock => 'أدخل الرقم السري',
+    _PinPhase.phone => 'سجّل دخولك'.tr,
+    _PinPhase.create => 'اختر رقماً سرياً'.tr,
+    _PinPhase.confirm => 'أكّد الرقم السري'.tr,
+    _PinPhase.unlock => 'أدخل الرقم السري'.tr,
   };
 
   String get _subtitle => switch (_phase) {
     _PinPhase.phone =>
-      'رقم هاتفك العراقي يكفي. الحساب يُنشأ تلقائياً عند أول دخول.',
+      'رقم هاتفك العراقي يكفي. الحساب يُنشأ تلقائياً عند أول دخول.'.tr,
     _PinPhase.create =>
-      'ستة أرقام تتذكرها بسهولة. تُحفظ مشفّرة ولا يطّلع عليها أحد.',
-    _PinPhase.confirm => 'أعد كتابة الأرقام نفسها لتثبيتها.',
-    _PinPhase.unlock => 'نفس الأرقام التي اخترتها لهذا الرقم.',
+      'ستة أرقام تتذكرها بسهولة. تُحفظ مشفّرة ولا يطّلع عليها أحد.'.tr,
+    _PinPhase.confirm => 'أعد كتابة الأرقام نفسها لتثبيتها.'.tr,
+    _PinPhase.unlock => 'نفس الأرقام التي اخترتها لهذا الرقم.'.tr,
   };
 
   @override
@@ -259,7 +260,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlayFor(darkBackground: true),
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Vibes.surface,
         resizeToAvoidBottomInset: true,
         body: Stack(
           children: [
@@ -318,12 +319,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Expanded(
                     child: Container(
                       width: double.infinity,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.vertical(
+                      decoration: BoxDecoration(
+                        color: Vibes.surface,
+                        borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(32),
                         ),
-                        boxShadow: [
+                        boxShadow: const [
                           BoxShadow(
                             color: Color(0x22000000),
                             blurRadius: 30,
@@ -370,7 +371,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 fontFamily: VibesFont.ui,
                                 fontSize: 30,
                                 fontWeight: FontWeight.w900,
-                                color: Color(0xFF141C2B),
+                                color: _ink,
                                 height: 1.15,
                               ),
                             ),
@@ -381,7 +382,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 fontFamily: VibesFont.ui,
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF5A6678),
+                                color: _ink2,
                                 height: 1.6,
                               ),
                             ),
@@ -425,19 +426,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     : Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const Icon(
+                                          Icon(
                                             Icons.lock_outline_rounded,
                                             size: 14,
-                                            color: Color(0xFF5A6678),
+                                            color: _ink2,
                                           ),
                                           const SizedBox(width: 6),
                                           Text(
-                                            'محفوظ ومشفّر · ${_pinController.text.length} / 6',
+                                            'محفوظ ومشفّر · {n} / 6'.trArgs({
+                                              'n': _pinController.text.length,
+                                            }),
                                             style: TextStyle(
                                               fontFamily: VibesFont.ui,
                                               fontSize: 12,
                                               fontWeight: FontWeight.w700,
-                                              color: Color(0xFF5A6678),
+                                              color: _ink2,
                                             ),
                                           ),
                                         ],
@@ -449,7 +452,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   child: TextButton(
                                     onPressed: () => context.push('/support'),
                                     child: Text(
-                                      'نسيت الرقم السري؟ تواصل مع الدعم',
+                                      'نسيت الرقم السري؟ تواصل مع الدعم'.tr,
                                       style: TextStyle(
                                         fontFamily: VibesFont.ui,
                                         fontSize: 12.5,
@@ -469,7 +472,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                               const SizedBox(height: 20),
                               _PrimaryButton(
-                                label: 'متابعة',
+                                label: 'متابعة'.tr,
                                 loading: _loading,
                                 onTap: _continuePhone,
                                 palette: p,
@@ -494,10 +497,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
-const _ink = Color(0xFF141C2B);
-const _ink2 = Color(0xFF5A6678);
-const _line = Color(0xFFE4E9F0);
-const _paper = Color(0xFFF6F7F9);
+Color get _ink => themed(const Color(0xFF141C2B), Vibes.ink);
+Color get _ink2 => themed(const Color(0xFF5A6678), Vibes.inkSecondary);
+Color get _line => themed(const Color(0xFFE4E9F0), Vibes.hairline);
+Color get _paper => themed(const Color(0xFFF6F7F9), Vibes.surfaceMuted);
 
 class _GlassCircle extends StatelessWidget {
   const _GlassCircle({required this.icon, required this.onTap});
@@ -547,7 +550,7 @@ class _WorldTag extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           Text(
-            world.label,
+            world.label.tr,
             style: TextStyle(
               fontFamily: VibesFont.ui,
               fontSize: 12,
@@ -625,9 +628,9 @@ class _TrustRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          item(Icons.bolt_rounded, 'دخول بثوانٍ\nبلا رسائل'),
-          item(Icons.shield_outlined, 'رقم سري\nمشفّر'),
-          item(Icons.support_agent_rounded, 'دعم مباشر\nعند الحاجة'),
+          item(Icons.bolt_rounded, 'دخول بثوانٍ\nبلا رسائل'.tr),
+          item(Icons.shield_outlined, 'رقم سري\nمشفّر'.tr),
+          item(Icons.support_agent_rounded, 'دعم مباشر\nعند الحاجة'.tr),
         ],
       ),
     );
@@ -654,7 +657,7 @@ class _PhoneField extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       height: 66,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: themed(Colors.white, Vibes.surfaceMuted),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: focused ? palette.accent : _line,
@@ -708,20 +711,20 @@ class _PhoneField extends StatelessWidget {
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               textDirection: TextDirection.ltr,
               cursorColor: palette.accent,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Montserrat',
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
                 color: _ink,
                 letterSpacing: 1.2,
               ),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: '07XX XXX XXXX',
                 hintStyle: TextStyle(
                   fontFamily: 'Montserrat',
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFFB7C0CC),
+                  color: themed(const Color(0xFFB7C0CC), Vibes.inkTertiary),
                   letterSpacing: .6,
                 ),
                 counterText: '',
@@ -825,11 +828,13 @@ class _PinCell extends StatelessWidget {
       height: 62,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: filled ? palette.accentFaint : Colors.white,
+        color: filled
+            ? palette.accentFaint
+            : themed(Colors.white, Vibes.surfaceMuted),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: error
-              ? const Color(0xFFDC2626)
+              ? themed(const Color(0xFFDC2626), Vibes.danger)
               : active
               ? palette.accent
               : filled
@@ -901,12 +906,12 @@ class _PhoneChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.phone_iphone_rounded, size: 14, color: _ink2),
+              Icon(Icons.phone_iphone_rounded, size: 14, color: _ink2),
               const SizedBox(width: 6),
               Text(
                 phone,
                 textDirection: TextDirection.ltr,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Montserrat',
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -915,7 +920,7 @@ class _PhoneChip extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                'تغيير',
+                'تغيير'.tr,
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
                   fontSize: 11.5,
@@ -1002,17 +1007,25 @@ class _ErrorNote extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFEF2F2),
+        color: themed(
+          const Color(0xFFFEF2F2),
+          Vibes.danger.withValues(alpha: .12),
+        ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFFECACA)),
+        border: Border.all(
+          color: themed(
+            const Color(0xFFFECACA),
+            Vibes.danger.withValues(alpha: .35),
+          ),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
+          Icon(
             Icons.error_outline_rounded,
             size: 18,
-            color: Color(0xFFB91C1C),
+            color: themed(const Color(0xFFB91C1C), Vibes.danger),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -1022,7 +1035,7 @@ class _ErrorNote extends StatelessWidget {
                 fontFamily: VibesFont.ui,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFFB91C1C),
+                color: themed(const Color(0xFFB91C1C), Vibes.danger),
                 height: 1.45,
               ),
             ),
@@ -1043,12 +1056,12 @@ class _LegalLine extends StatelessWidget {
       fontFamily: VibesFont.ui,
       fontSize: 11.5,
       fontWeight: FontWeight.w600,
-      color: Color(0xFF8A9099),
+      color: themed(const Color(0xFF8A9099), Vibes.inkTertiary),
       height: 1.6,
     );
     final link = base.copyWith(
       fontWeight: FontWeight.w800,
-      color: const Color(0xFF1B3857),
+      color: Vibes.coral,
       decoration: TextDecoration.underline,
     );
     Widget a(String label, String path) => GestureDetector(
@@ -1058,10 +1071,10 @@ class _LegalLine extends StatelessWidget {
     return Wrap(
       alignment: WrapAlignment.center,
       children: [
-        Text('بالمتابعة أنت توافق على ', style: base),
-        a('شروط الاستخدام', '/terms'),
-        Text(' و', style: base),
-        a('سياسة الخصوصية', '/privacy'),
+        Text('بالمتابعة أنت توافق على '.tr, style: base),
+        a('شروط الاستخدام'.tr, '/terms'),
+        Text(' و'.tr, style: base),
+        a('سياسة الخصوصية'.tr, '/privacy'),
         Text('.', style: base),
       ],
     );

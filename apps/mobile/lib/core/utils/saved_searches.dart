@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../i18n/i18n.dart';
+
 class SavedSearch {
   const SavedSearch({
     required this.query,
@@ -45,14 +47,14 @@ class SavedSearch {
   ].join('|');
 
   String get label {
-    const types = {'FARM': 'مزارع', 'HALL': 'قاعات', 'DECORATION': 'تزيين'};
+    const types = {'FARM': 'مزارع', 'HALL': 'قاعات', 'DECORATION': 'تزيين'}; // i18n-ok
     final parts = <String>[
       if (query.trim().isNotEmpty) query.trim(),
-      ?types[type],
+      ?types[type]?.tr,
       ?province,
-      if (capacity > 0) 'من $capacity ضيف',
+      if (capacity > 0) 'من {n} ضيف'.trN(capacity),
     ];
-    return parts.isEmpty ? 'بحث محفوظ' : parts.join(' · ');
+    return parts.isEmpty ? 'بحث محفوظ'.tr : parts.join(' · ');
   }
 
   Map<String, dynamic> toJson() => {

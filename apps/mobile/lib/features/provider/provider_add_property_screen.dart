@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/data/property_providers.dart';
@@ -13,24 +14,24 @@ import '../../shared/widgets/world_ui.dart';
 import 'provider_data.dart';
 
 const _iraqCenters = <String, (double, double)>{
-  'بغداد': (33.3152, 44.3661),
-  'البصرة': (30.5085, 47.7804),
-  'أربيل': (36.1911, 44.0092),
-  'الموصل': (36.3489, 43.1577),
-  'النجف': (31.9996, 44.3396),
-  'كربلاء': (32.6163, 44.0249),
-  'السليمانية': (35.5571, 45.4350),
-  'كركوك': (35.4681, 44.3922),
-  'الأنبار': (33.4250, 43.3000),
-  'ذي قار': (31.0525, 46.2572),
-  'واسط': (32.5000, 45.8333),
-  'ديالى': (33.7733, 45.1494),
-  'بابل': (32.4680, 44.4260),
-  'صلاح الدين': (34.6000, 43.6800),
-  'ميسان': (31.8360, 47.1440),
-  'المثنى': (31.3160, 45.2800),
-  'القادسية': (31.9890, 44.9250),
-  'دهوك': (36.8670, 42.9880),
+  'بغداد': (33.3152, 44.3661), // i18n-ok
+  'البصرة': (30.5085, 47.7804), // i18n-ok
+  'أربيل': (36.1911, 44.0092), // i18n-ok
+  'الموصل': (36.3489, 43.1577), // i18n-ok
+  'النجف': (31.9996, 44.3396), // i18n-ok
+  'كربلاء': (32.6163, 44.0249), // i18n-ok
+  'السليمانية': (35.5571, 45.4350), // i18n-ok
+  'كركوك': (35.4681, 44.3922), // i18n-ok
+  'الأنبار': (33.4250, 43.3000), // i18n-ok
+  'ذي قار': (31.0525, 46.2572), // i18n-ok
+  'واسط': (32.5000, 45.8333), // i18n-ok
+  'ديالى': (33.7733, 45.1494), // i18n-ok
+  'بابل': (32.4680, 44.4260), // i18n-ok
+  'صلاح الدين': (34.6000, 43.6800), // i18n-ok
+  'ميسان': (31.8360, 47.1440), // i18n-ok
+  'المثنى': (31.3160, 45.2800), // i18n-ok
+  'القادسية': (31.9890, 44.9250), // i18n-ok
+  'دهوك': (36.8670, 42.9880), // i18n-ok
 };
 
 class ProviderAddPropertyScreen extends ConsumerStatefulWidget {
@@ -73,9 +74,9 @@ class _ProviderAddPropertyScreenState
     final name = _name.text.trim();
     final price = num.tryParse(_price.text.trim()) ?? 0;
     if (name.isEmpty || _cityId == null || price <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('أكمل الاسم والمدينة والسعر')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('أكمل الاسم والمدينة والسعر'.tr)));
       return;
     }
 
@@ -112,7 +113,7 @@ class _ProviderAddPropertyScreenState
       HapticFeedback.mediumImpact();
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('أُرسل المكان للمراجعة')));
+      ).showSnackBar(SnackBar(content: Text('أُرسل المكان للمراجعة'.tr)));
       context.pop();
     } catch (error) {
       if (!mounted) return;
@@ -133,9 +134,12 @@ class _ProviderAddPropertyScreenState
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
           children: [
-            MaisonPageHeader(title: 'إضافة مكان', onBack: () => context.pop()),
+            MaisonPageHeader(
+              title: 'إضافة مكان'.tr,
+              onBack: () => context.pop(),
+            ),
             Text(
-              'أدخل الاسم والمدينة والسعر. فريق VIBES يزور المكان ويصوره بعد الموافقة — لا حاجة لرفع صور من هنا.',
+              'أدخل الاسم والمدينة والسعر. فريق أجواء يزور المكان ويصوره بعد الموافقة — لا حاجة لرفع صور من هنا.'.tr,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: VibesTheme.textTertiaryOf(context),
                 height: 1.5,
@@ -149,19 +153,19 @@ class _ProviderAddPropertyScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SectionHeader('النوع'),
+                    SectionHeader('النوع'.tr),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children:
                           const [
-                            ('FARM', 'مزرعة'),
-                            ('HALL', 'قاعة'),
-                            ('DECORATION', 'تزيين'),
+                            ('FARM', 'مزرعة'), // i18n-ok
+                            ('HALL', 'قاعة'), // i18n-ok
+                            ('DECORATION', 'تزيين'), // i18n-ok
                           ].map((item) {
                             final active = _type == item.$1;
                             return MaisonChip(
-                              label: item.$2,
+                              label: item.$2.tr,
                               active: active,
                               onTap: () => setState(() => _type = item.$1),
                             );
@@ -169,13 +173,13 @@ class _ProviderAddPropertyScreenState
                     ),
                     const SizedBox(height: 18),
                     MaisonField(
-                      label: 'اسم المكان',
+                      label: 'اسم المكان'.tr,
                       controller: _name,
                       textInputAction: TextInputAction.next,
                     ),
                     const SizedBox(height: 12),
                     MaisonField(
-                      label: 'وصف مختصر',
+                      label: 'وصف مختصر'.tr,
                       controller: _description,
                       maxLines: 3,
                     ),
@@ -190,7 +194,7 @@ class _ProviderAddPropertyScreenState
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'المدينة',
+                            'المدينة'.tr,
                             style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(
                                   color: Vibes.inkSecondary,
@@ -223,7 +227,7 @@ class _ProviderAddPropertyScreenState
                     ),
                     const SizedBox(height: 12),
                     MaisonField(
-                      label: 'العنوان التفصيلي',
+                      label: 'العنوان التفصيلي'.tr,
                       controller: _address,
                     ),
                     const SizedBox(height: 12),
@@ -232,7 +236,7 @@ class _ProviderAddPropertyScreenState
                       children: [
                         Expanded(
                           child: MaisonField(
-                            label: 'السعة',
+                            label: 'السعة'.tr,
                             controller: _capacity,
                             keyboardType: TextInputType.number,
                           ),
@@ -240,7 +244,7 @@ class _ProviderAddPropertyScreenState
                         const SizedBox(width: 12),
                         Expanded(
                           child: MaisonField(
-                            label: 'سعر اليوم (د.ع)',
+                            label: 'سعر اليوم (د.ع)'.tr,
                             controller: _price,
                             keyboardType: TextInputType.number,
                           ),
@@ -249,7 +253,7 @@ class _ProviderAddPropertyScreenState
                     ),
                     const SizedBox(height: 24),
                     VibesButton(
-                      label: 'إرسال للمراجعة',
+                      label: 'إرسال للمراجعة'.tr,
                       icon: Icons.send_rounded,
                       loading: _saving,
                       onPressed: _submit,

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import '../compare/compare_feature.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +11,7 @@ import 'package:video_player/video_player.dart';
 
 import '../auth/auth_controller.dart';
 import '../chat/call_screen.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/world_theme.dart';
 import '../../core/network/api_client.dart';
@@ -92,12 +94,12 @@ enum _Anchor { booking, prices, amenities, about, location, reviews }
 
 extension on _Anchor {
   String get label => switch (this) {
-    _Anchor.booking => 'الحجز',
-    _Anchor.prices => 'الأسعار',
-    _Anchor.amenities => 'المزايا',
-    _Anchor.about => 'عن المكان',
-    _Anchor.location => 'الموقع',
-    _Anchor.reviews => 'التقييمات',
+    _Anchor.booking => 'الحجز'.tr,
+    _Anchor.prices => 'الأسعار'.tr,
+    _Anchor.amenities => 'المزايا'.tr,
+    _Anchor.about => 'عن المكان'.tr,
+    _Anchor.location => 'الموقع'.tr,
+    _Anchor.reviews => 'التقييمات'.tr,
   };
 }
 
@@ -278,8 +280,9 @@ class _PropertyPageState extends ConsumerState<_PropertyPage> {
                             // التزيين خدمة بسعر موحّد — لا جدول أيام
                             if (p.type == PropertyType.decoration) ...[
                               head(
-                                'سعر الخدمة',
-                                subtitle: 'سعر ثابت في أي يوم تختاره لمناسبتك',
+                                'سعر الخدمة'.tr,
+                                subtitle:
+                                    'سعر ثابت في أي يوم تختاره لمناسبتك'.tr,
                               ),
                               pad(
                                 _ServicePriceCard(
@@ -290,8 +293,9 @@ class _PropertyPageState extends ConsumerState<_PropertyPage> {
                               ),
                             ] else ...[
                               head(
-                                'أسعار الأسبوع',
-                                subtitle: 'اضغط أي سعر لتبدأ الحجز بذلك اليوم',
+                                'أسعار الأسبوع'.tr,
+                                subtitle:
+                                    'اضغط أي سعر لتبدأ الحجز بذلك اليوم'.tr,
                               ),
                               pad(
                                 PlaceWeeklyPriceTable(
@@ -311,8 +315,8 @@ class _PropertyPageState extends ConsumerState<_PropertyPage> {
                       ),
                       if (p.reels.isNotEmpty) ...[
                         head(
-                          'جولات سريعة',
-                          subtitle: 'شاهد المكان بالفيديو قبل أن تحجز',
+                          'جولات سريعة'.tr,
+                          subtitle: 'شاهد المكان بالفيديو قبل أن تحجز'.tr,
                         ),
                         _PropertyReelsStrip(reels: p.reels),
                       ],
@@ -323,9 +327,12 @@ class _PropertyPageState extends ConsumerState<_PropertyPage> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               head(
-                                'ما يقدّمه المكان',
-                                subtitle:
-                                    '${p.amenities.isNotEmpty ? p.amenities.length : p.amenityNames.length} ميزة',
+                                'ما يقدّمه المكان'.tr,
+                                subtitle: '{n} ميزة'.trN(
+                                  p.amenities.isNotEmpty
+                                      ? p.amenities.length
+                                      : p.amenityNames.length,
+                                ),
                               ),
                               pad(_AmenitiesGrid(property: p)),
                             ],
@@ -337,7 +344,7 @@ class _PropertyPageState extends ConsumerState<_PropertyPage> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              head('عن المكان'),
+                              head('عن المكان'.tr),
                               if (p.description.isNotEmpty)
                                 pad(_ExpandableText(text: p.description)),
                               if ((p.rules ?? '').isNotEmpty) ...[
@@ -353,7 +360,7 @@ class _PropertyPageState extends ConsumerState<_PropertyPage> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              head('أين ستكون'),
+                              head('أين ستكون'.tr),
                               pad(_LocationCard(property: p)),
                             ],
                           ),
@@ -361,7 +368,7 @@ class _PropertyPageState extends ConsumerState<_PropertyPage> {
                       if (p.providerName != null ||
                           p.phone != null ||
                           p.providerId != null) ...[
-                        head('المضيف'),
+                        head('المضيف'.tr),
                         pad(_HostCard(property: p)),
                       ],
                       anchor(
@@ -369,7 +376,7 @@ class _PropertyPageState extends ConsumerState<_PropertyPage> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            head('ماذا قال الضيوف'),
+                            head('ماذا قال الضيوف'.tr),
                             _ReviewsSection(property: p),
                           ],
                         ),
@@ -480,7 +487,9 @@ class _HeroAppBar extends StatelessWidget {
           elevation: 0,
           scrolledUnderElevation: 0,
           automaticallyImplyLeading: false,
-          systemOverlayStyle: overlayFor(darkBackground: t < .5),
+          systemOverlayStyle: overlayFor(
+            darkBackground: t < .5 || Appearance.isDark,
+          ),
           leadingWidth: 62,
           leading: Center(
             child: _BarIcon(
@@ -507,6 +516,31 @@ class _HeroAppBar extends StatelessWidget {
           ),
           actions: [
             _BarIcon(icon: Icons.ios_share_rounded, t: t, onTap: onShare),
+            const SizedBox(width: 8),
+            Consumer(
+              builder: (context, ref, _) {
+                final compare = ref.watch(compareSelectionProvider);
+                final inCompare = compare.any((x) => x.id == property.id);
+                return _BarIcon(
+                  icon: inCompare
+                      ? Icons.check_rounded
+                      : Icons.compare_arrows_rounded,
+                  t: t,
+                  active: inCompare,
+                  onTap: () {
+                    final notifier = ref.read(compareSelectionProvider.notifier);
+                    if (!inCompare && notifier.isFull) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('يمكنك مقارنة 4 أماكن كحد أقصى'.tr)),
+                      );
+                      return;
+                    }
+                    notifier.toggle(property);
+                    HapticFeedback.selectionClick();
+                  },
+                );
+              },
+            ),
             const SizedBox(width: 8),
             _BarIcon(icon: Icons.bookmark_add_outlined, t: t, onTap: onSave),
             const SizedBox(width: 8),
@@ -549,7 +583,9 @@ class _BarIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final world = context.world;
     final fg = active
-        ? const Color(0xFFE11D48)
+        ? (t < .5
+              ? const Color(0xFFE11D48)
+              : themed(const Color(0xFFE11D48), VibesDark.mapple))
         : Color.lerp(Colors.white, Vibes.ink, t)!;
     return PressScale(
       onTap: () {
@@ -565,7 +601,7 @@ class _BarIcon extends StatelessWidget {
               ? Colors.white
               : Color.lerp(
                   Colors.black.withValues(alpha: .32),
-                  Colors.white,
+                  Vibes.surface,
                   t,
                 ),
           border: Border.all(
@@ -628,8 +664,8 @@ class _PropertyHero extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Positioned(
-                  left: -40,
+                PositionedDirectional(
+                  end: -40,
                   bottom: -30,
                   child: Opacity(
                     opacity: .12,
@@ -718,7 +754,7 @@ class _TitleBlock extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   _Tag(
-                    label: p.typeLabelAr,
+                    label: p.typeLabelAr.tr,
                     leading: VibesCategoryIcon(
                       category: _categoryOf(p),
                       size: 13,
@@ -728,7 +764,7 @@ class _TitleBlock extends StatelessWidget {
                   ),
                   if (p.featured)
                     _Tag(
-                      label: 'مختار من VIBES',
+                      label: 'مختار من أجواء'.tr,
                       leading: Icon(
                         Icons.workspace_premium_rounded,
                         size: 14,
@@ -736,35 +772,44 @@ class _TitleBlock extends StatelessWidget {
                       ),
                     ),
                   if (p.isNew)
-                    const _Tag(
-                      label: 'وصل حديثاً',
+                    _Tag(
+                      label: 'وصل حديثاً'.tr,
                       leading: Icon(
                         Icons.fiber_new_rounded,
                         size: 15,
-                        color: Color(0xFF0E9F6E),
+                        color: themed(
+                          const Color(0xFF0E9F6E),
+                          VibesDark.success,
+                        ),
                       ),
                     ),
                   if (p.isWinter)
-                    const _Tag(
-                      label: 'مزرعة شتوية',
+                    _Tag(
+                      label: 'مزرعة شتوية'.tr,
                       leading: Icon(
                         Icons.ac_unit_rounded,
                         size: 14,
-                        color: Color(0xFF0284C7),
+                        color: themed(
+                          const Color(0xFF0284C7),
+                          const Color(0xFF7CC4EE),
+                        ),
                       ),
                     ),
                   if (p.hasIndoorPool)
-                    const _Tag(
-                      label: 'مسبح مغلق',
+                    _Tag(
+                      label: 'مسبح مغلق'.tr,
                       leading: Icon(
                         Icons.pool_rounded,
                         size: 14,
-                        color: Color(0xFF0D9488),
+                        color: themed(
+                          const Color(0xFF0D9488),
+                          const Color(0xFF5FD4C8),
+                        ),
                       ),
                     ),
                   if (p.supportsShifts)
                     _Tag(
-                      label: 'صباحي ومسائي',
+                      label: 'صباحي ومسائي'.tr,
                       leading: Icon(
                         Icons.schedule_rounded,
                         size: 14,
@@ -838,7 +883,7 @@ class _Tag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
       decoration: BoxDecoration(
-        color: filled ? world.accentSoft : Colors.white,
+        color: filled ? world.accentSoft : Vibes.surface,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
           color: world.accent.withValues(alpha: filled ? .0 : .18),
@@ -881,41 +926,41 @@ class _HighlightsCard extends StatelessWidget {
               icon: Icons.star_rounded,
               iconColor: _starGold,
               value: p.ratingAvg.toStringAsFixed(1),
-              label: '${p.ratingCount} تقييم',
+              label: '{n} تقييم'.trN(p.ratingCount),
             )
           : _Stat(
               icon: Icons.auto_awesome_rounded,
               iconColor: world.accent,
-              value: 'جديد',
-              label: 'بانتظار أول تقييم',
+              value: 'جديد'.tr,
+              label: 'بانتظار أول تقييم'.tr,
             ),
       if (p.capacity > 0)
         _Stat(
           icon: Icons.groups_rounded,
           iconColor: world.accentDeep,
           value: '${p.capacity}',
-          label: 'ضيف كحد أقصى',
+          label: 'ضيف كحد أقصى'.tr,
         ),
       if (p.bookingsCount > 0)
         _Stat(
           icon: Icons.verified_rounded,
-          iconColor: const Color(0xFF0E9F6E),
+          iconColor: themed(const Color(0xFF0E9F6E), VibesDark.success),
           value: '${p.bookingsCount}',
-          label: 'حجز ناجح',
+          label: 'حجز ناجح'.tr,
         )
       else if (p.viewCount > 0)
         _Stat(
           icon: Icons.visibility_outlined,
           iconColor: world.accentDeep,
           value: '${p.viewCount}',
-          label: 'مشاهدة',
+          label: 'مشاهدة'.tr,
         ),
     ];
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: world.accent.withValues(alpha: .12)),
         boxShadow: [
@@ -1147,7 +1192,7 @@ class _AnchorTabsState extends State<_AnchorTabs> {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     gradient: on ? world.fill : null,
-                    color: on ? null : Colors.white,
+                    color: on ? null : Vibes.surface,
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(
                       color: on
@@ -1186,7 +1231,7 @@ Future<void> _shareAsCard(BuildContext context, dynamic p) async {
         children: [
           const MaisonSheetHandle(),
           Text(
-            'مشاركة كبطاقة',
+            'مشاركة كبطاقة'.tr,
             style: Theme.of(
               sheetContext,
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
@@ -1197,7 +1242,7 @@ Future<void> _shareAsCard(BuildContext context, dynamic p) async {
           SizedBox(
             width: double.infinity,
             child: VibesButton(
-              label: 'مشاركة الصورة',
+              label: 'مشاركة الصورة'.tr,
               icon: Icons.share_rounded,
               onPressed: () async {
                 Navigator.pop(sheetContext);
@@ -1353,7 +1398,9 @@ class _ReelPreviewCardState extends State<_ReelPreviewCard> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      m.durationSec != null ? '${m.durationSec} ث' : 'شاهد',
+                      m.durationSec != null
+                          ? '{n} ث'.trArgs({'n': m.durationSec})
+                          : 'شاهد'.tr,
                       maxLines: 1,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: Colors.white,
@@ -1433,10 +1480,10 @@ class _ReelFullscreenState extends State<_ReelFullscreen> {
               ),
             )
           else if (_failed)
-            const Center(
+            Center(
               child: Text(
-                'تعذّر تشغيل الفيديو',
-                style: TextStyle(color: Colors.white70),
+                'تعذّر تشغيل الفيديو'.tr,
+                style: const TextStyle(color: Colors.white70),
               ),
             )
           else
@@ -1460,9 +1507,9 @@ class _ReelFullscreenState extends State<_ReelFullscreen> {
           ),
 
           // إغلاق
-          Positioned(
+          PositionedDirectional(
             top: MediaQuery.of(context).padding.top + 10,
-            left: 16,
+            end: 16,
             child: GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(
@@ -1482,9 +1529,9 @@ class _ReelFullscreenState extends State<_ReelFullscreen> {
 
           // كتم/تفعيل الصوت
           if (_video != null)
-            Positioned(
+            PositionedDirectional(
               top: MediaQuery.of(context).padding.top + 10,
-              right: 16,
+              start: 16,
               child: GestureDetector(
                 onTap: () {
                   final v = _video!;
@@ -1516,8 +1563,8 @@ class _ReelFullscreenState extends State<_ReelFullscreen> {
 // ═══════════════════════════════════════════════════════════
 
 List<(String?, String)> _amenityItems(Property p) => p.amenities.isNotEmpty
-    ? [for (final a in p.amenities) (a.icon, a.nameAr)]
-    : [for (final n in p.amenityNames) (null, n)];
+    ? [for (final a in p.amenities) (a.icon, a.nameAr.tr)]
+    : [for (final n in p.amenityNames) (null, n.tr)];
 
 class _AmenitiesGrid extends StatelessWidget {
   const _AmenitiesGrid({required this.property});
@@ -1548,7 +1595,7 @@ class _AmenitiesGrid extends StatelessWidget {
             if (items.length > shown.length) ...[
               const SizedBox(height: 14),
               WorldGhostButton(
-                label: 'عرض كل المزايا (${items.length})',
+                label: 'عرض كل المزايا ({n})'.trArgs({'n': items.length}),
                 icon: Icons.grid_view_rounded,
                 onTap: () => _showAllAmenities(context, items),
               ),
@@ -1572,7 +1619,7 @@ class _AmenityTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: world.accent.withValues(alpha: .12)),
       ),
@@ -1634,9 +1681,11 @@ Future<void> _showAllAmenities(
             constraints: BoxConstraints(
               maxHeight: MediaQuery.sizeOf(context).height * .8,
             ),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            decoration: BoxDecoration(
+              color: Vibes.surface,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1646,7 +1695,7 @@ Future<void> _showAllAmenities(
                 Padding(
                   padding: const EdgeInsets.fromLTRB(22, 4, 22, 12),
                   child: Text(
-                    'كل المزايا · ${items.length}',
+                    'كل المزايا · {n}'.trArgs({'n': items.length}),
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 19,
@@ -1743,7 +1792,7 @@ class _ExpandableTextState extends State<_ExpandableText> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _expanded ? 'عرض أقل' : 'اقرأ المزيد',
+                  _expanded ? 'عرض أقل'.tr : 'اقرأ المزيد'.tr,
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
                     fontSize: 13.5,
@@ -1782,7 +1831,7 @@ class _RulesCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: world.accent.withValues(alpha: .12)),
       ),
@@ -1793,13 +1842,15 @@ class _RulesCard extends StatelessWidget {
             children: [
               Icon(Icons.gavel_rounded, size: 18, color: world.accentDeep),
               const SizedBox(width: 8),
-              Text(
-                'قواعد المكان',
-                style: TextStyle(
-                  fontFamily: VibesFont.ui,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                  color: Vibes.ink,
+              Flexible(
+                child: Text(
+                  'قواعد المكان'.tr,
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    color: Vibes.ink,
+                  ),
                 ),
               ),
             ],
@@ -1863,14 +1914,14 @@ class _LocationCard extends StatelessWidget {
     final lng = property.longitude ?? 44.3661;
     final place = (property.address ?? '').trim().isNotEmpty
         ? property.address!.trim()
-        : (property.cityName ?? 'الموقع على الخريطة');
+        : (property.cityName ?? 'الموقع على الخريطة'.tr);
     final openMap = () => context.push(
       '/map?id=${property.id}&type=${property.type.name.toUpperCase()}',
     );
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: world.accent.withValues(alpha: .12)),
         boxShadow: [
@@ -1911,22 +1962,34 @@ class _LocationCard extends StatelessWidget {
                     flyToSelection: false,
                     tint: VibesMapTint(
                       land: Color.lerp(
-                        const Color(0xFFF6F5F1),
+                        themed(
+                          const Color(0xFFF6F5F1),
+                          const Color(0xFF17283D),
+                        ),
                         world.canvasTint,
                         .45,
                       )!,
                       water: Color.lerp(
-                        const Color(0xFFC6DCEC),
+                        themed(
+                          const Color(0xFFC6DCEC),
+                          const Color(0xFF0B2036),
+                        ),
                         world.accentLight,
                         .10,
                       )!,
                       green: Color.lerp(
-                        const Color(0xFFDDEBD3),
+                        themed(
+                          const Color(0xFFDDEBD3),
+                          const Color(0xFF1A3136),
+                        ),
                         world.canvasTint,
                         .25,
                       )!,
                       building: Color.lerp(
-                        const Color(0xFFE9E6DF),
+                        themed(
+                          const Color(0xFFE9E6DF),
+                          const Color(0xFF21354D),
+                        ),
                         world.canvasTint,
                         .5,
                       )!,
@@ -1945,9 +2008,14 @@ class _LocationCard extends StatelessWidget {
                   child: PressScale(
                     onTap: openMap,
                     child: Container(
-                      padding: const EdgeInsets.fromLTRB(10, 6, 12, 6),
+                      padding: const EdgeInsetsDirectional.fromSTEB(
+                        12,
+                        6,
+                        10,
+                        6,
+                      ),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Vibes.surface,
                         borderRadius: BorderRadius.circular(999),
                         boxShadow: [
                           BoxShadow(
@@ -1967,7 +2035,7 @@ class _LocationCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 5),
                           Text(
-                            'تكبير الخريطة',
+                            'تكبير الخريطة'.tr,
                             style: TextStyle(
                               fontFamily: VibesFont.ui,
                               fontSize: 11.5,
@@ -2045,7 +2113,7 @@ class _LocationCard extends StatelessWidget {
                     Expanded(
                       flex: 3,
                       child: WorldButton(
-                        label: 'الاتجاهات',
+                        label: 'الاتجاهات'.tr,
                         icon: Icons.directions_rounded,
                         height: 50,
                         onTap: () => showDirectionsSheet(
@@ -2060,7 +2128,7 @@ class _LocationCard extends StatelessWidget {
                     Expanded(
                       flex: 2,
                       child: WorldGhostButton(
-                        label: 'مشاركة',
+                        label: 'مشاركة'.tr,
                         icon: Icons.ios_share_rounded,
                         height: 50,
                         onTap: () => Share.share(
@@ -2072,7 +2140,7 @@ class _LocationCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'افتح الموقع في Google Maps أو Waze أو أي تطبيق خرائط لديك',
+                  'افتح الموقع في Google Maps أو Waze أو أي تطبيق خرائط لديك'.tr,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
@@ -2139,18 +2207,20 @@ class _HostCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final world = context.world;
-    final name = property.providerName ?? 'مضيف المكان';
+    final name = property.providerName ?? 'مضيف المكان'.tr;
     final phone = property.whatsapp ?? property.phone;
     final providerId = property.providerId;
     final follow = providerId == null
         ? null
         : ref.watch(followStatusProvider(providerId)).valueOrNull;
-    final initial = name.trim().isNotEmpty ? name.trim().characters.first : 'م';
+    final initial = name.trim().isNotEmpty
+        ? name.trim().characters.first
+        : (I18n.isEn ? 'H' : 'م'); // i18n-ok
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: world.accent.withValues(alpha: .12)),
         boxShadow: [
@@ -2189,7 +2259,7 @@ class _HostCard extends ConsumerWidget {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: world.canvasTint,
-                            border: Border.all(color: Colors.white, width: 2),
+                            border: Border.all(color: Vibes.surface, width: 2),
                           ),
                           child: Center(
                             child: Text(
@@ -2213,7 +2283,7 @@ class _HostCard extends ConsumerWidget {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: const Color(0xFF0E9F6E),
-                            border: Border.all(color: Colors.white, width: 2),
+                            border: Border.all(color: Vibes.surface, width: 2),
                           ),
                           child: const Icon(
                             Icons.check_rounded,
@@ -2242,7 +2312,7 @@ class _HostCard extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        'مضيف موثّق · يرد عادة خلال ساعة',
+                        'مضيف موثّق · يرد عادة خلال ساعة'.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 12,
@@ -2254,7 +2324,12 @@ class _HostCard extends ConsumerWidget {
                   ),
                 ),
                 if (providerId != null)
-                  Icon(Icons.chevron_left_rounded, color: world.accentDeep),
+                  Icon(
+                    I18n.isEn
+                        ? Icons.chevron_right_rounded
+                        : Icons.chevron_left_rounded,
+                    color: world.accentDeep,
+                  ),
               ],
             ),
           ),
@@ -2271,7 +2346,7 @@ class _HostCard extends ConsumerWidget {
                   Expanded(
                     child: _HostStat(
                       value: '${follow?.followers ?? property.followersCount}',
-                      label: 'متابع',
+                      label: 'متابع'.tr,
                     ),
                   ),
                   VerticalDivider(
@@ -2281,7 +2356,7 @@ class _HostCard extends ConsumerWidget {
                   Expanded(
                     child: _HostStat(
                       value: '${property.bookingsCount}',
-                      label: 'حجز',
+                      label: I18n.isEn ? 'Bookings' : 'حجز', // i18n-ok
                     ),
                   ),
                   VerticalDivider(
@@ -2293,7 +2368,7 @@ class _HostCard extends ConsumerWidget {
                       value: property.ratingCount > 0
                           ? property.ratingAvg.toStringAsFixed(1)
                           : '—',
-                      label: 'التقييم',
+                      label: 'التقييم'.tr,
                     ),
                   ),
                 ],
@@ -2307,13 +2382,13 @@ class _HostCard extends ConsumerWidget {
                 Expanded(
                   child: (follow?.following ?? false)
                       ? WorldGhostButton(
-                          label: 'تتابعه',
+                          label: 'تتابعه'.tr,
                           icon: Icons.check_rounded,
                           height: 46,
                           onTap: () => _toggleFollow(context, ref, true),
                         )
                       : WorldButton(
-                          label: 'متابعة',
+                          label: I18n.isEn ? 'Follow' : 'متابعة', // i18n-ok
                           icon: Icons.person_add_alt_1_rounded,
                           height: 46,
                           onTap: () => _toggleFollow(context, ref, false),
@@ -2335,7 +2410,7 @@ class _HostCard extends ConsumerWidget {
                 const SizedBox(width: 8),
                 _CircleAction(
                   icon: Icons.forum_rounded,
-                  tint: const Color(0xFF16A34A),
+                  tint: themed(const Color(0xFF16A34A), VibesDark.success),
                   onTap: () => _launch(
                     'https://wa.me/',
                     phone.replaceFirst(RegExp(r'^\+'), ''),
@@ -2446,7 +2521,7 @@ class _ReviewsSection extends ConsumerWidget {
             child: Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Vibes.surface,
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(color: world.accent.withValues(alpha: .12)),
               ),
@@ -2471,7 +2546,7 @@ class _ReviewsSection extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'لا تقييمات بعد',
+                          'لا تقييمات بعد'.tr,
                           style: TextStyle(
                             fontFamily: VibesFont.ui,
                             fontSize: 15,
@@ -2480,7 +2555,7 @@ class _ReviewsSection extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          'احجز وكن أول من يشارك تجربته هنا',
+                          'احجز وكن أول من يشارك تجربته هنا'.tr,
                           style: TextStyle(
                             fontFamily: VibesFont.ui,
                             fontSize: 12.5,
@@ -2511,7 +2586,7 @@ class _ReviewsSection extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Vibes.surface,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
                     color: world.accent.withValues(alpha: .12),
@@ -2542,7 +2617,7 @@ class _ReviewsSection extends ConsumerWidget {
                         GoldRatingBar(rating: avg.toDouble(), size: 14),
                         const SizedBox(height: 4),
                         Text(
-                          '${list.length} تقييم موثّق',
+                          '{n} تقييم موثّق'.trN(list.length),
                           style: TextStyle(
                             fontFamily: VibesFont.ui,
                             fontSize: 11.5,
@@ -2623,33 +2698,33 @@ class _ReviewCard extends ConsumerWidget {
 
   final Review review;
 
-  static const _months = [
-    'يناير',
-    'فبراير',
-    'مارس',
-    'أبريل',
-    'مايو',
-    'يونيو',
-    'يوليو',
-    'أغسطس',
-    'سبتمبر',
-    'أكتوبر',
-    'نوفمبر',
-    'ديسمبر',
+  static List<String> get _months => [
+    'يناير'.tr,
+    'فبراير'.tr,
+    'مارس'.tr,
+    'أبريل'.tr,
+    'مايو'.tr,
+    'يونيو'.tr,
+    'يوليو'.tr,
+    'أغسطس'.tr,
+    'سبتمبر'.tr,
+    'أكتوبر'.tr,
+    'نوفمبر'.tr,
+    'ديسمبر'.tr,
   ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final world = context.world;
     final name = (review.userName ?? '').trim().isEmpty
-        ? 'ضيف VIBES'
+        ? 'ضيف أجواء'.tr
         : review.userName!.trim();
     final date = review.createdAt;
     return Container(
       width: 280,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: world.accent.withValues(alpha: .12)),
       ),
@@ -2712,7 +2787,7 @@ class _ReviewCard extends ConsumerWidget {
                 height: 30,
                 child: IconButton(
                   padding: EdgeInsets.zero,
-                  tooltip: 'إبلاغ',
+                  tooltip: 'إبلاغ'.tr,
                   icon: Icon(
                     Icons.more_vert,
                     size: 18,
@@ -2734,7 +2809,7 @@ class _ReviewCard extends ConsumerWidget {
             child: Text(
               review.comment.isNotEmpty
                   ? review.comment
-                  : 'قيّم المكان دون تعليق',
+                  : 'قيّم المكان دون تعليق'.tr,
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -2774,17 +2849,17 @@ class _BookingBar extends ConsumerWidget {
     final world = context.world;
     final bottom = MediaQuery.paddingOf(context).bottom;
     final unit = property.type == PropertyType.decoration
-        ? 'للخدمة'
+        ? 'للخدمة'.tr
         : property.supportsShifts
-        ? 'للفترة'
-        : 'لليلة';
+        ? 'للفترة'.tr
+        : 'لليلة'.tr;
 
     return Padding(
           padding: EdgeInsets.fromLTRB(12, 0, 12, 10 + bottom),
           child: Container(
             padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 10, 10),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Vibes.surface,
               borderRadius: BorderRadius.circular(26),
               border: Border.all(color: world.accent.withValues(alpha: .14)),
               boxShadow: [
@@ -2815,7 +2890,7 @@ class _BookingBar extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'يبدأ من',
+                          'يبدأ من'.tr,
                           style: TextStyle(
                             fontFamily: VibesFont.ui,
                             fontSize: 10.5,
@@ -2835,12 +2910,14 @@ class _BookingBar extends ConsumerWidget {
                                 child: PlaceFullPriceText(
                                   placeReferencePrice(property, dayPrices),
                                   size: 19,
+                                  // الوحدة بجانبه؛ العربية تحتفظ بمظهرها الحالي.
+                                  unit: !I18n.isEn,
                                 ),
                               ),
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'د.ع',
+                              'د.ع'.tr,
                               style: TextStyle(
                                 fontFamily: VibesFont.ui,
                                 fontSize: 11,
@@ -2851,7 +2928,9 @@ class _BookingBar extends ConsumerWidget {
                           ],
                         ),
                         Text(
-                          '$unit · جدول الأسعار',
+                          '{unit} · جدول الأسعار'.trArgs({'unit': unit.tr}),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontFamily: VibesFont.ui,
                             fontSize: 10.5,
@@ -2874,7 +2953,7 @@ class _BookingBar extends ConsumerWidget {
                 SizedBox(
                   width: 148,
                   child: WorldButton(
-                    label: 'احجز الآن',
+                    label: 'احجز الآن'.tr,
                     icon: Icons.event_available_rounded,
                     height: 52,
                     onTap: () {
@@ -2951,9 +3030,9 @@ Future<void> _pickCollection(
   }
   final collections = ref.read(collectionsProvider).valueOrNull ?? [];
   if (collections.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('أنشئ قائمة أولاً من المفضلة')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('أنشئ قائمة أولاً من المفضلة'.tr)));
     return;
   }
   final note = TextEditingController();
@@ -2969,15 +3048,15 @@ Future<void> _pickCollection(
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
               child: MaisonField(
-                label: 'ملاحظة اختيارية',
+                label: 'ملاحظة اختيارية'.tr,
                 controller: note,
-                hint: 'لماذا حفظت هذا المكان؟',
+                hint: 'لماذا حفظت هذا المكان؟'.tr,
               ),
             ),
             for (final col in collections)
               ListTile(
                 title: Text(col.name),
-                subtitle: Text('${col.itemCount} مكان'),
+                subtitle: Text('{n} مكان'.trN(col.itemCount)),
                 onTap: () => Navigator.pop(ctx, col.id),
               ),
           ],
@@ -3002,7 +3081,7 @@ Future<void> _pickCollection(
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('أُضيف المكان إلى القائمة')));
+      ).showSnackBar(SnackBar(content: Text('أُضيف المكان إلى القائمة'.tr)));
     }
   } catch (e) {
     if (context.mounted) {
@@ -3027,12 +3106,12 @@ class _SimilarPlaces extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Padding(
-              padding: EdgeInsets.only(bottom: 16),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
               child: SectionHead(
-                title: 'أماكن قد تعجبك',
-                subtitle: 'من نفس النوع والمدينة أو مختارات مميزة',
-                padding: EdgeInsets.fromLTRB(20, 38, 20, 0),
+                title: 'أماكن قد تعجبك'.tr,
+                subtitle: 'من نفس النوع والمدينة أو مختارات مميزة'.tr,
+                padding: const EdgeInsets.fromLTRB(20, 38, 20, 0),
               ),
             ),
             SizedBox(
@@ -3074,7 +3153,7 @@ class _ServicePriceCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: accent.withValues(alpha: .18)),
       ),
@@ -3095,21 +3174,25 @@ class _ServicePriceCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              Text(
-                'د.ع · للخدمة',
-                style: TextStyle(
-                  fontFamily: VibesFont.ui,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: Vibes.inkSecondary,
+              Flexible(
+                child: Text(
+                  'د.ع · للخدمة'.tr,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: Vibes.inkSecondary,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          for (final line in const [
-            'نفس السعر في أي يوم — عطلة أو يوم عادي',
-            'تختار يوم مناسبتك فقط، والفريق يحضر ويجهّز',
+          for (final line in [
+            'نفس السعر في أي يوم — عطلة أو يوم عادي'.tr,
+            'تختار يوم مناسبتك فقط، والفريق يحضر ويجهّز'.tr,
           ])
             Padding(
               padding: const EdgeInsets.only(bottom: 6),
@@ -3137,7 +3220,7 @@ class _ServicePriceCard extends StatelessWidget {
             child: FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: accent,
-                foregroundColor: Colors.white,
+                foregroundColor: themed(Colors.white, context.world.onAccent),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -3145,7 +3228,7 @@ class _ServicePriceCard extends StatelessWidget {
               ),
               onPressed: onBook,
               child: Text(
-                'اختر يوم مناسبتك',
+                'اختر يوم مناسبتك'.tr,
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
                   fontSize: 15,

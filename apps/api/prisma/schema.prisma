@@ -480,6 +480,8 @@ model Booking {
   guestPhone     String?       @map("guest_phone")
   totalPrice     Decimal       @map("total_price") @db.Decimal(12, 2)
   discountAmount Decimal       @default(0) @map("discount_amount") @db.Decimal(12, 2)
+  /// خصم الولاء المستخدم في هذا الحجز (جزء من discountAmount)
+  loyaltyDiscount Decimal      @default(0) @map("loyalty_discount") @db.Decimal(12, 2)
   couponId       String?       @map("coupon_id")
   coupon         Coupon?       @relation(fields: [couponId], references: [id], onDelete: SetNull)
   notes          String?
@@ -716,6 +718,18 @@ model Favorite {
   @@unique([userId, propertyId])
   @@index([userId])
   @@map("favorites")
+}
+
+/// ترجمات المحتوى التلقائية — تُحفظ مرة واحدة لكل نص.
+model ContentTranslation {
+  hash      String
+  locale    String
+  source    String
+  text      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([hash, locale])
+  @@map("content_translations")
 }
 
 model PlatformSetting {

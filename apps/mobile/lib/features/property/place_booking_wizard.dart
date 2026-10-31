@@ -1,4 +1,5 @@
 import '../../core/theme/world_theme.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -51,7 +52,7 @@ Future<PlaceBookingDraft?> showPlaceBookingWizard({
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    backgroundColor: Colors.white,
+    backgroundColor: Vibes.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
@@ -157,35 +158,37 @@ class _PlaceBookingWizardSheetState extends State<_PlaceBookingWizardSheet> {
   };
 
   String get _title => switch (_step) {
-    PlaceBookingWizardStep.period => 'اختر الفترة',
-    PlaceBookingWizardStep.guests => 'كم عدد الضيوف؟',
+    PlaceBookingWizardStep.period => 'اختر الفترة'.tr,
+    PlaceBookingWizardStep.guests => 'كم عدد الضيوف؟'.tr,
     PlaceBookingWizardStep.dates =>
-      _fullDayMulti == true ? 'اختر مدة الإقامة' : 'اختر اليوم',
-    PlaceBookingWizardStep.review => 'راجع حجزك',
+      _fullDayMulti == true ? 'اختر مدة الإقامة'.tr : 'اختر اليوم'.tr,
+    PlaceBookingWizardStep.review => 'راجع حجزك'.tr,
   };
 
   String? get _subtitle => switch (_step) {
     PlaceBookingWizardStep.period =>
       widget.property.supportsShifts
-          ? 'اختر الفترة — ننتقل تلقائياً للخطوة التالية'
-          : 'حدّد مدة الإقامة ثم أكمل',
+          ? 'اختر الفترة — ننتقل تلقائياً للخطوة التالية'.tr
+          : 'حدّد مدة الإقامة ثم أكمل'.tr,
     PlaceBookingWizardStep.guests =>
       widget.property.capacity > 0
-          ? 'سعة المكان ${widget.property.capacity} — اكتب الرقم من الكيبورد'
-          : 'اكتب العدد أو استخدم الاختصارات',
+          ? 'سعة المكان {n} — اكتب الرقم من الكيبورد'.trArgs({
+              'n': widget.property.capacity,
+            })
+          : 'اكتب العدد أو استخدم الاختصارات'.tr,
     PlaceBookingWizardStep.dates => _dateSubtitle,
-    PlaceBookingWizardStep.review => 'يمكنك تعديل أي بند قبل التأكيد',
+    PlaceBookingWizardStep.review => 'يمكنك تعديل أي بند قبل التأكيد'.tr,
   };
 
   String get _dateSubtitle {
     final s = _shift;
     if (s == ShiftType.morning) {
-      return 'يوم واحد · المغادرة تلقائياً في اليوم التالي';
+      return 'يوم واحد · المغادرة تلقائياً في اليوم التالي'.tr;
     }
     if (s == ShiftType.evening) {
-      return 'يوم واحد · المغادرة تُضبط لليوم التالي تلقائياً';
+      return 'يوم واحد · المغادرة تُضبط لليوم التالي تلقائياً'.tr;
     }
-    return 'يوم أو أكثر — لأكثر من يوم اضغط على يوم النهاية';
+    return 'يوم أو أكثر — لأكثر من يوم اضغط على يوم النهاية'.tr;
   }
 
   Future<void> _ensureAvailability() async {
@@ -202,7 +205,7 @@ class _PlaceBookingWizardSheetState extends State<_PlaceBookingWizardSheet> {
       if (!mounted) return;
       setState(() {
         _loadingDates = false;
-        _error = 'تعذر تحميل المواعيد — حاول مجدداً';
+        _error = 'تعذر تحميل المواعيد — حاول مجدداً'.tr;
       });
     }
   }
@@ -258,11 +261,11 @@ class _PlaceBookingWizardSheetState extends State<_PlaceBookingWizardSheet> {
     HapticFeedback.selectionClick();
     if (_step == PlaceBookingWizardStep.period) {
       if (_shift == null) {
-        setState(() => _error = 'اختر الفترة أولاً');
+        setState(() => _error = 'اختر الفترة أولاً'.tr);
         return;
       }
       if (_shift == ShiftType.full && _fullDayMulti == null) {
-        setState(() => _error = 'حدّد: يوم واحد أم أكثر؟');
+        setState(() => _error = 'حدّد: يوم واحد أم أكثر؟'.tr);
         return;
       }
       _advanceFromPeriod();
@@ -270,7 +273,7 @@ class _PlaceBookingWizardSheetState extends State<_PlaceBookingWizardSheet> {
     }
     if (_step == PlaceBookingWizardStep.guests) {
       if (_guests < 1) {
-        setState(() => _error = 'أدخل عدد ضيوف صالحاً');
+        setState(() => _error = 'أدخل عدد ضيوف صالحاً'.tr);
         return;
       }
       if (widget.editOnly) {
@@ -395,7 +398,7 @@ class _PlaceBookingWizardSheetState extends State<_PlaceBookingWizardSheet> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 12, 0),
+              padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 8, 0),
               child: Row(
                 children: [
                   IconButton(
@@ -405,7 +408,9 @@ class _PlaceBookingWizardSheetState extends State<_PlaceBookingWizardSheet> {
                               (widget.editOnly &&
                                   _step != PlaceBookingWizardStep.dates)
                           ? Icons.close_rounded
-                          : Icons.arrow_forward_ios_rounded,
+                          : (I18n.isEn
+                                ? Icons.arrow_back_ios_new_rounded
+                                : Icons.arrow_forward_ios_rounded),
                       size: 20,
                       color: placeInk2,
                     ),
@@ -458,7 +463,7 @@ class _PlaceBookingWizardSheetState extends State<_PlaceBookingWizardSheet> {
                     fontFamily: VibesFont.ui,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFFB45309),
+                    color: placeWarn,
                   ),
                 ),
               ),
@@ -522,10 +527,10 @@ class _PlaceBookingWizardSheetState extends State<_PlaceBookingWizardSheet> {
                 _step == PlaceBookingWizardStep.review)
               PlaceSheetConfirm(
                 label: switch (_step) {
-                  PlaceBookingWizardStep.period => 'التالي — الضيوف',
-                  PlaceBookingWizardStep.guests => 'التالي — التاريخ',
-                  PlaceBookingWizardStep.review => 'تأكيد الموعد',
-                  _ => 'متابعة',
+                  PlaceBookingWizardStep.period => 'التالي — الضيوف'.tr,
+                  PlaceBookingWizardStep.guests => 'التالي — التاريخ'.tr,
+                  PlaceBookingWizardStep.review => 'تأكيد الموعد'.tr,
+                  _ => 'متابعة'.tr,
                 },
                 onPressed: _goNext,
               ),
@@ -541,7 +546,12 @@ class _WizardProgress extends StatelessWidget {
 
   final int active;
 
-  static const _labels = ['الفترة', 'الضيوف', 'التاريخ', 'مراجعة'];
+  static List<String> get _labels => [
+    'الفترة'.tr,
+    'الضيوف'.tr,
+    'التاريخ'.tr,
+    'مراجعة'.tr,
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -575,10 +585,10 @@ class _WizardProgress extends StatelessWidget {
                   ),
                 ),
                 child: i < active
-                    ? const Icon(
+                    ? Icon(
                         Icons.check_rounded,
                         size: 14,
-                        color: Colors.white,
+                        color: themed(Colors.white, context.world.onAccent),
                       )
                     : Text(
                         '${i + 1}',
@@ -586,7 +596,9 @@ class _WizardProgress extends StatelessWidget {
                           fontFamily: 'Montserrat',
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
-                          color: i == active ? Colors.white : placeInk2,
+                          color: i == active
+                              ? themed(Colors.white, context.world.onAccent)
+                              : placeInk2,
                         ),
                       ),
               ),
@@ -641,7 +653,7 @@ class _DatesEmbeddedStep extends StatelessWidget {
             CircularProgressIndicator(strokeWidth: 2.4),
             SizedBox(height: 12),
             Text(
-              'جاري تحميل المواعيد…',
+              'جاري تحميل المواعيد…'.tr,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontWeight: FontWeight.w700,
@@ -660,7 +672,7 @@ class _DatesEmbeddedStep extends StatelessWidget {
             Icon(Icons.event_busy_outlined, size: 40, color: placeInk2),
             const SizedBox(height: 10),
             Text(
-              'تعذر تحميل التقويم',
+              'تعذر تحميل التقويم'.tr,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontWeight: FontWeight.w900,
@@ -668,7 +680,7 @@ class _DatesEmbeddedStep extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            TextButton(onPressed: onRetry, child: const Text('إعادة المحاولة')),
+            TextButton(onPressed: onRetry, child: Text('إعادة المحاولة'.tr)),
           ],
         ),
       );
@@ -725,9 +737,9 @@ class _ReviewStep extends StatelessWidget {
       endExclusive,
     );
     final shiftLabel = switch (shift) {
-      ShiftType.morning => 'الفترة الصباحية',
-      ShiftType.evening => 'الفترة المسائية',
-      ShiftType.full => fullDayMulti ? 'يوم كامل · عدة أيام' : 'يوم كامل',
+      ShiftType.morning => 'الفترة الصباحية'.tr,
+      ShiftType.evening => 'الفترة المسائية'.tr,
+      ShiftType.full => fullDayMulti ? 'يوم كامل · عدة أيام'.tr : 'يوم كامل'.tr,
     };
 
     return SingleChildScrollView(
@@ -747,7 +759,7 @@ class _ReviewStep extends StatelessWidget {
                 _TimelineRow(
                   icon: Icons.login_rounded,
                   tint: placeShiftColor(shift),
-                  title: 'الوصول',
+                  title: 'الوصول'.tr,
                   value: timeline.arrival,
                 ),
                 Padding(
@@ -760,7 +772,7 @@ class _ReviewStep extends StatelessWidget {
                 _TimelineRow(
                   icon: Icons.logout_rounded,
                   tint: placeInk,
-                  title: 'المغادرة',
+                  title: 'المغادرة'.tr,
                   value: timeline.departure,
                 ),
               ],
@@ -770,21 +782,21 @@ class _ReviewStep extends StatelessWidget {
           _ReviewEditable(
             icon: Icons.schedule_rounded,
             tint: placeShiftColor(shift),
-            label: 'الفترة',
+            label: 'الفترة'.tr,
             value: shiftLabel,
             onEdit: onEditPeriod,
           ),
           _ReviewEditable(
             icon: Icons.groups_rounded,
             tint: placeBrass,
-            label: 'الضيوف',
-            value: guests == 1 ? 'ضيف واحد' : '$guests ضيوف',
+            label: 'الضيوف'.tr,
+            value: guests == 1 ? 'ضيف واحد'.tr : '{n} ضيوف'.trN(guests),
             onEdit: onEditGuests,
           ),
           _ReviewEditable(
             icon: Icons.calendar_month_rounded,
             tint: placeInk,
-            label: 'الموعد',
+            label: 'الموعد'.tr,
             value: placeFormatDateRange(start, endExclusive),
             onEdit: onEditDates,
           ),
@@ -801,7 +813,7 @@ class _ReviewStep extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'تقدير قبل الكوبون',
+                      'تقدير قبل الكوبون'.tr,
                       style: TextStyle(
                         fontFamily: VibesFont.ui,
                         fontSize: 13,
@@ -898,7 +910,7 @@ class _ReviewEditable extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           onTap: () {
@@ -942,7 +954,7 @@ class _ReviewEditable extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'تعديل',
+                  'تعديل'.tr,
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
                     fontSize: 11.5,
@@ -992,7 +1004,7 @@ class _PeriodStep extends StatelessWidget {
           if (selected == ShiftType.full) ...[
             const SizedBox(height: 18),
             Text(
-              'كم يوماً تريد؟',
+              'كم يوماً تريد؟'.tr,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontSize: 15,
@@ -1005,8 +1017,8 @@ class _PeriodStep extends StatelessWidget {
               children: [
                 Expanded(
                   child: _DurationCard(
-                    title: 'يوم واحد',
-                    subtitle: 'مغادرة الغد تلقائياً',
+                    title: 'يوم واحد'.tr,
+                    subtitle: 'مغادرة الغد تلقائياً'.tr,
                     icon: Icons.today_rounded,
                     selected: fullDayMulti == false,
                     onTap: () => onSelectDuration(false),
@@ -1015,8 +1027,8 @@ class _PeriodStep extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: _DurationCard(
-                    title: 'أكثر من يوم',
-                    subtitle: 'تختار الوصول والمغادرة',
+                    title: 'أكثر من يوم'.tr,
+                    subtitle: 'تختار الوصول والمغادرة'.tr,
                     icon: Icons.date_range_rounded,
                     selected: fullDayMulti == true,
                     onTap: () => onSelectDuration(true),
@@ -1047,8 +1059,8 @@ class _PeriodStep extends StatelessWidget {
                   Expanded(
                     child: Text(
                       selected == ShiftType.evening
-                          ? 'المسائي يوم واحد — المغادرة غداً تلقائياً'
-                          : 'الصباحي يوم واحد — المغادرة غداً تلقائياً',
+                          ? 'المسائي يوم واحد — المغادرة غداً تلقائياً'.tr
+                          : 'الصباحي يوم واحد — المغادرة غداً تلقائياً'.tr,
                       style: TextStyle(
                         fontFamily: VibesFont.ui,
                         fontSize: 12,
@@ -1085,8 +1097,9 @@ class _DurationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final onFill = themed(Colors.white, context.world.onAccent);
     return Material(
-      color: selected ? context.world.accentDeep : Colors.white,
+      color: selected ? context.world.accentDeep : Vibes.surface,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
@@ -1103,7 +1116,7 @@ class _DurationCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, size: 22, color: selected ? Colors.white : placeInk),
+              Icon(icon, size: 22, color: selected ? onFill : placeInk),
               const SizedBox(height: 10),
               Text(
                 title,
@@ -1111,7 +1124,7 @@ class _DurationCard extends StatelessWidget {
                   fontFamily: VibesFont.ui,
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
-                  color: selected ? Colors.white : placeInk,
+                  color: selected ? onFill : placeInk,
                 ),
               ),
               const SizedBox(height: 2),
@@ -1122,9 +1135,7 @@ class _DurationCard extends StatelessWidget {
                   fontSize: 10.5,
                   fontWeight: FontWeight.w600,
                   height: 1.35,
-                  color: selected
-                      ? Colors.white.withValues(alpha: 0.78)
-                      : placeInk2,
+                  color: selected ? onFill.withValues(alpha: 0.78) : placeInk2,
                 ),
               ),
             ],
@@ -1155,7 +1166,7 @@ class _ShiftOptionsInline extends StatelessWidget {
     final options = <(ShiftType, String, String?, IconData, Color, num)>[
       (
         ShiftType.morning,
-        'الفترة الصباحية',
+        'الفترة الصباحية'.tr,
         labels.morning,
         Icons.wb_sunny_outlined,
         placeShiftMorning,
@@ -1163,7 +1174,7 @@ class _ShiftOptionsInline extends StatelessWidget {
       ),
       (
         ShiftType.evening,
-        'الفترة المسائية',
+        'الفترة المسائية'.tr,
         labels.evening,
         Icons.dark_mode_outlined,
         placeShiftEvening,
@@ -1171,7 +1182,7 @@ class _ShiftOptionsInline extends StatelessWidget {
       ),
       (
         ShiftType.full,
-        'اليوم الكامل',
+        'اليوم الكامل'.tr,
         null,
         Icons.calendar_today_rounded,
         placeShiftFull,
@@ -1230,7 +1241,7 @@ class _WizardShiftTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final available = availability.isAvailable;
     return Material(
-      color: selected ? tint.withValues(alpha: 0.07) : Colors.white,
+      color: selected ? tint.withValues(alpha: 0.07) : Vibes.surface,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: available ? onTap : null,
@@ -1259,7 +1270,7 @@ class _WizardShiftTile extends StatelessWidget {
                   child: Icon(
                     icon,
                     size: 20,
-                    color: selected ? Colors.white : tint,
+                    color: selected ? placeOnFill : tint,
                   ),
                 ),
                 const SizedBox(width: 12),

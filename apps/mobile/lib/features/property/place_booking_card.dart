@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/network/api_client.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/world_theme.dart';
 import '../../shared/widgets/world_ui.dart';
@@ -12,6 +13,9 @@ import '../../shared/models/models.dart';
 import '../auth/auth_controller.dart';
 import 'place_experience_ui.dart';
 import 'shift_calendar_ui.dart';
+import '../loyalty/loyalty_data.dart';
+import '../loyalty/loyalty_widgets.dart';
+import '../home/home_sections.dart';
 import 'place_booking_sheets.dart';
 import 'place_booking_wizard.dart';
 import '../booking/booking_providers.dart';
@@ -47,6 +51,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
   bool _fullDayMulti = false;
 
   Map<String, dynamic>? _quote;
+  bool _useLoyalty = true;
   bool _quoting = false;
   String? _quoteError;
   bool _loadingWizard = false;
@@ -121,9 +126,9 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
   }
 
   String get _shiftLabel => switch (_shift) {
-    ShiftType.morning => 'الفترة الصباحية',
-    ShiftType.evening => 'الفترة المسائية',
-    ShiftType.full => _fullDayMulti ? 'يوم كامل · عدة أيام' : 'يوم كامل',
+    ShiftType.morning => 'الفترة الصباحية'.tr,
+    ShiftType.evening => 'الفترة المسائية'.tr,
+    ShiftType.full => _fullDayMulti ? 'يوم كامل · عدة أيام'.tr : 'يوم كامل'.tr,
   };
 
   String _dateKey(DateTime d) =>
@@ -145,6 +150,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
                   'startDate': _dateKey(_start!),
                   'endDate': _dateKey(_end!),
                   'shift': _shift.name.toUpperCase(),
+                  if (_useLoyalty) 'useLoyalty': true,
                 },
               )
               as Map<String, dynamic>;
@@ -160,7 +166,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
         // رسالة الخادم أوضح (موعد محجوز، شفت غير متاح…) من رسالة عامة
         final msg = maisonError(e);
         _quoteError = msg.trim().isEmpty
-            ? 'تعذر حساب السعر — حاول مجدداً'
+            ? 'تعذر حساب السعر — حاول مجدداً'.tr
             : msg;
       });
     }
@@ -254,9 +260,11 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loadingWizard = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('تعذر تحميل المواعيد: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('تعذر تحميل المواعيد: {error}'.trArgs({'error': e})),
+        ),
+      );
       return;
     }
     if (!mounted) return;
@@ -310,6 +318,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
                   'endDate': _dateKey(_end!),
                   'shift': _shift.name.toUpperCase(),
                   'guests': _guests,
+                  if (_quote?['loyaltyApplied'] == true) 'useLoyalty': true,
                 },
               )
               as Map<String, dynamic>;
@@ -317,6 +326,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
       HapticFeedback.mediumImpact();
       // الحجز الجديد يظهر فوراً في «حجوزاتي» كبانتظار التأكيد
       ref.invalidate(myBookingsProvider);
+      ref.invalidate(loyaltyProvider);
       final bookingId = created['id'] as String?;
       if (bookingId == null) {
         context.pushReplacement('/booking-success');
@@ -342,7 +352,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
       if (!mounted) return;
       setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تعذر إنشاء الحجز — حاول مجدداً')),
+        SnackBar(content: Text('تعذر إنشاء الحجز — حاول مجدداً'.tr)),
       );
     }
   }
@@ -359,7 +369,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
     final world = context.world;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(color: world.accent.withValues(alpha: .14)),
         boxShadow: [
@@ -381,7 +391,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [world.canvasTint, Colors.white],
+                colors: [world.canvasTint, Vibes.surface],
               ),
             ),
             child: Row(
@@ -408,7 +418,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _ready ? 'ملخص حجزك' : 'احجز هذا المكان',
+                        _ready ? 'ملخص حجزك'.tr : 'احجز هذا المكان'.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 17,
@@ -419,8 +429,8 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
                       ),
                       Text(
                         _ready
-                            ? 'اضغط أي بند لتعديله فوراً'
-                            : 'ثلاث خطوات فقط وتنتهي',
+                            ? 'اضغط أي بند لتعديله فوراً'.tr
+                            : 'ثلاث خطوات فقط وتنتهي'.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 11.5,
@@ -435,7 +445,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      'يبدأ من',
+                      'يبدأ من'.tr,
                       style: TextStyle(
                         fontFamily: VibesFont.ui,
                         fontSize: 10,
@@ -485,7 +495,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
                           ? Icons.nights_stay_outlined
                           : Icons.calendar_today_rounded,
                       tint: placeShiftColor(_shift),
-                      label: 'الفترة',
+                      label: 'الفترة'.tr,
                       value: _shiftLabel,
                       onTap: () => _startWizard(
                         startAt: PlaceBookingWizardStep.period,
@@ -495,8 +505,10 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
                   _EditableChip(
                     icon: Icons.groups_rounded,
                     tint: context.world.accentDeep,
-                    label: 'الضيوف',
-                    value: _guests == 1 ? 'ضيف واحد' : '$_guests ضيوف',
+                    label: 'الضيوف'.tr,
+                    value: _guests == 1
+                        ? 'ضيف واحد'.tr
+                        : '{n} ضيوف'.trN(_guests),
                     onTap: () => _startWizard(
                       startAt: PlaceBookingWizardStep.guests,
                       editOnly: true,
@@ -521,6 +533,19 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
                 ),
               ),
             ),
+            if (_quote?['loyalty'] != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+                child: LoyaltyBookingOffer(
+                  offer: _quote!['loyalty'] as Map<String, dynamic>,
+                  applied: _quote!['loyaltyApplied'] == true,
+                  section: sectionForType(widget.property.type.name),
+                  onChanged: (use) {
+                    setState(() => _useLoyalty = use);
+                    _fetchQuote();
+                  },
+                ),
+              ),
             if (!_quoting && total != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
@@ -539,14 +564,19 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
                   child: Column(
                     children: [
                       _priceLine(
-                        '$nights ${nights == 1 ? 'ليلة' : 'ليالٍ'} × $_shiftPriceLabel',
+                        (nights == 1
+                                ? '{n} ليلة × {shift}'.tr
+                                : '{n} ليالٍ × {shift}'.tr)
+                            .trArgs({'n': nights, 'shift': _shiftPriceLabel}),
                         placeFullPrice(_quoteOriginalTotal ?? total),
                       ),
                       if ((_quoteDiscount ?? 0) > 0)
                         Padding(
                           padding: const EdgeInsets.only(top: 6),
                           child: _priceLine(
-                            'خصم الكوبون',
+                            _quote?['loyaltyApplied'] == true
+                                ? 'خصم الولاء'.tr
+                                : 'خصم الكوبون'.tr,
                             '− ${placeFullPrice(_quoteDiscount!)}',
                           ),
                         ),
@@ -554,7 +584,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
                         Padding(
                           padding: const EdgeInsets.only(top: 6),
                           child: _priceLine(
-                            'الإجمالي الكامل',
+                            'الإجمالي الكامل'.tr,
                             placeFullPrice(total),
                           ),
                         ),
@@ -572,7 +602,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
                     fontFamily: VibesFont.ui,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFFB45309),
+                    color: placeWarn,
                   ),
                 ),
               ),
@@ -582,7 +612,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
                 child: TextButton(
                   onPressed: () => _startWizard(),
                   child: Text(
-                    'إعادة اختيار الموعد من البداية',
+                    'إعادة اختيار الموعد من البداية'.tr,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 11.5,
@@ -597,7 +627,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
 
           Center(
             child: Text(
-              '🔒 لن تُخصم أي رسوم الآن',
+              '🔒 لن تُخصم أي رسوم الآن'.tr,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontSize: 10.5,
@@ -615,7 +645,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
                   days: widget.dayPrices,
                 ),
                 child: Text(
-                  'أسعار بتواريخ محددة',
+                  'أسعار بتواريخ محددة'.tr,
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
                     fontSize: 12,
@@ -636,13 +666,15 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontFamily: VibesFont.ui,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: placeInk2,
+        Flexible(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontFamily: VibesFont.ui,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: placeInk2,
+            ),
           ),
         ),
         Text(
@@ -659,9 +691,9 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
   }
 
   String get _shiftPriceLabel => switch (_shift) {
-    ShiftType.morning => 'صباحي',
-    ShiftType.evening => 'مسائي',
-    ShiftType.full => 'يوم كامل',
+    ShiftType.morning => 'صباحي'.tr,
+    ShiftType.evening => 'مسائي'.tr,
+    ShiftType.full => 'يوم كامل'.tr,
   };
 }
 
@@ -693,7 +725,7 @@ class _StayTimelineCard extends StatelessWidget {
         },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
+          padding: const EdgeInsetsDirectional.fromSTEB(12, 14, 14, 14),
           child: Row(
             children: [
               Expanded(
@@ -702,14 +734,14 @@ class _StayTimelineCard extends StatelessWidget {
                     _miniLine(
                       Icons.login_rounded,
                       placeShiftColor(shift),
-                      'وصول',
+                      'وصول'.tr,
                       t.arrival,
                     ),
                     const SizedBox(height: 10),
                     _miniLine(
                       Icons.logout_rounded,
                       placeInk,
-                      'مغادرة',
+                      'مغادرة'.tr,
                       t.departure,
                     ),
                   ],
@@ -721,12 +753,12 @@ class _StayTimelineCard extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Vibes.surface,
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(color: placeLine),
                 ),
                 child: Text(
-                  'تعديل',
+                  'تعديل'.tr,
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
                     fontSize: 11,
@@ -796,15 +828,15 @@ class _EmptyBookingStart extends StatelessWidget {
   Widget build(BuildContext context) {
     final world = context.world;
     final steps = supportsShifts
-        ? const [
-            (Icons.schedule_rounded, 'الفترة'),
-            (Icons.groups_rounded, 'الضيوف'),
-            (Icons.calendar_month_rounded, 'التاريخ'),
+        ? [
+            (Icons.schedule_rounded, 'الفترة'.tr),
+            (Icons.groups_rounded, 'الضيوف'.tr),
+            (Icons.calendar_month_rounded, 'التاريخ'.tr),
           ]
-        : const [
-            (Icons.timelapse_rounded, 'المدة'),
-            (Icons.groups_rounded, 'الضيوف'),
-            (Icons.calendar_month_rounded, 'التاريخ'),
+        : [
+            (Icons.timelapse_rounded, 'المدة'.tr),
+            (Icons.groups_rounded, 'الضيوف'.tr),
+            (Icons.calendar_month_rounded, 'التاريخ'.tr),
           ];
 
     return Column(
@@ -843,7 +875,7 @@ class _EmptyBookingStart extends StatelessWidget {
                       height: 40,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white,
+                        color: Vibes.surface,
                         border: Border.all(
                           color: world.accent.withValues(alpha: .35),
                           width: 1.4,
@@ -873,7 +905,7 @@ class _EmptyBookingStart extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         WorldButton(
-          label: 'اختر الموعد',
+          label: 'اختر الموعد'.tr,
           icon: Icons.calendar_month_rounded,
           loading: loading,
           onTap: onStart,
@@ -903,7 +935,7 @@ class _EditableChip extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(18),
         child: InkWell(
           onTap: () {
@@ -968,7 +1000,7 @@ class _EditableChip extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    'تعديل',
+                    'تعديل'.tr,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 11,
@@ -1004,17 +1036,19 @@ class _ReserveButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (state) {
-      _ReserveState.loading => const WorldButton(
-        label: 'جاري الحجز',
+      _ReserveState.loading => WorldButton(
+        label: 'جاري الحجز'.tr,
         loading: true,
         onTap: null,
       ),
-      _ReserveState.calculating => const WorldButton(
-        label: 'جاري حساب الإجمالي…',
+      _ReserveState.calculating => WorldButton(
+        label: 'جاري حساب الإجمالي…'.tr,
         icon: Icons.hourglass_top_rounded,
       ),
       _ReserveState.ready => WorldButton(
-        label: 'احجز الآن — ${placeFullPrice(total!)} د.ع',
+        label: 'احجز الآن — {amount} د.ع'.trArgs({
+          'amount': placeFullPrice(total!),
+        }),
         icon: Icons.lock_rounded,
         onTap: () {
           HapticFeedback.mediumImpact();

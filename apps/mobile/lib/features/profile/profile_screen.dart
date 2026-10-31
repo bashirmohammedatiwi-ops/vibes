@@ -40,9 +40,9 @@ class ProfileScreen extends ConsumerWidget {
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
           children: [
-            const MaisonPageHeader(
-              title: 'ملفي',
-              kicker: 'العضوية',
+            MaisonPageHeader(
+              title: 'ملفي'.tr,
+              kicker: 'العضوية'.tr,
               safe: true,
             ),
             const SizedBox(height: 8),
@@ -53,13 +53,13 @@ class ProfileScreen extends ConsumerWidget {
               onEdit: () => _editName(context, ref, user?.name),
             ).animate().fadeIn(duration: 400.ms).slideY(begin: .05, end: 0),
             const SizedBox(height: 24),
-            const MaisonKicker('حسابك'),
+            MaisonKicker('حسابك'.tr),
             const SizedBox(height: 10),
             MaisonMenuGroup(
               children: [
                 MaisonMenuRow(
                   icon: Icons.notifications_none_rounded,
-                  label: 'الإشعارات',
+                  label: 'الإشعارات'.tr,
                   trailing: Consumer(
                     builder: (context, ref, _) {
                       final unread =
@@ -73,7 +73,7 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 MaisonMenuRow(
                   icon: Icons.forum_outlined,
-                  label: 'الرسائل',
+                  label: 'الرسائل'.tr,
                   trailing: Consumer(
                     builder: (context, ref, _) {
                       final unread =
@@ -87,40 +87,45 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 MaisonMenuRow(
                   icon: Icons.receipt_long_outlined,
-                  label: 'الفواتير',
+                  label: 'الفواتير'.tr,
                   onTap: () => context.push('/invoices'),
                 ),
                 MaisonMenuRow(
                   icon: Icons.favorite_outline_rounded,
-                  label: 'المفضلة والقوائم',
+                  label: 'المفضلة والقوائم'.tr,
                   trailing: _CountMark('${favorites.valueOrNull?.length ?? 0}'),
                   onTap: () => context.push('/favorites'),
                 ),
               ],
             ),
             const SizedBox(height: 18),
-            const MaisonKicker('اكتشف'),
+            MaisonKicker('اكتشف'.tr),
             const SizedBox(height: 10),
             MaisonMenuGroup(
               children: [
                 MaisonMenuRow(
+                  icon: Icons.card_giftcard_rounded,
+                  label: 'بطاقات الولاء'.tr,
+                  onTap: () => context.push('/loyalty'),
+                ),
+                MaisonMenuRow(
                   icon: Icons.local_offer_outlined,
-                  label: 'العروض الخاصة',
+                  label: 'العروض الخاصة'.tr,
                   onTap: () => context.push('/offers'),
                 ),
                 MaisonMenuRow(
                   icon: Icons.confirmation_number_outlined,
-                  label: 'كوبونات الخصم',
+                  label: 'كوبونات الخصم'.tr,
                   onTap: () => context.push('/coupons'),
                 ),
                 MaisonMenuRow(
                   icon: Icons.auto_awesome_outlined,
-                  label: 'تجارب الضيوف',
+                  label: 'تجارب الضيوف'.tr,
                   onTap: () => context.push('/experiences'),
                 ),
                 MaisonMenuRow(
                   icon: Icons.person_add_alt_1_outlined,
-                  label: 'أتابعهم',
+                  label: 'أتابعهم'.tr,
                   trailing: Consumer(
                     builder: (context, ref, _) {
                       final count =
@@ -138,7 +143,7 @@ class ProfileScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 18),
-            const MaisonKicker('التفضيلات'),
+            MaisonKicker('التفضيلات'.tr),
             const SizedBox(height: 10),
             MaisonMenuGroup(
               children: [
@@ -149,24 +154,24 @@ class ProfileScreen extends ConsumerWidget {
                     ThemeMode.system => Icons.brightness_auto_outlined,
                   },
                   label: 'المظهر'.tr,
-                  trailing: _ValueMark(
-                    switch (prefs.themeMode) {
-                      ThemeMode.dark => 'داكن'.tr,
-                      ThemeMode.light => 'فاتح'.tr,
-                      ThemeMode.system => 'حسب الجهاز'.tr,
-                    },
-                  ),
+                  trailing: _ValueMark(switch (prefs.themeMode) {
+                    ThemeMode.dark => 'داكن'.tr,
+                    ThemeMode.light => 'فاتح'.tr,
+                    ThemeMode.system => 'حسب الجهاز'.tr,
+                  }),
                   onTap: () => _pickTheme(context, ref),
                 ),
                 MaisonMenuRow(
                   icon: Icons.language_rounded,
                   label: 'اللغة'.tr,
-                  trailing: _ValueMark(I18n.isEn ? 'English' : 'العربية'),
+                  trailing: _ValueMark(
+                    I18n.isEn ? 'English' : 'العربية', // i18n-ok
+                  ),
                   onTap: () => _pickLanguage(context, ref),
                 ),
                 MaisonMenuRow(
                   icon: Icons.data_saver_on_outlined,
-                  label: 'توفير البيانات',
+                  label: 'توفير البيانات'.tr,
                   trailing: _ToggleMini(
                     value: prefs.dataSaver,
                     onChanged: (v) => ref
@@ -181,22 +186,22 @@ class ProfileScreen extends ConsumerWidget {
               children: [
                 MaisonMenuRow(
                   icon: Icons.support_agent_rounded,
-                  label: 'الدعم والمساعدة',
+                  label: 'الدعم والمساعدة'.tr,
                   onTap: () => context.push('/support'),
                 ),
                 MaisonMenuRow(
                   icon: Icons.privacy_tip_outlined,
-                  label: 'سياسة الخصوصية',
+                  label: 'سياسة الخصوصية'.tr,
                   onTap: () => openLegal('/privacy'),
                 ),
                 MaisonMenuRow(
                   icon: Icons.description_outlined,
-                  label: 'شروط الاستخدام',
+                  label: 'شروط الاستخدام'.tr,
                   onTap: () => openLegal('/terms'),
                 ),
                 MaisonMenuRow(
                   icon: Icons.info_outline_rounded,
-                  label: 'عن VIBES',
+                  label: 'عن أجواء'.tr,
                   onTap: () => openLegal('/'),
                   trailing: Text(
                     '1.0.0',
@@ -213,7 +218,7 @@ class ProfileScreen extends ConsumerWidget {
             SizedBox(
               width: double.infinity,
               child: VibesButton(
-                label: 'تسجيل الخروج',
+                label: 'تسجيل الخروج'.tr,
                 ghost: true,
                 onPressed: () async {
                   await ref.read(authControllerProvider.notifier).logout();
@@ -232,7 +237,7 @@ class ProfileScreen extends ConsumerWidget {
                   color: Theme.of(context).colorScheme.error,
                 ),
                 label: Text(
-                  'حذف الحساب',
+                  'حذف الحساب'.tr,
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
                     fontWeight: FontWeight.w800,
@@ -268,11 +273,10 @@ Future<void> openLegal(String path) => launchUrl(
 Future<void> confirmDeleteAccount(BuildContext context, WidgetRef ref) async {
   final ok = await showMaisonConfirm(
     context: context,
-    title: 'حذف الحساب نهائياً؟',
+    title: 'حذف الحساب نهائياً؟'.tr,
     message:
-        'سيُحذف رقمك واسمك ومفضلتك وإشعاراتك ومنشوراتك، وتُلغى الحجوزات غير المدفوعة. '
-        'الحجوزات المؤكدة تبقى لدى صاحب المكان دون هويتك. لا يمكن التراجع عن الحذف.',
-    confirmLabel: 'احذف حسابي',
+        'سيُحذف رقمك واسمك ومفضلتك وإشعاراتك ومنشوراتك، وتُلغى الحجوزات غير المدفوعة. الحجوزات المؤكدة تبقى لدى صاحب المكان دون هويتك. لا يمكن التراجع عن الحذف.'.tr,
+    confirmLabel: 'احذف حسابي'.tr,
     destructive: true,
   );
   if (!ok || !context.mounted) return;
@@ -290,9 +294,9 @@ Future<void> confirmDeleteAccount(BuildContext context, WidgetRef ref) async {
     }
     await ref.read(appModeProvider.notifier).resetAfterLogout();
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('حُذف حسابك وبياناتك الشخصية')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('حُذف حسابك وبياناتك الشخصية'.tr)));
     context.go('/home');
   } catch (error) {
     if (!context.mounted) return;
@@ -309,9 +313,9 @@ Future<void> _editName(
 ) async {
   final next = await showMaisonPrompt(
     context: context,
-    title: 'اسمك',
+    title: 'اسمك'.tr,
     initial: current,
-    hint: 'اكتب اسمك',
+    hint: 'اكتب اسمك'.tr,
   );
   if (next == null || next.isEmpty) return;
   try {
@@ -337,9 +341,9 @@ class _GuestProfile extends ConsumerWidget {
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
           children: [
-            const MaisonPageHeader(
-              title: 'ملفي',
-              kicker: 'الضيافة',
+            MaisonPageHeader(
+              title: 'ملفي'.tr,
+              kicker: 'الضيافة'.tr,
               safe: true,
             ),
             const SizedBox(height: 8),
@@ -350,14 +354,14 @@ class _GuestProfile extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'تصفح بحرية',
+                      'تصفح بحرية'.tr,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'الدخول يُطلب عند إتمام الحجز. تستطيع الدخول من هنا متى شئت.',
+                      'الدخول يُطلب عند إتمام الحجز. تستطيع الدخول من هنا متى شئت.'.tr,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: VibesTheme.textSecondaryOf(context),
                         height: 1.6,
@@ -365,7 +369,7 @@ class _GuestProfile extends ConsumerWidget {
                     ),
                     const SizedBox(height: 18),
                     VibesButton(
-                      label: 'دخول',
+                      label: 'دخول'.tr,
                       onPressed: () => context.push('/login'),
                     ),
                   ],
@@ -377,17 +381,17 @@ class _GuestProfile extends ConsumerWidget {
               children: [
                 MaisonMenuRow(
                   icon: Icons.support_agent_rounded,
-                  label: 'الدعم والمساعدة',
+                  label: 'الدعم والمساعدة'.tr,
                   onTap: () => context.push('/support'),
                 ),
                 MaisonMenuRow(
                   icon: Icons.privacy_tip_outlined,
-                  label: 'سياسة الخصوصية',
+                  label: 'سياسة الخصوصية'.tr,
                   onTap: () => openLegal('/privacy'),
                 ),
                 MaisonMenuRow(
                   icon: Icons.description_outlined,
-                  label: 'شروط الاستخدام',
+                  label: 'شروط الاستخدام'.tr,
                   onTap: () => openLegal('/terms'),
                 ),
               ],
@@ -445,8 +449,8 @@ class _OwnerWhisper extends StatelessWidget {
                   const SizedBox(width: 6),
                   Text(
                     isOwner
-                        ? 'الانتقال إلى بوابة المالك'
-                        : 'مالك مزرعة أو قاعة؟',
+                        ? 'الانتقال إلى بوابة المالك'.tr
+                        : 'مالك مزرعة أو قاعة؟'.tr,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: VibesTheme.textTertiaryOf(context),
                       fontWeight: FontWeight.w700,
@@ -463,7 +467,7 @@ class _OwnerWhisper extends StatelessWidget {
 }
 
 Widget _chevron(BuildContext context) => Icon(
-  Icons.chevron_left_rounded,
+  I18n.isEn ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
   color: VibesTheme.textTertiaryOf(context),
   size: 20,
 );
@@ -559,11 +563,18 @@ class _MemberCard extends ConsumerWidget {
         gradient: LinearGradient(
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
-          colors: [
-            Color.lerp(p.accent, p.accentDeep, .2)!,
-            p.accentDeep,
-            Color.lerp(p.accentDeep, p.night, .5)!,
-          ],
+          // ليلاً اللون العميق فاتح: تدرّج ليل العالم حتى يبقى النص الأبيض مقروءاً
+          colors: Appearance.isDark
+              ? [
+                  p.nightHigh,
+                  p.night,
+                  Color.lerp(p.night, VibesDark.canvas, .6)!,
+                ]
+              : [
+                  Color.lerp(p.accent, p.accentDeep, .2)!,
+                  p.accentDeep,
+                  Color.lerp(p.accentDeep, p.night, .5)!,
+                ],
         ),
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
@@ -596,8 +607,8 @@ class _MemberCard extends ConsumerWidget {
                         : Container(
                             width: 58,
                             height: 58,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
+                            decoration: BoxDecoration(
+                              color: Vibes.surface,
                               shape: BoxShape.circle,
                             ),
                             child: Center(
@@ -619,7 +630,7 @@ class _MemberCard extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'عضو VIBES',
+                            'عضو أجواء'.tr,
                             style: TextStyle(
                               fontFamily: VibesFont.ui,
                               fontSize: 11.5,
@@ -628,7 +639,7 @@ class _MemberCard extends ConsumerWidget {
                             ),
                           ),
                           Text(
-                            n.isEmpty ? 'أضف اسمك' : n,
+                            n.isEmpty ? 'أضف اسمك'.tr : n,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -691,7 +702,7 @@ class _MemberCard extends ConsumerWidget {
                       children: [
                         stat(
                           '$bookings',
-                          'حجوزات',
+                          'حجوزات'.tr,
                           () => context.go('/bookings'),
                         ),
                         VerticalDivider(
@@ -700,7 +711,7 @@ class _MemberCard extends ConsumerWidget {
                         ),
                         stat(
                           '$favs',
-                          'مفضلة',
+                          'مفضلة'.tr,
                           () => context.push('/favorites'),
                         ),
                         VerticalDivider(
@@ -709,7 +720,7 @@ class _MemberCard extends ConsumerWidget {
                         ),
                         stat(
                           '$following',
-                          'أتابعهم',
+                          'أتابعهم'.tr,
                           () => context.push('/following'),
                         ),
                       ],

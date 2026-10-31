@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:livekit_client/livekit_client.dart';
 
 import '../../core/network/api_client.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/maison_chrome.dart';
 import '../../shared/widgets/maison_shapes.dart';
@@ -102,6 +103,19 @@ Future<void> declineCall(WidgetRef ref, String callId) async {
   } catch (_) {}
 }
 
+/// نص رسالة المكالمة من الخادم بلغة الواجهة — المنطق يبقى على العربية الأصلية.
+String callBodyLabel(String body) {
+  const prefix = 'مكالمة، '; // i18n-ok
+  if (I18n.isEn && body.startsWith(prefix)) {
+    final duration = body
+        .substring(prefix.length)
+        .replaceAll('ث', 'sec') // i18n-ok
+        .replaceAll('د', 'min'); // i18n-ok
+    return 'مكالمة، {duration}'.trArgs({'duration': duration});
+  }
+  return body.tr;
+}
+
 class CallScreen extends ConsumerStatefulWidget {
   const CallScreen({super.key, required this.payload});
 
@@ -123,12 +137,12 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   bool _speaker = false;
   _CallPhase _phase = _CallPhase.connecting;
   String _endNote = '';
-  String _queueLabel = 'نبحث عن موظف';
+  String _queueLabel = 'نبحث عن موظف'.tr;
   DateTime? _connectedAt;
   Map<String, dynamic> _live = {};
 
   String get _callId => widget.payload['callId'] as String? ?? '';
-  String get _place => widget.payload['place'] as String? ?? 'مكالمة';
+  String get _place => (widget.payload['place'] as String? ?? 'مكالمة'.tr).tr;
   String get _peer => widget.payload['peerName'] as String? ?? '';
   bool get _isCaller => widget.payload['role'] != 'callee';
 
@@ -174,7 +188,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
         if (text.contains('call-ended') &&
             text.contains(_callId) &&
             _phase != _CallPhase.ended) {
-          _hangUp(auto: true, note: 'انتهت المكالمة');
+          _hangUp(auto: true);
         }
       });
     } catch (_) {}
@@ -197,13 +211,13 @@ class _CallScreenState extends ConsumerState<CallScreen> {
           if (mounted) {
             setState(() {
               _phase = _CallPhase.failed;
-              _endNote = 'الفريق مشغول — أرسل رسالة';
+              _endNote = 'الفريق مشغول — أرسل رسالة'.tr;
             });
           }
           return;
         }
         if (queue == 'OFFERED') {
-          if (mounted) setState(() => _queueLabel = 'جارٍ التوصيل');
+          if (mounted) setState(() => _queueLabel = 'جارٍ التوصيل'.tr);
         }
         final token = data['token'] as String?;
         final url = data['url'] as String?;
@@ -262,7 +276,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
       if (!peerJoined && _isCaller) {
         Timer(const Duration(seconds: 46), () {
           if (mounted && _phase == _CallPhase.dialing) {
-            _hangUp(auto: true, note: 'لا رد على المكالمة');
+            _hangUp(auto: true, note: 'لا رد على المكالمة'.tr);
           }
         });
       }
@@ -286,14 +300,11 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     }
   }
 
-  Future<void> _hangUp({
-    bool auto = false,
-    String note = 'انتهت المكالمة',
-  }) async {
+  Future<void> _hangUp({bool auto = false, String? note}) async {
     if (_phase == _CallPhase.ended) return;
     setState(() {
       _phase = _CallPhase.ended;
-      _endNote = note;
+      _endNote = note ?? 'انتهت المكالمة'.tr;
     });
     try {
       if (_callId.isNotEmpty) {
@@ -341,14 +352,14 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   }
 
   String get _statusLine => switch (_phase) {
-    _CallPhase.connecting => 'جارٍ الاتصال…',
+    _CallPhase.connecting => 'جارٍ الاتصال…'.tr,
     _CallPhase.waiting => _queueLabel,
-    _CallPhase.dialing => _isCaller ? 'يرنّ الآن…' : 'جارٍ الربط…',
+    _CallPhase.dialing => _isCaller ? 'يرنّ الآن…'.tr : 'جارٍ الربط…'.tr,
     _CallPhase.active => _clock(
       DateTime.now().difference(_connectedAt ?? DateTime.now()),
     ),
     _CallPhase.ended => _endNote,
-    _CallPhase.failed => 'تعذّر الاتصال — تحقق من الشبكة والصلاحيات',
+    _CallPhase.failed => 'تعذّر الاتصال — تحقق من الشبكة والصلاحيات'.tr,
   };
 
   @override
@@ -415,7 +426,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                         duration: VibesMotion.base,
                         child: Text(
                           _engineState.reconnecting
-                              ? 'انقطع الاتصال — جارٍ الاستعادة…'
+                              ? 'انقطع الاتصال — جارٍ الاستعادة…'.tr
                               : _statusLine,
                           key: ValueKey(
                             _engineState.reconnecting
@@ -457,7 +468,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                                 ),
                               ),
                             VibesButton(
-                              label: 'إعادة المحاولة',
+                              label: 'إعادة المحاولة'.tr,
                               icon: Icons.refresh_rounded,
                               expanded: false,
                               onPressed: () {
@@ -479,7 +490,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                               icon: _muted
                                   ? Icons.mic_off_rounded
                                   : Icons.mic_rounded,
-                              label: _muted ? 'إلغاء الكتم' : 'كتم',
+                              label: _muted ? 'إلغاء الكتم'.tr : 'كتم'.tr,
                               onTap: _phase == _CallPhase.active
                                   ? _toggleMute
                                   : null,
@@ -488,8 +499,8 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                             _RoundAction(
                               icon: Icons.call_end_rounded,
                               label: _isCaller || _phase == _CallPhase.active
-                                  ? 'إنهاء'
-                                  : 'رفض',
+                                  ? 'إنهاء'.tr
+                                  : 'رفض'.tr,
                               danger: true,
                               onTap: _hangUp,
                             ),
@@ -498,7 +509,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                               icon: _speaker
                                   ? Icons.volume_up_rounded
                                   : Icons.hearing_outlined,
-                              label: _speaker ? 'الأذن' : 'السماعة',
+                              label: _speaker ? 'الأذن'.tr : 'السماعة'.tr,
                               onTap: _phase == _CallPhase.active
                                   ? _toggleSpeaker
                                   : null,
@@ -643,7 +654,12 @@ class _RoundAction extends StatelessWidget {
             ),
             child: Icon(
               icon,
-              color: enabled ? Colors.white : VibesDark.inkTertiary,
+              // النحاس أفتح ليلاً: أيقونة بحبر ليلي فوقه
+              color: !enabled
+                  ? VibesDark.inkTertiary
+                  : danger
+                  ? Colors.white
+                  : themed(Colors.white, Vibes.onTeal),
             ),
           ),
           const SizedBox(height: 9),
@@ -703,7 +719,7 @@ class _LineIndicator extends StatelessWidget {
             ),
           const SizedBox(width: 7),
           Text(
-            muted ? 'مكتوم · ${line.label}' : line.label,
+            muted ? 'مكتوم · {line}'.trArgs({'line': line.label}) : line.label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: Colors.white.withValues(alpha: .75),
               fontWeight: FontWeight.w700,

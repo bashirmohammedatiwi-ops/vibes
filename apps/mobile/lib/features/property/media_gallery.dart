@@ -6,6 +6,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/world_theme.dart';
 import '../../core/utils/vibes_net_image.dart';
@@ -121,9 +122,9 @@ class _MediaGalleryState extends State<MediaGallery> {
             ),
 
           // عدّاد الصور — كبسولة زجاجية داكنة
-          Positioned(
+          PositionedDirectional(
             bottom: 10 + widget.bottomInset,
-            left: 14,
+            end: 14,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
@@ -152,22 +153,22 @@ class _MediaGalleryState extends State<MediaGallery> {
             ),
           ),
           // شارة نوع الوسيط الحالي
-          Positioned(
+          PositionedDirectional(
             bottom: 10 + widget.bottomInset,
-            right: 14,
+            start: 14,
             child: Builder(
               builder: (context) {
                 final kind = widget.items[_index];
                 if (kind.kind == MediaKind.panorama) {
                   return _MediaChip(
                     icon: Icons.threed_rotation_rounded,
-                    label: 'جولة 360°',
+                    label: 'جولة 360°'.tr,
                   );
                 }
                 if (kind.isVideo) {
                   return _MediaChip(
                     icon: Icons.videocam_rounded,
-                    label: 'فيديو',
+                    label: 'فيديو'.tr,
                   );
                 }
                 return const SizedBox.shrink();
@@ -232,7 +233,7 @@ class _MediaPageState extends State<_MediaPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('تعذّر تشغيل الفيديو')));
+        ).showSnackBar(SnackBar(content: Text('تعذّر تشغيل الفيديو'.tr)));
       }
     }
   }
@@ -360,9 +361,9 @@ class _GalleryFullscreen extends StatelessWidget {
             },
           ),
           // إغلاق
-          Positioned(
+          PositionedDirectional(
             top: MediaQuery.of(context).padding.top + 12,
-            left: 16,
+            end: 16,
             child: GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(
@@ -422,10 +423,10 @@ class _FullscreenVideoState extends State<_FullscreenVideo> {
   @override
   Widget build(BuildContext context) {
     if (_failed) {
-      return const Center(
+      return Center(
         child: Text(
-          'تعذّر تشغيل الفيديو',
-          style: TextStyle(color: Colors.white70),
+          'تعذّر تشغيل الفيديو'.tr,
+          style: const TextStyle(color: Colors.white70),
         ),
       );
     }
@@ -590,9 +591,9 @@ class _PanoramaFullscreenState extends State<_PanoramaFullscreen> {
             gaplessPlayback: true,
           ),
           // إغلاق
-          Positioned(
+          PositionedDirectional(
             top: MediaQuery.of(context).padding.top + 12,
-            left: 16,
+            end: 16,
             child: GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(
@@ -655,11 +656,15 @@ class _PanoHint extends StatelessWidget {
                 color: Vibes.tealBright,
               ),
               const SizedBox(width: 8),
-              Text(
-                'جولة 360° — اسحب للدوران · انقر لتكبير',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
+              Flexible(
+                child: Text(
+                  'جولة 360° — اسحب للدوران · انقر لتكبير'.tr,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],

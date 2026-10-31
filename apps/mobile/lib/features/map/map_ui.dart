@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/vibes_net_image.dart';
 import '../../shared/models/models.dart';
@@ -15,11 +16,24 @@ enum MapListSort { featured, priceLow, topRated }
 
 enum MapLayer { standard, explore, satellite }
 
-const Color mapInk = Color(0xFF141C2B);
-const Color mapInk2 = Color(0xFF5A6678);
-const Color mapLine = Color(0xFFE4E9F0);
-const Color mapPaper = Color(0xFFF6F7F9);
-const Color mapBrass = Color(0xFFA5813A);
+Color get mapInk => placeInk;
+Color get mapInk2 => placeInk2;
+Color get mapLine => placeLine;
+Color get mapPaper => placePaper;
+Color get mapBrass => placeBrass;
+
+/// لون النص والأيقونة فوق تعبئة اللون (الألوان فاتحة ليلاً فيُقرأ عليها الداكن).
+Color get _onMapFill => themed(Colors.white, Brand.midnight);
+
+/// زجاج داكن فوق الخريطة في الوضعين.
+Color get _mapGlass => themed(const Color(0xFF141C2B), VibesDark.surface);
+Color get _mapShadow => themed(const Color(0xFF141C2B), Colors.black);
+Color get _mapSapphire => themed(Brand.sapphire, const Color(0xFF8FB4D4));
+Color get _mapStar => themed(Brand.brassDeep, Brand.brassLight);
+Color _mapSurfaceA(double alpha) =>
+    (Appearance.isDark ? VibesDark.surface : Colors.white).withValues(
+      alpha: alpha,
+    );
 
 List<BoxShadow> mapElev({double o = 1}) => [
   BoxShadow(
@@ -74,8 +88,8 @@ class MapHud extends StatelessWidget {
     // بلا ضبابية فوق الخريطة (تُعاد كل إطار أثناء تحريكها وتثقل الأجهزة)،
     // لذا خلفية أكثف تحفظ وضوح النص.
     final shellColor = listSurface
-        ? Colors.white.withValues(alpha: 0.96)
-        : mapInk.withValues(alpha: 0.78);
+        ? _mapSurfaceA(0.96)
+        : _mapGlass.withValues(alpha: 0.78);
     final shellBorder = listSurface
         ? mapLine
         : Colors.white.withValues(alpha: 0.28);
@@ -90,7 +104,7 @@ class MapHud extends StatelessWidget {
             border: Border.all(color: shellBorder),
             boxShadow: [
               BoxShadow(
-                color: mapInk.withValues(alpha: listSurface ? 0.06 : 0.18),
+                color: _mapShadow.withValues(alpha: listSurface ? 0.06 : 0.18),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -114,10 +128,13 @@ class MapHud extends StatelessWidget {
                       child: Container(
                         height: 40,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.92),
+                          color: _mapSurfaceA(0.92),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.65),
+                            color: themed(
+                              Colors.white.withValues(alpha: 0.65),
+                              VibesDark.hairline,
+                            ),
                           ),
                         ),
                         alignment: Alignment.center,
@@ -134,14 +151,14 @@ class MapHud extends StatelessWidget {
                           ),
                           decoration: InputDecoration(
                             isDense: true,
-                            hintText: 'ابحث…',
+                            hintText: 'ابحث…'.tr,
                             hintStyle: TextStyle(
                               fontFamily: VibesFont.ui,
                               fontWeight: FontWeight.w600,
                               fontSize: 12.5,
                               color: mapInk2.withValues(alpha: 0.7),
                             ),
-                            prefixIcon: const Icon(
+                            prefixIcon: Icon(
                               Icons.search_rounded,
                               size: 20,
                               color: mapInk2,
@@ -149,7 +166,7 @@ class MapHud extends StatelessWidget {
                             suffixIcon: query.isNotEmpty
                                 ? GestureDetector(
                                     onTap: onClearQuery,
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.close_rounded,
                                       size: 18,
                                       color: mapInk2,
@@ -180,11 +197,11 @@ class MapHud extends StatelessWidget {
                       ),
                       child: Text(
                         '$count',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Montserrat',
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
-                          color: Colors.white,
+                          color: _onMapFill,
                         ),
                       ),
                     ),
@@ -295,7 +312,7 @@ class _MapModeToggle extends StatelessWidget {
           icon,
           size: 18,
           color: active
-              ? (light ? Colors.white : mapInk)
+              ? (light ? _onMapFill : const Color(0xFF141C2B))
               : (light ? mapInk2 : Colors.white.withValues(alpha: 0.85)),
         ),
       ),
@@ -326,10 +343,10 @@ class _MapFilterRail extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       children: [
         for (final item in [
-          (null, 'الكل', accentForType('FARM')),
-          ('FARM', 'مزارع', accentForType('FARM')),
-          ('HALL', 'قاعات', accentForType('HALL')),
-          ('DECORATION', 'تزيين', accentForType('DECORATION')),
+          (null, 'الكل'.tr, accentForType('FARM')),
+          ('FARM', 'مزارع'.tr, accentForType('FARM')),
+          ('HALL', 'قاعات'.tr, accentForType('HALL')),
+          ('DECORATION', 'تزيين'.tr, accentForType('DECORATION')),
         ])
           Padding(
             padding: const EdgeInsetsDirectional.only(end: 5),
@@ -355,8 +372,8 @@ class _MapFilterRail extends StatelessWidget {
           Padding(
             padding: const EdgeInsetsDirectional.only(end: 5),
             child: _FilterPill(
-              label: 'العراق',
-              accent: Brand.sapphire,
+              label: 'العراق'.tr,
+              accent: _mapSapphire,
               active: provinceFilter == null,
               compact: true,
               glass: !light,
@@ -367,8 +384,8 @@ class _MapFilterRail extends StatelessWidget {
             Padding(
               padding: const EdgeInsetsDirectional.only(end: 5),
               child: _FilterPill(
-                label: name,
-                accent: Brand.sapphire,
+                label: name.tr,
+                accent: _mapSapphire,
                 active: provinceFilter == name,
                 compact: true,
                 glass: !light,
@@ -413,7 +430,7 @@ class _FilterPill extends StatelessWidget {
               ? accent
               : glass
               ? Colors.white.withValues(alpha: 0.14)
-              : Colors.white,
+              : Vibes.surface,
           borderRadius: BorderRadius.circular(compact ? 999 : 12),
           border: Border.all(
             color: active
@@ -440,7 +457,7 @@ class _FilterPill extends StatelessWidget {
             fontSize: compact ? 10 : 12,
             fontWeight: FontWeight.w800,
             color: active
-                ? Colors.white
+                ? _onMapFill
                 : glass
                 ? Colors.white.withValues(alpha: 0.92)
                 : mapInk,
@@ -478,9 +495,14 @@ class MapControlDock extends StatelessWidget {
           width: 52,
           padding: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.97),
+            color: _mapSurfaceA(0.97),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.65)),
+            border: Border.all(
+              color: themed(
+                Colors.white.withValues(alpha: 0.65),
+                VibesDark.hairline,
+              ),
+            ),
             boxShadow: mapElev(),
           ),
           child: Column(
@@ -493,7 +515,7 @@ class MapControlDock extends StatelessWidget {
               _MapIconBtn(
                 icon: Icons.my_location_rounded,
                 onTap: onLocate,
-                tint: Brand.sapphire,
+                tint: _mapSapphire,
               ),
               const _DockDivider(),
               _MapIconBtn(icon: Icons.fit_screen_rounded, onTap: onFitAll),
@@ -507,9 +529,9 @@ class MapControlDock extends StatelessWidget {
                 onTap: onCycleLayer,
                 tint: mapBrass,
                 label: switch (layer) {
-                  MapLayer.standard => 'خريطة',
-                  MapLayer.explore => 'تضاريس',
-                  MapLayer.satellite => 'قمر',
+                  MapLayer.standard => 'خريطة'.tr,
+                  MapLayer.explore => 'تضاريس'.tr,
+                  MapLayer.satellite => 'قمر'.tr,
                 },
               ),
             ],
@@ -561,13 +583,16 @@ class _MapIconBtn extends StatelessWidget {
               Icon(icon, size: 21, color: tint ?? mapInk),
               if (label != null) ...[
                 const SizedBox(height: 2),
-                Text(
-                  label!,
-                  style: TextStyle(
-                    fontFamily: VibesFont.ui,
-                    fontSize: 8.5,
-                    fontWeight: FontWeight.w800,
-                    color: mapInk2,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label!,
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w800,
+                      color: mapInk2,
+                    ),
                   ),
                 ),
               ],
@@ -611,7 +636,7 @@ class MapPlaceRail extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                'أماكن قريبة',
+                'أماكن قريبة'.tr,
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
                   fontSize: 14,
@@ -633,7 +658,7 @@ class MapPlaceRail extends StatelessWidget {
             itemBuilder: (context, i) {
               final p = properties[i];
               final accent = accentForType(p.type.name);
-              final place = p.cityName ?? p.provinceName ?? '';
+              final place = (p.cityName ?? p.provinceName ?? '').tr;
               return GestureDetector(
                 onTap: () {
                   HapticFeedback.selectionClick();
@@ -644,7 +669,10 @@ class MapPlaceRail extends StatelessWidget {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.35),
+                      color: themed(
+                        Colors.white.withValues(alpha: 0.35),
+                        VibesDark.hairline,
+                      ),
                       width: 1.2,
                     ),
                     boxShadow: mapElev(o: 1.05),
@@ -670,16 +698,16 @@ class MapPlaceRail extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Positioned(
+                      PositionedDirectional(
                         top: 10,
-                        right: 10,
+                        start: 10,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.94),
+                            color: _mapSurfaceA(0.94),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: ConstrainedBox(
@@ -688,8 +716,10 @@ class MapPlaceRail extends StatelessWidget {
                               fit: BoxFit.scaleDown,
                               alignment: AlignmentDirectional.centerEnd,
                               child: Text(
-                                '${placeFullPrice(p.pricePerDay)} د.ع',
-                                style: const TextStyle(
+                                '{price} د.ع'.trArgs({
+                                  'price': placeFullPrice(p.pricePerDay),
+                                }),
+                                style: TextStyle(
                                   fontFamily: 'Montserrat',
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,
@@ -768,7 +798,7 @@ class MapSelectedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = accentForType(property.type.name);
-    final place = property.cityName ?? property.provinceName ?? '';
+    final place = (property.cityName ?? property.provinceName ?? '').tr;
     final amenities = property.amenityNames.take(3).toList();
     final desc = property.description.trim();
 
@@ -776,12 +806,12 @@ class MapSelectedCard extends StatelessWidget {
       color: Colors.transparent,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Vibes.surface,
           borderRadius: BorderRadius.circular(26),
           border: Border.all(color: mapLine.withValues(alpha: 0.9)),
           boxShadow: [
             BoxShadow(
-              color: mapInk.withValues(alpha: 0.08),
+              color: _mapShadow.withValues(alpha: 0.08),
               blurRadius: 24,
               offset: const Offset(0, 10),
             ),
@@ -825,28 +855,28 @@ class MapSelectedCard extends StatelessWidget {
                     right: 0,
                     child: Container(height: 4, color: mapBrass),
                   ),
-                  Positioned(
+                  PositionedDirectional(
                     top: 12,
-                    left: 12,
+                    end: 12,
                     child: _MapBadge(
                       label: property.typeLabelAr,
                       background: accent,
-                      foreground: Colors.white,
+                      foreground: _onMapFill,
                     ),
                   ),
                   if (property.featured)
-                    const Positioned(
+                    PositionedDirectional(
                       top: 12,
-                      right: 52,
+                      start: 52,
                       child: _MapBadge(
-                        label: 'مختار',
+                        label: 'مختار'.tr,
                         background: mapBrass,
-                        foreground: Colors.white,
+                        foreground: _onMapFill,
                       ),
                     ),
-                  Positioned(
+                  PositionedDirectional(
                     top: 10,
-                    right: 10,
+                    start: 10,
                     child: _MapCloseBtn(onTap: onClose),
                   ),
                 ],
@@ -899,7 +929,7 @@ class MapSelectedCard extends StatelessWidget {
                       if (property.capacity > 0)
                         _MapStatChip(
                           icon: Icons.groups_rounded,
-                          label: '${property.capacity} ضيف',
+                          label: '{n} ضيف'.trN(property.capacity),
                           tint: accent,
                         ),
                       if (property.ratingCount > 0)
@@ -907,12 +937,12 @@ class MapSelectedCard extends StatelessWidget {
                           icon: Icons.star_rounded,
                           label:
                               '${property.ratingAvg.toStringAsFixed(1)} (${property.ratingCount})',
-                          tint: Brand.brassDeep,
+                          tint: _mapStar,
                         ),
                       if (property.bookingsCount > 0)
                         _MapStatChip(
                           icon: Icons.event_available_rounded,
-                          label: '${property.bookingsCount} حجز',
+                          label: '{n} حجز'.trN(property.bookingsCount),
                           tint: mapInk2,
                         ),
                     ],
@@ -937,7 +967,7 @@ class MapSelectedCard extends StatelessWidget {
                                   border: Border.all(color: mapLine),
                                 ),
                                 child: Text(
-                                  a,
+                                  a.tr,
                                   style: TextStyle(
                                     fontFamily: VibesFont.ui,
                                     fontSize: 10.5,
@@ -980,7 +1010,7 @@ class MapSelectedCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'يبدأ من',
+                              'يبدأ من'.tr,
                               style: TextStyle(
                                 fontFamily: VibesFont.ui,
                                 fontSize: 10.5,
@@ -991,7 +1021,7 @@ class MapSelectedCard extends StatelessWidget {
                             PlaceFullPriceText(property.pricePerDay, size: 22),
                             const SizedBox(height: 2),
                             Text(
-                              'د.ع / يوم',
+                              'د.ع / يوم'.tr,
                               style: TextStyle(
                                 fontFamily: VibesFont.ui,
                                 fontSize: 11,
@@ -1006,9 +1036,17 @@ class MapSelectedCard extends StatelessWidget {
                               Text(
                                 [
                                   if ((property.priceMorningShift ?? 0) > 0)
-                                    'صباح ${placeFullPrice(property.priceMorningShift!)}',
+                                    'صباح {price}'.trArgs({
+                                      'price': placeFullPrice(
+                                        property.priceMorningShift!,
+                                      ),
+                                    }),
                                   if ((property.priceEveningShift ?? 0) > 0)
-                                    'مساء ${placeFullPrice(property.priceEveningShift!)}',
+                                    'مساء {price}'.trArgs({
+                                      'price': placeFullPrice(
+                                        property.priceEveningShift!,
+                                      ),
+                                    }),
                                 ].join(' · '),
                                 maxLines: 2,
                                 style: TextStyle(
@@ -1028,7 +1066,7 @@ class MapSelectedCard extends StatelessWidget {
                               context.push(placeBookPath(property.id)),
                           style: FilledButton.styleFrom(
                             backgroundColor: accent,
-                            foregroundColor: Colors.white,
+                            foregroundColor: _onMapFill,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 22,
                               vertical: 14,
@@ -1039,7 +1077,7 @@ class MapSelectedCard extends StatelessWidget {
                             elevation: 0,
                           ),
                           child: Text(
-                            'احجز',
+                            'احجز'.tr,
                             style: TextStyle(
                               fontFamily: VibesFont.ui,
                               fontWeight: FontWeight.w900,
@@ -1056,11 +1094,11 @@ class MapSelectedCard extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: () => context.push('/property/${property.id}'),
                       icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                      label: const Text('صفحة المكان الكاملة'),
+                      label: Text('صفحة المكان الكاملة'.tr),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: mapInk,
                         padding: const EdgeInsets.symmetric(vertical: 13),
-                        side: const BorderSide(color: mapLine),
+                        side: BorderSide(color: mapLine),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -1125,11 +1163,13 @@ class _MapCloseBtn extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.97),
+              color: _mapSurfaceA(0.97),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white),
+              border: Border.all(
+                color: themed(Colors.white, VibesDark.hairline),
+              ),
             ),
-            child: const Icon(Icons.close_rounded, size: 20, color: mapInk),
+            child: Icon(Icons.close_rounded, size: 20, color: mapInk),
           ),
         ),
       ),
@@ -1234,11 +1274,11 @@ class _MapPlacesListViewState extends State<MapPlacesListView> {
 
   Map<String, List<Property>> _sections(List<Property> sorted) {
     if (sorted.length < 4) {
-      return {'النتائج': sorted};
+      return {'النتائج'.tr: sorted};
     }
     final groups = <String, List<Property>>{};
     for (final p in sorted) {
-      final key = p.provinceName ?? p.cityName ?? 'أماكن أخرى';
+      final key = p.provinceName ?? p.cityName ?? 'أماكن أخرى'.tr;
       groups.putIfAbsent(key, () => []).add(p);
     }
     final keys = groups.keys.toList()
@@ -1266,9 +1306,9 @@ class _MapPlacesListViewState extends State<MapPlacesListView> {
           padding: const EdgeInsets.all(28),
           child: _MapListMessageCard(
             icon: Icons.cloud_off_rounded,
-            title: 'تعذّر تحميل الأماكن',
+            title: 'تعذّر تحميل الأماكن'.tr,
             subtitle: widget.errorMessage!,
-            actionLabel: 'إعادة المحاولة',
+            actionLabel: 'إعادة المحاولة'.tr,
             onAction: widget.onRetry,
           ),
         ),
@@ -1281,11 +1321,11 @@ class _MapPlacesListViewState extends State<MapPlacesListView> {
           padding: const EdgeInsets.all(28),
           child: _MapListMessageCard(
             icon: Icons.travel_explore_rounded,
-            title: widget.hasFilters ? 'لا نتائج مطابقة' : 'لا أماكن بعد',
+            title: widget.hasFilters ? 'لا نتائج مطابقة'.tr : 'لا أماكن بعد'.tr,
             subtitle: widget.hasFilters
-                ? 'جرّب توسيع البحث أو مسح الفلاتر'
-                : 'ستظهر المزارع والقاعات هنا فور إضافتها',
-            actionLabel: widget.hasFilters ? 'مسح الفلاتر' : null,
+                ? 'جرّب توسيع البحث أو مسح الفلاتر'.tr
+                : 'ستظهر المزارع والقاعات هنا فور إضافتها'.tr,
+            actionLabel: widget.hasFilters ? 'مسح الفلاتر'.tr : null,
             onAction: widget.hasFilters ? widget.onClearFilters : null,
           ),
         ),
@@ -1321,7 +1361,7 @@ class _MapPlacesListViewState extends State<MapPlacesListView> {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-            child: _MapListSectionHeader(title: entry.key, count: items.length),
+            child: _MapListSectionHeader(title: entry.key.tr, count: items.length),
           ),
         ),
       );
@@ -1352,11 +1392,17 @@ class _MapPlacesListViewState extends State<MapPlacesListView> {
     slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 32)));
 
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFFE8ECF2), mapPaper, Colors.white],
+          colors: Appearance.isDark
+              ? const [
+                  VibesDark.surface,
+                  VibesDark.canvas,
+                  VibesDark.canvas,
+                ]
+              : [const Color(0xFFE8ECF2), mapPaper, Colors.white],
         ),
       ),
       child: CustomScrollView(
@@ -1402,7 +1448,7 @@ class _MapListHero extends StatelessWidget {
         children: [
           Container(height: 3, color: mapBrass),
           Container(
-            color: Colors.white,
+            color: Vibes.surface,
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1412,7 +1458,7 @@ class _MapListHero extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'دليل الأماكن',
+                        'دليل الأماكن'.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 19,
@@ -1423,7 +1469,7 @@ class _MapListHero extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'اسحب الخريطة واكتشف ما حولك',
+                        'اسحب الخريطة واكتشف ما حولك'.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 11.5,
@@ -1445,11 +1491,11 @@ class _MapListHero extends StatelessWidget {
                   ),
                   child: Text(
                     total.toString().padLeft(2, '0'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Montserrat',
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
-                      color: Colors.white,
+                      color: _onMapFill,
                     ),
                   ),
                 ),
@@ -1462,19 +1508,19 @@ class _MapListHero extends StatelessWidget {
             child: Row(
               children: [
                 _MapTypeStat(
-                  label: 'مزارع',
+                  label: 'مزارع'.tr,
                   count: farms,
                   color: accentForType('FARM'),
                 ),
                 const SizedBox(width: 8),
                 _MapTypeStat(
-                  label: 'قاعات',
+                  label: 'قاعات'.tr,
                   count: halls,
                   color: accentForType('HALL'),
                 ),
                 const SizedBox(width: 8),
                 _MapTypeStat(
-                  label: 'تزيين',
+                  label: 'تزيين'.tr,
                   count: deco,
                   color: accentForType('DECORATION'),
                 ),
@@ -1482,7 +1528,7 @@ class _MapListHero extends StatelessWidget {
             ),
           ),
           Container(
-            color: Colors.white,
+            color: Vibes.surface,
             padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
             child: SizedBox(
               height: 32,
@@ -1490,17 +1536,17 @@ class _MapListHero extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 children: [
                   _MapSortChip(
-                    label: 'مختارة',
+                    label: 'مختارة'.tr,
                     active: sort == MapListSort.featured,
                     onTap: () => onSortChanged(MapListSort.featured),
                   ),
                   _MapSortChip(
-                    label: 'الأقل سعراً',
+                    label: 'الأقل سعراً'.tr,
                     active: sort == MapListSort.priceLow,
                     onTap: () => onSortChanged(MapListSort.priceLow),
                   ),
                   _MapSortChip(
-                    label: 'الأعلى تقييماً',
+                    label: 'الأعلى تقييماً'.tr,
                     active: sort == MapListSort.topRated,
                     onTap: () => onSortChanged(MapListSort.topRated),
                   ),
@@ -1531,7 +1577,7 @@ class _MapTypeStat extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Vibes.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: mapLine),
         ),
@@ -1544,15 +1590,18 @@ class _MapTypeStat extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             Expanded(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: VibesFont.ui,
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w800,
-                  color: mapInk,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: mapInk,
+                  ),
                 ),
               ),
             ),
@@ -1603,7 +1652,7 @@ class _MapSortChip extends StatelessWidget {
               fontFamily: VibesFont.ui,
               fontSize: 11,
               fontWeight: FontWeight.w800,
-              color: active ? Colors.white : mapInk2,
+              color: active ? _onMapFill : mapInk2,
             ),
           ),
         ),
@@ -1645,13 +1694,13 @@ class _MapListSectionHeader extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Vibes.surface,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: mapLine),
           ),
           child: Text(
             '$count',
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Montserrat',
               fontSize: 11,
               fontWeight: FontWeight.w800,
@@ -1680,7 +1729,7 @@ class _MapListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = accentForType(property.type.name);
-    final place = property.cityName ?? property.provinceName ?? '';
+    final place = (property.cityName ?? property.provinceName ?? '').tr;
     final hasMap = onShowOnMap != null;
 
     return Material(
@@ -1694,7 +1743,7 @@ class _MapListTile extends StatelessWidget {
         child: Ink(
           height: 132,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Vibes.surface,
             borderRadius: BorderRadius.circular(22),
             border: Border.all(color: mapLine),
             boxShadow: mapElev(o: 0.65),
@@ -1706,7 +1755,7 @@ class _MapListTile extends StatelessWidget {
                 Container(width: 4, color: accent),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 11, 6, 11),
+                    padding: const EdgeInsetsDirectional.fromSTEB(6, 11, 12, 11),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1714,7 +1763,7 @@ class _MapListTile extends StatelessWidget {
                           children: [
                             Text(
                               index.toString().padLeft(2, '0'),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFamily: 'Montserrat',
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
@@ -1743,7 +1792,7 @@ class _MapListTile extends StatelessWidget {
                             ),
                             if (property.featured) ...[
                               const SizedBox(width: 5),
-                              const Icon(
+                              Icon(
                                 Icons.auto_awesome,
                                 size: 13,
                                 color: mapBrass,
@@ -1751,7 +1800,9 @@ class _MapListTile extends StatelessWidget {
                             ],
                             const Spacer(),
                             Icon(
-                              Icons.chevron_left_rounded,
+                              I18n.isEn
+                                  ? Icons.chevron_right_rounded
+                                  : Icons.chevron_left_rounded,
                               size: 20,
                               color: mapInk2.withValues(alpha: 0.45),
                             ),
@@ -1800,7 +1851,7 @@ class _MapListTile extends StatelessWidget {
                                 children: [
                                   Text(
                                     placeFullPrice(property.pricePerDay),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontFamily: 'Montserrat',
                                       fontSize: 13.5,
                                       fontWeight: FontWeight.w800,
@@ -1809,7 +1860,7 @@ class _MapListTile extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 3),
                                   Text(
-                                    'د.ع',
+                                    'د.ع'.tr,
                                     style: TextStyle(
                                       fontFamily: VibesFont.ui,
                                       fontSize: 9.5,
@@ -1825,12 +1876,12 @@ class _MapListTile extends StatelessWidget {
                               Icon(
                                 Icons.star_rounded,
                                 size: 14,
-                                color: Brand.brassDeep,
+                                color: _mapStar,
                               ),
                               const SizedBox(width: 2),
                               Text(
                                 property.ratingAvg.toStringAsFixed(1),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'Montserrat',
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w800,
@@ -1859,18 +1910,18 @@ class _MapListTile extends StatelessWidget {
                       DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            begin: Alignment.centerRight,
-                            end: Alignment.centerLeft,
+                            begin: AlignmentDirectional.centerStart,
+                            end: AlignmentDirectional.centerEnd,
                             colors: [
-                              Colors.white.withValues(alpha: 0.55),
+                              _mapSurfaceA(0.55),
                               Colors.transparent,
                             ],
                           ),
                         ),
                       ),
                       if (hasMap)
-                        Positioned(
-                          left: 8,
+                        PositionedDirectional(
+                          end: 8,
                           bottom: 8,
                           child: GestureDetector(
                             behavior: HitTestBehavior.opaque,
@@ -1882,7 +1933,7 @@ class _MapListTile extends StatelessWidget {
                               width: 34,
                               height: 34,
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.94),
+                                color: _mapSurfaceA(0.94),
                                 shape: BoxShape.circle,
                                 border: Border.all(color: accent, width: 1.5),
                                 boxShadow: mapElev(o: 0.35),
@@ -1927,7 +1978,7 @@ class _MapListMessageCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: mapLine),
         boxShadow: mapElev(),
@@ -1965,7 +2016,7 @@ class _MapListMessageCard extends StatelessWidget {
               onPressed: onAction,
               style: FilledButton.styleFrom(
                 backgroundColor: mapInk,
-                foregroundColor: Colors.white,
+                foregroundColor: _onMapFill,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 22,
                   vertical: 12,
@@ -2007,7 +2058,7 @@ class MapEmptyState extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 28),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: mapLine),
         boxShadow: mapElev(),
@@ -2023,10 +2074,10 @@ class MapEmptyState extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             loading
-                ? 'جاري تحميل الخريطة…'
+                ? 'جاري تحميل الخريطة…'.tr
                 : hasFilters
-                ? 'لا نتائج مطابقة'
-                : 'لا مواقع بعد',
+                ? 'لا نتائج مطابقة'.tr
+                : 'لا مواقع بعد'.tr,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: VibesFont.ui,
@@ -2037,7 +2088,7 @@ class MapEmptyState extends StatelessWidget {
           ),
           if (hasFilters && !loading) ...[
             const SizedBox(height: 10),
-            TextButton(onPressed: onClear, child: const Text('مسح الفلاتر')),
+            TextButton(onPressed: onClear, child: Text('مسح الفلاتر'.tr)),
           ],
         ],
       ),

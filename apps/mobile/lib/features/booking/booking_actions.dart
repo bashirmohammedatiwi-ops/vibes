@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -73,11 +74,12 @@ Future<bool> cancelBookingFlow(
 ) async {
   final ok = await showMaisonConfirm(
     context: context,
-    title: 'إلغاء الحجز؟',
+    title: 'إلغاء الحجز؟'.tr,
     message:
-        '${b.propertyName ?? 'المكان'} — سيُلغى طلبك ويعود الموعد متاحاً لغيرك. لا يمكن التراجع عن هذا.',
-    confirmLabel: 'نعم، ألغِ الحجز',
-    cancelLabel: 'تراجع',
+        '{name} — سيُلغى طلبك ويعود الموعد متاحاً لغيرك. لا يمكن التراجع عن هذا.' // i18n-ok
+            .trArgs({'name': b.propertyName ?? 'المكان'.tr}),
+    confirmLabel: 'نعم، ألغِ الحجز'.tr,
+    cancelLabel: 'تراجع'.tr,
     destructive: true,
   );
   if (!ok || !context.mounted) return false;
@@ -85,7 +87,7 @@ Future<bool> cancelBookingFlow(
   try {
     await ref.read(apiClientProvider).post('/api/bookings/${b.id}/cancel');
     _refresh(ref, b);
-    if (context.mounted) _toast(context, 'تم إلغاء الحجز');
+    if (context.mounted) _toast(context, 'تم إلغاء الحجز'.tr);
     return true;
   } catch (e) {
     if (context.mounted) _toast(context, maisonError(e));
@@ -102,13 +104,15 @@ Future<bool> requestRefundFlow(
   final expected = expectedRefund(b);
   final reason = await showMaisonPrompt(
     context: context,
-    title: 'طلب إلغاء واسترداد',
+    title: 'طلب إلغاء واسترداد'.tr,
     message: expected > 0
-        ? 'الاسترداد المتوقع: ${PriceText.format(expected)} د.ع — كامل قبل 7 أيام من الموعد، ونصف بين 3 و6 أيام. يراجع الفريق طلبك ويبلغك بالنتيجة.'
-        : 'وفق سياسة الإلغاء لا يُسترد مبلغ لموعد أقرب من 3 أيام، ويمكنك إرسال الطلب للمراجعة.',
-    hint: 'سبب الإلغاء (اختياري)',
-    confirmLabel: 'إرسال الطلب',
-    cancelLabel: 'تراجع',
+        ? 'الاسترداد المتوقع: {amount} د.ع — كامل قبل 7 أيام من الموعد، ونصف بين 3 و6 أيام. يراجع الفريق طلبك ويبلغك بالنتيجة.' // i18n-ok
+              .trArgs({'amount': PriceText.format(expected)})
+        : 'وفق سياسة الإلغاء لا يُسترد مبلغ لموعد أقرب من 3 أيام، ويمكنك إرسال الطلب للمراجعة.' // i18n-ok
+              .tr,
+    hint: 'سبب الإلغاء (اختياري)'.tr,
+    confirmLabel: 'إرسال الطلب'.tr,
+    cancelLabel: 'تراجع'.tr,
   );
   if (reason == null || !context.mounted) return false;
   HapticFeedback.mediumImpact();
@@ -121,7 +125,7 @@ Future<bool> requestRefundFlow(
         );
     _refresh(ref, b);
     if (context.mounted) {
-      _toast(context, 'أُرسل طلب الإلغاء — سنبلغك بالنتيجة');
+      _toast(context, 'أُرسل طلب الإلغاء — سنبلغك بالنتيجة'.tr);
     }
     return true;
   } catch (e) {

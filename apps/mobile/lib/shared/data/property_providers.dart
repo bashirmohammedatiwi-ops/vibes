@@ -375,6 +375,7 @@ class CityOption {
     required this.provinceName,
     this.provinceSlug,
     this.provinceImageUrl,
+    this.provincePlaceCounts,
   });
 
   final String id;
@@ -382,6 +383,17 @@ class CityOption {
   final String provinceName;
   final String? provinceSlug;
   final String? provinceImageUrl;
+
+  /// أماكن المحافظة لكل نوع. فارغة إذا لم يُرسلها الخادم.
+  final Map<String, int>? provincePlaceCounts;
+
+  /// هل في المحافظة أماكن من هذا النوع؟ بلا [type]: من أي نوع.
+  bool provinceOpenFor(String? type) {
+    final counts = provincePlaceCounts;
+    if (counts == null) return true;
+    if (type != null) return (counts[type.toUpperCase()] ?? 0) > 0;
+    return counts.values.any((n) => n > 0);
+  }
 
   String get label => '$nameAr · $provinceName';
 }
@@ -399,6 +411,10 @@ final locationsProvider = FutureProvider<List<CityOption>>((ref) async {
     final provinceImageUrl = rawImage is String && rawImage.isNotEmpty
         ? rawImage
         : null;
+    final rawCounts = province['placeCounts'];
+    final placeCounts = rawCounts is Map
+        ? rawCounts.map((k, v) => MapEntry('$k', (v as num).toInt()))
+        : null;
     for (final city
         in (province['cities'] as List<dynamic>? ?? [])
             .whereType<Map<String, dynamic>>()) {
@@ -409,6 +425,7 @@ final locationsProvider = FutureProvider<List<CityOption>>((ref) async {
           provinceName: provinceName,
           provinceSlug: provinceSlug,
           provinceImageUrl: provinceImageUrl,
+          provincePlaceCounts: placeCounts,
         ),
       );
     }

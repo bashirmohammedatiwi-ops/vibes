@@ -17,12 +17,30 @@ export class LocationsController {
   @Public()
   @Get('provinces')
   provinces() {
-    return this.cache.getOrSet('cache:provinces:all', LOCATIONS_TTL_SECONDS, () =>
-      this.prisma.province.findMany({
-        include: { cities: true },
-        orderBy: { nameAr: 'asc' },
-      }),
-    );
+    return this.cache.getOrSet('cache:provinces:all', LOCATIONS_TTL_SECONDS, async () => {
+      const [provinces, places] = await Promise.all([
+        this.prisma.province.findMany({
+          include: { cities: true },
+          orderBy: { nameAr: 'asc' },
+        }),
+        this.prisma.property.groupBy({
+          by: ['cityId', 'type'],
+          where: { status: 'APPROVED' },
+          _count: { _all: true },
+        }),
+      ]);
+      // placeCounts لكل نوع: المحافظة بلا أماكن تظهر «قريباً» ولا تُفتح
+      return provinces.map((province) => {
+        const cityIds = new Set(province.cities.map((city) => city.id));
+        const placeCounts: Record<string, number> = {};
+        for (const row of places) {
+          if (cityIds.has(row.cityId)) {
+            placeCounts[row.type] = (placeCounts[row.type] ?? 0) + row._count._all;
+          }
+        }
+        return { ...province, placeCounts };
+      });
+    });
   }
 
   @Public()

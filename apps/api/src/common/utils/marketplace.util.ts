@@ -95,7 +95,7 @@ export function invoicePrintHtml(invoice: InvoicePrintInput): string {
       </tr>`,
     )
     .join('');
-  const place = invoice.booking?.property?.name ?? 'مكان VIBES';
+  const place = invoice.booking?.property?.name ?? 'مكان أجواء';
   const guest = invoice.booking?.user?.name || invoice.booking?.user?.phone || 'ضيف';
   const status = INVOICE_STATUS_AR[invoice.status] ?? invoice.status;
 
@@ -116,7 +116,7 @@ export function invoicePrintHtml(invoice: InvoicePrintInput): string {
   </style>
 </head>
 <body>
-  <h1>فاتورة VIBES</h1>
+  <h1>فاتورة أجواء</h1>
   <div class="muted">${escapeHtml(invoice.number)} · ${escapeHtml(status)} · ${dayIq(invoice.issuedAt)}</div>
   <p>المكان: <strong>${escapeHtml(place)}</strong><br/>
   الضيف: ${escapeHtml(guest)}<br/>

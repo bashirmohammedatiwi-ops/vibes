@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/models.dart';
@@ -42,23 +43,26 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
       final ok = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          backgroundColor: Colors.white,
+          backgroundColor: Vibes.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
           title: Text(
-            'إلغاء هذا الحجز؟',
-            style: TextStyle(fontFamily: VibesFont.ui, fontWeight: FontWeight.w900),
+            'إلغاء هذا الحجز؟'.tr,
+            style: TextStyle(
+              fontFamily: VibesFont.ui,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           content: Text(
-            'سيُبلَّغ الضيف ويعود اليوم متاحاً في التقويم.',
+            'سيُبلَّغ الضيف ويعود اليوم متاحاً في التقويم.'.tr,
             style: TextStyle(fontFamily: VibesFont.ui, height: 1.5),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               style: TextButton.styleFrom(foregroundColor: ownerNavy),
-              child: const Text('تراجع'),
+              child: Text('تراجع'.tr),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
@@ -66,7 +70,7 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
                 backgroundColor: SemanticColors.danger,
                 shape: const StadiumBorder(),
               ),
-              child: const Text('نعم، إلغاء'),
+              child: Text('نعم، إلغاء'.tr),
             ),
           ],
         ),
@@ -88,7 +92,7 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              status == 'CONFIRMED' ? 'تم تأكيد الحجز' : 'تم إلغاء الحجز',
+              status == 'CONFIRMED' ? 'تم تأكيد الحجز'.tr : 'تم إلغاء الحجز'.tr,
             ),
           ),
         );
@@ -132,14 +136,14 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
               ref.invalidate(providerBookingDetailProvider(bookingId)),
         ),
         data: (booking) {
-          final guest = booking.userName ?? booking.guestName ?? 'ضيف';
+          final guest = booking.userName ?? booking.guestName ?? 'ضيف'.tr;
           final phone = booking.userPhone ?? booking.guestPhone;
           final pay = booking.payment;
 
           return Column(
             children: [
               MaisonPageHeader(
-                title: 'تفاصيل الحجز',
+                title: 'تفاصيل الحجز'.tr,
                 onBack: () => context.pop(),
               ),
               Expanded(
@@ -169,7 +173,7 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
                                 border: Border.all(color: ownerLine),
                               ),
                               child: Text(
-                                'حجز خارجي',
+                                'حجز خارجي'.tr,
                                 style: TextStyle(
                                   fontFamily: VibesFont.ui,
                                   fontSize: 11,
@@ -185,7 +189,7 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
                         onTap: () =>
                             context.push('/property/${booking.propertyId}'),
                         child: Text(
-                          booking.propertyName ?? 'مكان',
+                          booking.propertyName ?? 'مكان'.tr,
                           style: TextStyle(
                             fontFamily: VibesFont.ui,
                             fontSize: 22,
@@ -216,29 +220,32 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
                       _DetailCard(
                         children: [
                           _DetailRow(
-                            label: 'الحالة',
+                            label: 'الحالة'.tr,
                             value: booking.statusLabelAr,
                             valueColor: _statusColor(booking.status),
                           ),
                           _DetailRow(
-                            label: 'المبلغ',
-                            value:
-                                '${PriceText.format(booking.totalPrice)} د.ع',
+                            label: 'المبلغ'.tr,
+                            value: '{amount} د.ع'.trArgs({
+                              'amount': PriceText.format(booking.totalPrice),
+                            }),
                             valueBold: true,
                           ),
                           if (booking.guests > 0)
                             _DetailRow(
-                              label: 'الضيوف',
+                              label: 'الضيوف'.tr,
                               value: '${booking.guests}',
                             ),
                           if (pay != null)
                             _DetailRow(
-                              label: 'الدفع',
-                              value: pay.isPaid ? 'مدفوع' : 'بانتظار الدفع',
+                              label: 'الدفع'.tr,
+                              value: pay.isPaid
+                                  ? 'مدفوع'.tr
+                                  : 'بانتظار الدفع'.tr,
                             ),
                           if (booking.invoiceNumber != null)
                             _DetailRow(
-                              label: 'الفاتورة',
+                              label: 'الفاتورة'.tr,
                               value: booking.invoiceNumber!,
                             ),
                         ],
@@ -249,7 +256,7 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
                         _DetailCard(
                           children: [
                             Text(
-                              'ملاحظات',
+                              'ملاحظات'.tr,
                               style: TextStyle(
                                 fontFamily: VibesFont.ui,
                                 fontSize: 12,
@@ -272,7 +279,7 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
                         ),
                       ],
                       const SizedBox(height: 18),
-                      const OwnerSectionTitle('تواصل مع الضيف'),
+                      OwnerSectionTitle('تواصل مع الضيف'.tr),
                       Wrap(
                         spacing: 10,
                         runSpacing: 10,
@@ -280,21 +287,21 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
                           if (phone != null) ...[
                             _ContactChip(
                               icon: Icons.call_outlined,
-                              label: 'اتصال',
+                              label: 'اتصال'.tr,
                               onTap: () => _launchTel(phone),
                             ),
                             _ContactChip(
                               icon: Icons.chat_outlined,
-                              label: 'واتساب',
+                              label: 'واتساب'.tr,
                               onTap: () => _launchWhatsApp(phone),
                             ),
                             _ContactChip(
                               icon: Icons.copy_outlined,
-                              label: 'نسخ الرقم',
+                              label: 'نسخ الرقم'.tr,
                               onTap: () {
                                 Clipboard.setData(ClipboardData(text: phone));
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('تم نسخ الرقم')),
+                                  SnackBar(content: Text('تم نسخ الرقم'.tr)),
                                 );
                               },
                             ),
@@ -302,12 +309,12 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
                           if (!booking.isExternal)
                             _ContactChip(
                               icon: Icons.forum_outlined,
-                              label: 'رسالة',
+                              label: 'رسالة'.tr,
                               onTap: () => _openChat(context, ref),
                             ),
                           _ContactChip(
                             icon: Icons.videocam_outlined,
-                            label: 'مكالمة بالتطبيق',
+                            label: 'مكالمة بالتطبيق'.tr,
                             onTap: () =>
                                 startCall(ref, context, bookingId: booking.id),
                           ),
@@ -317,13 +324,13 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
                           !booking.isExternal) ...[
                         const SizedBox(height: 24),
                         VibesButton(
-                          label: 'تأكيد الحجز',
+                          label: 'تأكيد الحجز'.tr,
                           onPressed: () =>
                               _setStatus(context, ref, 'CONFIRMED', booking),
                         ),
                         const SizedBox(height: 10),
                         VibesButton(
-                          label: 'رفض الحجز',
+                          label: 'رفض الحجز'.tr,
                           ghost: true,
                           onPressed: () =>
                               _setStatus(context, ref, 'CANCELLED', booking),
@@ -333,7 +340,7 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
                           booking.status != BookingStatus.cancelled) ...[
                         const SizedBox(height: 24),
                         VibesButton(
-                          label: 'إلغاء الحجز الخارجي',
+                          label: 'إلغاء الحجز الخارجي'.tr,
                           ghost: true,
                           onPressed: () =>
                               _setStatus(context, ref, 'CANCELLED', booking),
@@ -350,7 +357,7 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
     );
   }
 
-  static String _dateAr(DateTime d) => '${d.day}/${d.month}/${d.year}';
+  static String _dateAr(DateTime d) => ownerFullDate(d);
 
   static Color _statusColor(BookingStatus s) => switch (s) {
     BookingStatus.confirmed => SemanticColors.success,
@@ -423,14 +430,17 @@ class _DetailRow extends StatelessWidget {
               color: placeInk2,
             ),
           ),
-          const Spacer(),
-          Text(
-            value,
-            style: TextStyle(
-              fontFamily: VibesFont.ui,
-              fontSize: valueBold ? 16 : 14,
-              fontWeight: valueBold ? FontWeight.w900 : FontWeight.w800,
-              color: valueColor ?? ownerNavy,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
+                fontSize: valueBold ? 16 : 14,
+                fontWeight: valueBold ? FontWeight.w900 : FontWeight.w800,
+                color: valueColor ?? ownerNavy,
+              ),
             ),
           ),
         ],
@@ -453,7 +463,7 @@ class _ContactChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: Vibes.surface,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,

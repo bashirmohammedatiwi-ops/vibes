@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -14,6 +15,8 @@ import '../../shared/models/models.dart';
 import '../../shared/widgets/maison_chrome.dart';
 import '../../shared/widgets/vibes_widgets.dart';
 import '../home/home_sections.dart';
+import '../loyalty/loyalty_data.dart';
+import '../loyalty/loyalty_widgets.dart';
 import 'booking_date_picker.dart';
 import '../property/place_experience_ui.dart';
 import '../property/place_booking_sheets.dart';
@@ -50,6 +53,9 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
   bool _fullDayMulti = false;
   String _notes = '';
   String _coupon = '';
+
+  /// خصم الولاء يُطبَّق تلقائياً متى توفر، والزبون يستطيع الاحتفاظ به لحجز آخر.
+  bool _useLoyalty = true;
 
   Map<String, dynamic>? _quote;
   bool _quoting = false;
@@ -96,11 +102,11 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
   String get _shiftLabel {
     switch (_shift) {
       case ShiftType.morning:
-        return 'الفترة الصباحية';
+        return 'الفترة الصباحية'.tr;
       case ShiftType.evening:
-        return 'الفترة المسائية';
+        return 'الفترة المسائية'.tr;
       case ShiftType.full:
-        return _fullDayMulti ? 'يوم كامل · عدة أيام' : 'يوم كامل';
+        return _fullDayMulti ? 'يوم كامل · عدة أيام'.tr : 'يوم كامل'.tr;
     }
   }
 
@@ -197,6 +203,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                   'endDate': _dateKey(_end!),
                   'shift': _shift.name.toUpperCase(),
                   if (_coupon.isNotEmpty) 'couponCode': _coupon,
+                  if (_useLoyalty && _coupon.isEmpty) 'useLoyalty': true,
                 },
               )
               as Map<String, dynamic>;
@@ -230,9 +237,13 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _loadingDates = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('تعذر تحميل المواعيد: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'تعذر تحميل المواعيد: {error}'.trArgs({'error': error}),
+          ),
+        ),
+      );
       return;
     }
 
@@ -309,7 +320,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
   String? _couponPendingError() {
     if (_coupon.isEmpty || _quote == null) return null;
     return ((_quote?['discount'] ?? 0) == 0)
-        ? 'الرمز غير مطبق — تحقق منه'
+        ? 'الرمز غير مطبق — تحقق منه'.tr
         : null;
   }
 
@@ -335,6 +346,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                   'guests': _guests,
                   'notes': _notes.isNotEmpty ? _notes : null,
                   if (_coupon.isNotEmpty) 'couponCode': _coupon,
+                  if (_quote?['loyaltyApplied'] == true) 'useLoyalty': true,
                 },
               )
               as Map<String, dynamic>;
@@ -343,6 +355,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
       HapticFeedback.mediumImpact();
       // الحجز الجديد يظهر فوراً في «حجوزاتي» كبانتظار التأكيد
       ref.invalidate(myBookingsProvider);
+      ref.invalidate(loyaltyProvider);
       final bookingId = created['id'] as String?;
       if (bookingId == null) {
         context.pushReplacement('/booking-success');
@@ -379,7 +392,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
 
     return property.when(
       loading: () => Scaffold(
-        backgroundColor: placePaper,
+        backgroundColor: themed(placePaper, VibesDark.canvas),
         body: Center(child: CircularProgressIndicator(strokeWidth: 2)),
       ),
       error: (e, _) => Scaffold(
@@ -419,7 +432,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
             .toList();
 
         return Scaffold(
-          backgroundColor: placePaper,
+          backgroundColor: themed(placePaper, VibesDark.canvas),
           body: Stack(
             children: [
               // المحتوى — سطور قرار واضحة
@@ -437,7 +450,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                         ),
                         Expanded(
                           child: Text(
-                            'إتمام الحجز',
+                            'إتمام الحجز'.tr,
                             style: TextStyle(
                               fontFamily: VibesFont.ui,
                               fontSize: 20,
@@ -464,7 +477,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                       child: FilledButton(
                         style: FilledButton.styleFrom(
                           backgroundColor: accent,
-                          foregroundColor: Colors.white,
+                          foregroundColor: themed(Colors.white, Brand.midnight),
                           padding: const EdgeInsets.symmetric(vertical: 15),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
@@ -472,7 +485,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                         ),
                         onPressed: () => _openWizard(p),
                         child: Text(
-                          'اختر الموعد — فترة ثم ضيوف ثم تاريخ',
+                          'اختر الموعد — فترة ثم ضيوف ثم تاريخ'.tr,
                           style: TextStyle(
                             fontFamily: VibesFont.ui,
                             fontSize: 14.5,
@@ -494,7 +507,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                               : _shift == ShiftType.evening
                               ? Icons.nights_stay_outlined
                               : Icons.calendar_today_rounded,
-                          title: 'الفترة',
+                          title: 'الفترة'.tr,
                           value: _shiftLabel,
                           iconTint: placeShiftColor(_shift),
                           trailing: PlaceShiftBadge(
@@ -507,22 +520,24 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                       ],
                       _DecisionRow(
                         icon: Icons.groups_rounded,
-                        title: 'الضيوف',
-                        value: _guests == 1 ? 'ضيف واحد' : '$_guests ضيوف',
+                        title: 'الضيوف'.tr,
+                        value: _guests == 1
+                            ? 'ضيف واحد'.tr
+                            : '{n} ضيوف'.trN(_guests),
                         onTap: () => _openGuests(p),
                       ),
                       const _RowDivider(),
                       _DecisionRow(
                         icon: Icons.calendar_month_rounded,
-                        title: 'التاريخ',
+                        title: 'التاريخ'.tr,
                         value: _datesReady
                             ? placeFormatDateRange(_start!, _end!)
-                            : 'اختر موعدك',
+                            : 'اختر موعدك'.tr,
                         hint: _loadingDates
-                            ? 'جاري التحميل…'
+                            ? 'جاري التحميل…'.tr
                             : (_datesReady &&
                                       _end!.difference(_start!).inDays == 1
-                                  ? 'مغادرة تلقائية في اليوم التالي'
+                                  ? 'مغادرة تلقائية في اليوم التالي'.tr
                                   : null),
                         strong: _datesReady,
                         onTap: () => _openDates(p),
@@ -530,9 +545,9 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                       const _RowDivider(),
                       _DecisionRow(
                         icon: Icons.note_alt_outlined,
-                        title: 'ملاحظة',
+                        title: 'ملاحظة'.tr,
                         value: _notes.isEmpty
-                            ? 'أضف مناسبتك (اختياري)'
+                            ? 'أضف مناسبتك (اختياري)'.tr
                             : _notes,
                         valueMaxLines: _notes.isEmpty ? 1 : 2,
                         onTap: _openNotes,
@@ -541,13 +556,16 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                         const _RowDivider(),
                         _DecisionRow(
                           icon: Icons.local_offer_outlined,
-                          title: 'خصم',
-                          value: _coupon.isEmpty ? 'أضف رمزاً' : _coupon,
+                          title: 'خصم'.tr,
+                          value: _coupon.isEmpty ? 'أضف رمزاً'.tr : _coupon,
                           trailing: (_quote?['discount'] ?? 0) > 0
-                              ? const Icon(
+                              ? Icon(
                                   Icons.check_circle,
                                   size: 18,
-                                  color: Color(0xFF15803D),
+                                  color: themed(
+                                    const Color(0xFF15803D),
+                                    VibesDark.success,
+                                  ),
                                 )
                               : null,
                           onTap: () => _openCoupon(suggestedCodes),
@@ -568,6 +586,22 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                       availability: _calendarAvailability ?? availability,
                     ),
 
+                  if (_quote?['loyalty'] != null) ...[
+                    LoyaltyBookingOffer(
+                      offer: _quote!['loyalty'] as Map<String, dynamic>,
+                      applied: _quote!['loyaltyApplied'] == true,
+                      section: sectionForType(p.type.name),
+                      onChanged: (use) {
+                        setState(() {
+                          _useLoyalty = use;
+                          if (use) _coupon = '';
+                        });
+                        _fetchQuote();
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
                   // السعر — واضح وكامل
                   PlaceQuoteSummaryCard(
                     quoting: _quoting,
@@ -577,7 +611,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                         : null,
                     total: _quoteTotal,
                     discount: _quoteDiscount ?? 0,
-                    hint: 'اختر التاريخ لعرض الإجمالي الكامل',
+                    hint: 'اختر التاريخ لعرض الإجمالي الكامل'.tr,
                   ),
 
                   const SizedBox(height: 10),
@@ -596,10 +630,10 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                       placeReferencePrice(p, availability?.dayPrices ?? []),
                   amountLabel: _datesReady
                       ? (_quoteTotal != null
-                            ? 'الإجمالي النهائي'
-                            : 'جاري الحساب…')
-                      : 'يبدأ من',
-                  buttonLabel: 'تأكيد الحجز',
+                            ? 'الإجمالي النهائي'.tr
+                            : 'جاري الحساب…'.tr)
+                      : 'يبدأ من'.tr,
+                  buttonLabel: 'تأكيد الحجز'.tr,
                   accent: accent,
                   enabled: _datesReady && !_quoting,
                   loading: _submitting,
@@ -629,7 +663,7 @@ class _PlaceMiniHeader extends StatelessWidget {
         height: 84,
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Vibes.surface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: placeLine),
         ),
@@ -671,7 +705,7 @@ class _PlaceMiniHeader extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    '${property.typeLabelAr} · ${property.cityName ?? ''}',
+                    '${property.typeLabelAr.tr} · ${property.cityName ?? ''}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -686,7 +720,10 @@ class _PlaceMiniHeader extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Icon(
-              Icons.chevron_left_rounded,
+              // الأيقونة تنعكس تلقائياً؛ العربية تبقى كما هي والإنجليزية تشير للأمام.
+              I18n.isEn
+                  ? Icons.chevron_right_rounded
+                  : Icons.chevron_left_rounded,
               size: 20,
               color: placeInk2.withValues(alpha: .5),
             ),
@@ -707,12 +744,15 @@ class _DecisionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: placeLine),
         boxShadow: [
           BoxShadow(
-            color: placeInk.withValues(alpha: 0.05),
+            color: themed(
+              placeInk.withValues(alpha: 0.05),
+              Colors.black.withValues(alpha: .18),
+            ),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -821,6 +861,7 @@ class _DecisionRow extends StatelessWidget {
                     if (hint != null)
                       Text(
                         hint!,
+                        textAlign: TextAlign.end,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 10,
@@ -833,7 +874,9 @@ class _DecisionRow extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Icon(
-                Icons.chevron_left_rounded,
+                I18n.isEn
+                    ? Icons.chevron_right_rounded
+                    : Icons.chevron_left_rounded,
                 size: 18,
                 color: placeInk2.withValues(alpha: .45),
               ),

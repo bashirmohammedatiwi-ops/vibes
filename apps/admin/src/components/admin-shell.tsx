@@ -40,6 +40,7 @@ const sections: Array<{ title: string; links: NavLink[] }> = [
         { href: "/payments", label: "المدفوعات" },
         { href: "/invoices", label: "الفواتير" },
         { href: "/coupons", label: "الكوبونات", adminOnly: true },
+        { href: "/loyalty", label: "برنامج الولاء", adminOnly: true },
       ],
     },
     {
@@ -106,6 +107,7 @@ function pageTitle(pathname: string) {
   if (pathname.startsWith("/provider/properties/")) return "إدارة المكان";
   if (pathname === "/provider") return "بوابة المالك";
   if (pathname === "/coupons") return "الكوبونات";
+  if (pathname === "/loyalty") return "برنامج الولاء";
   if (pathname === "/amenities") return "مزايا الأماكن";
   if (pathname === "/") return "الرئيسية";
   if (pathname.startsWith("/properties/new")) return "مكان جديد";

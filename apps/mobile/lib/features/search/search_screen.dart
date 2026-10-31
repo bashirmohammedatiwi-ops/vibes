@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/world_theme.dart';
@@ -21,6 +22,15 @@ import '../../shared/widgets/vibes_graphics.dart';
 import '../compare/compare_feature.dart';
 import '../home/home_sections.dart';
 import '../property/place_experience_ui.dart';
+
+/// تعبئة «المحدد»: حبر عميق نهاراً ونحاس ليلاً، وما يُقرأ فوقها.
+Color get _selectedFill => themed(const Color(0xFF141C2B), Brand.brassLight);
+Color get _onSelectedFill => themed(Colors.white, Brand.midnight);
+
+/// ما يُقرأ فوق لون العالم الممتلئ (الألوان فاتحة ليلاً).
+Color get _onAccentFill => themed(Colors.white, Brand.midnight);
+
+Color get _shadowInk => themed(const Color(0xFF141C2B), Colors.black);
 
 /// ═══════════════════════════════════════════════════════════
 /// البحث — لغة التصميم الجديدة: أبيض نظيف، حبر عميق، نحاس.
@@ -314,7 +324,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: Vibes.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -360,8 +370,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           child: Container(
                             width: 42,
                             height: 42,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF2F3F5),
+                            decoration: BoxDecoration(
+                              color: themed(
+                                const Color(0xFFF2F3F5),
+                                VibesDark.surfaceMuted,
+                              ),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
@@ -374,7 +387,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'استكشف الأماكن',
+                            'استكشف الأماكن'.tr,
                             style: TextStyle(
                               fontFamily: VibesFont.ui,
                               fontSize: 20,
@@ -517,9 +530,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         children: [
           WorldEmpty(
             icon: Icons.search_off_rounded,
-            title: 'لا نتائج مطابقة',
-            subtitle: 'جرّب محافظة أخرى أو وسّع الميزانية أو عدّل الفلاتر',
-            actionLabel: 'تعديل الفلاتر',
+            title: 'لا نتائج مطابقة'.tr,
+            subtitle: 'جرّب محافظة أخرى أو وسّع الميزانية أو عدّل الفلاتر'.tr,
+            actionLabel: 'تعديل الفلاتر'.tr,
             onAction: _openFilterSheet,
           ),
         ],
@@ -539,7 +552,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         itemBuilder: (context, i) {
           if (i == 0) {
             return Padding(
-              padding: const EdgeInsets.only(bottom: 14, right: 4),
+              padding: const EdgeInsetsDirectional.only(bottom: 14, start: 4),
               child: Row(
                 children: [
                   Container(
@@ -552,7 +565,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'النتائج',
+                    'النتائج'.tr,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 14,
@@ -562,7 +575,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   ),
                   const Spacer(),
                   Text(
-                    _filters.isEmpty ? 'الكل' : 'مطابقة لفلاترك',
+                    _filters.isEmpty ? 'الكل'.tr : 'مطابقة لفلاترك'.tr,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 11,
@@ -653,7 +666,7 @@ class _SearchBarState extends State<_SearchBar> {
       height: 52,
       padding: const EdgeInsetsDirectional.only(start: 6, end: 6),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _focused ? widget.accent : placeLine,
@@ -661,7 +674,7 @@ class _SearchBarState extends State<_SearchBar> {
         ),
         boxShadow: [
           BoxShadow(
-            color: placeInk.withValues(alpha: _focused ? 0.08 : 0.05),
+            color: _shadowInk.withValues(alpha: _focused ? 0.08 : 0.05),
             blurRadius: _focused ? 20 : 14,
             offset: const Offset(0, 6),
           ),
@@ -680,7 +693,7 @@ class _SearchBarState extends State<_SearchBar> {
             child: Icon(
               Icons.search_rounded,
               size: 19,
-              color: _focused ? Colors.white : placeInk2,
+              color: _focused ? _onAccentFill : placeInk2,
             ),
           ),
           const SizedBox(width: 10),
@@ -698,7 +711,7 @@ class _SearchBarState extends State<_SearchBar> {
                 color: placeInk,
               ),
               decoration: InputDecoration(
-                hintText: 'ابحث بالاسم أو المدينة…',
+                hintText: 'ابحث بالاسم أو المدينة…'.tr,
                 hintStyle: TextStyle(
                   fontFamily: VibesFont.ui,
                   fontSize: 13.5,
@@ -746,16 +759,16 @@ class _SearchBarState extends State<_SearchBar> {
                   Icon(
                     Icons.tune_rounded,
                     size: 19,
-                    color: widget.filterCount > 0 ? Colors.white : placeInk2,
+                    color: widget.filterCount > 0 ? _onAccentFill : placeInk2,
                   ),
                   if (widget.filterCount > 1)
-                    Positioned(
+                    PositionedDirectional(
                       top: 7,
-                      right: 7,
+                      start: 7,
                       child: Container(
                         padding: const EdgeInsets.all(2.5),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
+                        decoration: BoxDecoration(
+                          color: Vibes.surface,
                           shape: BoxShape.circle,
                         ),
                         child: CircleAvatar(
@@ -763,11 +776,11 @@ class _SearchBarState extends State<_SearchBar> {
                           backgroundColor: widget.accent,
                           child: Text(
                             '${widget.filterCount}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Montserrat',
                               fontSize: 7.5,
                               fontWeight: FontWeight.w900,
-                              color: Colors.white,
+                              color: _onAccentFill,
                               height: 1,
                             ),
                           ),
@@ -800,7 +813,7 @@ class _TypeFilterRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
           _TypeChip(
-            label: 'الكل',
+            label: 'الكل'.tr,
             accent: placeInk,
             icon: null,
             selected: selected == null,
@@ -853,7 +866,7 @@ class _FarmFeatureRow extends StatelessWidget {
           duration: VibesMotion.fast,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
-            color: on ? color.withValues(alpha: .12) : Colors.white,
+            color: on ? color.withValues(alpha: .12) : Vibes.surface,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color: on ? color : placeLine,
@@ -886,18 +899,27 @@ class _FarmFeatureRow extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Row(
-        children: [
-          chip('❄️', 'مزارع شتوية', winter, onWinter, const Color(0xFF0284C7)),
-          const SizedBox(width: 8),
-          chip(
-            '🏊',
-            'مسبح مغلق',
-            indoorPool,
-            onIndoorPool,
-            const Color(0xFF0D9488),
-          ),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            chip(
+              '❄️',
+              'مزارع شتوية'.tr,
+              winter,
+              onWinter,
+              themed(const Color(0xFF0284C7), const Color(0xFF7DD3FC)),
+            ),
+            const SizedBox(width: 8),
+            chip(
+              '🏊',
+              'مسبح مغلق'.tr,
+              indoorPool,
+              onIndoorPool,
+              themed(const Color(0xFF0D9488), const Color(0xFF5EEAD4)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -926,7 +948,7 @@ class _TypeChip extends StatelessWidget {
         duration: VibesMotion.fast,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: selected ? accent : Colors.white,
+          color: selected ? accent : Vibes.surface,
           borderRadius: BorderRadius.circular(13),
           border: Border.all(
             color: selected ? accent : placeLine,
@@ -949,7 +971,7 @@ class _TypeChip extends StatelessWidget {
               VibesCategoryIcon(
                 category: icon!,
                 size: 15,
-                color: selected ? Colors.white : accent,
+                color: selected ? _onAccentFill : accent,
               ),
               const SizedBox(width: 6),
             ],
@@ -959,7 +981,7 @@ class _TypeChip extends StatelessWidget {
                 fontFamily: VibesFont.ui,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w800,
-                color: selected ? Colors.white : placeInk,
+                color: selected ? _onAccentFill : placeInk,
               ),
             ),
           ],
@@ -986,30 +1008,37 @@ class _ActiveFiltersRow extends StatelessWidget {
     final chips = <Widget>[];
 
     if (filters.winter) {
-      chips.add(_FilterPill(label: '❄️ مزارع شتوية', onTap: onEdit));
+      chips.add(_FilterPill(label: '❄️ مزارع شتوية'.tr, onTap: onEdit));
     }
     if (filters.indoorPool) {
-      chips.add(_FilterPill(label: '🏊 مسبح مغلق', onTap: onEdit));
+      chips.add(_FilterPill(label: '🏊 مسبح مغلق'.tr, onTap: onEdit));
     }
     if (filters.province != null) {
-      chips.add(_FilterPill(label: filters.province!, onTap: onEdit));
+      chips.add(_FilterPill(label: filters.province!.tr, onTap: onEdit));
     }
     if (filters.sort != null) {
       final sortLabel = switch (filters.sort) {
-        'price_asc' => 'الأقل سعراً',
-        'price_desc' => 'الأعلى سعراً',
-        'rating' => 'الأعلى تقييماً',
-        _ => 'الأحدث',
+        'price_asc' => 'الأقل سعراً'.tr,
+        'price_desc' => 'الأعلى سعراً'.tr,
+        'rating' => 'الأعلى تقييماً'.tr,
+        _ => 'الأحدث'.tr,
       };
       chips.add(_FilterPill(label: sortLabel, onTap: onEdit));
     }
     if (filters.capacity > 0) {
-      chips.add(_FilterPill(label: '${filters.capacity}+ ضيف', onTap: onEdit));
+      chips.add(
+        _FilterPill(
+          label: '{n}+ ضيف'.trArgs({'n': filters.capacity}),
+          onTap: onEdit,
+        ),
+      );
     }
     if (filters.maxPrice > 0) {
       chips.add(
         _FilterPill(
-          label: 'حتى ${placeFullPrice(filters.maxPrice)} د.ع',
+          label: 'حتى {price} د.ع'.trArgs({
+            'price': placeFullPrice(filters.maxPrice),
+          }),
           onTap: onEdit,
         ),
       );
@@ -1031,7 +1060,7 @@ class _ActiveFiltersRow extends StatelessWidget {
         TextButton(
           onPressed: onClear,
           child: Text(
-            'مسح',
+            'مسح'.tr,
             style: TextStyle(
               fontFamily: VibesFont.ui,
               fontSize: 12,
@@ -1116,7 +1145,7 @@ class _SearchDiscover extends ConsumerWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              'ابدأ الاكتشاف',
+              'ابدأ الاكتشاف'.tr,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontSize: 15,
@@ -1130,7 +1159,7 @@ class _SearchDiscover extends ConsumerWidget {
         Padding(
           padding: EdgeInsetsDirectional.only(start: 11),
           child: Text(
-            'اختر نوع المكان أو محافظة — أو ابحث بالاسم',
+            'اختر نوع المكان أو محافظة — أو ابحث بالاسم'.tr,
             style: TextStyle(
               fontFamily: VibesFont.ui,
               fontSize: 11.5,
@@ -1174,7 +1203,7 @@ class _SearchDiscover extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                'بحوثك السابقة',
+                'بحوثك السابقة'.tr,
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
                   fontSize: 15,
@@ -1216,12 +1245,12 @@ class _DiscoverTypeCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Vibes.surface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: placeLine),
           boxShadow: [
             BoxShadow(
-              color: placeInk.withValues(alpha: 0.05),
+              color: _shadowInk.withValues(alpha: 0.05),
               blurRadius: 14,
               offset: const Offset(0, 6),
             ),
@@ -1243,13 +1272,16 @@ class _DiscoverTypeCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            Text(
-              section.label,
-              style: TextStyle(
-                fontFamily: VibesFont.ui,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w900,
-                color: accent,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                section.label,
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w900,
+                  color: accent,
+                ),
               ),
             ),
           ],
@@ -1269,14 +1301,16 @@ class _ProvinceGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final locations = ref.watch(locationsProvider).valueOrNull ?? const [];
     final provinces = <String, String>{};
+    final open = <String>{};
     for (final city in locations) {
       final slug = city.provinceSlug;
       if (slug != null && slug.isNotEmpty && city.provinceName.isNotEmpty) {
         provinces[slug] = city.provinceName;
+        if (city.provinceOpenFor(null)) open.add(slug);
       }
     }
     final entries = provinces.entries.toList()
-      ..sort((a, b) => a.value.compareTo(b.value));
+      ..sort((a, b) => a.value.tr.compareTo(b.value.tr));
 
     if (entries.isEmpty) return const SizedBox.shrink();
 
@@ -1285,7 +1319,7 @@ class _ProvinceGrid extends ConsumerWidget {
       children: [
         const SizedBox(height: 24),
         Text(
-          'تصفح بالمحافظة',
+          'تصفح بالمحافظة'.tr,
           style: TextStyle(
             fontFamily: VibesFont.ui,
             fontSize: 15,
@@ -1300,14 +1334,16 @@ class _ProvinceGrid extends ConsumerWidget {
           children: [
             for (final province in entries)
               GestureDetector(
-                onTap: () => onPick(null, province.key),
+                onTap: open.contains(province.key)
+                    ? () => onPick(null, province.key)
+                    : null,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Vibes.surface,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: placeLine),
                   ),
@@ -1321,14 +1357,20 @@ class _ProvinceGrid extends ConsumerWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        province.value,
+                        province.value.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
-                          color: placeInk,
+                          color: open.contains(province.key)
+                              ? placeInk
+                              : placeInk2,
                         ),
                       ),
+                      if (!open.contains(province.key)) ...[
+                        const SizedBox(width: 6),
+                        const ComingSoonPill(),
+                      ],
                     ],
                   ),
                 ),
@@ -1356,9 +1398,9 @@ class _SavedSearchRow extends StatelessWidget {
     return PressScale(
       onTap: onApply,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+        padding: const EdgeInsetsDirectional.fromSTEB(6, 10, 14, 10),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Vibes.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: placeLine),
         ),
@@ -1393,7 +1435,7 @@ class _SavedSearchRow extends StatelessWidget {
               ),
             ),
             IconButton(
-              tooltip: 'حذف',
+              tooltip: 'حذف'.tr,
               visualDensity: VisualDensity.compact,
               onPressed: onRemove,
               icon: Icon(Icons.close_rounded, size: 17, color: placeInk2),
@@ -1453,14 +1495,16 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
   Widget build(BuildContext context) {
     final cities = ref.watch(locationsProvider).valueOrNull ?? const [];
     final provinces = <String, String>{};
+    final openProvinces = <String>{};
     for (final city in cities) {
       final slug = city.provinceSlug;
       if (slug != null && slug.isNotEmpty && city.provinceName.isNotEmpty) {
         provinces[slug] = city.provinceName;
+        if (city.provinceOpenFor(null)) openProvinces.add(slug);
       }
     }
     final entries = provinces.entries.toList()
-      ..sort((a, b) => a.value.compareTo(b.value));
+      ..sort((a, b) => a.value.tr.compareTo(b.value.tr));
 
     return SafeArea(
       top: false,
@@ -1483,7 +1527,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
           Padding(
             padding: EdgeInsets.fromLTRB(20, 14, 20, 6),
             child: Text(
-              'الفلاتر',
+              'الفلاتر'.tr,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontSize: 17,
@@ -1502,7 +1546,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                   // ── المحافظة — شبكة بطاقات ──
                   _FilterSection(
                     icon: Icons.location_on_outlined,
-                    title: 'المحافظة',
+                    title: 'المحافظة'.tr,
                     trailing: _ClearSectionButton(
                       visible: _province != null,
                       onTap: () => setState(() => _province = null),
@@ -1513,8 +1557,9 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                       children: [
                         for (final e in entries)
                           _ProvinceTile(
-                            name: e.value,
+                            name: e.value.tr,
                             selected: _province == e.key,
+                            available: openProvinces.contains(e.key),
                             onTap: () => setState(
                               () =>
                                   _province = _province == e.key ? null : e.key,
@@ -1527,7 +1572,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                   // ── الميزانية — سلايدر حقيقي ──
                   _FilterSection(
                     icon: Icons.payments_outlined,
-                    title: 'الميزانية',
+                    title: 'الميزانية'.tr,
                     trailing: _ClearSectionButton(
                       visible: _maxPrice > 0,
                       onTap: () => setState(() => _maxPrice = 0),
@@ -1541,7 +1586,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                   // ── السعة — بطاقات بأيقونات ──
                   _FilterSection(
                     icon: Icons.groups_outlined,
-                    title: 'السعة',
+                    title: 'السعة'.tr,
                     trailing: _ClearSectionButton(
                       visible: _capacity > 0,
                       onTap: () => setState(() => _capacity = 0),
@@ -1571,33 +1616,33 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                   // ── الترتيب ──
                   _FilterSection(
                     icon: Icons.sort_rounded,
-                    title: 'الترتيب',
+                    title: 'الترتيب'.tr,
                     child: Column(
                       children: [
-                        for (final (v, label, icon, desc) in const [
+                        for (final (v, label, icon, desc) in [
                           (
                             null,
-                            'الأحدث',
+                            'الأحدث'.tr,
                             Icons.new_releases_outlined,
-                            'أحدث الأماكن المضافة',
+                            'أحدث الأماكن المضافة'.tr,
                           ),
                           (
                             'price_asc',
-                            'الأقل سعراً',
+                            'الأقل سعراً'.tr,
                             Icons.trending_down_rounded,
-                            'ابدأ من الأرخص',
+                            'ابدأ من الأرخص'.tr,
                           ),
                           (
                             'price_desc',
-                            'الأعلى سعراً',
+                            'الأعلى سعراً'.tr,
                             Icons.trending_up_rounded,
-                            'الفخم أولاً',
+                            'الفخم أولاً'.tr,
                           ),
                           (
                             'rating',
-                            'الأعلى تقييماً',
+                            'الأعلى تقييماً'.tr,
                             Icons.star_outline_rounded,
-                            'اختيارات الضيوف',
+                            'اختيارات الضيوف'.tr,
                           ),
                         ])
                           _SortTile(
@@ -1622,8 +1667,8 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
               width: double.infinity,
               child: FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor: placeInk,
-                  foregroundColor: Colors.white,
+                  backgroundColor: _selectedFill,
+                  foregroundColor: _onSelectedFill,
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -1631,7 +1676,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                 ),
                 onPressed: _apply,
                 child: Text(
-                  'تطبيق الفلاتر',
+                  'تطبيق الفلاتر'.tr,
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
                     fontSize: 15,
@@ -1731,7 +1776,7 @@ class _ClearSectionButton extends StatelessWidget {
                     Icon(Icons.close_rounded, size: 12, color: placeInk2),
                     SizedBox(width: 3),
                     Text(
-                      'إلغاء',
+                      'إلغاء'.tr,
                       style: TextStyle(
                         fontFamily: VibesFont.ui,
                         fontSize: 10.5,
@@ -1753,15 +1798,42 @@ class _ProvinceTile extends StatelessWidget {
   const _ProvinceTile({
     required this.name,
     required this.selected,
+    required this.available,
     required this.onTap,
   });
 
   final String name;
   final bool selected;
+  final bool available;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    if (!available) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: Vibes.surfaceMuted,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              name,
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: Vibes.inkTertiary,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const ComingSoonPill(),
+          ],
+        ),
+      );
+    }
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
@@ -1771,13 +1843,13 @@ class _ProvinceTile extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? placeInk : Colors.white,
+          color: selected ? _selectedFill : Vibes.surface,
           borderRadius: BorderRadius.circular(13),
-          border: Border.all(color: selected ? placeInk : placeLine),
+          border: Border.all(color: selected ? _selectedFill : placeLine),
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: placeInk.withValues(alpha: 0.2),
+                    color: _selectedFill.withValues(alpha: 0.2),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -1801,7 +1873,7 @@ class _ProvinceTile extends StatelessWidget {
                 fontFamily: VibesFont.ui,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w800,
-                color: selected ? Colors.white : placeInk,
+                color: selected ? _onSelectedFill : placeInk,
               ),
             ),
           ],
@@ -1811,7 +1883,7 @@ class _ProvinceTile extends StatelessWidget {
   }
 }
 
-const Color _brassSoftColor = Color(0xFFE4C88A);
+Color get _brassSoftColor => themed(const Color(0xFFE4C88A), Brand.midnight);
 
 /// بطاقة سعة — رقم كبير + أيقونة.
 class _CapacityTile extends StatelessWidget {
@@ -1839,9 +1911,9 @@ class _CapacityTile extends StatelessWidget {
         width: 72,
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? placeInk : Colors.white,
+          color: selected ? _selectedFill : Vibes.surface,
           borderRadius: BorderRadius.circular(13),
-          border: Border.all(color: selected ? placeInk : placeLine),
+          border: Border.all(color: selected ? _selectedFill : placeLine),
         ),
         child: Column(
           children: [
@@ -1853,7 +1925,7 @@ class _CapacityTile extends StatelessWidget {
                 fontFamily: 'Montserrat',
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
-                color: selected ? Colors.white : placeInk,
+                color: selected ? _onSelectedFill : placeInk,
               ),
             ),
           ],
@@ -1874,13 +1946,15 @@ class _BudgetSlider extends StatelessWidget {
   static const double _step = 50000;
 
   String _label(num v) {
-    if (v <= 0) return 'بدون حد';
-    if (v >= _max) return 'أي سعر';
+    if (v <= 0) return 'بدون حد'.tr;
+    if (v >= _max) return 'أي سعر'.tr;
     if (v >= 1000000) {
       final m = v / 1000000;
-      return 'حتى ${m.toStringAsFixed(m == m.roundToDouble() ? 0 : 1)} مليون';
+      return 'حتى {n} مليون'.trArgs({
+        'n': m.toStringAsFixed(m == m.roundToDouble() ? 0 : 1),
+      });
     }
-    return 'حتى ${placeFullPrice(v)} د.ع';
+    return 'حتى {price} د.ع'.trArgs({'price': placeFullPrice(v)});
   }
 
   @override
@@ -1916,7 +1990,7 @@ class _BudgetSlider extends StatelessWidget {
             trackHeight: 5,
             activeTrackColor: placeBrass,
             inactiveTrackColor: placeLine,
-            thumbColor: Colors.white,
+            thumbColor: Vibes.surface,
             thumbShape: const _BrassThumbShape(),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
             showValueIndicator: ShowValueIndicator.never,
@@ -1935,7 +2009,7 @@ class _BudgetSlider extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              for (final mark in ['0', '500 ألف', '1 مليون', 'الكل'])
+              for (final mark in ['0', '500 ألف'.tr, '1 مليون'.tr, 'الكل'.tr])
                 Text(
                   mark,
                   style: TextStyle(
@@ -1983,7 +2057,7 @@ class _BrassThumbShape extends SliderComponentShape {
       Paint()..color = placeBrass.withValues(alpha: 0.18),
     );
     // قرص أبيض بحد نحاسي
-    canvas.drawCircle(center, 10, Paint()..color = Colors.white);
+    canvas.drawCircle(center, 10, Paint()..color = Vibes.surface);
     canvas.drawCircle(
       center,
       10,
@@ -2025,9 +2099,9 @@ class _SortTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         decoration: BoxDecoration(
-          color: selected ? placeInk : Colors.white,
+          color: selected ? _selectedFill : Vibes.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: selected ? placeInk : placeLine),
+          border: Border.all(color: selected ? _selectedFill : placeLine),
         ),
         child: Row(
           children: [
@@ -2036,7 +2110,7 @@ class _SortTile extends StatelessWidget {
               height: 34,
               decoration: BoxDecoration(
                 color: selected
-                    ? Colors.white.withValues(alpha: 0.12)
+                    ? _onSelectedFill.withValues(alpha: 0.12)
                     : placePaper,
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -2057,7 +2131,7 @@ class _SortTile extends StatelessWidget {
                       fontFamily: VibesFont.ui,
                       fontSize: 13.5,
                       fontWeight: FontWeight.w900,
-                      color: selected ? Colors.white : placeInk,
+                      color: selected ? _onSelectedFill : placeInk,
                     ),
                   ),
                   const SizedBox(height: 1),
@@ -2068,7 +2142,7 @@ class _SortTile extends StatelessWidget {
                       fontSize: 10.5,
                       fontWeight: FontWeight.w600,
                       color: selected
-                          ? Colors.white.withValues(alpha: 0.65)
+                          ? _onSelectedFill.withValues(alpha: 0.65)
                           : placeInk2,
                     ),
                   ),

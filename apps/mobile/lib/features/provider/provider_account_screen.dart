@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -29,7 +30,10 @@ class ProviderAccountScreen extends ConsumerWidget {
       body: OwnerPortalCanvas(
         child: Column(
           children: [
-            MaisonPageHeader(title: 'حساب المالك', onBack: () => context.pop()),
+            MaisonPageHeader(
+              title: 'حساب المالك'.tr,
+              onBack: () => context.pop(),
+            ),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
@@ -44,7 +48,7 @@ class ProviderAccountScreen extends ConsumerWidget {
                         child: Text(
                           (user?.name?.trim().isNotEmpty == true
                                   ? user!.name!.trim()[0]
-                                  : 'م')
+                                  : (I18n.isEn ? 'O' : 'م')) // i18n-ok
                               .toUpperCase(),
                           style: TextStyle(
                             fontFamily: VibesFont.ui,
@@ -62,7 +66,7 @@ class ProviderAccountScreen extends ConsumerWidget {
                             Text(
                               user?.name?.trim().isNotEmpty == true
                                   ? user!.name!
-                                  : 'مالك VIBES',
+                                  : 'مالك أجواء'.tr,
                               style: TextStyle(
                                 fontFamily: VibesFont.ui,
                                 fontSize: 18,
@@ -100,7 +104,10 @@ class ProviderAccountScreen extends ConsumerWidget {
                             children: [
                               Expanded(
                                 child: Text(
-                                  '${o.propertyCount} مكان مربوط · ${o.activeBookings} حجز نشط',
+                                  [
+                                    '{n} مكان مربوط'.trN(o.propertyCount),
+                                    '{n} حجز نشط'.trN(o.activeBookings),
+                                  ].join(' · '),
                                   style: TextStyle(
                                     fontFamily: VibesFont.ui,
                                     fontSize: 14,
@@ -109,10 +116,7 @@ class ProviderAccountScreen extends ConsumerWidget {
                                   ),
                                 ),
                               ),
-                              Icon(
-                                Icons.chevron_left_rounded,
-                                color: placeInk2,
-                              ),
+                              Icon(ownerForwardChevron, color: placeInk2),
                             ],
                           ),
                         ),
@@ -132,7 +136,7 @@ class ProviderAccountScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'ألوان التقويم',
+                          'ألوان التقويم'.tr,
                           style: TextStyle(
                             fontFamily: VibesFont.ui,
                             fontSize: 13,
@@ -144,7 +148,7 @@ class ProviderAccountScreen extends ConsumerWidget {
                         const OwnerCalendarLegend(),
                         const SizedBox(height: 6),
                         Text(
-                          'الشرائط أسفل اليوم تعرض الشفتات المحجوزة — صباح، مساء، أو يوم كامل.',
+                          'الشرائط أسفل اليوم تعرض الشفتات المحجوزة — صباح، مساء، أو يوم كامل.'.tr,
                           style: TextStyle(
                             fontFamily: VibesFont.ui,
                             fontSize: 11,
@@ -167,31 +171,31 @@ class ProviderAccountScreen extends ConsumerWidget {
                       children: [
                         OwnerMenuTile(
                           icon: Icons.explore_outlined,
-                          label: 'تصفّح التطبيق كضيف',
+                          label: 'تصفّح التطبيق كضيف'.tr,
                           onTap: () => switchToGuestExperience(context, ref),
                         ),
-                        const Divider(height: 1, color: ownerLine),
+                        Divider(height: 1, color: ownerLine),
                         OwnerMenuTile(
                           icon: Icons.forum_outlined,
-                          label: 'مراسلة الدعم',
+                          label: 'مراسلة الدعم'.tr,
                           onTap: () => openSupportChat(context, ref),
                         ),
-                        const Divider(height: 1, color: ownerLine),
+                        Divider(height: 1, color: ownerLine),
                         OwnerMenuTile(
                           icon: Icons.help_outline_rounded,
-                          label: 'مركز المساعدة',
+                          label: 'مركز المساعدة'.tr,
                           onTap: () => context.push('/support'),
                         ),
-                        const Divider(height: 1, color: ownerLine),
+                        Divider(height: 1, color: ownerLine),
                         OwnerMenuTile(
                           icon: Icons.privacy_tip_outlined,
-                          label: 'سياسة الخصوصية',
+                          label: 'سياسة الخصوصية'.tr,
                           onTap: () => openLegal('/privacy'),
                         ),
-                        const Divider(height: 1, color: ownerLine),
+                        Divider(height: 1, color: ownerLine),
                         OwnerMenuTile(
                           icon: Icons.description_outlined,
-                          label: 'شروط الاستخدام',
+                          label: 'شروط الاستخدام'.tr,
                           onTap: () => openLegal('/terms'),
                         ),
                       ],
@@ -202,14 +206,14 @@ class ProviderAccountScreen extends ConsumerWidget {
                     onPressed: () => providerLogout(context, ref),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: ownerNavy,
-                      side: const BorderSide(color: ownerLine),
+                      side: BorderSide(color: ownerLine),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     child: Text(
-                      'تسجيل الخروج',
+                      'تسجيل الخروج'.tr,
                       style: TextStyle(
                         fontFamily: VibesFont.ui,
                         fontWeight: FontWeight.w900,
@@ -219,17 +223,17 @@ class ProviderAccountScreen extends ConsumerWidget {
                   const SizedBox(height: 8),
                   TextButton.icon(
                     onPressed: () => confirmDeleteAccount(context, ref),
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.delete_forever_outlined,
                       size: 18,
-                      color: Color(0xFFC2402F),
+                      color: themed(const Color(0xFFC2402F), Vibes.danger),
                     ),
                     label: Text(
-                      'حذف الحساب',
+                      'حذف الحساب'.tr,
                       style: TextStyle(
                         fontFamily: VibesFont.ui,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFFC2402F),
+                        color: themed(const Color(0xFFC2402F), Vibes.danger),
                       ),
                     ),
                   ),

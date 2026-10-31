@@ -24,7 +24,7 @@ export class SmsService {
       const res = await fetch(webhook, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, code, message: `رمز VIBES: ${code}` }),
+        body: JSON.stringify({ phone, code, message: `رمز أجواء: ${code}` }),
       });
       if (!res.ok) {
         this.logger.error(`OTP webhook failed: ${res.status}`);

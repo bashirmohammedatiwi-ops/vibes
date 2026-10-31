@@ -5,7 +5,13 @@ import 'package:dio/dio.dart';
 import 'package:vibes/core/network/api_client.dart';
 import 'package:vibes/core/storage/token_storage.dart';
 
-class _NoopTokens extends TokenStorage {}
+class _NoopTokens extends TokenStorage {
+  @override
+  Future<String?> readAccess() async => null;
+
+  @override
+  Future<String?> readRefresh() async => null;
+}
 
 class _FakeAdapter implements HttpClientAdapter {
   _FakeAdapter({required this.handler});

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/device_id.dart';
 import '../../core/utils/error_guard.dart';
@@ -27,20 +28,20 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
 
   static const _faq = [
     (
-      'كيف أحجز مكاناً؟',
-      'اختر المكان ثم التاريخ والوقت المناسب واضغط تأكيد الحجز — سيتواصل معك المالك لتأكيد التفاصيل والدفع.',
+      'كيف أحجز مكاناً؟', // i18n-ok
+      'اختر المكان ثم التاريخ والوقت المناسب واضغط تأكيد الحجز — سيتواصل معك المالك لتأكيد التفاصيل والدفع.', // i18n-ok
     ),
     (
-      'ما طرق الدفع المتاحة؟',
-      'التحويل البنكي أو محافظ Zain Cash وQi Card — ارفع صورة الإيصال من صفحة الحجز بعد الدفع.',
+      'ما طرق الدفع المتاحة؟', // i18n-ok
+      'التحويل البنكي أو محافظ Zain Cash وQi Card — ارفع صورة الإيصال من صفحة الحجز بعد الدفع.', // i18n-ok
     ),
     (
-      'هل يمكنني إلغاء حجزي؟',
-      'قبل تأكيد المالك يمكنك الإلغاء مباشرة من صفحة الحجز. بعد التأكيد أرسل طلب إلغاء واسترداد من التفاصيل، وسيُحسب المبلغ وفق سياسة الإلغاء.',
+      'هل يمكنني إلغاء حجزي؟', // i18n-ok
+      'قبل تأكيد المالك يمكنك الإلغاء مباشرة من صفحة الحجز. بعد التأكيد أرسل طلب إلغاء واسترداد من التفاصيل، وسيُحسب المبلغ وفق سياسة الإلغاء.', // i18n-ok
     ),
     (
-      'أملك مزرعة أو قاعة، كيف أُديرها؟',
-      'راسل الدعم من التطبيق باسم المكان. بعد التأكد من الملكية يربط الفريق المكان بحسابك، وتظهر حجوزاته في بوابة أماكني.',
+      'أملك مزرعة أو قاعة، كيف أُديرها؟', // i18n-ok
+      'راسل الدعم من التطبيق باسم المكان. بعد التأكد من الملكية يربط الفريق المكان بحسابك، وتظهر حجوزاته في بوابة أماكني.', // i18n-ok
     ),
   ];
 
@@ -64,8 +65,8 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
     ).catchError((_) => false);
     if (!ok && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تعذّر فتح التطبيق — جرّب المحادثة داخل VIBES'),
+        SnackBar(
+          content: Text('تعذّر فتح التطبيق — جرّب المحادثة داخل أجواء'.tr),
         ),
       );
     }
@@ -92,8 +93,8 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
         child: Column(
           children: [
             MaisonPageHeader(
-              title: 'الدعم والمساعدة',
-              kicker: 'نحن معك',
+              title: 'الدعم والمساعدة'.tr,
+              kicker: 'نحن معك'.tr,
               onBack: () => context.pop(),
             ),
             Expanded(
@@ -101,26 +102,29 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                 children: [
-                  const SectionHeader('الأسئلة الشائعة'),
+                  SectionHeader('الأسئلة الشائعة'.tr),
                   ..._faq.asMap().entries.map(
                     (entry) => _FaqRow(
-                      question: entry.value.$1,
-                      answer: entry.value.$2,
+                      question: entry.value.$1.tr,
+                      answer: entry.value.$2.tr,
                     ),
                   ),
                   if (instructions.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    _FaqRow(question: 'كيف أدفع حجزي؟', answer: instructions),
+                    _FaqRow(
+                      question: 'كيف أدفع حجزي؟'.tr,
+                      answer: instructions,
+                    ),
                   ],
                   const SizedBox(height: 22),
-                  const SectionHeader('تواصل معنا'),
+                  SectionHeader('تواصل معنا'.tr),
                   VibesCard(
                     padding: EdgeInsets.zero,
                     child: Column(
                       children: [
                         _ContactRow(
                           icon: Icons.forum_outlined,
-                          label: 'محادثة داخل التطبيق',
+                          label: 'محادثة داخل التطبيق'.tr,
                           color: Vibes.coral,
                           onTap: _openChat,
                         ),
@@ -131,7 +135,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                           ),
                           _ContactRow(
                             icon: Icons.chat_bubble_outline_rounded,
-                            label: 'واتساب — الأسرع رداً',
+                            label: 'واتساب — الأسرع رداً'.tr,
                             color: Vibes.teal,
                             onTap: () => _launch('https://wa.me/$phone'),
                           ),
@@ -141,7 +145,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                           ),
                           _ContactRow(
                             icon: Icons.call_outlined,
-                            label: 'اتصال هاتفي',
+                            label: 'اتصال هاتفي'.tr,
                             color: Vibes.coral,
                             onTap: () => _launch('tel:+$phone'),
                           ),
@@ -155,8 +159,8 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                       onTap: () => setState(() => _diagnostics = !_diagnostics),
                       child: Text(
                         _diagnostics
-                            ? 'إخفاء التفاصيل التقنية'
-                            : 'تفاصيل تقنية',
+                            ? 'إخفاء التفاصيل التقنية'.tr
+                            : 'تفاصيل تقنية'.tr,
                         style: Theme.of(context).textTheme.labelMedium
                             ?.copyWith(
                               color: Vibes.inkTertiary,
@@ -177,7 +181,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                                 Expanded(
                                   child: Text(
                                     _deviceId.isEmpty
-                                        ? 'جاري التجهيز…'
+                                        ? 'جاري التجهيز…'.tr
                                         : _deviceId,
                                     style: Theme.of(context).textTheme.bodySmall
                                         ?.copyWith(
@@ -200,24 +204,24 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                                           ScaffoldMessenger.of(
                                             context,
                                           ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('تم النسخ'),
+                                            SnackBar(
+                                              content: Text('تم النسخ'.tr),
                                             ),
                                           );
                                         },
-                                  child: const Text('نسخ'),
+                                  child: Text('نسخ'.tr),
                                 ),
                               ],
                             ),
                             if (errors.isEmpty)
                               Text(
-                                'لا أخطاء مسجلة — التطبيق يعمل بسلام',
+                                'لا أخطاء مسجلة — التطبيق يعمل بسلام'.tr,
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(color: Vibes.success),
                               )
                             else ...[
                               Text(
-                                'آخر الأخطاء (لإرسالها للفريق):',
+                                'آخر الأخطاء (لإرسالها للفريق):'.tr,
                                 style: Theme.of(context).textTheme.labelSmall
                                     ?.copyWith(fontWeight: FontWeight.w700),
                               ),
@@ -339,7 +343,9 @@ class _ContactRow extends StatelessWidget {
               ),
             ),
             Icon(
-              Icons.chevron_left_rounded,
+              I18n.isEn
+                  ? Icons.chevron_right_rounded
+                  : Icons.chevron_left_rounded,
               size: 18,
               color: VibesTheme.textTertiaryOf(context),
             ),

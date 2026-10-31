@@ -2,7 +2,7 @@ import { BadRequestException, Body, Controller, Get, NotFoundException, Param, P
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiProperty, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
 import { BookingStatus, ShiftType, UserRole } from '@prisma/client';
-import { IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AuthUser, CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
@@ -48,6 +48,11 @@ class CreateBookingBody {
   @IsOptional()
   @IsString()
   couponCode?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  useLoyalty?: boolean;
 }
 
 class QuoteBookingBody {
@@ -72,6 +77,11 @@ class QuoteBookingBody {
   @IsOptional()
   @IsString()
   couponCode?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  useLoyalty?: boolean;
 
   // يرسله التطبيق مع كل تسعير — لا يغيّر السعر، لكن رفضه كان يُفشل التسعير كله
   @ApiPropertyOptional()

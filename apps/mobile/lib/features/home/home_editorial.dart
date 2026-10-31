@@ -1,4 +1,5 @@
 import 'dart:ui';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 
 import 'package:flutter/material.dart';
@@ -24,14 +25,16 @@ import '../../core/perf/perf.dart';
 /// وبطل وبطاقات مُصقولة بأدق التفاصيل. بلا فيديو نهائياً.
 /// ═══════════════════════════════════════════════════════════
 
-const Color _ink = Color(0xFF141C2B);
-const Color _ink2 = Color(0xFF5A6678);
-const Color _ink3 = Color(0xFFB4BDCC);
-const Color _brass = Color(0xFFA5813A);
+const Color _inkLight = Color(0xFF141C2B);
+Color get _ink => themed(_inkLight, Vibes.ink);
+Color get _ink2 => themed(const Color(0xFF5A6678), Vibes.inkSecondary);
+Color get _ink3 => themed(const Color(0xFFB4BDCC), Vibes.inkTertiary);
+Color get _brass => themed(const Color(0xFFA5813A), Brand.brassLight);
+// فوق الصور دائماً، فيبقى ثابتاً في المظهرين
 const Color _brassSoft = Color(0xFFF0DCB4);
-const Color _paper = Color(0xFFFFFFFF);
-const Color _paperMuted = Color(0xFFF6F7F9);
-const Color _line = Color(0xFFE4E9F0);
+Color get _paper => Vibes.surface;
+Color get _paperMuted => themed(const Color(0xFFF6F7F9), Vibes.surfaceMuted);
+Color get _line => themed(const Color(0xFFE4E9F0), Vibes.hairline);
 
 /// سعر كامل بفواصل الآلاف — للبطاقات، لا لاختصارات الخريطة.
 String _money(num v) {
@@ -47,12 +50,16 @@ String _money(num v) {
 
 List<BoxShadow> _shadow({double o = 1}) => Perf.shadows([
   BoxShadow(
-    color: Color.fromRGBO(20, 28, 43, 0.05 * o),
+    color: Appearance.isDark
+        ? Color.fromRGBO(0, 0, 0, 0.2 * o)
+        : Color.fromRGBO(20, 28, 43, 0.05 * o),
     blurRadius: 8,
     offset: const Offset(0, 2),
   ),
   BoxShadow(
-    color: Color.fromRGBO(20, 28, 43, 0.07 * o),
+    color: Appearance.isDark
+        ? Color.fromRGBO(0, 0, 0, 0.3 * o)
+        : Color.fromRGBO(20, 28, 43, 0.07 * o),
     blurRadius: 24,
     offset: const Offset(0, 10),
   ),
@@ -122,11 +129,7 @@ class SectionHead extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 2),
-                              Icon(
-                                Icons.arrow_back_rounded,
-                                size: 15,
-                                color: accent,
-                              ),
+                              Icon(forwardArrow, size: 15, color: accent),
                             ],
                           ),
                         ),
@@ -223,10 +226,10 @@ class EditorsPicks extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHead(
-          title: 'أماكن مختارة',
+          title: 'أماكن مختارة'.tr,
           subtitle: props.length == 1
-              ? 'المكان الذي اخترناه لك'
-              : 'اسحب البطاقة لتشوف المكان التالي',
+              ? 'المكان الذي اخترناه لك'.tr
+              : 'اسحب البطاقة لتشوف المكان التالي'.tr,
         ),
         const SizedBox(height: 16),
         _ChosenDeck(properties: props, accent: section.accent),
@@ -429,7 +432,10 @@ class _ChosenDeckState extends State<_ChosenDeck>
                     decoration: BoxDecoration(
                       color: i == _top
                           ? widget.accent
-                          : const Color(0xFFD5DCE6),
+                          : themed(
+                              const Color(0xFFD5DCE6),
+                              Vibes.hairlineStrong,
+                            ),
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),
@@ -474,14 +480,18 @@ class _DeckCard extends ConsumerWidget {
     final place = property.cityName ?? property.provinceName ?? '';
     final price = _fromPrice(property);
     final unit = switch (property.type) {
-      PropertyType.decoration => 'للخدمة',
-      _ when property.supportsShifts => 'للفترة',
-      _ => 'لليوم',
+      PropertyType.decoration => 'للخدمة'.tr,
+      _ when property.supportsShifts => 'للفترة'.tr,
+      _ => 'لليوم'.tr,
     };
+    final palette = WorldPalette.forType(property.type.name);
     return Semantics(
       button: true,
-      label:
-          '${property.name}، ${property.typeLabelAr}، يبدأ من ${_money(price)} دينار',
+      label: '{name}، {type}، يبدأ من {price} دينار'.trArgs({
+        'name': property.name,
+        'type': property.typeLabelAr.tr,
+        'price': _money(price),
+      }),
       child: PressScale(
         onTap: () => context.push('/property/${property.id}'),
         child: DecoratedBox(
@@ -556,14 +566,27 @@ class _DeckCard extends ConsumerWidget {
                       width: 38,
                       height: 38,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.95),
+                        color: themed(
+                          Colors.white.withValues(alpha: 0.95),
+                          Colors.black.withValues(alpha: 0.42),
+                        ),
                         shape: BoxShape.circle,
+                        border: Appearance.isDark
+                            ? Border.all(
+                                color: Colors.white.withValues(alpha: 0.22),
+                              )
+                            : null,
                       ),
                       child: Icon(
                         fav
                             ? Icons.favorite_rounded
                             : Icons.favorite_border_rounded,
-                        color: fav ? const Color(0xFFE11D48) : _ink,
+                        color: fav
+                            ? themed(
+                                const Color(0xFFE11D48),
+                                const Color(0xFFFF6B8A),
+                              )
+                            : themed(_inkLight, Colors.white),
                         size: 19,
                       ),
                     ),
@@ -590,7 +613,7 @@ class _DeckCard extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
-                              property.typeLabelAr,
+                              property.typeLabelAr.tr,
                               style: TextStyle(
                                 fontFamily: VibesFont.ui,
                                 fontSize: 10.5,
@@ -669,7 +692,7 @@ class _DeckCard extends ConsumerWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'يبدأ من',
+                                  'يبدأ من'.tr,
                                   style: TextStyle(
                                     fontFamily: VibesFont.ui,
                                     fontSize: 10.5,
@@ -694,7 +717,9 @@ class _DeckCard extends ConsumerWidget {
                                         ),
                                       ),
                                       TextSpan(
-                                        text: '  د.ع · $unit',
+                                        text: '  د.ع · {unit}'.trArgs({
+                                          'unit': unit,
+                                        }),
                                         style: TextStyle(
                                           fontFamily: VibesFont.ui,
                                           fontSize: 11,
@@ -719,16 +744,16 @@ class _DeckCard extends ConsumerWidget {
                               ),
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: themed(Colors.white, palette.accent),
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
-                                'احجز الآن',
+                                'احجز الآن'.tr,
                                 style: TextStyle(
                                   fontFamily: VibesFont.ui,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w900,
-                                  color: _ink,
+                                  color: themed(_inkLight, palette.onAccent),
                                 ),
                               ),
                             ),
@@ -738,6 +763,18 @@ class _DeckCard extends ConsumerWidget {
                     ],
                   ),
                 ),
+                // خيط ضوء على حافة البطاقة — ليلاً فقط
+                if (Appearance.isDark)
+                  IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.1),
+                        ),
+                      ),
+                    ),
+                  ),
                 // تعتيم البطاقات الخلفية (بدل الشفافية التي تُظهر الصور فوق بعض)
                 if (dim > 0)
                   IgnorePointer(
@@ -764,13 +801,16 @@ class HomePlaceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final meta = [
       property.cityName ?? property.provinceName ?? '',
-      if (property.capacity > 0) '${property.capacity} ضيف',
+      if (property.capacity > 0) '{n} ضيف'.trN(property.capacity),
     ].where((s) => s.isNotEmpty).join(' · ');
 
     return Semantics(
       button: true,
-      label:
-          '${property.name}، ${property.typeLabelAr}، ${_money(property.pricePerDay)} دينار لليوم',
+      label: '{name}، {type}، {price} دينار لليوم'.trArgs({
+        'name': property.name,
+        'type': property.typeLabelAr.tr,
+        'price': _money(property.pricePerDay),
+      }),
       child: PressScale(
         onTap: () => context.push('/property/${property.id}'),
         child: Container(
@@ -805,12 +845,12 @@ class HomePlaceCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            'مميّز',
+                            'مميّز'.tr,
                             style: TextStyle(
                               fontFamily: VibesFont.ui,
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
-                              color: Colors.white,
+                              color: themed(Colors.white, Brand.midnight),
                               height: 1,
                             ),
                           ),
@@ -843,7 +883,7 @@ class HomePlaceCard extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             [
-                              property.typeLabelAr,
+                              property.typeLabelAr.tr,
                               if (meta.isNotEmpty) meta,
                               if (property.ratingCount > 0)
                                 '★ ${property.ratingAvg.toStringAsFixed(1)}',
@@ -878,7 +918,7 @@ class HomePlaceCard extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'د.ع / يوم',
+                          'د.ع / يوم'.tr,
                           style: TextStyle(
                             fontFamily: VibesFont.ui,
                             fontSize: 10,
@@ -921,8 +961,8 @@ class TopRatedEditorial extends ConsumerWidget {
     return Column(
       children: [
         SectionHead(
-          title: 'الأعلى تقييماً',
-          subtitle: 'الأماكن التي نالت أعلى رضا ضيوفنا',
+          title: 'الأعلى تقييماً'.tr,
+          subtitle: 'الأماكن التي نالت أعلى رضا ضيوفنا'.tr,
         ),
         const SizedBox(height: 14),
         Container(
@@ -942,8 +982,8 @@ class TopRatedEditorial extends ConsumerWidget {
                   rank: i + 1,
                 ).animate().fadeIn(delay: (80 * i).ms, duration: 340.ms),
                 if (i < props.length - 1)
-                  const Padding(
-                    padding: EdgeInsetsDirectional.only(start: 136),
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(start: 136),
                     child: Divider(height: 1, color: _line),
                   ),
               ],
@@ -1025,20 +1065,20 @@ class _RankedRow extends StatelessWidget {
                       const SizedBox(width: 3),
                       Text(
                         property.ratingAvg.toStringAsFixed(1),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w900,
                           color: _ink,
-                          fontFeatures: [FontFeature.tabularFigures()],
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
-                          '${property.ratingCount} تقييم',
+                          '{n} تقييم'.trN(property.ratingCount),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w600,
                             color: _ink2,
@@ -1051,31 +1091,58 @@ class _RankedRow extends StatelessWidget {
               ),
             ),
             // السعر — رقم كبير بحبر قوي ووحدة نحيفة
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  _money(property.pricePerDay),
-                  style: TextStyle(
-                    fontFamily: VibesFont.ui,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    color: _ink,
-                    fontFeatures: [FontFeature.tabularFigures()],
+            // Montserrat أعرض من Cairo: بالإنجليزية تنزل الوحدة تحت الرقم
+            if (I18n.isEn) ...[
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    _money(property.pricePerDay),
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: _ink,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 3),
-                const Text(
-                  'د.ع',
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
-                    color: _ink2,
+                  Text(
+                    'د.ع'.tr,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: _ink2,
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ] else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    _money(property.pricePerDay),
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      color: _ink,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    'د.ع'.tr,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: _ink2,
+                    ),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
@@ -1120,7 +1187,9 @@ class MapPreviewCard extends ConsumerWidget {
           fit: StackFit.expand,
           children: [
             VibesMapView(
-              styleUri: MapConstants.styleUri,
+              styleUri: Appearance.isDark
+                  ? 'mapbox://styles/mapbox/dark-v11'
+                  : MapConstants.styleUri,
               markers: [
                 for (final p in props)
                   VibesMapMarker(
@@ -1147,10 +1216,10 @@ class MapPreviewCard extends ConsumerWidget {
                   end: Alignment.bottomCenter,
                   stops: const [0, 0.35, 0.72, 1],
                   colors: [
-                    Colors.white.withValues(alpha: 0.92),
-                    Colors.white.withValues(alpha: 0.08),
+                    themed(Colors.white, Vibes.surface).withValues(alpha: 0.92),
+                    themed(Colors.white, Vibes.surface).withValues(alpha: 0.08),
                     Colors.transparent,
-                    _ink.withValues(alpha: 0.55),
+                    themed(_inkLight, Colors.black).withValues(alpha: 0.55),
                   ],
                 ),
               ),
@@ -1163,7 +1232,10 @@ class MapPreviewCard extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsetsDirectional.fromSTEB(10, 10, 12, 10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.96),
+                  color: themed(
+                    Colors.white,
+                    Vibes.surface,
+                  ).withValues(alpha: 0.96),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: _line),
                   boxShadow: _shadow(o: 0.65),
@@ -1195,7 +1267,7 @@ class MapPreviewCard extends ConsumerWidget {
                             ),
                           ),
                           Text(
-                            'استكشف الأماكن على الخريطة',
+                            'استكشف الأماكن على الخريطة'.tr,
                             style: TextStyle(
                               fontFamily: VibesFont.ui,
                               fontSize: 10.5,
@@ -1221,9 +1293,9 @@ class MapPreviewCard extends ConsumerWidget {
               left: 14,
               bottom: 12,
               child: Container(
-                padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+                padding: const EdgeInsetsDirectional.fromSTEB(10, 12, 14, 12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Vibes.surface,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: _line),
                   boxShadow: _shadow(o: 0.85),
@@ -1250,7 +1322,7 @@ class MapPreviewCard extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'استكشف على الخريطة',
+                            'استكشف على الخريطة'.tr,
                             style: TextStyle(
                               fontFamily: VibesFont.ui,
                               fontSize: 13.5,
@@ -1277,16 +1349,16 @@ class MapPreviewCard extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: _ink,
+                        color: themed(_inkLight, section.palette.accent),
                         borderRadius: BorderRadius.circular(11),
                       ),
                       child: Text(
-                        'افتح',
+                        'افتح'.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 12,
                           fontWeight: FontWeight.w900,
-                          color: Colors.white,
+                          color: themed(Colors.white, section.palette.onAccent),
                         ),
                       ),
                     ),
@@ -1316,39 +1388,39 @@ class EditorialFooter extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 64),
           child: Row(
             children: [
-              const Expanded(child: Divider(color: Color(0xFFE4E9F0))),
+              Expanded(child: Divider(color: _line)),
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 10),
                 width: 5,
                 height: 5,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFA5813A),
+                decoration: BoxDecoration(
+                  color: _brass,
                   shape: BoxShape.circle,
                 ),
               ),
-              const Expanded(child: Divider(color: Color(0xFFE4E9F0))),
+              Expanded(child: Divider(color: _line)),
             ],
           ),
         ),
         const SizedBox(height: 18),
-        const Text(
-          'VIBES',
+        Text(
+          I18n.appName,
           style: TextStyle(
-            fontFamily: 'Montserrat',
+            fontFamily: VibesFont.ui,
             fontSize: 15,
             fontWeight: FontWeight.w900,
-            letterSpacing: 6,
-            color: Color(0xFFB4BDCC),
+            letterSpacing: I18n.isEn ? 6 : 0,
+            color: _ink3,
           ),
         ),
         const SizedBox(height: 6),
         Text(
-          'أرقى المزارع والقاعات وخدمات التزيين في العراق',
+          'أرقى المزارع والقاعات وخدمات التزيين في العراق'.tr,
           style: TextStyle(
             fontFamily: VibesFont.ui,
             fontSize: 11.5,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF9AA6B8),
+            color: themed(const Color(0xFF9AA6B8), Vibes.inkTertiary),
           ),
         ),
         const SizedBox(height: 8),

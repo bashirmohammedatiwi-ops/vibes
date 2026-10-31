@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/i18n/i18n.dart';
 import 'vibes_graphics.dart';
 
 /// ═══════════════════════════════════════════════════════════
@@ -286,10 +287,13 @@ class DiamondPin extends StatelessWidget {
                     end: Alignment.bottomRight,
                     colors: [Color(0xFFE8C273), Vibes.teal],
                   )
-                : const LinearGradient(
+                : LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Colors.white, Color(0xFFF3EDDF)],
+                    colors: [
+                      themed(Colors.white, VibesDark.surfaceMuted),
+                      themed(const Color(0xFFF3EDDF), VibesDark.surface),
+                    ],
                   ),
             shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.only(
@@ -347,7 +351,7 @@ class DiamondPin extends StatelessWidget {
             height: 7,
             decoration: BoxDecoration(
               gradient: selected ? Vibes.tealFill : null,
-              color: selected ? null : Colors.white,
+              color: selected ? null : themed(Colors.white, VibesDark.surface),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Vibes.teal.withValues(alpha: .5)),
             ),
@@ -432,15 +436,18 @@ class _OctagonButtonState extends State<OctagonButton> {
                             ),
                           ),
                         )
-                      : Text(
-                          widget.label,
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: widget.ghost
-                                    ? Vibes.honeyDeep
-                                    : Vibes.onTeal,
-                              ),
+                      : FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            widget.label,
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: widget.ghost
+                                      ? Vibes.honeyDeep
+                                      : Vibes.onTeal,
+                                ),
+                          ),
                         ),
                 ),
               ),
@@ -466,11 +473,11 @@ class NumberedDiamond extends StatelessWidget {
       alignment: Alignment.center,
       decoration: const BoxDecoration(
         gradient: Vibes.tealFill,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(6),
-          topRight: Radius.circular(2),
-          bottomRight: Radius.circular(6),
-          bottomLeft: Radius.circular(6),
+        borderRadius: BorderRadiusDirectional.only(
+          topStart: Radius.circular(2),
+          topEnd: Radius.circular(6),
+          bottomStart: Radius.circular(6),
+          bottomEnd: Radius.circular(6),
         ),
       ),
       child: Text(
@@ -516,7 +523,10 @@ class _DrawnCheckmarkState extends State<DrawnCheckmark>
       builder: (context, _) {
         return CustomPaint(
           size: Size.square(widget.size),
-          painter: _DrawnCheckPainter(progress: _controller.value),
+          painter: _DrawnCheckPainter(
+            progress: _controller.value,
+            color: Vibes.teal,
+          ),
         );
       },
     );
@@ -524,18 +534,19 @@ class _DrawnCheckmarkState extends State<DrawnCheckmark>
 }
 
 class _DrawnCheckPainter extends CustomPainter {
-  const _DrawnCheckPainter({required this.progress});
+  const _DrawnCheckPainter({required this.progress, required this.color});
 
   final double progress;
+  final Color color;
 
   @override
   bool shouldRepaint(covariant _DrawnCheckPainter old) =>
-      old.progress != progress;
+      old.progress != progress || old.color != color;
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Vibes.teal
+      ..color = color
       ..style = ui.PaintingStyle.stroke
       ..strokeWidth = 1.8
       ..strokeCap = ui.StrokeCap.round;
@@ -712,11 +723,11 @@ class PetalMark extends StatelessWidget {
       decoration: BoxDecoration(
         color: filled ? color : Colors.transparent,
         border: filled ? null : Border.all(color: color, width: 1.2),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(size * 0.18),
-          topRight: Radius.circular(1),
-          bottomRight: Radius.circular(size * 0.18),
-          bottomLeft: Radius.circular(size * 0.18),
+        borderRadius: BorderRadiusDirectional.only(
+          topStart: const Radius.circular(1),
+          topEnd: Radius.circular(size * 0.18),
+          bottomStart: Radius.circular(size * 0.18),
+          bottomEnd: Radius.circular(size * 0.18),
         ),
       ),
     );
@@ -943,7 +954,8 @@ class VibesLogo extends StatelessWidget {
 
   String get _asset {
     if (lockup) return color == null ? lockupAsset : markAsset;
-    if (_brand) return brandMarkAsset;
+    // العلامة الكحلية تختفي على الليل — النسخة النحاسية بدلها.
+    if (_brand) return Appearance.isDark ? goldMarkAsset : brandMarkAsset;
     return color == null ? goldMarkAsset : markAsset;
   }
 
@@ -994,6 +1006,16 @@ class WaveClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     const cut = 18.0;
+    // الشطف عند نهاية السطر — يُعكس في الإنجليزية.
+    if (I18n.isEn) {
+      return Path()
+        ..moveTo(0, 0)
+        ..lineTo(size.width, 0)
+        ..lineTo(size.width, size.height - cut)
+        ..lineTo(size.width - cut, size.height)
+        ..lineTo(0, size.height)
+        ..close();
+    }
     return Path()
       ..moveTo(0, 0)
       ..lineTo(size.width, 0)
@@ -1029,11 +1051,11 @@ class RibbonChip extends StatelessWidget {
       decoration: ShapeDecoration(
         color: color.withValues(alpha: .96),
         shape: RoundedRectangleBorder(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(8),
-            topRight: Radius.circular(2),
-            bottomRight: Radius.circular(8),
-            bottomLeft: Radius.circular(8),
+          borderRadius: const BorderRadiusDirectional.only(
+            topStart: Radius.circular(2),
+            topEnd: Radius.circular(8),
+            bottomStart: Radius.circular(8),
+            bottomEnd: Radius.circular(8),
           ),
           side: BorderSide(color: Colors.white.withValues(alpha: .22)),
         ),

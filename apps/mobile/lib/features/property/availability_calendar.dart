@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/models.dart';
 import 'place_experience_ui.dart';
@@ -25,14 +26,14 @@ class AvailabilityCalendar extends StatelessWidget {
   final ValueChanged<DayPricing>? onDayTap;
   final bool hybridMarkers;
 
-  static const _weekdayLabels = [
-    'أحد',
-    'إثن',
-    'ثلا',
-    'أرب',
-    'خمي',
-    'جمع',
-    'سبت',
+  static List<String> get _weekdayLabels => [
+    'أحد'.tr,
+    'إثن'.tr,
+    'ثلا'.tr,
+    'أرب'.tr,
+    'خمي'.tr,
+    'جمع'.tr,
+    'سبت'.tr,
   ];
 
   @override
@@ -125,19 +126,19 @@ class AvailabilityCalendar extends StatelessWidget {
   }
 
   String _monthTitle(DateTime d) {
-    const months = [
-      'كانون الثاني',
-      'شباط',
-      'آذار',
-      'نيسان',
-      'أيار',
-      'حزيران',
-      'تموز',
-      'آب',
-      'أيلول',
-      'تشرين الأول',
-      'تشرين الثاني',
-      'كانون الأول',
+    final months = [
+      'كانون الثاني'.tr,
+      'شباط'.tr,
+      'آذار'.tr,
+      'نيسان'.tr,
+      'أيار'.tr,
+      'حزيران'.tr,
+      'تموز'.tr,
+      'آب'.tr,
+      'أيلول'.tr,
+      'تشرين الأول'.tr,
+      'تشرين الثاني'.tr,
+      'كانون الأول'.tr,
     ];
     return months[d.month - 1];
   }

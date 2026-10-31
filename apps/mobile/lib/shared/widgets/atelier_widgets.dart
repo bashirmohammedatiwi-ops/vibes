@@ -161,10 +161,12 @@ class AtelierSection extends StatelessWidget {
                   children: [
                     Container(width: 3, height: 18, color: Vibes.teal),
                     const SizedBox(width: 10),
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
+                    Flexible(
+                      child: Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ],

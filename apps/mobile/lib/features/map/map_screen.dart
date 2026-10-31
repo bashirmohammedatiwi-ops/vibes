@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/map_constants.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/world_theme.dart';
 import '../../core/utils/vibes_net_image.dart';
@@ -71,9 +72,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     super.dispose();
   }
 
+  /// لا نسخة ليلية من outdoors؛ طبقة الاستكشاف ليلاً خريطة طرق داكنة.
+  static const _exploreNightStyleUri =
+      'mapbox://styles/mapbox/navigation-night-v1';
+
+  /// تتبع المظهر: VibesMapView يعيد تحميل الستايل حين تتغيّر القيمة.
   String get _styleUri => switch (_layer) {
-    MapLayer.standard => MapConstants.styleUri,
-    MapLayer.explore => MapConstants.exploreStyleUri,
+    MapLayer.standard =>
+      Appearance.isDark ? MapConstants.darkStyleUri : MapConstants.styleUri,
+    MapLayer.explore =>
+      Appearance.isDark ? _exploreNightStyleUri : MapConstants.exploreStyleUri,
     MapLayer.satellite => MapConstants.satelliteStyleUri,
   };
 
@@ -112,7 +120,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             (p) =>
                 p.name.toLowerCase().contains(q) ||
                 (p.cityName ?? '').toLowerCase().contains(q) ||
-                (p.provinceName ?? '').toLowerCase().contains(q),
+                (p.provinceName ?? '').toLowerCase().contains(q) ||
+                (p.cityName ?? '').tr.toLowerCase().contains(q) ||
+                (p.provinceName ?? '').tr.toLowerCase().contains(q),
           )
           .toList();
     }
@@ -233,7 +243,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     // ── وضع القائمة ──
     if (!_showMap) {
       return AnnotatedRegion<SystemUiOverlayStyle>(
-        value: overlayFor(darkBackground: false),
+        value: overlayFor(darkBackground: Appearance.isDark),
         child: ColoredBox(
           color: palette.canvas,
           child: Column(
@@ -274,14 +284,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final headerHeight = provinces.isEmpty ? 116.0 : 160.0;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: overlayFor(darkBackground: _layer == MapLayer.satellite),
+      value: overlayFor(
+        darkBackground: Appearance.isDark || _layer == MapLayer.satellite,
+      ),
       child: Stack(
         fit: StackFit.expand,
         children: [
           VibesMapView(
             controller: _mapCtrl,
             styleUri: _styleUri,
-            tint: _tintFor(palette),
+            tint: Appearance.isDark ? null : _tintFor(palette),
             pitch: _layer == MapLayer.satellite ? 42 : 0,
             fitBounds: mappable.isNotEmpty,
             focusCluster: mappable.isNotEmpty && _query.isEmpty,
@@ -427,8 +439,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         perm == LocationPermission.deniedForever) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('فعّل صلاحية الموقع من إعدادات الجهاز'),
+          SnackBar(
+            content: Text('فعّل صلاحية الموقع من إعدادات الجهاز'.tr),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -441,8 +453,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تعذّر تحديد موقعك حالياً'),
+          SnackBar(
+            content: Text('تعذّر تحديد موقعك حالياً'.tr),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -490,9 +502,11 @@ String _shortPrice(num v) {
   if (v <= 0) return '';
   if (v >= 1000000) {
     final m = v / 1000000;
-    return '${m == m.roundToDouble() ? m.toInt() : m.toStringAsFixed(1)} مليون';
+    return '{n} مليون'.trArgs({
+      'n': m == m.roundToDouble() ? m.toInt() : m.toStringAsFixed(1),
+    });
   }
-  if (v >= 1000) return '${(v / 1000).round()} ألف';
+  if (v >= 1000) return '{n} ألف'.trArgs({'n': (v / 1000).round()});
   return '${v.round()}';
 }
 
@@ -556,7 +570,7 @@ class _MapHeader extends StatelessWidget {
                   height: 50,
                   padding: const EdgeInsetsDirectional.only(start: 14, end: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Vibes.surface,
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
                       color: palette.accent.withValues(alpha: .16),
@@ -595,7 +609,7 @@ class _MapHeader extends StatelessWidget {
                             enabledBorder: InputBorder.none,
                             focusedBorder: InputBorder.none,
                             filled: false,
-                            hintText: 'ابحث عن مكان أو مدينة',
+                            hintText: 'ابحث عن مكان أو مدينة'.tr,
                             hintStyle: TextStyle(
                               fontFamily: VibesFont.ui,
                               fontSize: 13.5,
@@ -622,7 +636,7 @@ class _MapHeader extends StatelessWidget {
               const SizedBox(width: 8),
               _Round(
                 icon: showMap ? Icons.view_agenda_outlined : Icons.map_outlined,
-                tooltip: showMap ? 'عرض كقائمة' : 'عرض على الخريطة',
+                tooltip: showMap ? 'عرض كقائمة'.tr : 'عرض على الخريطة'.tr,
                 onTap: onToggleView,
                 filled: true,
                 palette: palette,
@@ -639,7 +653,7 @@ class _MapHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14),
             children: [
               _WorldFilter(
-                label: 'الكل',
+                label: 'الكل'.tr,
                 count: counts[null] ?? 0,
                 selected: type == null,
                 palette: palette,
@@ -670,7 +684,7 @@ class _MapHeader extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14),
               children: [
                 _ProvinceChip(
-                  label: 'كل المحافظات',
+                  label: 'كل المحافظات'.tr,
                   selected: province == null,
                   palette: palette,
                   onTap: () => onProvince(null),
@@ -678,7 +692,7 @@ class _MapHeader extends StatelessWidget {
                 for (final p in provinces) ...[
                   const SizedBox(width: 6),
                   _ProvinceChip(
-                    label: p,
+                    label: p.tr,
                     selected: province == p,
                     palette: palette,
                     onTap: () => onProvince(province == p ? null : p),
@@ -719,7 +733,7 @@ class _Round extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: filled ? p.fill : null,
-          color: filled ? null : Colors.white,
+          color: filled ? null : Vibes.surface,
           border: filled
               ? null
               : Border.all(color: p.accent.withValues(alpha: .16)),
@@ -768,7 +782,7 @@ class _WorldFilter extends StatelessWidget {
         padding: const EdgeInsetsDirectional.fromSTEB(14, 0, 8, 0),
         decoration: BoxDecoration(
           gradient: selected ? palette.fill : null,
-          color: selected ? null : Colors.white,
+          color: selected ? null : Vibes.surface,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
             color: selected
@@ -812,7 +826,10 @@ class _WorldFilter extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
                 color: selected
-                    ? Colors.white.withValues(alpha: .25)
+                    ? themed(
+                        Colors.white.withValues(alpha: .25),
+                        palette.onAccent.withValues(alpha: .14),
+                      )
                     : palette.accentFaint,
                 borderRadius: BorderRadius.circular(999),
               ),
@@ -862,7 +879,7 @@ class _ProvinceChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected
               ? palette.accentDeep
-              : Colors.white.withValues(alpha: .92),
+              : Vibes.surface.withValues(alpha: .92),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
             color: selected
@@ -876,7 +893,9 @@ class _ProvinceChip extends StatelessWidget {
             Icon(
               Icons.place_outlined,
               size: 13,
-              color: selected ? Colors.white : palette.accentDeep,
+              color: selected
+                  ? themed(Colors.white, palette.onAccent)
+                  : palette.accentDeep,
             ),
             const SizedBox(width: 3),
             Text(
@@ -885,7 +904,9 @@ class _ProvinceChip extends StatelessWidget {
                 fontFamily: VibesFont.ui,
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
-                color: selected ? Colors.white : Vibes.ink,
+                color: selected
+                    ? themed(Colors.white, palette.onAccent)
+                    : Vibes.ink,
                 height: 1.2,
               ),
             ),
@@ -918,13 +939,15 @@ class _ControlDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final layerLabel = switch (layer) {
-      MapLayer.standard => 'عادية',
-      MapLayer.explore => 'تضاريس',
-      MapLayer.satellite => 'قمر صناعي',
+      MapLayer.standard => 'عادية'.tr,
+      // ليلاً تكون طبقة الاستكشاف خريطة طرق داكنة لا تضاريس.
+      MapLayer.explore => Appearance.isDark ? 'طرق'.tr : 'تضاريس'.tr,
+      MapLayer.satellite => 'قمر صناعي'.tr,
     };
     final layerIcon = switch (layer) {
       MapLayer.standard => Icons.layers_outlined,
-      MapLayer.explore => Icons.terrain_rounded,
+      MapLayer.explore =>
+        Appearance.isDark ? Icons.alt_route_rounded : Icons.terrain_rounded,
       MapLayer.satellite => Icons.satellite_alt_rounded,
     };
     Widget btn(IconData icon, VoidCallback onTap, {String? label}) =>
@@ -939,15 +962,19 @@ class _ControlDock extends StatelessWidget {
                 Icon(icon, size: 21, color: palette.accentDeep),
                 if (label != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontFamily: VibesFont.ui,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                        color: Vibes.inkSecondary,
-                        height: 1.1,
+                    padding: const EdgeInsets.only(top: 2, left: 3, right: 3),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: Vibes.inkSecondary,
+                          height: 1.1,
+                        ),
                       ),
                     ),
                   ),
@@ -963,7 +990,7 @@ class _ControlDock extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: palette.accent.withValues(alpha: .14)),
         boxShadow: [
@@ -1003,14 +1030,30 @@ class _PlaceCard extends StatelessWidget {
     final p = WorldPalette.forType(property.type.name);
     final cover = property.coverUrl;
     final where = [
-      property.cityName ?? property.provinceName ?? '',
-      if (property.capacity > 0) 'حتى ${property.capacity} ضيف',
+      (property.cityName ?? property.provinceName ?? '').tr,
+      if (property.capacity > 0) 'حتى {n} ضيف'.trN(property.capacity),
     ].where((s) => s.isNotEmpty).join(' · ');
     final unit = property.type == PropertyType.decoration
-        ? 'للخدمة'
+        ? 'د.ع للخدمة'.tr
         : property.supportsShifts
-        ? 'للفترة'
-        : 'لليوم';
+        ? 'د.ع للفترة'.tr
+        : 'د.ع لليوم'.tr;
+    // الإنجليزية أعرض: السعر فوق الوحدة، وزر الاتجاهات أيقونة فقط.
+    final priceText = Text(
+      formatIqdShort(_fromPrice(property)),
+      style: TextStyle(
+        fontFamily: 'Montserrat',
+        fontSize: 15,
+        fontWeight: FontWeight.w800,
+        color: Vibes.ink,
+      ),
+    );
+    final unitStyle = TextStyle(
+      fontFamily: VibesFont.ui,
+      fontSize: 10.5,
+      fontWeight: FontWeight.w800,
+      color: p.accentDeep,
+    );
 
     return PressScale(
       onTap: () => context.push('/property/${property.id}'),
@@ -1018,10 +1061,12 @@ class _PlaceCard extends StatelessWidget {
         duration: const Duration(milliseconds: 260),
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Vibes.surface,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: selected ? p.accent : p.accent.withValues(alpha: .10),
+            color: selected
+                ? p.accent
+                : themed(p.accent.withValues(alpha: .10), Vibes.hairline),
             width: selected ? 1.6 : 1,
           ),
           boxShadow: [
@@ -1137,34 +1182,40 @@ class _PlaceCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            Text(
-                              formatIqdShort(_fromPrice(property)),
-                              style: TextStyle(
-                                fontFamily: 'Montserrat',
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: Vibes.ink,
+                        child: I18n.isEn
+                            ? Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment:
+                                        AlignmentDirectional.centerStart,
+                                    child: priceText,
+                                  ),
+                                  Text(
+                                    unit,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: unitStyle,
+                                  ),
+                                ],
+                              )
+                            : Row(
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  priceText,
+                                  const SizedBox(width: 3),
+                                  Flexible(
+                                    child: Text(
+                                      unit,
+                                      maxLines: 1,
+                                      style: unitStyle,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            const SizedBox(width: 3),
-                            Flexible(
-                              child: Text(
-                                'د.ع $unit',
-                                maxLines: 1,
-                                style: TextStyle(
-                                  fontFamily: VibesFont.ui,
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: p.accentDeep,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
                       if (property.latitude != null &&
                           property.longitude != null)
@@ -1177,7 +1228,9 @@ class _PlaceCard extends StatelessWidget {
                           ),
                           child: Container(
                             height: 32,
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: I18n.isEn ? 8 : 10,
+                            ),
                             decoration: BoxDecoration(
                               gradient: p.fill,
                               borderRadius: BorderRadius.circular(999),
@@ -1189,18 +1242,21 @@ class _PlaceCard extends StatelessWidget {
                                   Icons.directions_rounded,
                                   size: 16,
                                   color: p.onAccent,
+                                  semanticLabel: 'اتجاهات'.tr,
                                 ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'اتجاهات',
-                                  style: TextStyle(
-                                    fontFamily: VibesFont.ui,
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w900,
-                                    color: p.onAccent,
-                                    height: 1.2,
+                                if (!I18n.isEn) ...[
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'اتجاهات'.tr,
+                                    style: TextStyle(
+                                      fontFamily: VibesFont.ui,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: p.onAccent,
+                                      height: 1.2,
+                                    ),
                                   ),
-                                ),
+                                ],
                               ],
                             ),
                           ),

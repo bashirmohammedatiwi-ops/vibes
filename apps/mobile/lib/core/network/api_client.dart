@@ -117,8 +117,8 @@ class ApiClient {
               error.type == DioExceptionType.connectionError) {
             handler.next(
               error.copyWith(
-                error: const ApiException(
-                  'تعذّر الاتصال بالخادم — تحقق من الشبكة وحاول مجدداً',
+                error: ApiException(
+                  'تعذّر الاتصال بالخادم — تحقق من الشبكة وحاول مجدداً'.tr,
                 ),
               ),
             );
@@ -225,7 +225,7 @@ class ApiClient {
     final data = response.data;
     // 401 لا يُعرض بنص الخادم («Unauthorized») — رسالة عربية واضحة
     if (response.statusCode == 401) {
-      return 'انتهت الجلسة — سجّل الدخول من جديد';
+      return 'انتهت الجلسة — سجّل الدخول من جديد'.tr;
     }
     if (data is Map<String, dynamic>) {
       final message = data['message'];
@@ -235,12 +235,14 @@ class ApiClient {
       if (message is String && message.isNotEmpty) return message;
     }
     return switch (response.statusCode) {
-      400 => 'طلب غير صالح',
-      401 => 'انتهت الجلسة — سجّل الدخول من جديد',
-      403 => 'لا تملك صلاحية لهذا الإجراء',
-      404 => 'العنصر غير موجود',
-      429 => 'طلبات كثيرة — انتظر قليلاً',
-      _ => 'حدث خطأ غير متوقع (${response.statusCode})',
+      400 => 'طلب غير صالح'.tr,
+      401 => 'انتهت الجلسة — سجّل الدخول من جديد'.tr,
+      403 => 'لا تملك صلاحية لهذا الإجراء'.tr,
+      404 => 'العنصر غير موجود'.tr,
+      429 => 'طلبات كثيرة — انتظر قليلاً'.tr,
+      _ => 'حدث خطأ غير متوقع ({code})'.trArgs({
+        'code': response.statusCode,
+      }),
     };
   }
 
@@ -334,11 +336,11 @@ class ApiClient {
         e.type == DioExceptionType.receiveTimeout ||
         e.type == DioExceptionType.sendTimeout ||
         e.type == DioExceptionType.connectionError) {
-      return const ApiException(
-        'تعذّر الاتصال بالخادم — تحقق من الشبكة وحاول مجدداً',
+      return ApiException(
+        'تعذّر الاتصال بالخادم — تحقق من الشبكة وحاول مجدداً'.tr,
       );
     }
-    return ApiException(e.message ?? 'حدث خطأ غير متوقع');
+    return ApiException(e.message ?? 'حدث خطأ غير متوقع'.tr);
   }
 
   /// رفع ملف متعدد الأجزاء (صور/فيديو/إثباتات)

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -60,7 +61,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       if (!mounted) return;
       ref.invalidate(bookingDetailProvider(widget.id));
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم رفع إثبات الدفع — بانتظار المراجعة')),
+        SnackBar(content: Text('تم رفع إثبات الدفع — بانتظار المراجعة'.tr)),
       );
     } catch (e) {
       if (!mounted) return;
@@ -102,13 +103,15 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
     if (!mounted) return;
     final caption = await showMaisonPrompt(
       context: context,
-      title: 'انشر تجربتك',
+      title: 'انشر تجربتك'.tr,
       message: photos.isEmpty
-          ? 'أضف وصفاً، ويمكن استخدام صورة المكان إن وُجدت.'
-          : 'سيتم إرفاق ${photos.length > 6 ? 6 : photos.length} صور مع تجربتك.',
-      hint: 'كيف كانت إقامتك؟',
-      confirmLabel: 'نشر',
-      cancelLabel: 'لاحقاً',
+          ? 'أضف وصفاً، ويمكن استخدام صورة المكان إن وُجدت.'.tr
+          : 'سيتم إرفاق {n} صور مع تجربتك.'.trN(
+              photos.length > 6 ? 6 : photos.length,
+            ),
+      hint: 'كيف كانت إقامتك؟'.tr,
+      confirmLabel: 'نشر'.tr,
+      cancelLabel: 'لاحقاً'.tr,
     );
     if (caption == null) return;
     try {
@@ -135,7 +138,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
       if (caption.isEmpty && urls.isEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('أضف وصفاً أو صورة قبل النشر')),
+          SnackBar(content: Text('أضف وصفاً أو صورة قبل النشر'.tr)),
         );
         return;
       }
@@ -151,9 +154,9 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
           );
       ref.invalidate(experiencesProvider);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('نُشرت تجربتك في الاستكشاف')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('نُشرت تجربتك في الاستكشاف'.tr)));
       context.push('/experiences');
     } catch (e) {
       if (!mounted) return;
@@ -273,7 +276,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              b.propertyName ?? 'حجزك',
+                              b.propertyName ?? 'حجزك'.tr,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -293,18 +296,24 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                                   color: p.accentLight,
                                 ),
                                 const SizedBox(width: 3),
-                                Text(
-                                  b.cityName ?? 'العراق',
-                                  style: TextStyle(
-                                    fontFamily: VibesFont.ui,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white.withValues(alpha: .85),
+                                Flexible(
+                                  child: Text(
+                                    b.cityName ?? 'العراق'.tr,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontFamily: VibesFont.ui,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white.withValues(
+                                        alpha: .85,
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 10),
                                 Text(
-                                  'عرض المكان',
+                                  'عرض المكان'.tr,
                                   style: TextStyle(
                                     fontFamily: VibesFont.ui,
                                     fontSize: 12.5,
@@ -361,10 +370,11 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                       _NextActionCard(
                         palette: p,
                         icon: Icons.star_rounded,
-                        title: 'كيف كانت تجربتك؟',
+                        title: 'كيف كانت تجربتك؟'.tr,
                         body:
-                            'تقييمك يساعد ضيوفاً آخرين ويشجّع المضيف على التميّز',
-                        action: 'قيّم المكان',
+                            'تقييمك يساعد ضيوفاً آخرين ويشجّع المضيف على التميّز' // i18n-ok
+                                .tr,
+                        action: 'قيّم المكان'.tr,
                         onTap: () => showReviewSheet(context, ref, b),
                       ),
                       const SizedBox(height: 14),
@@ -372,47 +382,47 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
 
                     // ── التفاصيل ──
                     _Section(
-                      title: 'تفاصيل الحجز',
+                      title: 'تفاصيل الحجز'.tr,
                       child: Column(
                         children: [
                           _InfoRow(
                             icon: Icons.event_rounded,
-                            label: 'الوصول',
+                            label: 'الوصول'.tr,
                             value: _longDate(b.startDate),
                           ),
                           _InfoRow(
                             icon: Icons.event_available_rounded,
-                            label: 'المغادرة',
+                            label: 'المغادرة'.tr,
                             value: _longDate(
                               b.endDate.subtract(const Duration(days: 1)),
                             ),
                           ),
                           _InfoRow(
                             icon: Icons.schedule_rounded,
-                            label: 'الفترة',
-                            value: b.shiftLabelAr,
+                            label: 'الفترة'.tr,
+                            value: b.shiftLabelAr.tr,
                           ),
                           _InfoRow(
                             icon: Icons.groups_rounded,
-                            label: 'الضيوف',
+                            label: 'الضيوف'.tr,
                             value: b.guests == 1
-                                ? 'ضيف واحد'
-                                : '${b.guests} ضيف',
+                                ? 'ضيف واحد'.tr
+                                : '{n} ضيف'.trN(b.guests),
                           ),
                           if (b.notes?.isNotEmpty == true)
                             _InfoRow(
                               icon: Icons.sticky_note_2_outlined,
-                              label: 'ملاحظاتك',
+                              label: 'ملاحظاتك'.tr,
                               value: b.notes!,
                               last: true,
                             )
                           else
                             _InfoRow(
                               icon: Icons.nights_stay_outlined,
-                              label: 'المدة',
+                              label: 'المدة'.tr,
                               value: b.nights == 1
-                                  ? 'ليلة واحدة'
-                                  : '${b.nights} ليالٍ',
+                                  ? 'ليلة واحدة'.tr
+                                  : '{n} ليالٍ'.trN(b.nights),
                               last: true,
                             ),
                         ],
@@ -422,7 +432,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
 
                     // ── المبلغ ──
                     _Section(
-                      title: 'المبلغ',
+                      title: 'المبلغ'.tr,
                       trailing: GestureDetector(
                         onTap: () => context.push('/booking/${b.id}/invoice'),
                         child: Row(
@@ -435,7 +445,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'الفاتورة',
+                              'الفاتورة'.tr,
                               style: TextStyle(
                                 fontFamily: VibesFont.ui,
                                 fontSize: 12.5,
@@ -450,14 +460,14 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                         children: [
                           if (b.discountAmount > 0) ...[
                             _MoneyRow(
-                              label: 'السعر الأصلي',
+                              label: 'السعر الأصلي'.tr,
                               value: b.totalPrice + b.discountAmount,
                               muted: true,
                             ),
                             _MoneyRow(
-                              label: 'الخصم',
+                              label: 'الخصم'.tr,
                               value: -b.discountAmount,
-                              color: const Color(0xFF0E9F6E),
+                              color: _ok,
                             ),
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -472,7 +482,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  'الإجمالي',
+                                  'الإجمالي'.tr,
                                   style: TextStyle(
                                     fontFamily: VibesFont.ui,
                                     fontSize: 14,
@@ -493,7 +503,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                'د.ع',
+                                'د.ع'.tr,
                                 style: TextStyle(
                                   fontFamily: VibesFont.ui,
                                   fontSize: 12.5,
@@ -505,10 +515,10 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                           ),
                           if (b.payment?.isPaid == true) ...[
                             const SizedBox(height: 10),
-                            const _Note(
+                            _Note(
                               icon: Icons.verified_rounded,
-                              color: Color(0xFF0E9F6E),
-                              text: 'تم استلام الدفع — حجزك مضمون',
+                              color: _ok,
+                              text: 'تم استلام الدفع — حجزك مضمون'.tr,
                             ),
                           ],
                         ],
@@ -518,12 +528,12 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
 
                     // ── التواصل ──
                     _Section(
-                      title: 'تواصل مع المضيف',
+                      title: 'تواصل مع المضيف'.tr,
                       child: Row(
                         children: [
                           Expanded(
                             child: WorldButton(
-                              label: 'محادثة',
+                              label: 'محادثة'.tr,
                               icon: Icons.chat_bubble_rounded,
                               height: 50,
                               onTap: () => _openChat(b),
@@ -532,7 +542,7 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: WorldGhostButton(
-                              label: 'اتصال',
+                              label: 'اتصال'.tr,
                               icon: Icons.call_rounded,
                               height: 50,
                               onTap: () =>
@@ -548,22 +558,22 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                     if (b.status == BookingStatus.completed)
                       _ActionTile(
                         icon: Icons.auto_awesome_rounded,
-                        title: 'انشر تجربتك',
-                        subtitle: 'شارك صورك مع مجتمع VIBES',
+                        title: 'انشر تجربتك'.tr,
+                        subtitle: 'شارك صورك مع مجتمع أجواء'.tr,
                         onTap: () => _shareExperience(b),
                       ),
                     if (b.status == BookingStatus.completed ||
                         b.status == BookingStatus.cancelled)
                       _ActionTile(
                         icon: Icons.replay_rounded,
-                        title: 'احجز مرة أخرى',
-                        subtitle: 'نفس المكان بموعد جديد',
+                        title: 'احجز مرة أخرى'.tr,
+                        subtitle: 'نفس المكان بموعد جديد'.tr,
                         onTap: () => context.push('/book/${b.propertyId}'),
                       ),
                     _ActionTile(
                       icon: Icons.receipt_long_rounded,
-                      title: 'الفاتورة الإلكترونية',
-                      subtitle: 'التفاصيل المالية ونسخة للمشاركة',
+                      title: 'الفاتورة الإلكترونية'.tr,
+                      subtitle: 'التفاصيل المالية ونسخة للمشاركة'.tr,
                       onTap: () => context.push('/booking/${b.id}/invoice'),
                     ),
                     if (b.payment?.isPaid == true ||
@@ -580,19 +590,20 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
                     // ── الإلغاء ──
                     if (canCancelDirectly(b))
                       _CancelButton(
-                        label: 'إلغاء الحجز',
+                        label: 'إلغاء الحجز'.tr,
                         onTap: () => _cancel(b),
                       )
                     else if (refundRequestPending(b))
-                      const _Note(
+                      _Note(
                         icon: Icons.hourglass_top_rounded,
-                        color: Color(0xFFB45309),
+                        color: _amberDeep,
                         text:
-                            'طلب الإلغاء والاسترداد قيد المراجعة — سنبلغك بالنتيجة',
+                            'طلب الإلغاء والاسترداد قيد المراجعة — سنبلغك بالنتيجة' // i18n-ok
+                                .tr,
                       )
                     else if (canRequestRefund(b))
                       _CancelButton(
-                        label: 'طلب إلغاء واسترداد المبلغ',
+                        label: 'طلب إلغاء واسترداد المبلغ'.tr,
                         onTap: () => _requestCancel(b),
                       ),
                   ],
@@ -606,31 +617,35 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
   }
 
   static const _months = [
-    'يناير',
-    'فبراير',
-    'مارس',
-    'أبريل',
-    'مايو',
-    'يونيو',
-    'يوليو',
-    'أغسطس',
-    'سبتمبر',
-    'أكتوبر',
-    'نوفمبر',
-    'ديسمبر',
+    'يناير', // i18n-ok
+    'فبراير', // i18n-ok
+    'مارس', // i18n-ok
+    'أبريل', // i18n-ok
+    'مايو', // i18n-ok
+    'يونيو', // i18n-ok
+    'يوليو', // i18n-ok
+    'أغسطس', // i18n-ok
+    'سبتمبر', // i18n-ok
+    'أكتوبر', // i18n-ok
+    'نوفمبر', // i18n-ok
+    'ديسمبر', // i18n-ok
   ];
   static const _weekdays = [
-    'الإثنين',
-    'الثلاثاء',
-    'الأربعاء',
-    'الخميس',
-    'الجمعة',
-    'السبت',
-    'الأحد',
+    'الإثنين', // i18n-ok
+    'الثلاثاء', // i18n-ok
+    'الأربعاء', // i18n-ok
+    'الخميس', // i18n-ok
+    'الجمعة', // i18n-ok
+    'السبت', // i18n-ok
+    'الأحد', // i18n-ok
   ];
 
-  String _longDate(DateTime d) =>
-      '${_weekdays[d.weekday - 1]} ${d.day} ${_months[d.month - 1]}';
+  String _longDate(DateTime d) {
+    final weekday = _weekdays[d.weekday - 1].tr;
+    final month = _months[d.month - 1].tr;
+    if (I18n.isEn) return '${_short(weekday)}, ${_short(month)} ${d.day}';
+    return '$weekday ${d.day} $month';
+  }
 
   int _daysUntil(DateTime start) {
     final now = DateTime.now();
@@ -644,37 +659,46 @@ class _BookingDetailScreenState extends ConsumerState<BookingDetailScreen> {
 // مكوّنات الصفحة
 // ═══════════════════════════════════════════════════════════
 
+Color get _ok => themed(const Color(0xFF0E9F6E), VibesDark.success);
+Color get _amberDeep => themed(const Color(0xFFB45309), VibesDark.warning);
+Color get _amber => themed(const Color(0xFFD97706), VibesDark.warning);
+Color get _blue => themed(const Color(0xFF2563EB), VibesDark.info);
+Color get _red => themed(const Color(0xFFDC2626), VibesDark.danger);
+Color get _violet => themed(const Color(0xFF7C3AED), const Color(0xFFBBA6F6));
+
+String _short(String s) => s.length > 3 ? s.substring(0, 3) : s;
+
 typedef _Look = ({String label, Color color, IconData icon});
 
 _Look _statusLook(Booking b) => switch (b.status) {
   BookingStatus.pending => (
-    label: 'بانتظار المضيف',
-    color: const Color(0xFFB45309),
+    label: 'بانتظار المضيف'.tr,
+    color: _amberDeep,
     icon: Icons.hourglass_top_rounded,
   ),
   BookingStatus.awaitingPayment => (
-    label: 'بانتظار الدفع',
-    color: const Color(0xFFD97706),
+    label: 'بانتظار الدفع'.tr,
+    color: _amber,
     icon: Icons.payments_rounded,
   ),
   BookingStatus.confirmed => (
-    label: 'مؤكد',
-    color: const Color(0xFF0E9F6E),
+    label: 'مؤكد'.tr,
+    color: _ok,
     icon: Icons.verified_rounded,
   ),
   BookingStatus.completed => (
-    label: 'مكتمل',
-    color: const Color(0xFF2563EB),
+    label: 'مكتمل'.tr,
+    color: _blue,
     icon: Icons.task_alt_rounded,
   ),
   BookingStatus.cancelled => (
-    label: 'ملغى',
-    color: const Color(0xFFDC2626),
+    label: 'ملغى'.tr,
+    color: _red,
     icon: Icons.cancel_rounded,
   ),
   BookingStatus.disputed => (
-    label: 'قيد النزاع',
-    color: const Color(0xFF7C3AED),
+    label: 'قيد النزاع'.tr,
+    color: _violet,
     icon: Icons.gavel_rounded,
   ),
 };
@@ -713,7 +737,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(999),
         boxShadow: [
           BoxShadow(
@@ -757,31 +781,31 @@ class _TicketCard extends StatelessWidget {
   final int daysUntil;
 
   static const _months = [
-    'يناير',
-    'فبراير',
-    'مارس',
-    'أبريل',
-    'مايو',
-    'يونيو',
-    'يوليو',
-    'أغسطس',
-    'سبتمبر',
-    'أكتوبر',
-    'نوفمبر',
-    'ديسمبر',
+    'يناير', // i18n-ok
+    'فبراير', // i18n-ok
+    'مارس', // i18n-ok
+    'أبريل', // i18n-ok
+    'مايو', // i18n-ok
+    'يونيو', // i18n-ok
+    'يوليو', // i18n-ok
+    'أغسطس', // i18n-ok
+    'سبتمبر', // i18n-ok
+    'أكتوبر', // i18n-ok
+    'نوفمبر', // i18n-ok
+    'ديسمبر', // i18n-ok
   ];
 
   String get _countdown {
     final s = booking.status;
-    if (s == BookingStatus.cancelled) return 'تم إلغاء هذا الحجز';
+    if (s == BookingStatus.cancelled) return 'تم إلغاء هذا الحجز'.tr;
     if (s == BookingStatus.completed)
-      return 'انتهت مناسبتك — نتمنى أنها كانت رائعة';
-    if (daysUntil < 0) return 'مناسبتك جارية الآن';
-    if (daysUntil == 0) return 'موعدك اليوم!';
-    if (daysUntil == 1) return 'موعدك غداً';
-    if (daysUntil == 2) return 'بعد يومين';
-    if (daysUntil <= 10) return 'بعد $daysUntil أيام';
-    return 'بعد $daysUntil يوماً';
+      return 'انتهت مناسبتك — نتمنى أنها كانت رائعة'.tr;
+    if (daysUntil < 0) return 'مناسبتك جارية الآن'.tr;
+    if (daysUntil == 0) return 'موعدك اليوم!'.tr;
+    if (daysUntil == 1) return 'موعدك غداً'.tr;
+    if (daysUntil == 2) return 'بعد يومين'.tr;
+    if (daysUntil <= 10) return 'بعد {n} أيام'.trN(daysUntil);
+    return 'بعد {n} يوماً'.trN(daysUntil);
   }
 
   @override
@@ -793,7 +817,7 @@ class _TicketCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
@@ -827,7 +851,9 @@ class _TicketCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      _months[d.month - 1],
+                      I18n.isEn
+                          ? _short(_months[d.month - 1].tr)
+                          : _months[d.month - 1],
                       style: TextStyle(
                         fontFamily: VibesFont.ui,
                         fontSize: 12,
@@ -860,14 +886,14 @@ class _TicketCard extends StatelessWidget {
                       children: [
                         _Chip(
                           icon: Icons.schedule_rounded,
-                          text: booking.shiftLabelAr,
+                          text: booking.shiftLabelAr.tr,
                           palette: p,
                         ),
                         _Chip(
                           icon: Icons.nights_stay_outlined,
                           text: booking.nights == 1
-                              ? 'ليلة'
-                              : '${booking.nights} ليالٍ',
+                              ? 'ليلة'.tr
+                              : '{n} ليالٍ'.trN(booking.nights),
                           palette: p,
                         ),
                         _Chip(
@@ -902,7 +928,7 @@ class _TicketCard extends StatelessWidget {
           Row(
             children: [
               Text(
-                'رمز الحجز',
+                'رمز الحجز'.tr,
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
                   fontSize: 12,
@@ -916,8 +942,8 @@ class _TicketCard extends StatelessWidget {
                   Clipboard.setData(ClipboardData(text: code));
                   HapticFeedback.selectionClick();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('نُسخ رمز الحجز'),
+                    SnackBar(
+                      content: Text('نُسخ رمز الحجز'.tr),
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
@@ -999,8 +1025,8 @@ class _Stepper extends StatelessWidget {
         icon: look.icon,
         color: look.color,
         text: s == BookingStatus.cancelled
-            ? 'هذا الحجز ملغى'
-            : 'الحجز قيد مراجعة نزاع — سيتواصل معك فريق الدعم',
+            ? 'هذا الحجز ملغى'.tr
+            : 'الحجز قيد مراجعة نزاع — سيتواصل معك فريق الدعم'.tr,
       );
     }
     final current = switch (s) {
@@ -1009,7 +1035,7 @@ class _Stepper extends StatelessWidget {
       BookingStatus.confirmed => 2,
       _ => 3,
     };
-    const labels = ['الطلب', 'الدفع', 'التأكيد', 'المناسبة'];
+    final labels = ['الطلب'.tr, 'الدفع'.tr, 'التأكيد'.tr, 'المناسبة'.tr];
     const icons = [
       Icons.send_rounded,
       Icons.payments_rounded,
@@ -1018,16 +1044,17 @@ class _Stepper extends StatelessWidget {
     ];
     final p = palette;
     final hint = switch (s) {
-      BookingStatus.pending => 'أُرسل طلبك — ينتظر موافقة المضيف',
-      BookingStatus.awaitingPayment => 'وافق المضيف! أكمل الدفع لتأكيد موعدك',
-      BookingStatus.confirmed => 'حجزك مؤكد — كل شيء جاهز لمناسبتك',
-      _ => 'اكتملت مناسبتك — شكراً لاختيارك VIBES',
+      BookingStatus.pending => 'أُرسل طلبك — ينتظر موافقة المضيف'.tr,
+      BookingStatus.awaitingPayment =>
+        'وافق المضيف! أكمل الدفع لتأكيد موعدك'.tr,
+      BookingStatus.confirmed => 'حجزك مؤكد — كل شيء جاهز لمناسبتك'.tr,
+      _ => 'اكتملت مناسبتك — شكراً لاختيارك أجواء'.tr,
     };
 
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: p.accent.withValues(alpha: .10)),
       ),
@@ -1046,7 +1073,12 @@ class _Stepper extends StatelessWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: i <= current ? p.fill : null,
-                          color: i <= current ? null : const Color(0xFFF2F3F5),
+                          color: i <= current
+                              ? null
+                              : themed(
+                                  const Color(0xFFF2F3F5),
+                                  VibesDark.surfaceMuted,
+                                ),
                           boxShadow: i == current
                               ? [
                                   BoxShadow(
@@ -1086,7 +1118,12 @@ class _Stepper extends StatelessWidget {
                       height: 2,
                       margin: const EdgeInsets.only(bottom: 22),
                       decoration: BoxDecoration(
-                        color: i < current ? p.accent : const Color(0xFFE6E8EB),
+                        color: i < current
+                            ? p.accent
+                            : themed(
+                                const Color(0xFFE6E8EB),
+                                VibesDark.hairline,
+                              ),
                         borderRadius: BorderRadius.circular(1),
                       ),
                     ),
@@ -1132,7 +1169,7 @@ class _Section extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: p.accent.withValues(alpha: .10)),
         boxShadow: [
@@ -1259,6 +1296,9 @@ class _MoneyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final neg = value < 0;
+    final formatted = '{amount} د.ع'.trArgs({
+      'amount': formatIqdShort(value.abs()),
+    });
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
@@ -1275,7 +1315,7 @@ class _MoneyRow extends StatelessWidget {
             ),
           ),
           Text(
-            '${neg ? '− ' : ''}${formatIqdShort(value.abs())} د.ع',
+            '${neg ? '− ' : ''}$formatted',
             style: TextStyle(
               fontFamily: VibesFont.ui,
               fontSize: 13.5,
@@ -1302,7 +1342,7 @@ class _Note extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: .09),
+        color: color.withValues(alpha: Appearance.isDark ? .14 : .09),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -1433,7 +1473,7 @@ class _ActionTile extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Vibes.surface,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: p.accent.withValues(alpha: .10)),
           ),
@@ -1474,7 +1514,13 @@ class _ActionTile extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_left_rounded, color: p.accentDeep),
+              // الأيقونة تنعكس تلقائياً؛ العربية تبقى كما هي والإنجليزية تشير للأمام.
+              Icon(
+                I18n.isEn
+                    ? Icons.chevron_right_rounded
+                    : Icons.chevron_left_rounded,
+                color: p.accentDeep,
+              ),
             ],
           ),
         ),
@@ -1494,7 +1540,7 @@ class _CancelButton extends StatelessWidget {
     return Center(
       child: TextButton.icon(
         onPressed: onTap,
-        style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+        style: TextButton.styleFrom(foregroundColor: _red),
         icon: const Icon(Icons.close_rounded, size: 18),
         label: Text(
           label,
@@ -1529,19 +1575,19 @@ class _PaymentCard extends ConsumerWidget {
     final payment = booking.payment!;
     final awaiting = !payment.isPaid && payment.proofUrl == null;
     final (label, color) = payment.isPaid
-        ? ('مدفوع', const Color(0xFF0E9F6E))
+        ? ('مدفوع'.tr, _ok)
         : payment.proofUrl != null
-        ? ('الإيصال قيد المراجعة', const Color(0xFF2563EB))
-        : ('بانتظار الدفع', const Color(0xFFD97706));
+        ? ('الإيصال قيد المراجعة'.tr, _blue)
+        : ('بانتظار الدفع'.tr, _amber);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: awaiting
-              ? const Color(0xFFD97706).withValues(alpha: .35)
+              ? _amber.withValues(alpha: .35)
               : p.accent.withValues(alpha: .10),
         ),
         boxShadow: [
@@ -1558,7 +1604,7 @@ class _PaymentCard extends ConsumerWidget {
           Row(
             children: [
               Text(
-                'الدفع',
+                'الدفع'.tr,
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
                   fontSize: 15.5,
@@ -1566,11 +1612,15 @@ class _PaymentCard extends ConsumerWidget {
                   color: Vibes.ink,
                 ),
               ),
-              const SizedBox(width: 8),
-              WorldStatusChip(label: label, color: color),
+              if (!I18n.isEn) ...[
+                const SizedBox(width: 8),
+                WorldStatusChip(label: label, color: color),
+              ],
               const Spacer(),
               Text(
-                '${formatIqdShort(payment.amount)} د.ع',
+                '{amount} د.ع'.trArgs({
+                  'amount': formatIqdShort(payment.amount),
+                }),
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
                   fontSize: 15,
@@ -1580,6 +1630,14 @@ class _PaymentCard extends ConsumerWidget {
               ),
             ],
           ),
+          // الإنجليزية أعرض: الحالة في سطرها كي لا يضيق الصف.
+          if (I18n.isEn) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: WorldStatusChip(label: label, color: color),
+            ),
+          ],
           if (payment.proofUrl != null) ...[
             const SizedBox(height: 12),
             ClipRRect(
@@ -1588,10 +1646,10 @@ class _PaymentCard extends ConsumerWidget {
             ),
             if (!payment.isPaid) ...[
               const SizedBox(height: 10),
-              const _Note(
+              _Note(
                 icon: Icons.schedule_rounded,
-                color: Color(0xFF2563EB),
-                text: 'سيراجع الفريق الإيصال ويؤكد حجزك قريباً',
+                color: _blue,
+                text: 'سيراجع الفريق الإيصال ويؤكد حجزك قريباً'.tr,
               ),
             ],
           ],
@@ -1601,7 +1659,10 @@ class _PaymentCard extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF6F7F9),
+                  color: themed(
+                    const Color(0xFFF6F7F9),
+                    VibesDark.surfaceMuted,
+                  ),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
@@ -1618,14 +1679,14 @@ class _PaymentCard extends ConsumerWidget {
             ],
             const SizedBox(height: 14),
             WorldButton(
-              label: 'رفع إيصال الدفع',
+              label: 'رفع إيصال الدفع'.tr,
               icon: Icons.upload_rounded,
               loading: uploading,
               onTap: onUpload,
             ),
             const SizedBox(height: 8),
             Text(
-              'حوّل المبلغ ثم ارفع صورة الإيصال هنا',
+              'حوّل المبلغ ثم ارفع صورة الإيصال هنا'.tr,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: VibesFont.ui,

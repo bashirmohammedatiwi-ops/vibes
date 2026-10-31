@@ -1,6 +1,7 @@
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/world_theme.dart';
 import '../../shared/models/models.dart';
@@ -18,14 +19,14 @@ class DayPriceStrip extends StatelessWidget {
   final List<DayPricing> days;
   final ShiftType? selectedShift;
 
-  static const _weekdayLabels = [
-    'أحد',
-    'إثن',
-    'ثلا',
-    'أرب',
-    'خمي',
-    'جمع',
-    'سبت',
+  static List<String> get _weekdayLabels => [
+    'أحد'.tr,
+    'إثن'.tr,
+    'ثلا'.tr,
+    'أرب'.tr,
+    'خمي'.tr,
+    'جمع'.tr,
+    'سبت'.tr,
   ];
 
   @override
@@ -103,7 +104,7 @@ class DayPriceStrip extends StatelessWidget {
                 .animate(delay: Duration(milliseconds: 60 * i))
                 .fadeIn(duration: VibesMotion.slow)
                 .slideX(
-                  begin: .08,
+                  begin: I18n.isEn ? -.08 : .08,
                   end: 0,
                   duration: VibesMotion.slow,
                   curve: VibesMotion.curve,

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth/auth_controller.dart';
 import '../../features/compare/compare_feature.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/utils/vibes_net_image.dart';
 import '../../shared/models/models.dart';
 import 'card_dimensions.dart';
@@ -21,16 +22,16 @@ import '../../core/perf/perf.dart';
 BorderRadius get _cardRadius => BorderRadius.circular(CardDims.radius);
 
 String _propertyKicker(PropertyType type) => switch (type) {
-  PropertyType.hall => 'قاعة أعراس',
-  PropertyType.decoration => 'تزيين',
-  PropertyType.farm => 'مزرعة',
+  PropertyType.hall => 'قاعة أعراس'.tr,
+  PropertyType.decoration => 'تزيين'.tr,
+  PropertyType.farm => 'مزرعة'.tr,
 };
 
 String _propertyMeta(Property property) => [
   property.cityName ?? property.provinceName ?? '',
-  if (property.isWinter) '❄️ شتوية',
-  if (property.hasIndoorPool) '🏊 مسبح مغلق',
-  if (property.capacity > 0) '${property.capacity} ضيف',
+  if (property.isWinter) '❄️ شتوية'.tr,
+  if (property.hasIndoorPool) '🏊 مسبح مغلق'.tr,
+  if (property.capacity > 0) '{n} ضيف'.trN(property.capacity),
   if (property.ratingCount > 0) '★ ${property.ratingAvg.toStringAsFixed(1)}',
 ].where((part) => part.isNotEmpty).join('  ·  ');
 
@@ -51,7 +52,7 @@ class _WorldKicker extends StatelessWidget {
     final onAccent = switch (property.type) {
       PropertyType.farm => Vibes.onTeal,
       PropertyType.hall => Vibes.onCoral,
-      PropertyType.decoration => Colors.white,
+      PropertyType.decoration => themed(Colors.white, VibesDark.canvas),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -181,7 +182,7 @@ class _CardPhoto extends StatelessWidget {
           PositionedDirectional(
             top: 10,
             end: 10,
-            child: RibbonChip(label: 'مميّز', color: accent),
+            child: RibbonChip(label: 'مميّز'.tr, color: accent),
           ),
         if (rank != null)
           PositionedDirectional(
@@ -264,7 +265,9 @@ class _CardBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final place = property.cityName ?? property.provinceName ?? '';
-    final guests = property.capacity > 0 ? '${property.capacity} ضيف' : '';
+    final guests = property.capacity > 0
+        ? '{n} ضيف'.trN(property.capacity)
+        : '';
     final meta = [place, guests].where((s) => s.isNotEmpty).join('  ·  ');
 
     return Padding(
@@ -280,16 +283,16 @@ class _CardBody extends StatelessWidget {
                   fontFamily: VibesFont.ui,
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFFA5813A),
+                  color: themed(const Color(0xFFA5813A), VibesDark.teal),
                   height: 1,
                 ),
               ),
               const Spacer(),
               if (property.ratingCount > 0) ...[
-                const Icon(
+                Icon(
                   Icons.star_rounded,
                   size: 13,
-                  color: Color(0xFFC4A15A),
+                  color: themed(const Color(0xFFC4A15A), VibesDark.teal),
                 ),
                 const SizedBox(width: 3),
                 Text(
@@ -298,7 +301,7 @@ class _CardBody extends StatelessWidget {
                     fontFamily: VibesFont.ui,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF141C2B),
+                    color: themed(const Color(0xFF141C2B), VibesDark.ink),
                     fontFeatures: [FontFeature.tabularFigures()],
                   ),
                 ),
@@ -315,7 +318,7 @@ class _CardBody extends StatelessWidget {
               fontSize: 16,
               fontWeight: FontWeight.w900,
               height: 1.15,
-              color: Color(0xFF141C2B),
+              color: themed(const Color(0xFF141C2B), VibesDark.ink),
               letterSpacing: -0.2,
             ),
           ),
@@ -332,7 +335,7 @@ class _CardBody extends StatelessWidget {
                     fontFamily: VibesFont.ui,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF5C6778),
+                    color: themed(const Color(0xFF5C6778), VibesDark.inkSecondary),
                   ),
                 ),
               ),
@@ -343,7 +346,7 @@ class _CardBody extends StatelessWidget {
                   fontFamily: VibesFont.ui,
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFF141C2B),
+                  color: themed(const Color(0xFF141C2B), VibesDark.ink),
                   height: 1,
                   fontFeatures: [FontFeature.tabularFigures()],
                 ),
@@ -352,12 +355,12 @@ class _CardBody extends StatelessWidget {
               Padding(
                 padding: EdgeInsets.only(bottom: 1),
                 child: Text(
-                  'د.ع',
+                  'د.ع'.tr,
                   style: TextStyle(
                     fontFamily: VibesFont.ui,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF5C6778),
+                    color: themed(const Color(0xFF5C6778), VibesDark.inkSecondary),
                   ),
                 ),
               ),
@@ -414,20 +417,30 @@ class PropertyCard extends StatelessWidget {
     return RepaintBoundary(
       child: Semantics(
         button: true,
-        label:
-            '${property.name}، ${property.typeLabelAr} في ${property.cityName ?? ''}، السعر ${PriceText.format(property.pricePerDay)} دينار لليوم',
+        label: '{name}، {type} في {city}، السعر {price} دينار لليوم'.trArgs({
+          'name': property.name,
+          'type': property.typeLabelAr,
+          'city': property.cityName ?? '',
+          'price': PriceText.format(property.pricePerDay),
+        }),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Vibes.surface,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFE4E9F0)),
-            boxShadow: Perf.shadows(const [
-              BoxShadow(
-                color: Color(0x12141C2B),
-                blurRadius: 16,
-                offset: Offset(0, 6),
-              ),
-            ]),
+            border: Border.all(
+              color: themed(const Color(0xFFE4E9F0), VibesDark.hairline),
+            ),
+            boxShadow: Perf.shadows(
+              Appearance.isDark
+                  ? Vibes.card
+                  : const [
+                      BoxShadow(
+                        color: Color(0x12141C2B),
+                        blurRadius: 16,
+                        offset: Offset(0, 6),
+                      ),
+                    ],
+            ),
           ),
           clipBehavior: Clip.antiAlias,
           child: Material(
@@ -608,12 +621,12 @@ class FeaturedPropertyCard extends StatelessWidget {
             : '${index! + 1}. ${property.name}',
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Vibes.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Vibes.hairline),
           ),
           child: Material(
-            color: Colors.white,
+            color: Vibes.surface,
             borderRadius: BorderRadius.circular(12),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
@@ -659,7 +672,7 @@ class FeaturedPropertyCard extends StatelessWidget {
                                 height: 32,
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: Vibes.surface,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
@@ -822,7 +835,7 @@ class HallPropertyCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'قاعة أعراس',
+                            'قاعة أعراس'.tr,
                             style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(
                                   color: accent,
@@ -895,7 +908,12 @@ class _CompareToggle extends ConsumerWidget {
         HapticFeedback.selectionClick();
       },
       child: FolioPanel(
-        color: selected ? Vibes.coral : const Color(0xE6FFFFFF),
+        color: selected
+            ? Vibes.coral
+            : themed(
+                const Color(0xE6FFFFFF),
+                VibesDark.surface.withValues(alpha: .9),
+              ),
         borderColor: selected ? Vibes.coral : Vibes.hairline,
         radius: Folio.compact,
         child: Padding(
@@ -903,7 +921,7 @@ class _CompareToggle extends ConsumerWidget {
           child: Icon(
             selected ? Icons.check_rounded : Icons.compare_arrows_rounded,
             size: 15,
-            color: selected ? Colors.white : Vibes.ink,
+            color: selected ? themed(Colors.white, VibesDark.onCoral) : Vibes.ink,
           ),
         ),
       ),

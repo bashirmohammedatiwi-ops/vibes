@@ -3,6 +3,8 @@
 /// تحويل دفاعي من JSON (يحتمل أنواعاً متعددة من الـ API)
 /// ═══════════════════════════════════════════════════════════
 
+import '../../core/i18n/i18n.dart';
+
 num _num(dynamic v, [num fallback = 0]) {
   if (v == null) return fallback;
   if (v is num) return v;
@@ -426,9 +428,9 @@ class Property {
   );
 
   String get typeLabelAr => switch (type) {
-    PropertyType.farm => 'مزرعة',
-    PropertyType.hall => 'قاعة',
-    PropertyType.decoration => 'تزيين',
+    PropertyType.farm => 'مزرعة'.tr,
+    PropertyType.hall => 'قاعة'.tr,
+    PropertyType.decoration => 'تزيين'.tr,
   };
 
   Map<String, dynamic> toCacheJson() => {
@@ -634,23 +636,23 @@ class Booking {
   }
 
   String get statusLabelAr => switch (status) {
-    BookingStatus.pending => 'بانتظار التأكيد',
-    BookingStatus.awaitingPayment => 'بانتظار الدفع',
-    BookingStatus.confirmed => 'مؤكد',
-    BookingStatus.cancelled => 'ملغى',
-    BookingStatus.completed => 'مكتمل',
-    BookingStatus.disputed => 'نزاع',
+    BookingStatus.pending => 'بانتظار التأكيد'.tr,
+    BookingStatus.awaitingPayment => 'بانتظار الدفع'.tr,
+    BookingStatus.confirmed => 'مؤكد'.tr,
+    BookingStatus.cancelled => 'ملغى'.tr,
+    BookingStatus.completed => 'مكتمل'.tr,
+    BookingStatus.disputed => 'نزاع'.tr,
   };
 
   String get shiftLabelAr => switch (shift) {
-    ShiftType.morning => 'شفت صباحي',
-    ShiftType.evening => 'شفت مسائي',
-    ShiftType.full => 'يوم كامل',
+    ShiftType.morning => 'شفت صباحي'.tr,
+    ShiftType.evening => 'شفت مسائي'.tr,
+    ShiftType.full => 'يوم كامل'.tr,
   };
 
   bool get isExternal => origin == 'EXTERNAL';
 
-  String get originLabelAr => isExternal ? 'خارجي' : 'تطبيق VIBES';
+  String get originLabelAr => isExternal ? 'خارجي'.tr : 'تطبيق أجواء'.tr;
 
   int get nights => endDate.difference(startDate).inDays.clamp(1, 365);
 }
@@ -1033,15 +1035,15 @@ class ConversationSummary {
       id: _str(j['id']),
       kind: _str(j['kind'], 'BOOKING'),
       title: property is Map<String, dynamic>
-          ? _str((property)['name'], 'محادثة')
+          ? _str((property)['name'], 'محادثة'.tr)
           : booking?['property'] is Map<String, dynamic>
           ? _str(
               (booking!['property'] as Map<String, dynamic>)['name'],
-              'محادثة حجز',
+              'محادثة حجز'.tr,
             )
-          : (j['kind'] == 'SUPPORT' ? 'دعم VIBES' : 'محادثة'),
+          : (j['kind'] == 'SUPPORT' ? 'دعم أجواء'.tr : 'محادثة'.tr),
       lastMessage: last?['kind'] == 'IMAGE' && _str(last?['body']).isEmpty
-          ? 'صورة'
+          ? 'صورة'.tr
           : last?['body'] as String?,
       lastMessageKind: last?['kind'] as String?,
       lastMessageSenderId: last?['senderId'] as String?,
@@ -1055,9 +1057,9 @@ class ConversationSummary {
           ? _num(property!['pricePerDay'])
           : null,
       stage: booking != null
-          ? 'حجز قائم'
+          ? 'حجز قائم'.tr
           : property != null
-          ? 'يسأل قبل الحجز'
+          ? 'يسأل قبل الحجز'.tr
           : null,
     );
   }
@@ -1244,7 +1246,7 @@ class PublicCoupon {
 
   String get discountLabel => discountType == 'PERCENT'
       ? '${discountValue.toInt()}%'
-      : '${discountValue.toInt()} د.ع';
+      : '{n} د.ع'.trArgs({'n': discountValue.toInt()});
 
   bool matchesProperty({required String id, required String type}) {
     if (propertyId != null && propertyId != id) return false;
@@ -1298,7 +1300,7 @@ class FollowedProvider {
   String get displayName =>
       (businessName != null && businessName!.trim().isNotEmpty)
       ? businessName!.trim()
-      : (userName ?? 'مزود');
+      : (userName ?? 'مزود'.tr);
 
   factory FollowedProvider.fromJson(Map<String, dynamic> j) {
     final user = j['user'] is Map<String, dynamic>

@@ -1,3 +1,4 @@
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -8,10 +9,12 @@ Color get placeShiftMorning =>
     themed(const Color(0xFFD97706), const Color(0xFFF2A94A));
 Color get placeShiftEvening =>
     themed(const Color(0xFF4F46E5), const Color(0xFF9D97F5));
-Color get placeShiftFull =>
-    themed(const Color(0xFF141C2B), VibesDark.ink);
-const Color _placeInk2 = Color(0xFF5A6678);
-const Color _placeBrass = Color(0xFFA5813A);
+Color get placeShiftFull => themed(const Color(0xFF141C2B), VibesDark.ink);
+Color get _placeInk2 => themed(const Color(0xFF5A6678), VibesDark.inkSecondary);
+Color get _placeBrass => themed(const Color(0xFFA5813A), Brand.brassLight);
+
+/// النص فوق تعبئة الشفت: أبيض نهاراً، وحبر داكن ليلاً لأن ألوان الشفت تفتح.
+Color get placeOnFill => themed(Colors.white, VibesDark.canvas);
 
 Color placeShiftColor(ShiftType shift) => switch (shift) {
   ShiftType.morning => placeShiftMorning,
@@ -20,9 +23,9 @@ Color placeShiftColor(ShiftType shift) => switch (shift) {
 };
 
 String placeShiftShortLabel(ShiftType shift) => switch (shift) {
-  ShiftType.morning => 'صباح',
-  ShiftType.evening => 'مساء',
-  ShiftType.full => 'يوم كامل',
+  ShiftType.morning => 'صباح'.tr,
+  ShiftType.evening => 'مساء'.tr,
+  ShiftType.full => 'يوم كامل'.tr,
 };
 
 ShiftType shiftTypeFromApi(String? raw) => switch (raw) {
@@ -38,9 +41,9 @@ String apiShiftFor(ShiftType shift) => switch (shift) {
 };
 
 String placeShiftBadgeChar(ShiftType shift) => switch (shift) {
-  ShiftType.morning => 'ص',
-  ShiftType.evening => 'م',
-  ShiftType.full => 'ك',
+  ShiftType.morning => I18n.isEn ? 'M' : 'ص', // i18n-ok
+  ShiftType.evening => I18n.isEn ? 'E' : 'م', // i18n-ok
+  ShiftType.full => I18n.isEn ? 'F' : 'ك', // i18n-ok
 };
 
 List<ShiftType> orderShiftsForDisplay(Iterable<ShiftType> shifts) {
@@ -264,7 +267,7 @@ class _AllPeriodsChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? placeShiftFull : Colors.white,
+      color: selected ? placeShiftFull : Vibes.surface,
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
         onTap: onTap,
@@ -280,12 +283,12 @@ class _AllPeriodsChip extends StatelessWidget {
             ),
           ),
           child: Text(
-            'كل الفترات',
+            'كل الفترات'.tr,
             style: TextStyle(
               fontFamily: VibesFont.ui,
               fontSize: 11,
               fontWeight: FontWeight.w800,
-              color: selected ? Colors.white : _placeInk2,
+              color: selected ? placeOnFill : _placeInk2,
             ),
           ),
         ),
@@ -361,7 +364,7 @@ class OwnerShiftChip extends StatelessWidget {
     final shift = shiftTypeFromApi(apiShift);
     final color = placeShiftColor(shift);
     return Material(
-      color: selected ? color.withValues(alpha: .12) : Colors.white,
+      color: selected ? color.withValues(alpha: .12) : Vibes.surface,
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
         onTap: onTap,
@@ -419,18 +422,14 @@ class PlaceShiftLegendRow extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         if (includeSelection)
-          _LegendChip(
-            color: placeShiftFull,
-            label: 'اختيارك',
-            filled: true,
-          ),
-        _LegendChip(color: placeShiftMorning, label: 'صباح'),
-        _LegendChip(color: placeShiftEvening, label: 'مساء'),
-        _LegendChip(color: placeShiftFull, label: 'يوم كامل'),
+          _LegendChip(color: placeShiftFull, label: 'اختيارك'.tr, filled: true),
+        _LegendChip(color: placeShiftMorning, label: 'صباح'.tr),
+        _LegendChip(color: placeShiftEvening, label: 'مساء'.tr),
+        _LegendChip(color: placeShiftFull, label: 'يوم كامل'.tr),
         if (includeUnavailable)
-          const _LegendChip(
-            color: Color(0xFFEDF0F4),
-            label: 'غير متاح',
+          _LegendChip(
+            color: themed(const Color(0xFFEDF0F4), VibesDark.hairlineStrong),
+            label: 'غير متاح'.tr,
             filled: true,
           ),
       ],

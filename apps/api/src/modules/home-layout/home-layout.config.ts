@@ -32,7 +32,7 @@ export const BODY_SECTIONS: { key: string; label: string; hint: string }[] = [
   { key: 'map', label: 'خريطة الأماكن', hint: 'بطاقة الخريطة الكبيرة' },
   { key: 'recentlyViewed', label: 'شاهدتها مؤخراً', hint: 'الأماكن التي فتحها الزبون' },
   { key: 'following', label: 'مضيفون تتابعهم', hint: 'للزبائن الذين يتابعون أصحاب أماكن' },
-  { key: 'trust', label: 'لماذا VIBES', hint: 'مزايا الحجز عبر VIBES' },
+  { key: 'trust', label: 'لماذا أجواء', hint: 'مزايا الحجز عبر أجواء' },
   { key: 'allPlaces', label: 'كل الأماكن', hint: 'قائمة كل أماكن العالم المختار — تبقى دائماً قبل التذييل' },
   { key: 'footer', label: 'تذييل الصفحة', hint: 'شعار ونص ختامي — دائماً في آخر الصفحة' },
 ];

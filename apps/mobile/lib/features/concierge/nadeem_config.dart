@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/network/api_client.dart';
 import '../../shared/models/models.dart';
 import '../home/home_sections.dart';
@@ -34,6 +35,10 @@ typedef _J = Map<String, dynamic>;
 
 _J _obj(Object? v) => v is Map<String, dynamic> ? v : const {};
 String _s(Object? v, String d) => v is String ? v : d;
+
+/// نص معروض من لوحة التحكم: إن طابق نصاً افتراضياً معروفاً يُترجم، وإلا يبقى
+/// كما كتبه المشرف. مرّر الافتراضي مترجماً.
+String _t(Object? v, String d) => v is String ? v.tr : d;
 bool _b(Object? v, bool d) => v is bool ? v : d;
 int _i(Object? v, int d) => v is num ? v.round() : d;
 
@@ -103,13 +108,13 @@ class NadeemOccasion {
     if (key.isEmpty) return null;
     return NadeemOccasion(
       key: key,
-      label: _s(j['label'], 'مناسبة'),
-      sub: _s(j['sub'], ''),
+      label: _t(j['label'], 'مناسبة'.tr),
+      sub: _t(j['sub'], ''),
       icon: iconFor(_s(j['icon'], 'sparkle')),
       world: _world(_type(j['world'])),
       impliedType: _type(j['impliedType']),
       suggestDecor: _b(j['suggestDecor'], false),
-      reaction: _s(j['reaction'], ''),
+      reaction: _t(j['reaction'], ''),
     );
   }
 }
@@ -124,8 +129,8 @@ class NadeemSlot {
     final j = _obj(v);
     return NadeemSlot(
       _b(j['enabled'], d.enabled),
-      _s(j['title'], d.title),
-      _s(j['sub'], d.sub),
+      _t(j['title'], d.title),
+      _t(j['sub'], d.sub),
     );
   }
 }
@@ -146,26 +151,27 @@ class NadeemConfig {
   bool get showInNav => _b(_r['showInNav'], true);
   bool get showOnHome => _b(_r['showOnHome'], true);
   String get name {
-    final n = _s(_r['name'], 'نديم').trim();
-    return n.isEmpty ? 'نديم' : n;
+    final n = _t(_r['name'], 'نديم'.tr).trim();
+    return n.isEmpty ? 'نديم'.tr : n;
   }
 
-  String get subtitle => _s(_r['subtitle'], 'مخطّط مناسبتك الشخصي');
-  String get typingLabel => _s(_r['typingLabel'], 'يكتب…');
-  String get disabledTitle => _s(_r['disabledTitle'], 'نديم في استراحة قصيرة');
-  String get disabledMessage => _s(
+  String get subtitle => _t(_r['subtitle'], 'مخطّط مناسبتك الشخصي'.tr);
+  String get typingLabel => _t(_r['typingLabel'], 'يكتب…'.tr);
+  String get disabledTitle =>
+      _t(_r['disabledTitle'], 'نديم في استراحة قصيرة'.tr);
+  String get disabledMessage => _t(
     _r['disabledMessage'],
-    'نعمل على تحسين نديم — يمكنك البحث عن الأماكن مباشرة حتى يعود.',
+    'نعمل على تحسين نديم — يمكنك البحث عن الأماكن مباشرة حتى يعود.'.tr,
   );
   List<String> get greeting {
     final g = _r['greeting'];
     if (g is List) {
       final list = g.whereType<String>().where((s) => s.trim().isNotEmpty);
-      if (list.isNotEmpty) return list.toList();
+      if (list.isNotEmpty) return [for (final s in list) s.tr];
     }
-    return const [
-      'أهلاً بك، أنا نديم ✨',
-      'سأساعدك تختار المكان المثالي لمناسبتك — بخطوات خفيفة.',
+    return [
+      'أهلاً بك، أنا نديم ✨'.tr,
+      'سأساعدك تختار المكان المثالي لمناسبتك — بخطوات خفيفة.'.tr,
     ];
   }
 
@@ -174,7 +180,7 @@ class NadeemConfig {
 
   // ── المناسبة ──
   String get occasionQuestion =>
-      _s(_sec('occasionStep')['question'], 'ما المناسبة التي تخطّط لها؟');
+      _t(_sec('occasionStep')['question'], 'ما المناسبة التي تخطّط لها؟'.tr);
 
   List<NadeemOccasion> get occasions {
     final raw = _r['occasions'];
@@ -189,103 +195,106 @@ class NadeemConfig {
     return _defaultOccasions;
   }
 
-  static final _defaultOccasions = [
+  static List<NadeemOccasion> get _defaultOccasions => [
     for (final o in const [
       (
         'wedding',
-        'زفاف',
-        'ليلة العمر',
+        'زفاف', // i18n-ok
+        'ليلة العمر', // i18n-ok
         'diamond',
         'HALL',
         'HALL',
         true,
-        'ألف مبروك! ليلة العمر تستحق الأفضل 💍',
+        'ألف مبروك! ليلة العمر تستحق الأفضل 💍', // i18n-ok
       ),
       (
         'engagement',
-        'خطوبة',
-        'بداية الحكاية',
+        'خطوبة', // i18n-ok
+        'بداية الحكاية', // i18n-ok
         'heart',
         'DECORATION',
         'HALL',
         true,
-        'مبارك مقدّماً! بداية جميلة تستحق مكاناً دافئاً.',
+        'مبارك مقدّماً! بداية جميلة تستحق مكاناً دافئاً.', // i18n-ok
       ),
       (
         'birthday',
-        'عيد ميلاد',
-        'فرحة وزينة',
+        'عيد ميلاد', // i18n-ok
+        'فرحة وزينة', // i18n-ok
         'cake',
         'DECORATION',
         'FARM',
         true,
-        'رائع! سنجعلها حفلة لا تُنسى 🎂',
+        'رائع! سنجعلها حفلة لا تُنسى 🎂', // i18n-ok
       ),
       (
         'family',
-        'جلسة أهل',
-        'يوم دافئ',
+        'جلسة أهل', // i18n-ok
+        'يوم دافئ', // i18n-ok
         'family',
         'FARM',
         'FARM',
         false,
-        'جميل — الأهل يستحقون يوماً هادئاً ومريحاً.',
+        'جميل — الأهل يستحقون يوماً هادئاً ومريحاً.', // i18n-ok
       ),
       (
         'work',
-        'عمل',
-        'لقاء رسمي',
+        'عمل', // i18n-ok
+        'لقاء رسمي', // i18n-ok
         'work',
         'HALL',
         'HALL',
         false,
-        'ممتاز، سأبحث عن مكان أنيق ومنظّم.',
+        'ممتاز، سأبحث عن مكان أنيق ومنظّم.', // i18n-ok
       ),
       (
         'other',
-        'أخرى',
-        'فاجئني',
+        'أخرى', // i18n-ok
+        'فاجئني', // i18n-ok
         'sparkle',
         'FARM',
         null,
         false,
-        'حسناً، أخبرني بالمزيد وسأقرأ بين السطور.',
+        'حسناً، أخبرني بالمزيد وسأقرأ بين السطور.', // i18n-ok
       ),
     ])
       NadeemOccasion(
         key: o.$1,
-        label: o.$2,
-        sub: o.$3,
+        label: o.$2.tr,
+        sub: o.$3.tr,
         icon: NadeemOccasion.iconFor(o.$4),
         world: _world(_type(o.$5)),
         impliedType: _type(o.$6),
         suggestDecor: o.$7,
-        reaction: o.$8,
+        reaction: o.$8.tr,
       ),
   ];
 
   // ── النوع ──
   _J get _typeStep => _sec('typeStep');
   bool get typeEnabled => _b(_typeStep['enabled'], true);
-  String get typeQuestion => _s(_typeStep['question'], 'أي مكان يليق بها؟');
-  String get typeReaction => _s(_typeStep['reaction'], 'اختيار موفّق.');
-  String get typeReactionAuto =>
-      _s(_typeStep['reactionAuto'], 'اترك الأمر لي — سأختار ما يناسب مناسبتك.');
+  String get typeQuestion => _t(_typeStep['question'], 'أي مكان يليق بها؟'.tr);
+  String get typeReaction => _t(_typeStep['reaction'], 'اختيار موفّق.'.tr);
+  String get typeReactionAuto => _t(
+    _typeStep['reactionAuto'],
+    'اترك الأمر لي — سأختار ما يناسب مناسبتك.'.tr,
+  );
   bool get typeAllowAuto => _b(_typeStep['allowAuto'], true);
   String get typeAutoLabel =>
-      _s(_typeStep['autoLabel'], 'لست متأكداً — اختر لي يا نديم');
-  String get typeAutoAnswer => _s(_typeStep['autoAnswer'], 'اختر لي يا نديم');
+      _t(_typeStep['autoLabel'], 'لست متأكداً — اختر لي يا نديم'.tr);
+  String get typeAutoAnswer =>
+      _t(_typeStep['autoAnswer'], 'اختر لي يا نديم'.tr);
   bool get typeShowCounts => _b(_typeStep['showCounts'], true);
 
   /// الأنواع المفعّلة مع أسمائها.
   List<(PropertyType, HomeSection, String)> get types {
     final defaults = [
-      (PropertyType.farm, HomeSection.farm, HomeSection.farm.label),
-      (PropertyType.hall, HomeSection.hall, HomeSection.hall.label),
+      (PropertyType.farm, HomeSection.farm, HomeSection.farm.label.tr),
+      (PropertyType.hall, HomeSection.hall, HomeSection.hall.label.tr),
       (
         PropertyType.decoration,
         HomeSection.decoration,
-        HomeSection.decoration.label,
+        HomeSection.decoration.label.tr,
       ),
     ];
     final raw = _typeStep['types'];
@@ -302,7 +311,7 @@ class NadeemConfig {
         orElse: () => const {},
       );
       if (j['enabled'] == false) continue;
-      final label = _s(j['label'], d.$3).trim();
+      final label = _t(j['label'], d.$3).trim();
       out.add((d.$1, d.$2, label.isEmpty ? d.$3 : label));
     }
     return out.isEmpty ? defaults : out;
@@ -311,12 +320,12 @@ class NadeemConfig {
   // ── المحافظة ──
   _J get _prov => _sec('provinceStep');
   bool get provinceEnabled => _b(_prov['enabled'], true);
-  String get provinceQuestion => _s(_prov['question'], 'في أي محافظة؟');
+  String get provinceQuestion => _t(_prov['question'], 'في أي محافظة؟'.tr);
   String get provinceReactionAll =>
-      _s(_prov['reactionAll'], 'سأبحث في كل العراق.');
+      _t(_prov['reactionAll'], 'سأبحث في كل العراق.'.tr);
   String get provinceReactionOne =>
-      _s(_prov['reactionOne'], 'تمام، سأركّز على {province}.');
-  String get provinceAnyLabel => _s(_prov['anyLabel'], 'أي مكان في العراق');
+      _t(_prov['reactionOne'], 'تمام، سأركّز على {province}.'.tr);
+  String get provinceAnyLabel => _t(_prov['anyLabel'], 'أي مكان في العراق'.tr);
   bool get provinceShowCounts => _b(_prov['showCounts'], true);
   bool get provinceHideEmpty => _b(_prov['hideEmpty'], false);
 
@@ -324,33 +333,33 @@ class NadeemConfig {
   _J get _guests => _sec('guestsStep');
   bool get guestsEnabled => _b(_guests['enabled'], true);
   String get guestsQuestion =>
-      _s(_guests['question'], 'كم ضيفاً تتوقع تقريباً؟');
+      _t(_guests['question'], 'كم ضيفاً تتوقع تقريباً؟'.tr);
   String get guestsReaction =>
-      _s(_guests['reaction'], 'وصلت — سأستبعد ما لا يتسع لضيوفك.');
+      _t(_guests['reaction'], 'وصلت — سأستبعد ما لا يتسع لضيوفك.'.tr);
   int get guestsMin => _i(_guests['min'], 10).clamp(1, 5000);
   int get guestsMax => _i(_guests['max'], 1000).clamp(guestsMin + 10, 20000);
   int get guestsInitial =>
       _i(_guests['initial'], 70).clamp(guestsMin, guestsMax);
-  String get guestsAnswer => _s(_guests['answer'], 'حوالي {n} ضيف');
-  String get guestsConfirm => _s(_guests['confirmLabel'], 'تمام — {n} ضيف');
+  String get guestsAnswer => _t(_guests['answer'], 'حوالي {n} ضيف'.tr);
+  String get guestsConfirm => _t(_guests['confirmLabel'], 'تمام — {n} ضيف'.tr);
   List<(int, String)> get guestScales {
     final raw = _guests['scales'];
     if (raw is List) {
       final list =
           raw
               .whereType<Map<String, dynamic>>()
-              .map((s) => (_i(s['upTo'], 100), _s(s['label'], '')))
+              .map((s) => (_i(s['upTo'], 100), _t(s['label'], '')))
               .where((s) => s.$2.trim().isNotEmpty)
               .toList()
             ..sort((a, b) => a.$1.compareTo(b.$1));
       if (list.isNotEmpty) return list;
     }
-    return const [
-      (30, 'جلسة حميمة'),
-      (80, 'عزيمة عائلية'),
-      (200, 'حفل متوسط'),
-      (450, 'مناسبة كبيرة'),
-      (100000, 'حدث ضخم'),
+    return [
+      (30, 'جلسة حميمة'.tr),
+      (80, 'عزيمة عائلية'.tr),
+      (200, 'حفل متوسط'.tr),
+      (450, 'مناسبة كبيرة'.tr),
+      (100000, 'حدث ضخم'.tr),
     ];
   }
 
@@ -365,66 +374,71 @@ class NadeemConfig {
   // ── التوقيت ──
   _J get _shift => _sec('shiftStep');
   bool get shiftEnabled => _b(_shift['enabled'], true);
-  String get shiftQuestion => _s(_shift['question'], 'متى تفضّل وقت المناسبة؟');
-  String get shiftReaction => _s(_shift['reaction'], 'حلو، سأراعي التوقيت.');
+  String get shiftQuestion =>
+      _t(_shift['question'], 'متى تفضّل وقت المناسبة؟'.tr);
+  String get shiftReaction => _t(_shift['reaction'], 'حلو، سأراعي التوقيت.'.tr);
   NadeemSlot get morning => NadeemSlot.fromJson(
     _shift['morning'],
-    const NadeemSlot(true, 'صباحاً', 'شمس وهواء'),
+    NadeemSlot(true, 'صباحاً'.tr, 'شمس وهواء'.tr),
   );
   NadeemSlot get evening => NadeemSlot.fromJson(
     _shift['evening'],
-    const NadeemSlot(true, 'مساءً', 'أضواء وسهر'),
+    NadeemSlot(true, 'مساءً'.tr, 'أضواء وسهر'.tr),
   );
   NadeemSlot get fullDay => NadeemSlot.fromJson(
     _shift['full'],
-    const NadeemSlot(true, 'يوم كامل', 'من الصبح لليل'),
+    NadeemSlot(true, 'يوم كامل'.tr, 'من الصبح لليل'.tr),
   );
   bool get flexEnabled => _b(_obj(_shift['flex'])['enabled'], true);
-  String get flexLabel => _s(_obj(_shift['flex'])['label'], 'التوقيت مرن عندي');
-  String get flexAnswer => _s(_obj(_shift['flex'])['answer'], 'التوقيت مرن');
+  String get flexLabel =>
+      _t(_obj(_shift['flex'])['label'], 'التوقيت مرن عندي'.tr);
+  String get flexAnswer => _t(_obj(_shift['flex'])['answer'], 'التوقيت مرن'.tr);
 
   // ── الميزانية ──
   _J get _budget => _sec('budgetStep');
   bool get budgetEnabled => _b(_budget['enabled'], true);
   String get budgetQuestion =>
-      _s(_budget['question'], 'وأخيراً — كم تحب أن تكون ميزانيتك لليوم؟');
-  String get budgetOpenLabel => _s(_budget['openLabel'], 'مفتوحة');
-  String get budgetOpenAnswer => _s(_budget['openAnswer'], 'الميزانية مفتوحة');
-  String get budgetSubmit => _s(_budget['submitLabel'], 'اعرض النتائج');
-  String get budgetAnswer => _s(_budget['answer'], 'حتى {amount} د.ع');
+      _t(_budget['question'], 'وأخيراً — كم تحب أن تكون ميزانيتك لليوم؟'.tr);
+  String get budgetOpenLabel => _t(_budget['openLabel'], 'مفتوحة'.tr);
+  String get budgetOpenAnswer =>
+      _t(_budget['openAnswer'], 'الميزانية مفتوحة'.tr);
+  String get budgetSubmit => _t(_budget['submitLabel'], 'اعرض النتائج'.tr);
+  String get budgetAnswer => _t(_budget['answer'], 'حتى {amount} د.ع'.tr);
   double get budgetInitial =>
       (_i(_budget['initialPercent'], 55).clamp(0, 100)) / 100;
 
   // ── الإنهاء والنتائج ──
   _J get _finish => _sec('finish');
   String get finishIntro =>
-      _s(_finish['intro'], 'ممتاز! دعني أقرأ الأماكن لأجلك…');
+      _t(_finish['intro'], 'ممتاز! دعني أقرأ الأماكن لأجلك…'.tr);
   String get finishThinking =>
-      _s(_finish['thinking'], 'أطابق مناسبتك مع الأماكن المتاحة…');
-  String get finishError => _s(
+      _t(_finish['thinking'], 'أطابق مناسبتك مع الأماكن المتاحة…'.tr);
+  String get finishError => _t(
     _finish['error'],
-    'تعذّر عليّ إكمال البحث الآن — تحقّق من الاتصال وحاول مجدداً.',
+    'تعذّر عليّ إكمال البحث الآن — تحقّق من الاتصال وحاول مجدداً.'.tr,
   );
-  String get retryLabel => _s(_finish['retryLabel'], 'حاول مجدداً');
+  String get retryLabel => _t(_finish['retryLabel'], 'حاول مجدداً'.tr);
 
   _J get _res => _sec('results');
-  String get resultsTitle => _s(_res['title'], 'خطة {occasion}');
-  String get editHint => _s(_res['editHint'], 'المس أي بند لتعديله');
-  String get resultsPrecise =>
-      _s(_res['precise'], 'هذه أفضل الأماكن لمناسبتك، مرتّبة حسب التطابق 👇');
-  String get resultsApprox => _s(
-    _res['approximate'],
-    'لم أجد تطابقاً كاملاً، لكن هذه الأقرب لما طلبت 👇',
+  String get resultsTitle => _t(_res['title'], 'خطة {occasion}'.tr);
+  String get editHint => _t(_res['editHint'], 'المس أي بند لتعديله'.tr);
+  String get resultsPrecise => _t(
+    _res['precise'],
+    'هذه أفضل الأماكن لمناسبتك، مرتّبة حسب التطابق 👇'.tr,
   );
-  String get resultsEmpty => _s(
+  String get resultsApprox => _t(
+    _res['approximate'],
+    'لم أجد تطابقاً كاملاً، لكن هذه الأقرب لما طلبت 👇'.tr,
+  );
+  String get resultsEmpty => _t(
     _res['empty'],
-    'لم أجد مطابقة دقيقة الآن — جرّب توسيع الميزانية أو تغيير المحافظة.',
+    'لم أجد مطابقة دقيقة الآن — جرّب توسيع الميزانية أو تغيير المحافظة.'.tr,
   );
   String get decorIntro =>
-      _s(_res['decorIntro'], 'ولتكتمل الصورة — فرق تزيين تليق بمناسبتك 🌸');
-  String get restartLabel => _s(_res['restartLabel'], 'من جديد');
-  String get allResultsLabel => _s(_res['allResultsLabel'], 'كل النتائج');
-  String get autoTypeChip => _s(_res['autoTypeChip'], 'نديم يختار');
+      _t(_res['decorIntro'], 'ولتكتمل الصورة — فرق تزيين تليق بمناسبتك 🌸'.tr);
+  String get restartLabel => _t(_res['restartLabel'], 'من جديد'.tr);
+  String get allResultsLabel => _t(_res['allResultsLabel'], 'كل النتائج'.tr);
+  String get autoTypeChip => _t(_res['autoTypeChip'], 'نديم يختار'.tr);
   bool get showMatchPercent => _b(_res['showMatchPercent'], true);
   bool get showReasons => _b(_res['showReasons'], true);
 

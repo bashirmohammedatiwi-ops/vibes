@@ -7,6 +7,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
 import '../../core/constants/map_constants.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/utils/vibes_net_image.dart';
 
 /// علامة على الخريطة — بيانات فقط (GPU-native).
@@ -170,6 +171,17 @@ class _VibesMapViewState extends State<VibesMapView> {
   bool _syncAgain = false;
   double _dpr = 3;
 
+  /// الطبقة الفاتحة الافتراضية تصبح داكنة في الوضع الليلي؛ الأقمار
+  /// الصناعية والتضاريس تبقى كما هي.
+  String get _effectiveStyle =>
+      Appearance.isDark && widget.styleUri == MapConstants.styleUri
+      ? MapConstants.darkStyleUri
+      : widget.styleUri;
+
+  /// سطح الدبوس غير المحدد والنص فوق تعبئة الدبوس المحدد.
+  Color get _pinSurface => themed(Colors.white, VibesDark.surface);
+  Color get _onPinFill => themed(Colors.white, VibesDark.canvas);
+
   @override
   void initState() {
     super.initState();
@@ -197,7 +209,7 @@ class _VibesMapViewState extends State<VibesMapView> {
     }
     if (_map == null) return;
 
-    if (oldWidget.styleUri != widget.styleUri) {
+    if (_loadedStyle != _effectiveStyle) {
       _switchStyle();
       return;
     }
@@ -296,7 +308,7 @@ class _VibesMapViewState extends State<VibesMapView> {
 
     _pins = await map.annotations.createPointAnnotationManager();
     _pins!.tapEvents(onTap: _onPinTap);
-    _loadedStyle = widget.styleUri;
+    _loadedStyle = _effectiveStyle;
 
     await _syncMarkers();
 
@@ -330,7 +342,7 @@ class _VibesMapViewState extends State<VibesMapView> {
     if (map == null) return;
     final style = map.style;
     try {
-      await style.localizeLabels('ar', null);
+      await style.localizeLabels(I18n.locale, null);
     } catch (_) {}
 
     Future<void> set(String layer, String prop, Object value) async {
@@ -347,8 +359,22 @@ class _VibesMapViewState extends State<VibesMapView> {
         set(l, 'visibility', 'none'),
     ]);
 
+    if (widget.styleUri != MapConstants.styleUri) return;
+
+    // ليل VIBES: الطبقة الداكنة بدرجات الكحلي بدل صبغة العالم الفاتحة.
+    if (Appearance.isDark) {
+      await Future.wait([
+        set('land', 'background-color', _hex(const Color(0xFF0F1E31))),
+        set('water', 'fill-color', _hex(VibesDark.canvas)),
+        set('national-park', 'fill-color', _hex(const Color(0xFF12263A))),
+        set('landuse', 'fill-color', _hex(const Color(0xFF12263A))),
+        set('building', 'fill-color', _hex(VibesDark.surfaceMuted)),
+      ]);
+      return;
+    }
+
     final tint = widget.tint;
-    if (tint == null || widget.styleUri != MapConstants.styleUri) return;
+    if (tint == null) return;
     await Future.wait([
       set('land', 'background-color', _hex(tint.land)),
       set('water', 'fill-color', _hex(tint.water)),
@@ -364,9 +390,9 @@ class _VibesMapViewState extends State<VibesMapView> {
   /// تبديل الطبقة دون هدم الخريطة — العلامات تُعاد بعد تحميل الستايل.
   Future<void> _switchStyle() async {
     final map = _map;
-    if (map == null || _loadedStyle == widget.styleUri) return;
-    _loadedStyle = widget.styleUri;
-    await map.loadStyleURI(widget.styleUri);
+    if (map == null || _loadedStyle == _effectiveStyle) return;
+    _loadedStyle = _effectiveStyle;
+    await map.loadStyleURI(_effectiveStyle);
     _drawn.clear();
     try {
       await _pins?.deleteAll();
@@ -399,7 +425,7 @@ class _VibesMapViewState extends State<VibesMapView> {
   bool _isSelected(VibesMapMarker m) => m.selected || m.id == widget.selectedId;
 
   String _sig(VibesMapMarker m) =>
-      '${m.imageUrl}|${m.label}|${m.accent?.toARGB32()}|${_isSelected(m)}';
+      '${m.imageUrl}|${m.label}|${m.accent?.toARGB32()}|${_isSelected(m)}|${Appearance.isDark}';
 
   /// مزامنة تفاضلية: حذف المختفي، إضافة الجديد، وتحديث ما تغيّر توقيعه.
   Future<void> _syncMarkers() async {
@@ -515,6 +541,7 @@ class _VibesMapViewState extends State<VibesMapView> {
       accent.toARGB32(),
       _dpr,
       4,
+      Appearance.isDark,
     );
     final cached = _pinCache[key];
     if (cached != null) return cached;
@@ -532,11 +559,11 @@ class _VibesMapViewState extends State<VibesMapView> {
           fontFamily: VibesFont.ui,
           fontSize: (selected ? 12.5 : 11.5) * s,
           fontWeight: FontWeight.w900,
-          color: selected ? Colors.white : Color.lerp(accent, Vibes.ink, .35),
+          color: selected ? _onPinFill : Color.lerp(accent, Vibes.ink, .35),
           height: 1.15,
         ),
       ),
-      textDirection: TextDirection.rtl,
+      textDirection: I18n.isEn ? TextDirection.ltr : TextDirection.rtl,
     )..layout();
     final pillH = hasLabel ? tp.height + 6 * s : 0.0;
     final pillW = hasLabel ? tp.width + 16 * s : 0.0;
@@ -593,7 +620,7 @@ class _VibesMapViewState extends State<VibesMapView> {
     canvas.drawCircle(
       Offset(cx, cy),
       d / 2 - ring,
-      Paint()..color = Colors.white,
+      Paint()..color = _pinSurface,
     );
 
     // الصورة
@@ -625,7 +652,7 @@ class _VibesMapViewState extends State<VibesMapView> {
           text: '◆',
           style: TextStyle(
             fontSize: inner * .8,
-            color: Colors.white.withValues(alpha: .9),
+            color: _onPinFill.withValues(alpha: .9),
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -659,7 +686,7 @@ class _VibesMapViewState extends State<VibesMapView> {
             ).createShader(rect.outerRect),
         );
       } else {
-        canvas.drawRRect(rect, Paint()..color = Colors.white);
+        canvas.drawRRect(rect, Paint()..color = _pinSurface);
         canvas.drawRRect(
           rect,
           Paint()
@@ -679,7 +706,7 @@ class _VibesMapViewState extends State<VibesMapView> {
     canvas.drawCircle(
       Offset(cx, dotY),
       dotR + 1.4 * s,
-      Paint()..color = Colors.white,
+      Paint()..color = _pinSurface,
     );
     canvas.drawCircle(Offset(cx, dotY), dotR, Paint()..color = accent);
 
@@ -692,7 +719,14 @@ class _VibesMapViewState extends State<VibesMapView> {
 
   /// دبوس نصّي (بلا صورة) — كبسولة بيضاء بخط لون العالم.
   Future<Uint8List> _pillPin(Color accent, bool selected, String? label) async {
-    final key = Object.hash(accent.toARGB32(), selected, label ?? '', _dpr, 4);
+    final key = Object.hash(
+      accent.toARGB32(),
+      selected,
+      label ?? '',
+      _dpr,
+      4,
+      Appearance.isDark,
+    );
     final cached = _pinCache[key];
     if (cached != null) return cached;
     final s = _dpr;
@@ -704,10 +738,10 @@ class _VibesMapViewState extends State<VibesMapView> {
           fontFamily: VibesFont.ui,
           fontSize: (selected ? 13 : 12) * s,
           fontWeight: FontWeight.w900,
-          color: selected ? Colors.white : Vibes.ink,
+          color: selected ? _onPinFill : Vibes.ink,
         ),
       ),
-      textDirection: TextDirection.rtl,
+      textDirection: I18n.isEn ? TextDirection.ltr : TextDirection.rtl,
     )..layout();
     final pillW = tp.width + 22 * s;
     final pillH = tp.height + 10 * s;
@@ -727,8 +761,17 @@ class _VibesMapViewState extends State<VibesMapView> {
         ..color = const Color(0x38000000)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, 3 * s),
     );
-    final fill = Paint()..color = selected ? accent : Colors.white;
+    final fill = Paint()..color = selected ? accent : _pinSurface;
     canvas.drawRRect(rect, fill);
+    if (!selected && Appearance.isDark) {
+      canvas.drawRRect(
+        rect,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1 * s
+          ..color = VibesDark.hairlineStrong,
+      );
+    }
     final tailPath = Path()
       ..moveTo(cx - 6 * s, rect.bottom - 1)
       ..lineTo(cx + 6 * s, rect.bottom - 1)
@@ -841,7 +884,7 @@ class _VibesMapViewState extends State<VibesMapView> {
   Widget build(BuildContext context) {
     final map = MapWidget(
       key: const ValueKey('vibes-map'),
-      styleUri: widget.styleUri,
+      styleUri: _effectiveStyle,
       textureView: true,
       cameraOptions: CameraOptions(
         center: Point(
@@ -889,7 +932,9 @@ class _WarmupMap extends StatelessWidget {
   Widget build(BuildContext context) {
     return MapWidget(
       key: const ValueKey('vibes-warmup-map'),
-      styleUri: MapConstants.styleUri,
+      styleUri: Appearance.isDark
+          ? MapConstants.darkStyleUri
+          : MapConstants.styleUri,
       textureView: false,
       cameraOptions: CameraOptions(
         center: Point(

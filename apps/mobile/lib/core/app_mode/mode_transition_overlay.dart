@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../i18n/i18n.dart';
 import 'package:flutter/services.dart';
 
 import '../../features/property/place_experience_ui.dart';
@@ -51,10 +52,10 @@ class _ModeTransitionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = toProvider ? 'بوابة المالك' : 'تطبيق VIBES';
+    final title = toProvider ? 'بوابة المالك'.tr : 'تطبيق أجواء'.tr;
     final subtitle = toProvider
-        ? 'إدارة الحجوزات والتقويم والأرباح'
-        : 'تصفح واحجز كضيف';
+        ? 'إدارة الحجوزات والتقويم والأرباح'.tr
+        : 'تصفح واحجز كضيف'.tr;
     final accent = toProvider ? placeBrass : placeInk;
 
     return Center(
@@ -64,7 +65,9 @@ class _ModeTransitionCard extends StatelessWidget {
           width: 280,
           padding: const EdgeInsets.fromLTRB(24, 28, 24, 26),
           decoration: BoxDecoration(
-            color: toProvider ? placeInk : Colors.white,
+            color: toProvider
+                ? themed(placeInk, VibesDark.surfaceMuted)
+                : Vibes.surface,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: toProvider ? placeBrass.withValues(alpha: .45) : placeLine,

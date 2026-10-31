@@ -115,7 +115,7 @@ class _VibesAppState extends ConsumerState<VibesApp>
     ref.watch(incomingCallProvider);
 
     return MaterialApp.router(
-      title: 'VIBES',
+      title: I18n.appName,
       debugShowCheckedModeBanner: false,
       theme: light,
       darkTheme: darkTheme,

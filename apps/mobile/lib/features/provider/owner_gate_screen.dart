@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -47,7 +48,7 @@ class OwnerGateScreen extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
           MaisonPageHeader(
-            title: 'لأصحاب الأماكن',
+            title: 'لأصحاب الأماكن'.tr,
             onBack: () =>
                 context.canPop() ? context.pop() : context.go('/home'),
           ),
@@ -61,7 +62,7 @@ class OwnerGateScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'إذا كنت مالك مزرعة أو قاعة',
+            'إذا كنت مالك مزرعة أو قاعة'.tr,
             style: TextStyle(
               fontFamily: VibesFont.ui,
               fontSize: 26,
@@ -72,7 +73,7 @@ class OwnerGateScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'راسل الدعم باسم المكان ورقم هاتفك. فريق VIBES يتحقق من الملكية ثم يربط المكان بحسابك. لا حاجة لإضافة المكان بنفسك.',
+            'راسل الدعم باسم المكان ورقم هاتفك. فريق أجواء يتحقق من الملكية ثم يربط المكان بحسابك. لا حاجة لإضافة المكان بنفسك.'.tr,
             style: TextStyle(
               fontFamily: VibesFont.ui,
               fontSize: 14,
@@ -91,10 +92,13 @@ class OwnerGateScreen extends ConsumerWidget {
               await openSupportChat(context, ref);
             },
             icon: const Icon(Icons.forum_outlined),
-            label: const Text('راسل الدعم'),
+            label: Text('راسل الدعم'.tr),
             style: FilledButton.styleFrom(
-              backgroundColor: ownerNavy,
-              foregroundColor: Colors.white,
+              backgroundColor: themed(ownerNavyDeep, WorldPalette.owner.accent),
+              foregroundColor: themed(
+                Colors.white,
+                WorldPalette.owner.onAccent,
+              ),
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -112,13 +116,13 @@ class OwnerGateScreen extends ConsumerWidget {
             style: OutlinedButton.styleFrom(
               foregroundColor: ownerNavy,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              side: const BorderSide(color: ownerLine),
+              side: BorderSide(color: ownerLine),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
             child: Text(
-              'مركز المساعدة',
+              'مركز المساعدة'.tr,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontWeight: FontWeight.w800,
@@ -138,7 +142,7 @@ class OwnerGateScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'أماكن رُبطت بحسابك',
+                    'أماكن رُبطت بحسابك'.tr,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 15,
@@ -155,7 +159,7 @@ class OwnerGateScreen extends ConsumerWidget {
                                     ? (claim['property'] as Map)['name']
                                     : null)
                                 ?.toString() ??
-                            'مكان',
+                            'مكان'.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontWeight: FontWeight.w700,

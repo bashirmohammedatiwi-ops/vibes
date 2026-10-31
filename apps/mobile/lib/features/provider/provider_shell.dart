@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/world_theme.dart';
 import 'provider_data.dart';
@@ -17,10 +18,18 @@ class ProviderShell extends ConsumerWidget {
   final StatefulNavigationShell shell;
 
   static const _tabs = [
-    (Icons.space_dashboard_rounded, Icons.space_dashboard_outlined, 'لوحتي'),
-    (Icons.calendar_month_rounded, Icons.calendar_month_outlined, 'الحجوزات'),
-    (Icons.event_busy_rounded, Icons.event_busy_outlined, 'التقويم'),
-    (Icons.home_work_rounded, Icons.home_work_outlined, 'ممتلكاتي'),
+    (
+      Icons.space_dashboard_rounded,
+      Icons.space_dashboard_outlined,
+      'لوحتي', // i18n-ok
+    ),
+    (
+      Icons.calendar_month_rounded,
+      Icons.calendar_month_outlined,
+      'الحجوزات', // i18n-ok
+    ),
+    (Icons.event_busy_rounded, Icons.event_busy_outlined, 'التقويم'), // i18n-ok
+    (Icons.home_work_rounded, Icons.home_work_outlined, 'ممتلكاتي'), // i18n-ok
   ];
 
   @override
@@ -59,9 +68,11 @@ class ProviderShell extends ConsumerWidget {
                   height: 68,
                   padding: const EdgeInsets.symmetric(horizontal: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Vibes.surface,
                     borderRadius: BorderRadius.circular(26),
-                    border: Border.all(color: const Color(0xFFEDEEF1)),
+                    border: Border.all(
+                      color: themed(const Color(0xFFEDEEF1), Vibes.hairline),
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: p.night.withValues(alpha: .12),
@@ -77,7 +88,7 @@ class ProviderShell extends ConsumerWidget {
                           child: _OwnerTab(
                             filled: _tabs[i].$1,
                             outlined: _tabs[i].$2,
-                            label: _tabs[i].$3,
+                            label: _tabs[i].$3.tr,
                             active: i == current,
                             badge: i == 1 ? pending : null,
                             onTap: () {
@@ -97,6 +108,8 @@ class ProviderShell extends ConsumerWidget {
     );
   }
 }
+
+Color get _inactive => themed(const Color(0xFF7C8594), Vibes.inkTertiary);
 
 class _OwnerTab extends StatelessWidget {
   const _OwnerTab({
@@ -146,7 +159,7 @@ class _OwnerTab extends StatelessWidget {
                   child: Icon(
                     active ? filled : outlined,
                     size: 21,
-                    color: active ? p.accentLight : const Color(0xFF7C8594),
+                    color: active ? p.accentLight : _inactive,
                   ),
                 ),
                 if (badge != null && badge! > 0)
@@ -161,7 +174,7 @@ class _OwnerTab extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: p.fill,
                         borderRadius: BorderRadius.circular(9),
-                        border: Border.all(color: Colors.white, width: 1.5),
+                        border: Border.all(color: Vibes.surface, width: 1.5),
                       ),
                       child: Text(
                         badge! > 9 ? '9+' : '$badge',
@@ -183,7 +196,7 @@ class _OwnerTab extends StatelessWidget {
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontWeight: active ? FontWeight.w900 : FontWeight.w700,
-                color: active ? p.night : const Color(0xFF7C8594),
+                color: active ? themed(p.night, p.accentLight) : _inactive,
                 fontSize: 11,
                 height: 1.1,
               ),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/data/marketplace_providers.dart';
 import '../../shared/models/models.dart';
@@ -21,8 +22,8 @@ class CouponsScreen extends ConsumerWidget {
         child: Column(
           children: [
             MaisonPageHeader(
-              title: 'كوبونات الخصم',
-              kicker: 'وفر على حجزك',
+              title: 'كوبونات الخصم'.tr,
+              kicker: 'وفر على حجزك'.tr,
               onBack: () => context.pop(),
             ),
             Expanded(
@@ -41,10 +42,10 @@ class CouponsScreen extends ConsumerWidget {
                 ),
                 data: (list) {
                   if (list.isEmpty) {
-                    return const EmptyCanvas(
+                    return EmptyCanvas(
                       icon: Icons.confirmation_number_outlined,
-                      title: 'لا كوبونات حالياً',
-                      subtitle: 'عندما يفعّل الفريق عرضاً سيظهر رمزه هنا',
+                      title: 'لا كوبونات حالياً'.tr,
+                      subtitle: 'عندما يفعّل الفريق عرضاً سيظهر رمزه هنا'.tr,
                     );
                   }
                   return RefreshIndicator(
@@ -105,20 +106,23 @@ class _CouponCard extends StatelessWidget {
                     MaisonIconWell(
                       icon: Icons.confirmation_number_outlined,
                       color: Vibes.teal,
-                      background: Colors.white,
+                      background: Vibes.surface,
                       size: 38,
                     ),
                     const SizedBox(width: 10),
-                    Text(
-                      coupon.discountLabel,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Vibes.teal,
-                        fontWeight: FontWeight.w800,
+                    Expanded(
+                      child: Text(
+                        coupon.discountLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Vibes.teal,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
-                    const Spacer(),
                     FolioPanel(
-                      color: Brand.brassPale,
+                      color: themed(Brand.brassPale, Vibes.surfaceMuted),
                       borderColor: Vibes.hairline,
                       radius: Folio.compact,
                       child: Padding(
@@ -151,7 +155,7 @@ class _CouponCard extends StatelessWidget {
                 if (coupon.propertyName != null) ...[
                   const SizedBox(height: 6),
                   Text(
-                    'لمكان: ${coupon.propertyName}',
+                    'لمكان: {name}'.trArgs({'name': coupon.propertyName}),
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: Vibes.inkSecondary),
@@ -160,7 +164,9 @@ class _CouponCard extends StatelessWidget {
                 if (coupon.minBookingTotal != null) ...[
                   const SizedBox(height: 4),
                   Text(
-                    'الحد الأدنى ${coupon.minBookingTotal!.toInt()} د.ع',
+                    'الحد الأدنى {amount} د.ع'.trArgs({
+                      'amount': coupon.minBookingTotal!.toInt(),
+                    }),
                     style: Theme.of(
                       context,
                     ).textTheme.labelSmall?.copyWith(color: Vibes.inkTertiary),
@@ -170,14 +176,18 @@ class _CouponCard extends StatelessWidget {
                 Align(
                   alignment: AlignmentDirectional.centerStart,
                   child: VibesButton(
-                    label: 'نسخ الرمز',
+                    label: 'نسخ الرمز'.tr,
                     small: true,
                     expanded: false,
                     onPressed: () async {
                       await Clipboard.setData(ClipboardData(text: coupon.code));
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('تم نسخ ${coupon.code}')),
+                        SnackBar(
+                          content: Text(
+                            'تم نسخ {code}'.trArgs({'code': coupon.code}),
+                          ),
+                        ),
                       );
                     },
                   ),

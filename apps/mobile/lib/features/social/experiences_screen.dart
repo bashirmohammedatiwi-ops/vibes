@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/moderation/moderation.dart';
 import '../../core/network/api_client.dart';
 import '../auth/auth_controller.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/vibes_net_image.dart';
 import '../../shared/data/marketplace_providers.dart';
@@ -13,6 +14,12 @@ import '../../shared/widgets/maison_chrome.dart';
 import '../../shared/widgets/maison_shapes.dart';
 import '../../shared/widgets/vibes_editorial.dart';
 import '../../shared/widgets/vibes_widgets.dart';
+
+String _commentAuthor(Map<String, dynamic> row) {
+  final user = row['user'];
+  final name = user is Map ? user['name'] : null;
+  return name?.toString() ?? 'ضيف'.tr;
+}
 
 class ExperiencesScreen extends ConsumerStatefulWidget {
   const ExperiencesScreen({super.key, this.embedded = false, this.highlightId});
@@ -72,9 +79,9 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
       isScrollControlled: true,
       backgroundColor: VibesTheme.surfaceOf(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(8),
-          topRight: Radius.circular(12),
+        borderRadius: BorderRadiusDirectional.only(
+          topEnd: Radius.circular(8),
+          topStart: Radius.circular(12),
         ),
       ),
       builder: (context) => Padding(
@@ -94,7 +101,7 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
                 CrestSeal(size: 22, color: Vibes.coral),
                 const SizedBox(width: 10),
                 Text(
-                  'تعليقات',
+                  'تعليقات'.tr,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
@@ -106,7 +113,7 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
             const SizedBox(height: 14),
             if (rows.isEmpty)
               Text(
-                'كن أول من يعلّق',
+                'كن أول من يعلّق'.tr,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: VibesTheme.textSecondaryOf(context),
                 ),
@@ -136,11 +143,11 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    '${row['user'] is Map ? row['user']['name'] ?? 'ضيف' : 'ضيف'}: ${row['body'] ?? ''}',
+                                    '${_commentAuthor(row)}: ${row['body'] ?? ''}',
                                   ),
                                 ),
                                 IconButton(
-                                  tooltip: 'إبلاغ أو حظر',
+                                  tooltip: 'إبلاغ أو حظر'.tr,
                                   icon: const Icon(Icons.more_horiz, size: 20),
                                   onPressed: () async {
                                     final hidden = await showModerationSheet(
@@ -168,13 +175,13 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
               ),
             const SizedBox(height: 12),
             MaisonField(
-              label: 'تعليق',
+              label: 'تعليق'.tr,
               controller: controller,
-              hint: 'اكتب تعليقاً',
+              hint: 'اكتب تعليقاً'.tr,
             ),
             const SizedBox(height: 12),
             VibesButton(
-              label: 'إرسال',
+              label: 'إرسال'.tr,
               onPressed: () async {
                 final text = controller.text.trim();
                 if (text.isEmpty) return;
@@ -238,10 +245,12 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
           if (list.isEmpty) {
             return EmptyCanvas(
               icon: Icons.auto_awesome_outlined,
-              title: _followingOnly ? 'لا تجارب من المتابَعين' : 'لا تجارب بعد',
+              title: _followingOnly
+                  ? 'لا تجارب من المتابَعين'.tr
+                  : 'لا تجارب بعد'.tr,
               subtitle: _followingOnly
-                  ? 'تابع مالكين لتظهر تجارب ضيوفهم هنا'
-                  : 'انشر تجربتك بعد اكتمال الحجز لتظهر هنا',
+                  ? 'تابع مالكين لتظهر تجارب ضيوفهم هنا'.tr
+                  : 'انشر تجربتك بعد اكتمال الحجز لتظهر هنا'.tr,
             );
           }
           final mod = ref.watch(moderationProvider);
@@ -298,7 +307,7 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
     );
 
     final chip = MaisonChip(
-      label: _followingOnly ? 'الكل' : 'المتابَعون',
+      label: _followingOnly ? 'الكل'.tr : 'المتابَعون'.tr,
       active: _followingOnly,
       onTap: () => setState(() => _followingOnly = !_followingOnly),
     );
@@ -307,8 +316,8 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
       children: [
         if (!widget.embedded)
           MaisonPageHeader(
-            title: 'تجارب الضيوف',
-            kicker: 'من عاش المكان',
+            title: 'تجارب الضيوف'.tr,
+            kicker: 'من عاش المكان'.tr,
             onBack: () => context.pop(),
             trailing: chip,
           )
@@ -322,12 +331,12 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       EditorialEyebrow(
-                        label: 'ضيوف VIBES',
+                        label: 'ضيوف أجواء'.tr,
                         accent: Vibes.coral,
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'تجارب حقيقية',
+                        'تجارب حقيقية'.tr,
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w900),
                       ),
@@ -408,12 +417,12 @@ class _ExperienceCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            post.authorName ?? 'ضيف VIBES',
+                            post.authorName ?? 'ضيف أجواء'.tr,
                             style: Theme.of(context).textTheme.labelLarge
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           Text(
-                            'تجربة ضيف',
+                            'تجربة ضيف'.tr,
                             style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(
                                   color: VibesTheme.textTertiaryOf(context),
@@ -426,7 +435,7 @@ class _ExperienceCard extends StatelessWidget {
                     if (post.propertyId != null)
                       Flexible(
                         child: MaisonSoftChip(
-                          label: post.propertyName ?? 'المكان',
+                          label: post.propertyName ?? 'المكان'.tr,
                         ),
                       ),
                   ],
@@ -456,7 +465,7 @@ class _ExperienceCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       _Action(
                         icon: Icons.home_work_outlined,
-                        label: 'المكان',
+                        label: 'المكان'.tr,
                         onTap: () =>
                             context.push('/property/${post.propertyId}'),
                       ),
@@ -464,7 +473,7 @@ class _ExperienceCard extends StatelessWidget {
                     const Spacer(),
                     IconButton(
                       onPressed: onReport,
-                      tooltip: 'إبلاغ أو حظر',
+                      tooltip: 'إبلاغ أو حظر'.tr,
                       icon: const Icon(Icons.more_horiz, size: 20),
                     ),
                   ],

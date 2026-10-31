@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/network/api_client.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/vibes_net_image.dart';
 import '../../shared/widgets/maison_chrome.dart';
@@ -29,8 +30,8 @@ class IncomingCall {
     return IncomingCall(
       id: call['id'] as String,
       conversationId: call['conversationId'] as String? ?? '',
-      place: call['place'] as String? ?? 'مكالمة',
-      callerName: call['callerName'] as String? ?? 'VIBES',
+      place: (call['place'] as String? ?? 'مكالمة'.tr).tr,
+      callerName: call['callerName'] as String? ?? I18n.appName,
       createdAt: DateTime.tryParse('${call['createdAt']}') ?? DateTime.now(),
       expiresInSeconds: (call['expiresInSeconds'] as num?)?.toInt() ?? 45,
     );
@@ -134,78 +135,76 @@ class IncomingCallSheet extends ConsumerWidget {
     final call = ref.watch(incomingCallProvider);
     if (call == null) return const SizedBox.shrink();
 
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: DecoratedBox(
-          decoration: const BoxDecoration(gradient: Vibes.midnightFill),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Column(
-                children: [
-                  const Spacer(),
-                  const _RingPulse(),
-                  const SizedBox(height: 26),
-                  Text(
-                    call.callerName,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: DecoratedBox(
+        decoration: const BoxDecoration(gradient: Vibes.midnightFill),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Column(
+              children: [
+                const Spacer(),
+                const _RingPulse(),
+                const SizedBox(height: 26),
+                Text(
+                  call.callerName,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'مكالمة صوتية · {place}'.trArgs({'place': call.place}),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                MaisonKicker(
+                  'مكالمة {app}'.trArgs({'app': I18n.appName}),
+                  light: true,
+                  color: Vibes.tealBright,
+                ),
+                const Spacer(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _CallChoice(
+                      icon: Icons.call_end_rounded,
+                      label: 'رفض'.tr,
+                      color: const Color(0xFFC2402F),
+                      onTap: () {
+                        final notifier = ref.read(
+                          incomingCallProvider.notifier,
+                        );
+                        final call = ref.read(incomingCallProvider);
+                        notifier.handled();
+                        if (call != null) declineCall(ref, call.id);
+                      },
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'مكالمة صوتية · ${call.place}',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white70,
-                      fontWeight: FontWeight.w600,
+                    _CallChoice(
+                      icon: Icons.call_rounded,
+                      label: 'قبول'.tr,
+                      color: Vibes.teal,
+                      iconColor: themed(Colors.white, Vibes.onTeal),
+                      onTap: () {
+                        final notifier = ref.read(
+                          incomingCallProvider.notifier,
+                        );
+                        final call = ref.read(incomingCallProvider);
+                        notifier.handled();
+                        if (call != null) joinCall(ref, context, call.id);
+                      },
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  MaisonKicker(
-                    'VIBES CALL',
-                    light: true,
-                    color: Vibes.tealBright,
-                  ),
-                  const Spacer(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _CallChoice(
-                        icon: Icons.call_end_rounded,
-                        label: 'رفض',
-                        color: const Color(0xFFC2402F),
-                        onTap: () {
-                          final notifier = ref.read(
-                            incomingCallProvider.notifier,
-                          );
-                          final call = ref.read(incomingCallProvider);
-                          notifier.handled();
-                          if (call != null) declineCall(ref, call.id);
-                        },
-                      ),
-                      _CallChoice(
-                        icon: Icons.call_rounded,
-                        label: 'قبول',
-                        color: Vibes.teal,
-                        onTap: () {
-                          final notifier = ref.read(
-                            incomingCallProvider.notifier,
-                          );
-                          final call = ref.read(incomingCallProvider);
-                          notifier.handled();
-                          if (call != null) joinCall(ref, context, call.id);
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 42),
-                ],
-              ),
+                  ],
+                ),
+                const SizedBox(height: 42),
+              ],
             ),
           ),
         ),
@@ -267,11 +266,7 @@ class _RingPulseState extends State<_RingPulse>
                     ),
                   );
                 }(),
-              VibesMonogram(
-                size: 92,
-                color: Vibes.tealBright,
-                strokeWidth: 3,
-              ),
+              VibesMonogram(size: 92, color: Vibes.tealBright, strokeWidth: 3),
             ],
           ),
         );
@@ -286,11 +281,13 @@ class _CallChoice extends StatelessWidget {
     required this.label,
     required this.color,
     required this.onTap,
+    this.iconColor = Colors.white,
   });
 
   final IconData icon;
   final String label;
   final Color color;
+  final Color iconColor;
   final VoidCallback onTap;
 
   @override
@@ -312,11 +309,11 @@ class _CallChoice extends StatelessWidget {
                 colors: [color.withValues(alpha: .85), color],
               ),
               shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(18),
-                  bottomRight: Radius.circular(12),
-                  bottomLeft: Radius.circular(16),
+                borderRadius: BorderRadiusDirectional.only(
+                  topEnd: Radius.circular(12),
+                  topStart: Radius.circular(18),
+                  bottomStart: Radius.circular(12),
+                  bottomEnd: Radius.circular(16),
                 ),
                 side: BorderSide(color: Color(0x66FFFFFF)),
               ),
@@ -328,7 +325,7 @@ class _CallChoice extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(icon, color: Colors.white, size: 34),
+            child: Icon(icon, color: iconColor, size: 34),
           ),
           const SizedBox(height: 10),
           Text(

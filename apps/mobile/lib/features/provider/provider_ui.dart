@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import 'package:flutter/services.dart';
 
@@ -12,18 +13,63 @@ import '../property/shift_calendar_ui.dart';
 import 'provider_data.dart';
 
 // ── ألوان بوابة المالك (كحلي وذهب) ──
-const Color ownerNavy = Color(0xFF0B1A2E);
-const Color ownerNavyHigh = Color(0xFF1B3857);
-const Color ownerGold = Color(0xFFC89844);
-const Color ownerGoldDeep = Color(0xFF8D6324);
-const Color ownerGoldLight = Color(0xFFE0B568);
-const Color ownerLine = Color(0xFFEDEEF1);
-const Color ownerPaper = Color(0xFFF5F6F8);
+/// كحلي ثابت في المظهرين: ظلال وغلالات فوق الصور وتعبئات داكنة.
+const Color ownerNavyDeep = Color(0xFF0B1A2E);
+
+/// حبر العناوين في الفاتح (الكحلي) وحبر دافئ في الداكن.
+Color get ownerNavy => themed(ownerNavyDeep, VibesDark.ink);
+Color get ownerNavyHigh =>
+    themed(const Color(0xFF1B3857), const Color(0xFFB4CFE6));
+Color get ownerGold => themed(const Color(0xFFC89844), const Color(0xFFE0B568));
+Color get ownerGoldDeep =>
+    themed(const Color(0xFF8D6324), const Color(0xFFE9C685));
+Color get ownerGoldLight =>
+    themed(const Color(0xFFE0B568), const Color(0xFFF0D7A4));
+Color get ownerLine => themed(const Color(0xFFEDEEF1), VibesDark.hairline);
+Color get ownerPaper => themed(const Color(0xFFF5F6F8), VibesDark.surfaceMuted);
+
+/// نص فوق تعبئة [ownerGoldDeep].
+Color get ownerOnGold => themed(Colors.white, const Color(0xFF0F2138));
+
+/// تعبئة كحلية ثابتة: يبقى فوقها الذهبي والأبيض مقروءين في المظهرين.
 const LinearGradient ownerNavyFill = LinearGradient(
   begin: Alignment.topRight,
   end: Alignment.bottomLeft,
-  colors: [ownerNavyHigh, ownerNavy],
+  colors: [Color(0xFF1B3857), ownerNavyDeep],
 );
+
+/// سهم «التالي» في نهاية الصف. العربية تبقى كما هي؛ الإنجليزية تشير لليمين.
+IconData get ownerForwardChevron =>
+    I18n.isEn ? Icons.chevron_right_rounded : Icons.chevron_left_rounded;
+
+const _enMonths = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+const _enWeekdaysShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+String ownerMonthEn(int month) => _enMonths[month - 1];
+String ownerMonthEnShort(int month) => _enMonths[month - 1].substring(0, 3);
+
+/// "4/11" بالعربية و"Nov 4" بالإنجليزية.
+String ownerShortDate(DateTime d) => I18n.isEn
+    ? '${ownerMonthEnShort(d.month)} ${d.day}'
+    : '${d.day}/${d.month}';
+
+/// "4/11/2026" بالعربية و"Nov 4, 2026" بالإنجليزية.
+String ownerFullDate(DateTime d) => I18n.isEn
+    ? '${ownerMonthEnShort(d.month)} ${d.day}, ${d.year}'
+    : '${d.day}/${d.month}/${d.year}';
 
 /// تاريخ نسبي للحجوزات (اليوم / غداً / …)
 String ownerRelativeBookingDay(DateTime date) {
@@ -31,11 +77,11 @@ String ownerRelativeBookingDay(DateTime date) {
   final today = DateTime(now.year, now.month, now.day);
   final target = DateTime(date.year, date.month, date.day);
   final diff = target.difference(today).inDays;
-  if (diff == 0) return 'اليوم';
-  if (diff == 1) return 'غداً';
-  if (diff == -1) return 'أمس';
-  if (diff > 1 && diff < 7) return 'بعد $diff أيام';
-  return '${date.day}/${date.month}';
+  if (diff == 0) return 'اليوم'.tr;
+  if (diff == 1) return 'غداً'.tr;
+  if (diff == -1) return 'أمس'.tr;
+  if (diff > 1 && diff < 7) return 'بعد {n} أيام'.trN(diff);
+  return ownerShortDate(date);
 }
 
 bool ownerIsSameDay(DateTime a, DateTime b) =>
@@ -64,28 +110,31 @@ bool ownerBookingCoversDay(Booking booking, DateTime day) {
 }
 
 String ownerFormatDayLong(DateTime d) {
+  if (I18n.isEn) {
+    return '${_enWeekdaysShort[d.weekday % 7]}, ${ownerMonthEnShort(d.month)} ${d.day}';
+  }
   const months = [
-    'كانون الثاني',
-    'شباط',
-    'آذار',
-    'نيسان',
-    'أيار',
-    'حزيران',
-    'تموز',
-    'آب',
-    'أيلول',
-    'تشرين الأول',
-    'تشرين الثاني',
-    'كانون الأول',
+    'كانون الثاني', // i18n-ok
+    'شباط', // i18n-ok
+    'آذار', // i18n-ok
+    'نيسان', // i18n-ok
+    'أيار', // i18n-ok
+    'حزيران', // i18n-ok
+    'تموز', // i18n-ok
+    'آب', // i18n-ok
+    'أيلول', // i18n-ok
+    'تشرين الأول', // i18n-ok
+    'تشرين الثاني', // i18n-ok
+    'كانون الأول', // i18n-ok
   ];
   const weekdays = [
-    'الأحد',
-    'الإثنين',
-    'الثلاثاء',
-    'الأربعاء',
-    'الخميس',
-    'الجمعة',
-    'السبت',
+    'الأحد', // i18n-ok
+    'الإثنين', // i18n-ok
+    'الثلاثاء', // i18n-ok
+    'الأربعاء', // i18n-ok
+    'الخميس', // i18n-ok
+    'الجمعة', // i18n-ok
+    'السبت', // i18n-ok
   ];
   return '${weekdays[d.weekday % 7]} ${d.day} ${months[d.month - 1]}';
 }
@@ -109,7 +158,7 @@ class OwnerSelectedDayCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _line),
       ),
@@ -140,7 +189,7 @@ class OwnerSelectedDayCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    'مغلق',
+                    'مغلق'.tr,
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 10,
@@ -154,7 +203,7 @@ class OwnerSelectedDayCard extends StatelessWidget {
           const SizedBox(height: 6),
           if (bookings.isEmpty)
             Text(
-              'لا حجوزات مسجّلة في هذا اليوم',
+              'لا حجوزات مسجّلة في هذا اليوم'.tr,
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontSize: 12,
@@ -165,7 +214,9 @@ class OwnerSelectedDayCard extends StatelessWidget {
             )
           else ...[
             Text(
-              '${bookings.length} حجز${bookings.length > 1 ? 'اً' : ''}',
+              bookings.length > 1
+                  ? '{n} حجزاً'.trN(bookings.length)
+                  : '{n} حجز'.trN(bookings.length),
               style: TextStyle(
                 fontFamily: VibesFont.ui,
                 fontSize: 12,
@@ -207,10 +258,10 @@ class OwnerTheme extends StatelessWidget {
 }
 
 WorldPalette get _o => WorldPalette.owner;
-const _ink = Color(0xFF0F1B2D);
-const _ink2 = Color(0xFF5B6576);
-const _line = Color(0xFFEDEEF1);
-const _soft = Color(0xFFF5F6F8);
+Color get _ink => themed(const Color(0xFF0F1B2D), VibesDark.ink);
+Color get _ink2 => themed(const Color(0xFF5B6576), VibesDark.inkSecondary);
+Color get _line => themed(const Color(0xFFEDEEF1), VibesDark.hairline);
+Color get _soft => themed(const Color(0xFFF5F6F8), VibesDark.surfaceMuted);
 
 /// خلفية البوابة.
 class OwnerPortalCanvas extends StatelessWidget {
@@ -241,6 +292,15 @@ class OwnerBrassRule extends StatelessWidget {
   }
 }
 
+/// بالإنجليزية يُصغَّر النص ليلائم البطاقة الضيقة؛ العربية كما هي.
+Widget _enFit(Widget text) => I18n.isEn
+    ? FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: AlignmentDirectional.centerStart,
+        child: text,
+      )
+    : text;
+
 class OwnerMetricTile extends StatelessWidget {
   const OwnerMetricTile({
     super.key,
@@ -269,7 +329,7 @@ class OwnerMetricTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
         decoration: BoxDecoration(
-          color: highlight ? null : Colors.white,
+          color: highlight ? null : Vibes.surface,
           gradient: highlight
               ? LinearGradient(colors: [_o.nightHigh, _o.night])
               : null,
@@ -304,27 +364,33 @@ class OwnerMetricTile extends StatelessWidget {
               ),
               const SizedBox(height: 10),
             ],
-            Text(
-              value,
-              style: TextStyle(
-                fontFamily: 'Montserrat',
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: highlight ? Colors.white : _ink,
-                height: 1.1,
+            _enFit(
+              Text(
+                value,
+                style: TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: highlight ? Colors.white : _ink,
+                  height: 1.1,
+                ),
               ),
             ),
             const SizedBox(height: 2),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: VibesFont.ui,
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                color: highlight ? Colors.white.withValues(alpha: .75) : _ink2,
-                height: 1.2,
+            _enFit(
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: highlight
+                      ? Colors.white.withValues(alpha: .75)
+                      : _ink2,
+                  height: 1.2,
+                ),
               ),
             ),
           ],
@@ -365,7 +431,7 @@ class OwnerQuickAction extends StatelessWidget {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Vibes.surface,
                     borderRadius: BorderRadius.circular(19),
                     border: Border.all(color: _line),
                     boxShadow: [
@@ -376,7 +442,11 @@ class OwnerQuickAction extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Icon(icon, size: 24, color: _o.nightHigh),
+                  child: Icon(
+                    icon,
+                    size: 24,
+                    color: themed(_o.nightHigh, _o.accentLight),
+                  ),
                 ),
                 if (badge != null && badge! > 0)
                   Positioned(
@@ -390,7 +460,7 @@ class OwnerQuickAction extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: _o.fill,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.white, width: 2),
+                        border: Border.all(color: Vibes.surface, width: 2),
                       ),
                       child: Text(
                         badge! > 9 ? '9+' : '$badge',
@@ -409,7 +479,7 @@ class OwnerQuickAction extends StatelessWidget {
             const SizedBox(height: 7),
             Text(
               label,
-              maxLines: 1,
+              maxLines: I18n.isEn ? 2 : 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -448,7 +518,7 @@ class OwnerAlertBanner extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Vibes.surface,
           borderRadius: BorderRadius.circular(22),
           border: Border.all(
             color: _o.accent.withValues(alpha: .45),
@@ -619,6 +689,9 @@ class OwnerRevenueHero extends StatelessWidget {
             colors: [_o.nightHigh, _o.night],
           ),
           borderRadius: BorderRadius.circular(26),
+          border: Appearance.isDark
+              ? Border.all(color: _o.accent.withValues(alpha: .22))
+              : null,
           boxShadow: [
             BoxShadow(
               color: _o.night.withValues(alpha: .30),
@@ -629,8 +702,8 @@ class OwnerRevenueHero extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            Positioned(
-              left: -40,
+            PositionedDirectional(
+              end: -40,
               top: -50,
               child: Container(
                 width: 180,
@@ -654,7 +727,7 @@ class OwnerRevenueHero extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        'أرباح هذا الشهر',
+                        'أرباح هذا الشهر'.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 13,
@@ -691,7 +764,7 @@ class OwnerRevenueHero extends StatelessWidget {
                               ),
                               const SizedBox(width: 3),
                               Text(
-                                '${trend.abs().round()}٪',
+                                '{pct}٪'.trArgs({'pct': trend.abs().round()}),
                                 style: TextStyle(
                                   fontFamily: VibesFont.ui,
                                   fontSize: 11.5,
@@ -723,7 +796,7 @@ class OwnerRevenueHero extends StatelessWidget {
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        'د.ع',
+                        'د.ع'.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 13,
@@ -735,7 +808,9 @@ class OwnerRevenueHero extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '$bookingsCount ${bookingsCount == 1 ? 'حجز مؤكد' : 'حجوزات مؤكدة'} هذا الشهر',
+                    bookingsCount == 1
+                        ? '{n} حجز مؤكد هذا الشهر'.trN(bookingsCount)
+                        : '{n} حجوزات مؤكدة هذا الشهر'.trN(bookingsCount),
                     style: TextStyle(
                       fontFamily: VibesFont.ui,
                       fontSize: 12,
@@ -757,7 +832,7 @@ class OwnerRevenueHero extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        'التقارير الكاملة',
+                        'التقارير الكاملة'.tr,
                         style: TextStyle(
                           fontFamily: VibesFont.ui,
                           fontSize: 12,
@@ -766,7 +841,7 @@ class OwnerRevenueHero extends StatelessWidget {
                         ),
                       ),
                       Icon(
-                        Icons.chevron_left_rounded,
+                        ownerForwardChevron,
                         size: 18,
                         color: _o.accentLight,
                       ),
@@ -872,7 +947,7 @@ class OwnerCoverageStack extends StatelessWidget {
                 if (platformW > 0)
                   Expanded(
                     flex: (platformW * 1000).round().clamp(1, 1000),
-                    child: ColoredBox(color: _o.nightHigh),
+                    child: ColoredBox(color: ownerNavyHigh),
                   ),
                 if (externalW > 0)
                   Expanded(
@@ -887,7 +962,7 @@ class OwnerCoverageStack extends StatelessWidget {
                 if (openW > 0)
                   Expanded(
                     flex: (openW * 1000).round().clamp(1, 1000),
-                    child: const ColoredBox(color: ownerLine),
+                    child: ColoredBox(color: ownerLine),
                   ),
               ],
             ),
@@ -895,7 +970,9 @@ class OwnerCoverageStack extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          '${((filled / totalSlots) * 100).round()}% من أيام الـ30 القادمة مُغطّاة',
+          '{pct}% من أيام الـ30 القادمة مُغطّاة'.trArgs({
+            'pct': ((filled / totalSlots) * 100).round(),
+          }),
           style: TextStyle(
             fontFamily: VibesFont.ui,
             fontSize: 11,
@@ -918,11 +995,11 @@ class OwnerCalendarLegend extends StatelessWidget {
       runSpacing: 6,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        _LegendDot(color: placeShiftMorning, label: 'صباح'),
-        _LegendDot(color: placeShiftEvening, label: 'مساء'),
-        _LegendDot(color: placeShiftFull, label: 'يوم كامل'),
-        _LegendDot(color: ownerGoldDeep, label: 'خارجي'),
-        _LegendDot(color: placeInk2, label: 'مغلق'),
+        _LegendDot(color: placeShiftMorning, label: 'صباح'.tr),
+        _LegendDot(color: placeShiftEvening, label: 'مساء'.tr),
+        _LegendDot(color: placeShiftFull, label: 'يوم كامل'.tr),
+        _LegendDot(color: ownerGoldDeep, label: 'خارجي'.tr),
+        _LegendDot(color: placeInk2, label: 'مغلق'.tr),
       ],
     );
   }
@@ -1002,7 +1079,7 @@ class OwnerSearchField extends StatelessWidget {
         border: b(Colors.transparent),
         enabledBorder: b(Colors.transparent),
         focusedBorder: b(_o.accent, 1.4),
-        prefixIcon: const Icon(Icons.search_rounded, color: _ink2, size: 22),
+        prefixIcon: Icon(Icons.search_rounded, color: _ink2, size: 22),
       ),
     );
   }
@@ -1025,7 +1102,7 @@ class OwnerMenuTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: Vibes.surface,
       child: InkWell(
         onTap: () {
           HapticFeedback.selectionClick();
@@ -1058,7 +1135,7 @@ class OwnerMenuTile extends StatelessWidget {
               ),
               trailing ??
                   Icon(
-                    Icons.chevron_left_rounded,
+                    ownerForwardChevron,
                     color: _o.accentDeep.withValues(alpha: .6),
                     size: 22,
                   ),
@@ -1081,7 +1158,7 @@ class OwnerTomorrowBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     if (bookings.isEmpty) return const SizedBox.shrink();
     return Material(
-      color: Colors.white,
+      color: Vibes.surface,
       borderRadius: BorderRadius.circular(22),
       child: InkWell(
         onTap: onTap == null
@@ -1118,7 +1195,7 @@ class OwnerTomorrowBanner extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'غداً · ${bookings.length} حجز',
+                      'غداً · {n} حجز'.trN(bookings.length),
                       style: TextStyle(
                         fontFamily: VibesFont.ui,
                         fontSize: 14,
@@ -1128,18 +1205,14 @@ class OwnerTomorrowBanner extends StatelessWidget {
                     ),
                   ),
                   if (onTap != null)
-                    Icon(
-                      Icons.chevron_left_rounded,
-                      color: placeInk2,
-                      size: 22,
-                    ),
+                    Icon(ownerForwardChevron, color: placeInk2, size: 22),
                 ],
               ),
               const SizedBox(height: 8),
               OwnerShiftDaySummary(bookings: bookings),
               Text(
                 bookings
-                    .map((b) => b.propertyName ?? 'مكان')
+                    .map((b) => b.propertyName ?? 'مكان'.tr)
                     .take(2)
                     .join(' · '),
                 maxLines: 1,
@@ -1183,7 +1256,7 @@ class OwnerShiftRevenueBreakdown extends StatelessWidget {
           border: Border.all(color: ownerLine),
         ),
         child: Text(
-          'لا إيرادات مؤكّدة هذا الشهر بعد — تظهر هنا حسب الفترة (صباح / مساء / يوم كامل).',
+          'لا إيرادات مؤكّدة هذا الشهر بعد — تظهر هنا حسب الفترة (صباح / مساء / يوم كامل).'.tr,
           style: TextStyle(
             fontFamily: VibesFont.ui,
             fontSize: 12,
@@ -1199,7 +1272,7 @@ class OwnerShiftRevenueBreakdown extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Vibes.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: ownerLine),
       ),
@@ -1207,7 +1280,7 @@ class OwnerShiftRevenueBreakdown extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'هذا الشهر حسب الفترة',
+            'هذا الشهر حسب الفترة'.tr,
             style: TextStyle(
               fontFamily: VibesFont.ui,
               fontSize: 13,
@@ -1256,7 +1329,7 @@ class _ShiftRevenueRow extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                '$bookings حجز',
+                '{n} حجز'.trN(bookings),
                 style: TextStyle(
                   fontFamily: VibesFont.ui,
                   fontSize: 11,
@@ -1266,7 +1339,7 @@ class _ShiftRevenueRow extends StatelessWidget {
               ),
             ),
             Text(
-              '${PriceText.format(revenue)} د.ع',
+              '{amount} د.ع'.trArgs({'amount': PriceText.format(revenue)}),
               style: TextStyle(
                 fontFamily: 'Montserrat',
                 fontSize: 13,
