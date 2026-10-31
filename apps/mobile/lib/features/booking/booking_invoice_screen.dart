@@ -61,7 +61,7 @@ class BookingInvoiceScreen extends ConsumerWidget {
                           color: Colors.white,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.arrow_back_rounded,
                           size: 20,
                           color: Vibes.ink,
@@ -69,11 +69,11 @@ class BookingInvoiceScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'الفاتورة',
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: VibesFont.ui,
                           fontSize: 19,
                           fontWeight: FontWeight.w900,
                           color: Vibes.ink,
@@ -84,7 +84,7 @@ class BookingInvoiceScreen extends ConsumerWidget {
                       Text(
                         number,
                         textDirection: TextDirection.ltr,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Montserrat',
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -296,10 +296,10 @@ class _InvoiceContent extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 18),
-                      const Text(
+                      Text(
                         'فاتورة إلكترونية',
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: VibesFont.ui,
                           fontSize: 22,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
@@ -371,11 +371,11 @@ class _InvoiceContent extends StatelessWidget {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                const Expanded(
+                                Expanded(
                                   child: Text(
                                     'الإجمالي',
                                     style: TextStyle(
-                                      fontFamily: 'Cairo',
+                                      fontFamily: VibesFont.ui,
                                       fontSize: 15,
                                       fontWeight: FontWeight.w900,
                                       color: Vibes.ink,
@@ -384,7 +384,7 @@ class _InvoiceContent extends StatelessWidget {
                                 ),
                                 Text(
                                   formatIqdShort(_total),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'Montserrat',
                                     fontSize: 24,
                                     fontWeight: FontWeight.w800,
@@ -396,7 +396,7 @@ class _InvoiceContent extends StatelessWidget {
                                 Text(
                                   'د.ع',
                                   style: TextStyle(
-                                    fontFamily: 'Cairo',
+                                    fontFamily: VibesFont.ui,
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w800,
                                     color: p.accentDeep,
@@ -436,11 +436,11 @@ class _InvoiceContent extends StatelessWidget {
           onTap: _print,
         ),
         const SizedBox(height: 12),
-        const Text(
+        Text(
           'احفظ الفاتورة كملف PDF من خيار الطباعة. يُعتمد إثبات الدفع النهائي بعد مراجعة العملية.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontFamily: 'Cairo',
+            fontFamily: VibesFont.ui,
             fontSize: 11.5,
             fontWeight: FontWeight.w600,
             color: Vibes.inkTertiary,
@@ -464,7 +464,7 @@ class _Label extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          fontFamily: 'Cairo',
+          fontFamily: VibesFont.ui,
           fontSize: 12,
           fontWeight: FontWeight.w900,
           color: context.world.accentDeep,
@@ -495,10 +495,10 @@ class _PaidStamp extends StatelessWidget {
           border: Border.all(color: c.withValues(alpha: .8), width: 1),
           borderRadius: BorderRadius.circular(7),
         ),
-        child: const Text(
+        child: Text(
           'مدفوعة',
           style: TextStyle(
-            fontFamily: 'Cairo',
+            fontFamily: VibesFont.ui,
             fontSize: 15,
             fontWeight: FontWeight.w900,
             color: c,

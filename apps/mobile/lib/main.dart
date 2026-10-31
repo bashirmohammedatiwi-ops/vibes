@@ -1,9 +1,11 @@
 import 'dart:async';
 
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibes/app/app.dart';
+import 'package:vibes/core/i18n/app_restart.dart';
+import 'package:vibes/core/i18n/i18n.dart';
 import 'package:vibes/core/notifications/firebase_placeholder.dart'
     as notifications;
 import 'package:vibes/core/constants/map_constants.dart';
@@ -14,7 +16,7 @@ import 'package:vibes/core/perf/perf.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await MapConstants.ensureInitialized();
-  await EasyLocalization.ensureInitialized();
+  await I18n.init(await SharedPreferences.getInstance());
   ErrorGuard.init();
   // كاش صور أكبر — تطبيق غني بالصور: 400 صورة / 220MB
   // يقلل إعادة التحميل عند التنقل بين الشاشات بشكل ملموس.
@@ -29,13 +31,5 @@ Future<void> main() async {
   // معدل تحديث عالٍ (90/120Hz) + مراقبة أداء الجهاز للوضع الخفيف
   unawaited(Perf.init());
 
-  runApp(
-    EasyLocalization(
-      supportedLocales: const [Locale('ar'), Locale('en')],
-      path: 'assets/translations',
-      fallbackLocale: const Locale('ar'),
-      startLocale: const Locale('ar'),
-      child: const ProviderScope(child: VibesApp()),
-    ),
-  );
+  runApp(const AppRestart(child: ProviderScope(child: VibesApp())));
 }

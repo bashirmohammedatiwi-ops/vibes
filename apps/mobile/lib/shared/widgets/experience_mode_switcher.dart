@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -71,7 +72,7 @@ class ExperienceModeSwitcherBar extends ConsumerWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w900,
                     color: fg,

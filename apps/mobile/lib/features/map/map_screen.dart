@@ -583,13 +583,13 @@ class _MapHeader extends StatelessWidget {
                           focusNode: searchFocus,
                           onChanged: onQuery,
                           textInputAction: TextInputAction.search,
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
+                          style: TextStyle(
+                            fontFamily: VibesFont.ui,
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
                             color: Vibes.ink,
                           ),
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             isCollapsed: true,
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
@@ -597,7 +597,7 @@ class _MapHeader extends StatelessWidget {
                             filled: false,
                             hintText: 'ابحث عن مكان أو مدينة',
                             hintStyle: TextStyle(
-                              fontFamily: 'Cairo',
+                              fontFamily: VibesFont.ui,
                               fontSize: 13.5,
                               fontWeight: FontWeight.w600,
                               color: Vibes.inkTertiary,
@@ -609,7 +609,7 @@ class _MapHeader extends StatelessWidget {
                         IconButton(
                           visualDensity: VisualDensity.compact,
                           onPressed: onClearQuery,
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.close_rounded,
                             size: 19,
                             color: Vibes.inkSecondary,
@@ -799,7 +799,7 @@ class _WorldFilter extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
                 color: fg,
@@ -882,7 +882,7 @@ class _ProvinceChip extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
                 color: selected ? Colors.white : Vibes.ink,
@@ -942,8 +942,8 @@ class _ControlDock extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       label,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 9,
                         fontWeight: FontWeight.w800,
                         color: Vibes.inkSecondary,
@@ -1079,7 +1079,7 @@ class _PlaceCard extends StatelessWidget {
                         child: Text(
                           property.typeLabelAr,
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: VibesFont.ui,
                             fontSize: 10.5,
                             fontWeight: FontWeight.w800,
                             color: p.accentDeep,
@@ -1097,8 +1097,8 @@ class _PlaceCard extends StatelessWidget {
                         const SizedBox(width: 2),
                         Text(
                           property.ratingAvg.toStringAsFixed(1),
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
+                          style: TextStyle(
+                            fontFamily: VibesFont.ui,
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
                             color: Vibes.ink,
@@ -1112,8 +1112,8 @@ class _PlaceCard extends StatelessWidget {
                     property.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 15,
                       fontWeight: FontWeight.w900,
                       color: Vibes.ink,
@@ -1125,8 +1125,8 @@ class _PlaceCard extends StatelessWidget {
                       where,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,
                         color: Vibes.inkSecondary,
@@ -1143,7 +1143,7 @@ class _PlaceCard extends StatelessWidget {
                           children: [
                             Text(
                               formatIqdShort(_fromPrice(property)),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFamily: 'Montserrat',
                                 fontSize: 15,
                                 fontWeight: FontWeight.w800,
@@ -1156,7 +1156,7 @@ class _PlaceCard extends StatelessWidget {
                                 'د.ع $unit',
                                 maxLines: 1,
                                 style: TextStyle(
-                                  fontFamily: 'Cairo',
+                                  fontFamily: VibesFont.ui,
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.w800,
                                   color: p.accentDeep,
@@ -1194,7 +1194,7 @@ class _PlaceCard extends StatelessWidget {
                                 Text(
                                   'اتجاهات',
                                   style: TextStyle(
-                                    fontFamily: 'Cairo',
+                                    fontFamily: VibesFont.ui,
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w900,
                                     color: p.onAccent,

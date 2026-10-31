@@ -367,7 +367,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           color: Vibes.tealMint,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.receipt_long_rounded,
                           color: Vibes.honeyDeep,
                           size: 22,
@@ -859,7 +859,7 @@ class _PayHintSheet extends StatelessWidget {
                         Text(
                           title,
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: VibesFont.ui,
                             fontSize: 14.5,
                             fontWeight: FontWeight.w900,
                             color: color ?? Vibes.ink,
@@ -867,8 +867,8 @@ class _PayHintSheet extends StatelessWidget {
                         ),
                         Text(
                           sub,
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
+                          style: TextStyle(
+                            fontFamily: VibesFont.ui,
                             fontSize: 11.5,
                             fontWeight: FontWeight.w600,
                             color: Vibes.inkTertiary,
@@ -927,21 +927,21 @@ class _PayHintSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'حجزك محفوظ',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 18,
               fontWeight: FontWeight.w900,
               color: Vibes.ink,
             ),
           ),
-          const Text(
+          Text(
             'طلبك بانتظار التأكيد وتجده دائماً في «حجوزاتي». إخفاء هذا التنبيه لا يلغي الحجز.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
               color: Vibes.inkTertiary,

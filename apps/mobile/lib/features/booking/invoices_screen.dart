@@ -133,8 +133,8 @@ class InvoicesScreen extends ConsumerWidget {
                                       row.propertyName ?? 'حجز',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontFamily: 'Cairo',
+                                      style: TextStyle(
+                                        fontFamily: VibesFont.ui,
                                         fontSize: 14.5,
                                         fontWeight: FontWeight.w900,
                                         color: Vibes.ink,
@@ -143,7 +143,7 @@ class InvoicesScreen extends ConsumerWidget {
                                     Text(
                                       row.number,
                                       textDirection: TextDirection.ltr,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontFamily: 'Montserrat',
                                         fontSize: 11.5,
                                         fontWeight: FontWeight.w700,
@@ -164,7 +164,7 @@ class InvoicesScreen extends ConsumerWidget {
                                 children: [
                                   Text(
                                     formatIqdShort(row.total),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontFamily: 'Montserrat',
                                       fontSize: 16,
                                       fontWeight: FontWeight.w800,
@@ -174,7 +174,7 @@ class InvoicesScreen extends ConsumerWidget {
                                   Text(
                                     'د.ع',
                                     style: TextStyle(
-                                      fontFamily: 'Cairo',
+                                      fontFamily: VibesFont.ui,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w800,
                                       color: p.accentDeep,
@@ -200,7 +200,7 @@ class InvoicesScreen extends ConsumerWidget {
                                         color: const Color(0xFFF4F5F7),
                                         borderRadius: BorderRadius.circular(11),
                                       ),
-                                      child: const Icon(
+                                      child: Icon(
                                         Icons.print_outlined,
                                         size: 18,
                                         color: Vibes.inkSecondary,

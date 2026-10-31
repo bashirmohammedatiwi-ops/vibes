@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/theme/world_theme.dart';
@@ -120,8 +121,8 @@ class OwnerSelectedDayCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   ownerFormatDayLong(day),
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
                     color: ownerNavy,
@@ -138,10 +139,10 @@ class OwnerSelectedDayCard extends StatelessWidget {
                     color: placeInk2.withValues(alpha: .12),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text(
+                  child: Text(
                     'مغلق',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
                       color: placeInk2,
@@ -152,10 +153,10 @@ class OwnerSelectedDayCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           if (bookings.isEmpty)
-            const Text(
+            Text(
               'لا حجوزات مسجّلة في هذا اليوم',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: placeInk2,
@@ -165,8 +166,8 @@ class OwnerSelectedDayCard extends StatelessWidget {
           else ...[
             Text(
               '${bookings.length} حجز${bookings.length > 1 ? 'اً' : ''}',
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: placeInk2,
@@ -205,7 +206,7 @@ class OwnerTheme extends StatelessWidget {
   );
 }
 
-const _o = WorldPalette.owner;
+WorldPalette get _o => WorldPalette.owner;
 const _ink = Color(0xFF0F1B2D);
 const _ink2 = Color(0xFF5B6576);
 const _line = Color(0xFFEDEEF1);
@@ -319,7 +320,7 @@ class OwnerMetricTile extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 11.5,
                 fontWeight: FontWeight.w700,
                 color: highlight ? Colors.white.withValues(alpha: .75) : _ink2,
@@ -411,8 +412,8 @@ class OwnerQuickAction extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
                 color: _ink,
@@ -483,8 +484,8 @@ class OwnerAlertBanner extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 15,
                       fontWeight: FontWeight.w900,
                       color: _ink,
@@ -492,8 +493,8 @@ class OwnerAlertBanner extends StatelessWidget {
                   ),
                   Text(
                     subtitle,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: _ink2,
@@ -513,7 +514,7 @@ class OwnerAlertBanner extends StatelessWidget {
               child: Text(
                 actionLabel,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 12.5,
                   fontWeight: FontWeight.w900,
                   color: _o.accentLight,
@@ -547,8 +548,8 @@ class OwnerSectionTitle extends StatelessWidget {
               children: [
                 Text(
                   text,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
                     color: _ink,
@@ -557,8 +558,8 @@ class OwnerSectionTitle extends StatelessWidget {
                 if (subtitle != null)
                   Text(
                     subtitle!,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: _ink2,
@@ -655,7 +656,7 @@ class OwnerRevenueHero extends StatelessWidget {
                       Text(
                         'أرباح هذا الشهر',
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: VibesFont.ui,
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: Colors.white.withValues(alpha: .7),
@@ -692,7 +693,7 @@ class OwnerRevenueHero extends StatelessWidget {
                               Text(
                                 '${trend.abs().round()}٪',
                                 style: TextStyle(
-                                  fontFamily: 'Cairo',
+                                  fontFamily: VibesFont.ui,
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w900,
                                   color: trend >= 0
@@ -724,7 +725,7 @@ class OwnerRevenueHero extends StatelessWidget {
                       Text(
                         'د.ع',
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: VibesFont.ui,
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
                           color: _o.accentLight,
@@ -736,7 +737,7 @@ class OwnerRevenueHero extends StatelessWidget {
                   Text(
                     '$bookingsCount ${bookingsCount == 1 ? 'حجز مؤكد' : 'حجوزات مؤكدة'} هذا الشهر',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: Colors.white.withValues(alpha: .7),
@@ -758,7 +759,7 @@ class OwnerRevenueHero extends StatelessWidget {
                       Text(
                         'التقارير الكاملة',
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: VibesFont.ui,
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
                           color: _o.accentLight,
@@ -895,8 +896,8 @@ class OwnerCoverageStack extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           '${((filled / totalSlots) * 100).round()}% من أيام الـ30 القادمة مُغطّاة',
-          style: const TextStyle(
-            fontFamily: 'Cairo',
+          style: TextStyle(
+            fontFamily: VibesFont.ui,
             fontSize: 11,
             fontWeight: FontWeight.w700,
             color: placeInk2,
@@ -916,7 +917,7 @@ class OwnerCalendarLegend extends StatelessWidget {
       spacing: 10,
       runSpacing: 6,
       crossAxisAlignment: WrapCrossAlignment.center,
-      children: const [
+      children: [
         _LegendDot(color: placeShiftMorning, label: 'صباح'),
         _LegendDot(color: placeShiftEvening, label: 'مساء'),
         _LegendDot(color: placeShiftFull, label: 'يوم كامل'),
@@ -946,8 +947,8 @@ class _LegendDot extends StatelessWidget {
         const SizedBox(width: 5),
         Text(
           label,
-          style: const TextStyle(
-            fontFamily: 'Cairo',
+          style: TextStyle(
+            fontFamily: VibesFont.ui,
             fontSize: 10,
             fontWeight: FontWeight.w700,
             color: placeInk2,
@@ -979,16 +980,16 @@ class OwnerSearchField extends StatelessWidget {
     return TextField(
       controller: controller,
       onChanged: onChanged,
-      style: const TextStyle(
-        fontFamily: 'Cairo',
+      style: TextStyle(
+        fontFamily: VibesFont.ui,
         fontWeight: FontWeight.w700,
         color: _ink,
         fontSize: 14,
       ),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(
-          fontFamily: 'Cairo',
+        hintStyle: TextStyle(
+          fontFamily: VibesFont.ui,
           fontWeight: FontWeight.w600,
           color: _ink2,
         ),
@@ -1047,8 +1048,8 @@ class OwnerMenuTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 14.5,
                     fontWeight: FontWeight.w800,
                     color: _ink,
@@ -1118,8 +1119,8 @@ class OwnerTomorrowBanner extends StatelessWidget {
                   Expanded(
                     child: Text(
                       'غداً · ${bookings.length} حجز',
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 14,
                         fontWeight: FontWeight.w900,
                         color: ownerNavy,
@@ -1127,7 +1128,7 @@ class OwnerTomorrowBanner extends StatelessWidget {
                     ),
                   ),
                   if (onTap != null)
-                    const Icon(
+                    Icon(
                       Icons.chevron_left_rounded,
                       color: placeInk2,
                       size: 22,
@@ -1143,8 +1144,8 @@ class OwnerTomorrowBanner extends StatelessWidget {
                     .join(' · '),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: placeInk2,
@@ -1181,10 +1182,10 @@ class OwnerShiftRevenueBreakdown extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: ownerLine),
         ),
-        child: const Text(
+        child: Text(
           'لا إيرادات مؤكّدة هذا الشهر بعد — تظهر هنا حسب الفترة (صباح / مساء / يوم كامل).',
           style: TextStyle(
-            fontFamily: 'Cairo',
+            fontFamily: VibesFont.ui,
             fontSize: 12,
             fontWeight: FontWeight.w600,
             color: placeInk2,
@@ -1205,10 +1206,10 @@ class OwnerShiftRevenueBreakdown extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'هذا الشهر حسب الفترة',
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 13,
               fontWeight: FontWeight.w900,
               color: ownerNavy,
@@ -1256,8 +1257,8 @@ class _ShiftRevenueRow extends StatelessWidget {
             Expanded(
               child: Text(
                 '$bookings حجز',
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: placeInk2,

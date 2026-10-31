@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -59,10 +60,10 @@ class OwnerGateScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'إذا كنت مالك مزرعة أو قاعة',
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 26,
               fontWeight: FontWeight.w900,
               color: ownerNavy,
@@ -70,10 +71,10 @@ class OwnerGateScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'راسل الدعم باسم المكان ورقم هاتفك. فريق VIBES يتحقق من الملكية ثم يربط المكان بحسابك. لا حاجة لإضافة المكان بنفسك.',
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: placeInk2,
@@ -98,8 +99,8 @@ class OwnerGateScreen extends ConsumerWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
-              textStyle: const TextStyle(
-                fontFamily: 'Cairo',
+              textStyle: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
               ),
@@ -116,10 +117,10 @@ class OwnerGateScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-            child: const Text(
+            child: Text(
               'مركز المساعدة',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -136,10 +137,10 @@ class OwnerGateScreen extends ConsumerWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'أماكن رُبطت بحسابك',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 15,
                       fontWeight: FontWeight.w900,
                       color: ownerNavy,
@@ -155,8 +156,8 @@ class OwnerGateScreen extends ConsumerWidget {
                                     : null)
                                 ?.toString() ??
                             'مكان',
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontWeight: FontWeight.w700,
                           color: placeInk2,
                         ),

@@ -230,7 +230,7 @@ class ThreadProgress extends StatelessWidget {
       child: LinearProgressIndicator(
         minHeight: 1.5,
         backgroundColor: VibesTheme.hairlineOf(context),
-        valueColor: const AlwaysStoppedAnimation(Vibes.teal),
+        valueColor: AlwaysStoppedAnimation(Vibes.teal),
       ),
     );
   }
@@ -281,7 +281,7 @@ class DiamondPin extends StatelessWidget {
         DecoratedBox(
           decoration: ShapeDecoration(
             gradient: selected
-                ? const LinearGradient(
+                ? LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [Color(0xFFE8C273), Vibes.teal],
@@ -400,7 +400,7 @@ class _OctagonButtonState extends State<OctagonButton> {
               shape: RoundedRectangleBorder(
                 borderRadius: Folio.radius,
                 side: widget.ghost
-                    ? const BorderSide(color: Vibes.teal, width: 1.4)
+                    ? BorderSide(color: Vibes.teal, width: 1.4)
                     : BorderSide.none,
               ),
               shadows: widget.ghost
@@ -695,12 +695,13 @@ class PetalMark extends StatelessWidget {
   const PetalMark({
     super.key,
     this.size = 10,
-    this.color = Vibes.teal,
+    Color? color,
     this.filled = true,
-  });
+  }) : _color = color;
 
   final double size;
-  final Color color;
+  final Color? _color;
+  Color get color => _color ?? Vibes.teal;
   final bool filled;
 
   @override
@@ -724,10 +725,11 @@ class PetalMark extends StatelessWidget {
 
 /// خط نحاسي قصير تحت العناوين — مربع تسجيل ثم شعرة
 class ArcFlourish extends StatefulWidget {
-  const ArcFlourish({super.key, this.width = 46, this.color = Vibes.teal});
+  const ArcFlourish({super.key, this.width = 46, Color? color}) : _color = color;
 
   final double width;
-  final Color color;
+  final Color? _color;
+  Color get color => _color ?? Vibes.teal;
 
   @override
   State<ArcFlourish> createState() => _ArcFlourishState();
@@ -973,10 +975,11 @@ class VibesLogo extends StatelessWidget {
 
 /// علامة VIBES الرسمية — دبوس الموقع، يُلوَّن حسب السياق
 class CrestSeal extends StatelessWidget {
-  const CrestSeal({super.key, this.size = 72, this.color = Vibes.coral});
+  const CrestSeal({super.key, this.size = 72, Color? color}) : _color = color;
 
   final double size;
-  final Color color;
+  final Color? _color;
+  Color get color => _color ?? Vibes.coral;
 
   @override
   Widget build(BuildContext context) {
@@ -1009,13 +1012,15 @@ class RibbonChip extends StatelessWidget {
   const RibbonChip({
     super.key,
     required this.label,
-    this.color = Vibes.teal,
-    this.onColor = Vibes.onTeal,
-  });
+    Color? color,
+    Color? onColor,
+  }) : _onColor = onColor, _color = color;
 
   final String label;
-  final Color color;
-  final Color onColor;
+  final Color? _color;
+  Color get color => _color ?? Vibes.teal;
+  final Color? _onColor;
+  Color get onColor => _onColor ?? Vibes.onTeal;
 
   @override
   Widget build(BuildContext context) {

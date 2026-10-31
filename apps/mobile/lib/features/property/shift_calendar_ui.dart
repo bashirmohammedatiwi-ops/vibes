@@ -1,11 +1,15 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 import '../../shared/models/models.dart';
 
 /// ألوان وعلامات موحّدة للشفتات في التقويم والحجز.
-const Color placeShiftMorning = Color(0xFFD97706);
-const Color placeShiftEvening = Color(0xFF4F46E5);
-const Color placeShiftFull = Color(0xFF141C2B);
+Color get placeShiftMorning =>
+    themed(const Color(0xFFD97706), const Color(0xFFF2A94A));
+Color get placeShiftEvening =>
+    themed(const Color(0xFF4F46E5), const Color(0xFF9D97F5));
+Color get placeShiftFull =>
+    themed(const Color(0xFF141C2B), VibesDark.ink);
 const Color _placeInk2 = Color(0xFF5A6678);
 const Color _placeBrass = Color(0xFFA5813A);
 
@@ -197,7 +201,7 @@ class PlaceShiftBadge extends StatelessWidget {
       child: Text(
         compact ? placeShiftBadgeChar(shift) : placeShiftShortLabel(shift),
         style: TextStyle(
-          fontFamily: 'Cairo',
+          fontFamily: VibesFont.ui,
           fontSize: compact ? 9 : 10,
           fontWeight: FontWeight.w900,
           color: fg,
@@ -278,7 +282,7 @@ class _AllPeriodsChip extends StatelessWidget {
           child: Text(
             'كل الفترات',
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 11,
               fontWeight: FontWeight.w800,
               color: selected ? Colors.white : _placeInk2,
@@ -322,7 +326,7 @@ class OwnerShiftDaySummary extends StatelessWidget {
                   const SizedBox(width: 4),
                   Text(
                     '${counts[shift]}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Montserrat',
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
@@ -383,7 +387,7 @@ class OwnerShiftChip extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   color: selected ? color : _placeInk2,
@@ -415,14 +419,14 @@ class PlaceShiftLegendRow extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         if (includeSelection)
-          const _LegendChip(
+          _LegendChip(
             color: placeShiftFull,
             label: 'اختيارك',
             filled: true,
           ),
-        const _LegendChip(color: placeShiftMorning, label: 'صباح'),
-        const _LegendChip(color: placeShiftEvening, label: 'مساء'),
-        const _LegendChip(color: placeShiftFull, label: 'يوم كامل'),
+        _LegendChip(color: placeShiftMorning, label: 'صباح'),
+        _LegendChip(color: placeShiftEvening, label: 'مساء'),
+        _LegendChip(color: placeShiftFull, label: 'يوم كامل'),
         if (includeUnavailable)
           const _LegendChip(
             color: Color(0xFFEDF0F4),
@@ -462,8 +466,8 @@ class _LegendChip extends StatelessWidget {
         const SizedBox(width: 5),
         Text(
           label,
-          style: const TextStyle(
-            fontFamily: 'Cairo',
+          style: TextStyle(
+            fontFamily: VibesFont.ui,
             fontSize: 10,
             fontWeight: FontWeight.w700,
             color: _placeInk2,

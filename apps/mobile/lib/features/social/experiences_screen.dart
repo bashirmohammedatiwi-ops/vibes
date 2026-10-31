@@ -91,7 +91,7 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
             const MaisonSheetHandle(),
             Row(
               children: [
-                const CrestSeal(size: 22, color: Vibes.coral),
+                CrestSeal(size: 22, color: Vibes.coral),
                 const SizedBox(width: 10),
                 Text(
                   'تعليقات',
@@ -321,7 +321,7 @@ class _ExperiencesScreenState extends ConsumerState<ExperiencesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const EditorialEyebrow(
+                      EditorialEyebrow(
                         label: 'ضيوف VIBES',
                         accent: Vibes.coral,
                       ),

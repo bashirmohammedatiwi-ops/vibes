@@ -497,8 +497,8 @@ class _HeroAppBar extends StatelessWidget {
               property.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
                 color: Vibes.ink,
@@ -776,8 +776,8 @@ class _TitleBlock extends StatelessWidget {
               const SizedBox(height: 14),
               Text(
                 p.name,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 27,
                   fontWeight: FontWeight.w900,
                   color: Vibes.ink,
@@ -802,8 +802,8 @@ class _TitleBlock extends StatelessWidget {
                     Expanded(
                       child: Text(
                         line,
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: Vibes.inkSecondary,
@@ -852,7 +852,7 @@ class _Tag extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 11.5,
               fontWeight: FontWeight.w800,
               color: filled ? world.accentDeep : Vibes.ink,
@@ -970,8 +970,8 @@ class _Stat extends StatelessWidget {
             const SizedBox(width: 4),
             Text(
               value,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 17,
                 fontWeight: FontWeight.w900,
                 color: Vibes.ink,
@@ -985,8 +985,8 @@ class _Stat extends StatelessWidget {
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontFamily: 'Cairo',
+          style: TextStyle(
+            fontFamily: VibesFont.ui,
             fontSize: 11,
             fontWeight: FontWeight.w600,
             color: Vibes.inkSecondary,
@@ -1158,7 +1158,7 @@ class _AnchorTabsState extends State<_AnchorTabs> {
                   child: Text(
                     a.label,
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                       color: on ? world.onAccent : Vibes.inkSecondary,
@@ -1601,8 +1601,8 @@ class _AmenityTile extends StatelessWidget {
               label,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
                 color: Vibes.ink,
@@ -1648,7 +1648,7 @@ Future<void> _showAllAmenities(
                   child: Text(
                     'كل المزايا · ${items.length}',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 19,
                       fontWeight: FontWeight.w900,
                       color: world.accentDeep,
@@ -1701,8 +1701,8 @@ class _ExpandableTextState extends State<_ExpandableText> {
   @override
   Widget build(BuildContext context) {
     final world = context.world;
-    const style = TextStyle(
-      fontFamily: 'Cairo',
+    final style = TextStyle(
+      fontFamily: VibesFont.ui,
       fontSize: 14,
       fontWeight: FontWeight.w500,
       color: Vibes.inkSecondary,
@@ -1745,7 +1745,7 @@ class _ExpandableTextState extends State<_ExpandableText> {
                 Text(
                   _expanded ? 'عرض أقل' : 'اقرأ المزيد',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontSize: 13.5,
                     fontWeight: FontWeight.w900,
                     color: world.accentDeep,
@@ -1793,10 +1793,10 @@ class _RulesCard extends StatelessWidget {
             children: [
               Icon(Icons.gavel_rounded, size: 18, color: world.accentDeep),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'قواعد المكان',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 15,
                   fontWeight: FontWeight.w900,
                   color: Vibes.ink,
@@ -1829,8 +1829,8 @@ class _RulesCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       rule,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: Vibes.inkSecondary,
@@ -1966,10 +1966,10 @@ class _LocationCard extends StatelessWidget {
                             color: world.accentDeep,
                           ),
                           const SizedBox(width: 5),
-                          const Text(
+                          Text(
                             'تكبير الخريطة',
                             style: TextStyle(
-                              fontFamily: 'Cairo',
+                              fontFamily: VibesFont.ui,
                               fontSize: 11.5,
                               fontWeight: FontWeight.w800,
                               color: Vibes.ink,
@@ -2013,8 +2013,8 @@ class _LocationCard extends StatelessWidget {
                             place,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
+                            style: TextStyle(
+                              fontFamily: VibesFont.ui,
                               fontSize: 14.5,
                               fontWeight: FontWeight.w900,
                               color: Vibes.ink,
@@ -2027,8 +2027,8 @@ class _LocationCard extends StatelessWidget {
                                 .where((s) => s.isNotEmpty)
                                 .toSet()
                                 .join(' · '),
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
+                            style: TextStyle(
+                              fontFamily: VibesFont.ui,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: Vibes.inkSecondary,
@@ -2071,11 +2071,11 @@ class _LocationCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'افتح الموقع في Google Maps أو Waze أو أي تطبيق خرائط لديك',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
                     color: Vibes.inkTertiary,
@@ -2195,7 +2195,7 @@ class _HostCard extends ConsumerWidget {
                             child: Text(
                               initial,
                               style: TextStyle(
-                                fontFamily: 'Cairo',
+                                fontFamily: VibesFont.ui,
                                 fontSize: 23,
                                 fontWeight: FontWeight.w900,
                                 color: world.accentDeep,
@@ -2234,17 +2234,17 @@ class _HostCard extends ConsumerWidget {
                         name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 16.5,
                           fontWeight: FontWeight.w900,
                           color: Vibes.ink,
                         ),
                       ),
-                      const Text(
+                      Text(
                         'مضيف موثّق · يرد عادة خلال ساعة',
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: VibesFont.ui,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: Vibes.inkSecondary,
@@ -2362,8 +2362,8 @@ class _HostStat extends StatelessWidget {
       children: [
         Text(
           value,
-          style: const TextStyle(
-            fontFamily: 'Cairo',
+          style: TextStyle(
+            fontFamily: VibesFont.ui,
             fontSize: 16,
             fontWeight: FontWeight.w900,
             color: Vibes.ink,
@@ -2372,8 +2372,8 @@ class _HostStat extends StatelessWidget {
         ),
         Text(
           label,
-          style: const TextStyle(
-            fontFamily: 'Cairo',
+          style: TextStyle(
+            fontFamily: VibesFont.ui,
             fontSize: 11,
             fontWeight: FontWeight.w600,
             color: Vibes.inkSecondary,
@@ -2466,14 +2466,14 @@ class _ReviewsSection extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 14),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'لا تقييمات بعد',
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: VibesFont.ui,
                             fontSize: 15,
                             fontWeight: FontWeight.w900,
                             color: Vibes.ink,
@@ -2482,7 +2482,7 @@ class _ReviewsSection extends ConsumerWidget {
                         Text(
                           'احجز وكن أول من يشارك تجربته هنا',
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: VibesFont.ui,
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
                             color: Vibes.inkSecondary,
@@ -2530,7 +2530,7 @@ class _ReviewsSection extends ConsumerWidget {
                       children: [
                         Text(
                           avg.toStringAsFixed(1),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'Montserrat',
                             fontSize: 40,
                             fontWeight: FontWeight.w800,
@@ -2543,8 +2543,8 @@ class _ReviewsSection extends ConsumerWidget {
                         const SizedBox(height: 4),
                         Text(
                           '${list.length} تقييم موثّق',
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
+                          style: TextStyle(
+                            fontFamily: VibesFont.ui,
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                             color: Vibes.inkSecondary,
@@ -2567,7 +2567,7 @@ class _ReviewsSection extends ConsumerWidget {
                                     width: 12,
                                     child: Text(
                                       '$s',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontFamily: 'Montserrat',
                                         fontSize: 11,
                                         fontWeight: FontWeight.w800,
@@ -2669,7 +2669,7 @@ class _ReviewCard extends ConsumerWidget {
                   child: Text(
                     name.characters.first,
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 15,
                       fontWeight: FontWeight.w900,
                       color: world.accentDeep,
@@ -2686,8 +2686,8 @@ class _ReviewCard extends ConsumerWidget {
                       name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 13.5,
                         fontWeight: FontWeight.w900,
                         color: Vibes.ink,
@@ -2696,8 +2696,8 @@ class _ReviewCard extends ConsumerWidget {
                     if (date != null)
                       Text(
                         '${_months[date.month - 1]} ${date.year}',
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: Vibes.inkTertiary,
@@ -2713,7 +2713,7 @@ class _ReviewCard extends ConsumerWidget {
                 child: IconButton(
                   padding: EdgeInsets.zero,
                   tooltip: 'إبلاغ',
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.more_vert,
                     size: 18,
                     color: Vibes.inkTertiary,
@@ -2738,7 +2738,7 @@ class _ReviewCard extends ConsumerWidget {
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
                 height: 1.65,
@@ -2814,10 +2814,10 @@ class _BookingBar extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
+                        Text(
                           'يبدأ من',
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: VibesFont.ui,
                             fontSize: 10.5,
                             fontWeight: FontWeight.w700,
                             color: Vibes.inkTertiary,
@@ -2842,7 +2842,7 @@ class _BookingBar extends ConsumerWidget {
                             Text(
                               'د.ع',
                               style: TextStyle(
-                                fontFamily: 'Cairo',
+                                fontFamily: VibesFont.ui,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
                                 color: world.accentDeep,
@@ -2853,7 +2853,7 @@ class _BookingBar extends ConsumerWidget {
                         Text(
                           '$unit · جدول الأسعار',
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: VibesFont.ui,
                             fontSize: 10.5,
                             fontWeight: FontWeight.w700,
                             color: world.accentDeep,
@@ -3086,7 +3086,7 @@ class _ServicePriceCard extends StatelessWidget {
             children: [
               Text(
                 PriceText.format(property.pricePerDay),
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Montserrat',
                   fontSize: 26,
                   fontWeight: FontWeight.w800,
@@ -3095,10 +3095,10 @@ class _ServicePriceCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              const Text(
+              Text(
                 'د.ع · للخدمة',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
                   color: Vibes.inkSecondary,
@@ -3120,8 +3120,8 @@ class _ServicePriceCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       line,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: Vibes.inkSecondary,
@@ -3144,10 +3144,10 @@ class _ServicePriceCard extends StatelessWidget {
                 ),
               ),
               onPressed: onBook,
-              child: const Text(
+              child: Text(
                 'اختر يوم مناسبتك',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 15,
                   fontWeight: FontWeight.w900,
                 ),

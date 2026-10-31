@@ -31,7 +31,7 @@ import '../../core/perf/perf.dart';
 
 // ── 1) الرئيسية ──
 
-const _p = WorldPalette.owner;
+WorldPalette get _p => WorldPalette.owner;
 const _hInk = Color(0xFF0F1B2D);
 const _hInk2 = Color(0xFF5B6576);
 const _hLine = Color(0xFFEDEEF1);
@@ -269,7 +269,7 @@ class ProviderHomeScreen extends ConsumerWidget {
                       child: Text(
                         'الكل',
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: VibesFont.ui,
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
                           color: _p.accentDeep,
@@ -343,10 +343,10 @@ class ProviderHomeScreen extends ConsumerWidget {
                   child: TextButton.icon(
                     onPressed: () => providerLogout(context, ref),
                     icon: const Icon(Icons.logout_rounded, size: 18),
-                    label: const Text(
+                    label: Text(
                       'تسجيل الخروج',
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: VibesFont.ui,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -392,7 +392,7 @@ class _OwnerTopBar extends StatelessWidget {
                 ? Text(
                     name!.characters.first,
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 19,
                       fontWeight: FontWeight.w900,
                       color: _p.accentLight,
@@ -410,7 +410,7 @@ class _OwnerTopBar extends StatelessWidget {
               Text(
                 ownerFormatDayLong(DateTime.now()),
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: _p.accentDeep,
@@ -420,8 +420,8 @@ class _OwnerTopBar extends StatelessWidget {
                 hasName ? '${_greeting()}، $name' : _greeting(),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
                   color: _hInk,
@@ -526,8 +526,8 @@ class _ActionCenter extends StatelessWidget {
                   total == 1
                       ? 'أمر واحد ينتظر قرارك'
                       : '$total أمور تنتظر قرارك',
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
                     color: _hInk,
@@ -591,8 +591,8 @@ class _TaskRow extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
                   color: _hInk,
@@ -648,11 +648,11 @@ class _QuietDay extends StatelessWidget {
             child: Icon(Icons.wb_sunny_rounded, color: _p.accentDeep, size: 22),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Text(
               'يوم هادئ — استغله لتحديث الصور والأسعار أو تسجيل حجوزاتك الخارجية.',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
                 color: _hInk2,
@@ -745,8 +745,8 @@ class _TimelineTile extends StatelessWidget {
                               guest,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontFamily: 'Cairo',
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
                                 fontSize: 14.5,
                                 fontWeight: FontWeight.w900,
                                 color: _hInk,
@@ -756,8 +756,8 @@ class _TimelineTile extends StatelessWidget {
                               '${booking.propertyName ?? 'مكان'} · ${booking.guests} ضيف',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontFamily: 'Cairo',
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 color: _hInk2,
@@ -780,7 +780,7 @@ class _TimelineTile extends StatelessWidget {
                               ? '${_shiftLabel(booking.shift)} · خارجي'
                               : _shiftLabel(booking.shift),
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: VibesFont.ui,
                             fontSize: 11.5,
                             fontWeight: FontWeight.w800,
                             color: color,
@@ -886,10 +886,10 @@ class _OccupancyCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'الإشغال — ٣٠ يوماً',
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: VibesFont.ui,
                         fontSize: 15.5,
                         fontWeight: FontWeight.w900,
                         color: _hInk,
@@ -901,8 +901,8 @@ class _OccupancyCard extends StatelessWidget {
                           : c.openDays > 0
                           ? '${c.openDays} يوماً ما زال متاحاً للضيوف'
                           : 'تقويمك ممتلئ بالكامل',
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
                         color: _hInk2,
@@ -937,11 +937,11 @@ class _OccupancyCard extends StatelessWidget {
                   color: _p.accentDeep,
                 ),
                 const SizedBox(width: 8),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'سجّل حجوزاتك خارج التطبيق ليختفي اليوم عن الضيوف.',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 11.5,
                       fontWeight: FontWeight.w700,
                       color: _hInk2,
@@ -953,7 +953,7 @@ class _OccupancyCard extends StatelessWidget {
                   child: Text(
                     'سجّل',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 12.5,
                       fontWeight: FontWeight.w900,
                       color: _p.accentDeep,
@@ -1112,7 +1112,7 @@ class _UpcomingTile extends StatelessWidget {
                     Text(
                       months[d.month - 1],
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: VibesFont.ui,
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
                         color: _p.accentLight,
@@ -1131,8 +1131,8 @@ class _UpcomingTile extends StatelessWidget {
                       booking.guestName ?? booking.userName ?? 'ضيف',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 14.5,
                         fontWeight: FontWeight.w900,
                         color: _hInk,
@@ -1142,8 +1142,8 @@ class _UpcomingTile extends StatelessWidget {
                       '${ownerRelativeBookingDay(d)} · ${booking.propertyName ?? 'مكان'}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: _hInk2,
@@ -1292,7 +1292,7 @@ class _ProviderBookingsScreenState
                   color: SemanticColors.danger.withValues(alpha: .1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.event_busy_rounded,
                   color: SemanticColors.danger,
                   size: 26,
@@ -1305,8 +1305,8 @@ class _ProviderBookingsScreenState
                   ? 'رفض هذا الحجز؟'
                   : 'إلغاء هذا الحجز؟',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 18,
                 fontWeight: FontWeight.w900,
                 color: _hInk,
@@ -1316,8 +1316,8 @@ class _ProviderBookingsScreenState
             Text(
               '${booking.guestName ?? booking.userName ?? 'ضيف'} · ${booking.propertyName ?? ''} · ${ownerFormatDayLong(booking.startDate)}',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
                 color: _hInk2,
@@ -1332,10 +1332,10 @@ class _ProviderBookingsScreenState
                 minimumSize: const Size.fromHeight(50),
                 shape: const StadiumBorder(),
               ),
-              child: const Text(
+              child: Text(
                 'نعم، تابع',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -1344,10 +1344,10 @@ class _ProviderBookingsScreenState
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               style: TextButton.styleFrom(foregroundColor: _hInk),
-              child: const Text(
+              child: Text(
                 'تراجع',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -1654,8 +1654,8 @@ class _ProviderBookingCard extends StatelessWidget {
                           ),
                           Text(
                             months[b.startDate.month - 1],
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
+                            style: TextStyle(
+                              fontFamily: VibesFont.ui,
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
                               color: ownerGoldLight,
@@ -1683,8 +1683,8 @@ class _ProviderBookingCard extends StatelessWidget {
                             guest,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
+                            style: TextStyle(
+                              fontFamily: VibesFont.ui,
                               fontSize: 15,
                               fontWeight: FontWeight.w900,
                               color: _hInk,
@@ -1694,8 +1694,8 @@ class _ProviderBookingCard extends StatelessWidget {
                             '${b.propertyName ?? 'مكان'} · ${ownerRelativeBookingDay(b.startDate)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
+                            style: TextStyle(
+                              fontFamily: VibesFont.ui,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: _hInk2,
@@ -1749,10 +1749,10 @@ class _ProviderBookingCard extends StatelessWidget {
                             color: _hInk,
                           ),
                         ),
-                        const Text(
+                        Text(
                           'د.ع',
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: VibesFont.ui,
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
                             color: _hInk2,
@@ -1885,7 +1885,7 @@ class _PillAction extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontFamily: 'Cairo',
+            fontFamily: VibesFont.ui,
             fontSize: 13,
             fontWeight: FontWeight.w900,
             color: primary ? ownerGoldLight : _hInk,

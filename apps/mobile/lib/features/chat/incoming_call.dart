@@ -166,7 +166,7 @@ class IncomingCallSheet extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  const MaisonKicker(
+                  MaisonKicker(
                     'VIBES CALL',
                     light: true,
                     color: Vibes.tealBright,
@@ -238,7 +238,7 @@ class _RingPulseState extends State<_RingPulse>
   Widget build(BuildContext context) {
     final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     if (reduce) {
-      return const Opacity(
+      return Opacity(
         opacity: .6,
         child: VibesMonogram(size: 120, color: Vibes.teal),
       );
@@ -260,14 +260,14 @@ class _RingPulseState extends State<_RingPulse>
                     scale: 0.55 + local * 0.75,
                     child: Opacity(
                       opacity: (1 - local) * 0.35,
-                      child: const CircleAvatar(
+                      child: CircleAvatar(
                         backgroundColor: Vibes.teal,
                         radius: 70,
                       ),
                     ),
                   );
                 }(),
-              const VibesMonogram(
+              VibesMonogram(
                 size: 92,
                 color: Vibes.tealBright,
                 strokeWidth: 3,

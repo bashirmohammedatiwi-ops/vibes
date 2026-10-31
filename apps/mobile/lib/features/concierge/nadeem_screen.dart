@@ -595,8 +595,8 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
             Text(
               _c.disabledTitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 18,
                 fontWeight: FontWeight.w900,
                 color: Vibes.ink,
@@ -606,8 +606,8 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
             Text(
               _c.disabledMessage,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
                 color: Vibes.inkSecondary,
@@ -641,8 +641,8 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
           children: [
             Text(
               _error!,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFFB91C1C),
@@ -822,8 +822,8 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
                         fillTokens(c.resultsTitle, {
                           'occasion': _answers.occasionLabel,
                         }),
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
@@ -833,7 +833,7 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
                     Text(
                       list.isEmpty ? '' : '${list.length} اقتراح',
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: VibesFont.ui,
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                         color: Colors.white.withValues(alpha: .8),
@@ -868,8 +868,8 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
                               const SizedBox(width: 4),
                               Text(
                                 c.$3,
-                                style: const TextStyle(
-                                  fontFamily: 'Cairo',
+                                style: TextStyle(
+                                  fontFamily: VibesFont.ui,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white,
@@ -885,7 +885,7 @@ class _NadeemScreenState extends ConsumerState<NadeemScreen> {
                 Text(
                   c.editHint,
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: Colors.white.withValues(alpha: .65),
@@ -1076,8 +1076,8 @@ class _TopBar extends StatelessWidget {
                   children: [
                     Text(
                       name,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 17,
                         fontWeight: FontWeight.w900,
                         color: Vibes.ink,
@@ -1090,7 +1090,7 @@ class _TopBar extends StatelessWidget {
                         typing ? typingLabel : subtitle,
                         key: ValueKey(typing),
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: VibesFont.ui,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: typing ? p.accentDeep : Vibes.inkTertiary,
@@ -1272,7 +1272,7 @@ class _Bubble extends StatelessWidget {
             child: Text(
               text,
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 14.5,
                 fontWeight: mine ? FontWeight.w800 : FontWeight.w600,
                 color: mine ? p.onAccent : Vibes.ink,
@@ -1467,7 +1467,7 @@ class _ThinkingCardState extends State<_ThinkingCard>
           Text(
             widget.text,
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 13,
               fontWeight: FontWeight.w800,
               color: p.accentDeep,
@@ -1529,8 +1529,8 @@ class _OccasionPicker extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     it.$2,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
                       color: Vibes.ink,
@@ -1539,8 +1539,8 @@ class _OccasionPicker extends StatelessWidget {
                   ),
                   Text(
                     it.$3,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 10.5,
                       fontWeight: FontWeight.w700,
                       color: Vibes.inkTertiary,
@@ -1599,8 +1599,8 @@ class _TypePicker extends ConsumerWidget {
                         const SizedBox(height: 6),
                         Text(
                           it.$3,
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
+                          style: TextStyle(
+                            fontFamily: VibesFont.ui,
                             fontSize: 15,
                             fontWeight: FontWeight.w900,
                             color: Vibes.ink,
@@ -1657,7 +1657,7 @@ class _SoftLink extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 13.5,
                 fontWeight: FontWeight.w800,
                 color: p.accentDeep,
@@ -1745,8 +1745,8 @@ class _ProvincePicker extends ConsumerWidget {
                           const SizedBox(width: 5),
                           Text(
                             pr.name,
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
+                            style: TextStyle(
+                              fontFamily: VibesFont.ui,
                               fontSize: 14,
                               fontWeight: FontWeight.w800,
                               color: Vibes.ink,
@@ -1831,7 +1831,7 @@ class _GuestDialState extends State<_GuestDial> {
                     duration: const Duration(milliseconds: 260),
                     builder: (context, v, _) => Text(
                       '${v.round()}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Montserrat',
                         fontSize: 48,
                         fontWeight: FontWeight.w800,
@@ -1846,7 +1846,7 @@ class _GuestDialState extends State<_GuestDial> {
                       'ضيف · $_scale',
                       key: ValueKey(_scale),
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: VibesFont.ui,
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                         color: p.accentDeep,
@@ -1987,7 +1987,7 @@ class _DayPicker extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 15,
                   fontWeight: FontWeight.w900,
                   color: dark ? Colors.white : Vibes.ink,
@@ -1996,7 +1996,7 @@ class _DayPicker extends StatelessWidget {
               Text(
                 sub,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: dark
@@ -2131,7 +2131,7 @@ class _BudgetPickerState extends ConsumerState<_BudgetPicker> {
             Text(
               'حتى ',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
                 color: Vibes.inkSecondary,
@@ -2139,7 +2139,7 @@ class _BudgetPickerState extends ConsumerState<_BudgetPicker> {
             ),
             Text(
               formatIqdShort(value),
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Montserrat',
                 fontSize: 30,
                 fontWeight: FontWeight.w800,
@@ -2151,7 +2151,7 @@ class _BudgetPickerState extends ConsumerState<_BudgetPicker> {
             Text(
               'د.ع',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
                 color: p.accentDeep,
@@ -2167,7 +2167,7 @@ class _BudgetPickerState extends ConsumerState<_BudgetPicker> {
               child: Text(
                 within == 0 ? 'لا أماكن بعد' : 'ضمن ميزانيتك',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                   color: p.accentDeep,
@@ -2339,7 +2339,7 @@ class _MatchCard extends StatelessWidget {
                         child: Text(
                           bestLabel,
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: VibesFont.ui,
                             fontSize: 11.5,
                             fontWeight: FontWeight.w900,
                             color: p.onAccent,
@@ -2365,8 +2365,8 @@ class _MatchCard extends StatelessWidget {
                     prop.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 15.5,
                       fontWeight: FontWeight.w900,
                       color: Vibes.ink,
@@ -2389,8 +2389,8 @@ class _MatchCard extends StatelessWidget {
                             const SizedBox(width: 3),
                             Text(
                               r,
-                              style: const TextStyle(
-                                fontFamily: 'Cairo',
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w700,
                                 color: Vibes.inkSecondary,
@@ -2405,7 +2405,7 @@ class _MatchCard extends StatelessWidget {
                     children: [
                       Text(
                         formatIqdShort(_fromPrice(prop)),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Montserrat',
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
@@ -2416,7 +2416,7 @@ class _MatchCard extends StatelessWidget {
                       Text(
                         'د.ع',
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: VibesFont.ui,
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                           color: p.accentDeep,
@@ -2435,7 +2435,7 @@ class _MatchCard extends StatelessWidget {
                         child: Text(
                           'احجز',
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: VibesFont.ui,
                             fontSize: 12.5,
                             fontWeight: FontWeight.w900,
                             color: p.onAccent,
@@ -2488,8 +2488,8 @@ class _MatchRing extends StatelessWidget {
             ),
             Text(
               '${(v * 100).round()}٪',
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 11.5,
                 fontWeight: FontWeight.w900,
                 color: Vibes.ink,
@@ -2544,8 +2544,8 @@ class _MiniPlace extends StatelessWidget {
                     property.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 13.5,
                       fontWeight: FontWeight.w900,
                       color: Vibes.ink,
@@ -2553,8 +2553,8 @@ class _MiniPlace extends StatelessWidget {
                   ),
                   Text(
                     property.cityName ?? property.provinceName ?? '',
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 11.5,
                       fontWeight: FontWeight.w600,
                       color: Vibes.inkTertiary,
@@ -2564,7 +2564,7 @@ class _MiniPlace extends StatelessWidget {
                   Text(
                     '${formatIqdShort(_fromPrice(property))} د.ع',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 12,
                       fontWeight: FontWeight.w900,
                       color: p.accentDeep,

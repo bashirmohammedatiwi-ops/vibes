@@ -1,4 +1,5 @@
 import '../../core/theme/world_theme.dart';
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -9,11 +10,12 @@ import '../../shared/widgets/vibes_widgets.dart';
 import '../home/home_sections.dart';
 import 'shift_calendar_ui.dart';
 
-const Color placeInk = Color(0xFF141C2B);
-const Color placeInk2 = Color(0xFF5A6678);
-const Color placeLine = Color(0xFFE4E9F0);
-const Color placePaper = Color(0xFFF6F7F9);
-const Color placeBrass = Color(0xFFA5813A);
+Color get placeInk => themed(const Color(0xFF141C2B), VibesDark.ink);
+Color get placeInk2 =>
+    themed(const Color(0xFF5A6678), VibesDark.inkSecondary);
+Color get placeLine => themed(const Color(0xFFE4E9F0), VibesDark.hairline);
+Color get placePaper => themed(const Color(0xFFF6F7F9), VibesDark.surfaceMuted);
+Color get placeBrass => themed(const Color(0xFFA5813A), Brand.brassLight);
 
 String placeDateKey(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -187,7 +189,7 @@ class PlaceFullPriceText extends StatelessWidget {
             TextSpan(
               text: ' د.ع',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: size * 0.55,
                 fontWeight: FontWeight.w700,
                 color: placeInk2,
@@ -250,12 +252,12 @@ class PlaceWeeklyPriceTable extends StatelessWidget {
             color: accent.withValues(alpha: 0.08),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   flex: 3,
                   child: Text(
                     'اليوم',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 11.5,
                       fontWeight: FontWeight.w900,
                       color: placeInk,
@@ -267,8 +269,8 @@ class PlaceWeeklyPriceTable extends StatelessWidget {
                   child: Text(
                     shifts ? 'يوم كامل' : 'السعر',
                     textAlign: TextAlign.end,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 11.5,
                       fontWeight: FontWeight.w900,
                       color: placeInk,
@@ -276,26 +278,26 @@ class PlaceWeeklyPriceTable extends StatelessWidget {
                   ),
                 ),
                 if (shifts) ...[
-                  const Expanded(
+                  Expanded(
                     flex: 4,
                     child: Text(
                       'صباح',
                       textAlign: TextAlign.end,
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: VibesFont.ui,
                         fontSize: 11.5,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFFD97706),
                       ),
                     ),
                   ),
-                  const Expanded(
+                  Expanded(
                     flex: 4,
                     child: Text(
                       'مساء',
                       textAlign: TextAlign.end,
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: VibesFont.ui,
                         fontSize: 11.5,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFF4F46E5),
@@ -311,7 +313,7 @@ class PlaceWeeklyPriceTable extends StatelessWidget {
           for (var i = 0; i < 7; i++) ...[
             _weekRow(shifts, i),
             if (i < 6)
-              const Padding(
+              Padding(
                 padding: EdgeInsetsDirectional.only(start: 12),
                 child: Divider(height: 1, color: placeLine),
               ),
@@ -326,8 +328,8 @@ class PlaceWeeklyPriceTable extends StatelessWidget {
               child: Text(
                 'الصباح ${property.shiftLabels.morning} · المساء ${property.shiftLabels.evening}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 10.5,
                   fontWeight: FontWeight.w600,
                   color: placeInk2,
@@ -368,7 +370,7 @@ class PlaceWeeklyPriceTable extends StatelessWidget {
                 Text(
                   name,
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: dayColor,
@@ -430,10 +432,10 @@ class PlaceWeeklyPriceTable extends StatelessWidget {
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     )
-                  : const Text(
+                  : Text(
                       '—',
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: VibesFont.ui,
                         fontWeight: FontWeight.w700,
                         color: placeInk2,
                       ),
@@ -481,8 +483,8 @@ class PlaceSectionHeader extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
                     color: placeInk,
@@ -493,8 +495,8 @@ class PlaceSectionHeader extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     subtitle!,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: placeInk2,
@@ -583,10 +585,10 @@ class PlaceBasePricingCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               color: placePaper,
-              child: const Text(
+              child: Text(
                 'يمكنك حجز صباح أو مساء أو يوم كامل — الأسعار أدناه لكل خيار.',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: placeInk2,
@@ -615,7 +617,7 @@ class PlaceBasePricingCard extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: highlight ? 14 : 13,
                   fontWeight: FontWeight.w800,
                   color: placeInk,
@@ -624,8 +626,8 @@ class PlaceBasePricingCard extends StatelessWidget {
               if (sub != null)
                 Text(
                   sub,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 10.5,
                     fontWeight: FontWeight.w600,
                     color: placeInk2,
@@ -637,10 +639,10 @@ class PlaceBasePricingCard extends StatelessWidget {
         if (amount != null && amount > 0)
           PlaceFullPriceText(amount, size: highlight ? 17 : 15)
         else
-          const Text(
+          Text(
             '—',
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontWeight: FontWeight.w700,
               color: placeInk2,
             ),
@@ -690,8 +692,8 @@ class PlaceBookingReferencePrices extends StatelessWidget {
               children: [
                 Text(
                   shifts ? 'مرجع: يوم كامل' : 'سعر اليوم',
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: placeInk2,
@@ -747,11 +749,11 @@ class PlaceDayPricingTable extends StatelessWidget {
       child: Column(
         children: [
           _headerRow(supportsShifts),
-          const Divider(height: 1, color: placeLine),
+          Divider(height: 1, color: placeLine),
           for (var i = 0; i < visible.length; i++) ...[
             _dayRow(visible[i], supportsShifts),
             if (i < visible.length - 1)
-              const Divider(height: 1, color: placeLine),
+              Divider(height: 1, color: placeLine),
           ],
           if (onDayBook != null)
             Padding(
@@ -760,8 +762,8 @@ class PlaceDayPricingTable extends StatelessWidget {
                 supportsShifts
                     ? 'اضغط على السعر (يوم كامل / صباح / مساء) للحجز'
                     : 'اضغط على أي يوم متاح للانتقال إلى الحجز',
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 10.5,
                   fontWeight: FontWeight.w600,
                   color: placeInk2,
@@ -779,12 +781,12 @@ class PlaceDayPricingTable extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
         children: [
-          const Expanded(
+          Expanded(
             flex: 3,
             child: Text(
               'اليوم',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
                 color: placeInk2,
@@ -796,8 +798,8 @@ class PlaceDayPricingTable extends StatelessWidget {
             child: Text(
               shifts ? 'يوم كامل' : 'السعر',
               textAlign: TextAlign.end,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
                 color: placeInk2,
@@ -805,26 +807,26 @@ class PlaceDayPricingTable extends StatelessWidget {
             ),
           ),
           if (shifts) ...[
-            const Expanded(
+            Expanded(
               flex: 4,
               child: Text(
                 'صباح',
                 textAlign: TextAlign.end,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   color: placeInk2,
                 ),
               ),
             ),
-            const Expanded(
+            Expanded(
               flex: 4,
               child: Text(
                 'مساء',
                 textAlign: TextAlign.end,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   color: placeInk2,
@@ -858,7 +860,7 @@ class PlaceDayPricingTable extends StatelessWidget {
                   Text(
                     _dateFmt.format(day.date),
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 12.5,
                       fontWeight: FontWeight.w800,
                       color: weekend ? placeBrass : placeInk,
@@ -867,8 +869,8 @@ class PlaceDayPricingTable extends StatelessWidget {
                   if (rowMuted)
                     Text(
                       day.isBlocked ? 'مغلق' : 'انتهى',
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         color: placeInk2,
@@ -959,9 +961,10 @@ class PlaceDayPricingTable extends StatelessWidget {
     );
   }
 
-  Widget _cellPrice(num v, {Color accent = placeInk}) {
+  Widget _cellPrice(num v, {Color? accent}) {
+    accent ??= placeInk;
     if (v <= 0) {
-      return const Text(
+      return Text(
         '—',
         style: TextStyle(
           fontFamily: 'Montserrat',
@@ -1095,10 +1098,10 @@ class PlaceQuickBookBanner extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'احجز بخطوات بسيطة',
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 17,
               fontWeight: FontWeight.w900,
               color: Colors.white,
@@ -1110,7 +1113,7 @@ class PlaceQuickBookBanner extends StatelessWidget {
                 ? '$availableDays ${availableDays == 1 ? 'يوم' : 'أيام'} متاحة قريباً'
                 : 'تحقق من التوفر في التقويم',
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: Colors.white.withValues(alpha: 0.78),
@@ -1125,7 +1128,7 @@ class PlaceQuickBookBanner extends StatelessWidget {
                   Text(
                     'يبدأ من',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: Colors.white.withValues(alpha: 0.7),
@@ -1142,11 +1145,11 @@ class PlaceQuickBookBanner extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                       ),
-                      children: const [
+                      children: [
                         TextSpan(
                           text: ' د.ع',
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: VibesFont.ui,
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: Colors.white70,
@@ -1168,10 +1171,10 @@ class PlaceQuickBookBanner extends StatelessWidget {
                     vertical: 12,
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   'جدول الأسعار',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontWeight: FontWeight.w800,
                     fontSize: 12,
                   ),
@@ -1188,10 +1191,10 @@ class PlaceQuickBookBanner extends StatelessWidget {
                     vertical: 12,
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   'احجز',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -1280,8 +1283,8 @@ class PlaceBookingStep extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
                         color: placeInk,
@@ -1289,8 +1292,8 @@ class PlaceBookingStep extends StatelessWidget {
                     ),
                     Text(
                       subtitle,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: placeInk2,
@@ -1339,10 +1342,10 @@ class PlaceQuoteSummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'ملخص السعر',
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 14,
               fontWeight: FontWeight.w900,
               color: placeInk,
@@ -1363,8 +1366,8 @@ class PlaceQuoteSummaryCard extends StatelessWidget {
           else if (error != null)
             Text(
               error!,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFFB45309),
@@ -1377,8 +1380,8 @@ class PlaceQuoteSummaryCard extends StatelessWidget {
                 children: [
                   Text(
                     '$nights ${nights == 1 ? 'ليلة' : 'ليالٍ'}',
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: placeInk2,
@@ -1387,8 +1390,8 @@ class PlaceQuoteSummaryCard extends StatelessWidget {
                   if (discount > 0)
                     Text(
                       'خصم ${placeFullPrice(discount)} د.ع',
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                         color: Color(0xFF15803D),
@@ -1400,10 +1403,10 @@ class PlaceQuoteSummaryCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'الإجمالي',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
                     color: placeInk,
@@ -1415,8 +1418,8 @@ class PlaceQuoteSummaryCard extends StatelessWidget {
           ] else
             Text(
               hint,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: placeInk2,
@@ -1475,7 +1478,7 @@ class PlaceBookingProgress extends StatelessWidget {
                   labels[i],
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontSize: 9.5,
                     fontWeight: FontWeight.w700,
                     color: i <= currentIndex ? placeInk : placeInk2,
@@ -1578,7 +1581,7 @@ class PlaceShiftSelector extends StatelessWidget {
                   child: Text(
                     title,
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 12,
                       fontWeight: FontWeight.w900,
                       color: active ? Colors.white : placeInk,
@@ -1591,7 +1594,7 @@ class PlaceShiftSelector extends StatelessWidget {
               Text(
                 time,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 9,
                   fontWeight: FontWeight.w600,
                   color: active
@@ -1664,8 +1667,8 @@ class PlaceCalendarLegend extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(
-            fontFamily: 'Cairo',
+          style: TextStyle(
+            fontFamily: VibesFont.ui,
             fontSize: 10,
             fontWeight: FontWeight.w600,
             color: placeInk2,
@@ -1756,10 +1759,10 @@ class _PlacePricingAvailabilitySectionState
             onChanged: (s) => setState(() => _shift = s),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'الشفت المختار ينطبق على جدول الأيام والتقويم',
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: placeInk2,
@@ -1852,11 +1855,11 @@ class PlaceNightlyPriceList extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'تفصيل الأيام',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
                     color: placeInk,
@@ -1875,8 +1878,8 @@ class PlaceNightlyPriceList extends StatelessWidget {
                   Expanded(
                     child: Text(
                       placeFormatDateShort(day.date),
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: placeInk,
@@ -1887,14 +1890,14 @@ class PlaceNightlyPriceList extends StatelessWidget {
                 ],
               ),
             ),
-          const Divider(height: 16, color: placeLine),
+          Divider(height: 16, color: placeLine),
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'مجموع الأيام (تقديري)',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                     color: placeInk2,
@@ -1908,7 +1911,7 @@ class PlaceNightlyPriceList extends StatelessWidget {
           Text(
             'الإجمالي النهائي قد يتضمن خصماً أو رسوماً — يظهر في «ملخص السعر».',
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 10,
               fontWeight: FontWeight.w600,
               color: placeInk2.withValues(alpha: 0.9),
@@ -1949,14 +1952,14 @@ class PlaceCouponCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(Icons.local_offer_outlined, size: 18, color: placeBrass),
               SizedBox(width: 8),
               Text(
                 'رمز خصم (اختياري)',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
                   color: placeInk,
@@ -1999,8 +2002,8 @@ class PlaceCouponCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               error!,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFFB45309),
@@ -2066,7 +2069,7 @@ class PlaceStickyCheckoutBar extends StatelessWidget {
                     Text(
                       amountLabel,
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: VibesFont.ui,
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
                         color: world.accentDeep,
@@ -2128,8 +2131,8 @@ class PlaceStickyCheckoutBar extends StatelessWidget {
                                   buttonLabel,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontFamily: 'Cairo',
+                                  style: TextStyle(
+                                    fontFamily: VibesFont.ui,
                                     fontWeight: FontWeight.w900,
                                     fontSize: 15.5,
                                     color: Colors.white,
@@ -2167,13 +2170,13 @@ class PlaceTrustHints extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: placeLine),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'كيف يعمل الحجز؟',
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 13,
               fontWeight: FontWeight.w900,
               color: placeInk,
@@ -2203,7 +2206,7 @@ class _hint extends StatelessWidget {
         children: [
           Text(
             n,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Montserrat',
               fontWeight: FontWeight.w900,
               color: placeBrass,
@@ -2213,8 +2216,8 @@ class _hint extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 11.5,
                 height: 1.4,
                 fontWeight: FontWeight.w600,

@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../i18n/i18n.dart';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -60,6 +61,7 @@ class ApiClient {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          options.headers['Accept-Language'] = I18n.locale;
           var token = await tokenStorage.readAccess();
           // تحديث مسبق: إن قارب الرمز على الانتهاء نجدّده قبل الطلب
           // بدل انتظار 401 (يمنع موجات الرفض عند فتح التطبيق).

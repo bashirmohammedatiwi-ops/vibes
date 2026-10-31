@@ -1,4 +1,5 @@
 import '../../core/theme/world_theme.dart';
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -89,8 +90,8 @@ class PlaceSheetFrame extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 17,
                     fontWeight: FontWeight.w900,
                     color: placeInk,
@@ -100,8 +101,8 @@ class PlaceSheetFrame extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     subtitle!,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: placeInk2,
@@ -149,8 +150,8 @@ class PlaceSheetConfirm extends StatelessWidget {
           onPressed: onPressed,
           child: Text(
             label,
-            style: const TextStyle(
-              fontFamily: 'Cairo',
+            style: TextStyle(
+              fontFamily: VibesFont.ui,
               fontSize: 15,
               fontWeight: FontWeight.w900,
             ),
@@ -352,8 +353,8 @@ class _ShiftTile extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 14.5,
                           fontWeight: FontWeight.w900,
                           color: placeInk,
@@ -363,8 +364,8 @@ class _ShiftTile extends StatelessWidget {
                         const SizedBox(height: 1),
                         Text(
                           time!,
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
+                          style: TextStyle(
+                            fontFamily: VibesFont.ui,
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
                             color: placeInk2,
@@ -395,7 +396,7 @@ class _ShiftTile extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontFamily: 'Cairo',
+                                fontFamily: VibesFont.ui,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
                                 color: available
@@ -414,10 +415,10 @@ class _ShiftTile extends StatelessWidget {
                 if (price > 0)
                   PlaceFullPriceText(price, size: 14.5)
                 else
-                  const Text(
+                  Text(
                     '—',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontWeight: FontWeight.w700,
                       color: placeInk2,
                     ),
@@ -597,8 +598,8 @@ class _PlaceGuestsEditorState extends State<PlaceGuestsEditor> {
                     const SizedBox(width: 8),
                     Text(
                       _sceneLabel,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                         color: placeInk2,
@@ -625,7 +626,7 @@ class _PlaceGuestsEditorState extends State<PlaceGuestsEditor> {
                           FilteringTextInputFormatter.digitsOnly,
                           LengthLimitingTextInputFormatter(3),
                         ],
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Montserrat',
                           fontSize: 44,
                           fontWeight: FontWeight.w800,
@@ -640,15 +641,15 @@ class _PlaceGuestsEditorState extends State<PlaceGuestsEditor> {
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
-                            borderSide: const BorderSide(color: placeLine),
+                            borderSide: BorderSide(color: placeLine),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
-                            borderSide: const BorderSide(color: placeLine),
+                            borderSide: BorderSide(color: placeLine),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
-                            borderSide: const BorderSide(
+                            borderSide: BorderSide(
                               color: placeBrass,
                               width: 1.6,
                             ),
@@ -674,8 +675,8 @@ class _PlaceGuestsEditorState extends State<PlaceGuestsEditor> {
                 const SizedBox(height: 8),
                 Text(
                   value == 1 ? 'ضيف واحد' : '$value ضيوف · حد أقصى $max',
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
                     color: placeInk2,
@@ -690,7 +691,7 @@ class _PlaceGuestsEditorState extends State<PlaceGuestsEditor> {
             child: Text(
               'اختيار سريع',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
                 color: placeInk2.withValues(alpha: 0.9),
@@ -828,7 +829,7 @@ Future<String?> showPlaceNotesSheet({
               textInputAction: TextInputAction.done,
               decoration: InputDecoration(
                 hintText: 'مثال: حفل تخرج — نحتاج الطاولة الرئيسية قبل الوصول',
-                hintStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5),
+                hintStyle: TextStyle(fontFamily: VibesFont.ui, fontSize: 12.5),
                 filled: true,
                 fillColor: placePaper,
                 border: OutlineInputBorder(
@@ -897,10 +898,10 @@ Future<String?> showPlaceCouponSheet({
                 ),
                 if (suggested.isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'رموز متاحة لهذا المكان',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: placeInk2,
@@ -923,8 +924,8 @@ Future<String?> showPlaceCouponSheet({
                   const SizedBox(height: 10),
                   Text(
                     error,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: Color(0xFFB45309),

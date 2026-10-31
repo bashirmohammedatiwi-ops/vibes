@@ -81,7 +81,7 @@ class CompareBar extends ConsumerWidget {
                                 color: VibesTheme.surfaceOf(context),
                                 borderColor: VibesTheme.hairlineOf(context),
                                 radius: Folio.compact,
-                                child: const Padding(
+                                child: Padding(
                                   padding: EdgeInsets.all(3),
                                   child: Icon(
                                     Icons.close_rounded,

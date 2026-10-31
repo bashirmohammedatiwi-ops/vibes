@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -306,7 +307,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Text(
                     p.mood,
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,
                       color: Colors.white.withValues(alpha: .75),
@@ -365,8 +366,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             const SizedBox(height: 6),
                             Text(
                               _headline,
-                              style: const TextStyle(
-                                fontFamily: 'Cairo',
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
                                 fontSize: 30,
                                 fontWeight: FontWeight.w900,
                                 color: Color(0xFF141C2B),
@@ -376,8 +377,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             const SizedBox(height: 8),
                             Text(
                               _subtitle,
-                              style: const TextStyle(
-                                fontFamily: 'Cairo',
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.w600,
                                 color: Color(0xFF5A6678),
@@ -432,8 +433,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                           const SizedBox(width: 6),
                                           Text(
                                             'محفوظ ومشفّر · ${_pinController.text.length} / 6',
-                                            style: const TextStyle(
-                                              fontFamily: 'Cairo',
+                                            style: TextStyle(
+                                              fontFamily: VibesFont.ui,
                                               fontSize: 12,
                                               fontWeight: FontWeight.w700,
                                               color: Color(0xFF5A6678),
@@ -450,7 +451,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     child: Text(
                                       'نسيت الرقم السري؟ تواصل مع الدعم',
                                       style: TextStyle(
-                                        fontFamily: 'Cairo',
+                                        fontFamily: VibesFont.ui,
                                         fontSize: 12.5,
                                         fontWeight: FontWeight.w800,
                                         color: p.accentDeep,
@@ -547,8 +548,8 @@ class _WorldTag extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             world.label,
-            style: const TextStyle(
-              fontFamily: 'Cairo',
+            style: TextStyle(
+              fontFamily: VibesFont.ui,
               fontSize: 12,
               fontWeight: FontWeight.w800,
               color: Colors.white,
@@ -605,8 +606,8 @@ class _TrustRow extends StatelessWidget {
           Text(
             label,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: 'Cairo',
+            style: TextStyle(
+              fontFamily: VibesFont.ui,
               fontSize: 11,
               fontWeight: FontWeight.w700,
               color: _ink2,
@@ -916,7 +917,7 @@ class _PhoneChip extends StatelessWidget {
               Text(
                 'تغيير',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w800,
                   color: accent,
@@ -971,7 +972,7 @@ class _PrimaryButton extends StatelessWidget {
                   Text(
                     label,
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 16.5,
                       fontWeight: FontWeight.w900,
                       color: palette.onAccent,
@@ -1017,8 +1018,8 @@ class _ErrorNote extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFFB91C1C),
@@ -1038,8 +1039,8 @@ class _LegalLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const base = TextStyle(
-      fontFamily: 'Cairo',
+    final base = TextStyle(
+      fontFamily: VibesFont.ui,
       fontSize: 11.5,
       fontWeight: FontWeight.w600,
       color: Color(0xFF8A9099),
@@ -1057,11 +1058,11 @@ class _LegalLine extends StatelessWidget {
     return Wrap(
       alignment: WrapAlignment.center,
       children: [
-        const Text('بالمتابعة أنت توافق على ', style: base),
+        Text('بالمتابعة أنت توافق على ', style: base),
         a('شروط الاستخدام', '/terms'),
-        const Text(' و', style: base),
+        Text(' و', style: base),
         a('سياسة الخصوصية', '/privacy'),
-        const Text('.', style: base),
+        Text('.', style: base),
       ],
     );
   }

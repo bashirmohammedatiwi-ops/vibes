@@ -1,4 +1,5 @@
 import '../../core/theme/world_theme.dart';
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -415,8 +416,8 @@ class _PlaceBookingWizardSheetState extends State<_PlaceBookingWizardSheet> {
                       children: [
                         Text(
                           _title,
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
+                          style: TextStyle(
+                            fontFamily: VibesFont.ui,
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
                             color: placeInk,
@@ -426,8 +427,8 @@ class _PlaceBookingWizardSheetState extends State<_PlaceBookingWizardSheet> {
                           const SizedBox(height: 2),
                           Text(
                             _subtitle!,
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
+                            style: TextStyle(
+                              fontFamily: VibesFont.ui,
                               fontSize: 11.5,
                               fontWeight: FontWeight.w600,
                               color: placeInk2,
@@ -453,8 +454,8 @@ class _PlaceBookingWizardSheetState extends State<_PlaceBookingWizardSheet> {
                 padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
                 child: Text(
                   _error!,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFFB45309),
@@ -593,7 +594,7 @@ class _WizardProgress extends StatelessWidget {
               Text(
                 _labels[i],
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 9.5,
                   fontWeight: FontWeight.w800,
                   color: i <= active ? context.world.accentDeep : placeInk2,
@@ -633,7 +634,7 @@ class _DatesEmbeddedStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -642,7 +643,7 @@ class _DatesEmbeddedStep extends StatelessWidget {
             Text(
               'جاري تحميل المواعيد…',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontWeight: FontWeight.w700,
                 color: placeInk2,
               ),
@@ -656,12 +657,12 @@ class _DatesEmbeddedStep extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.event_busy_outlined, size: 40, color: placeInk2),
+            Icon(Icons.event_busy_outlined, size: 40, color: placeInk2),
             const SizedBox(height: 10),
-            const Text(
+            Text(
               'تعذر تحميل التقويم',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontWeight: FontWeight.w900,
                 color: placeInk,
               ),
@@ -798,11 +799,11 @@ class _ReviewStep extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'تقدير قبل الكوبون',
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: VibesFont.ui,
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: placeInk2,
@@ -853,8 +854,8 @@ class _TimelineRow extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: placeInk2,
@@ -862,8 +863,8 @@ class _TimelineRow extends StatelessWidget {
               ),
               Text(
                 value,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
                   color: placeInk,
@@ -921,8 +922,8 @@ class _ReviewEditable extends StatelessWidget {
                     children: [
                       Text(
                         label,
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: placeInk2,
@@ -930,8 +931,8 @@ class _ReviewEditable extends StatelessWidget {
                       ),
                       Text(
                         value,
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 13.5,
                           fontWeight: FontWeight.w900,
                           color: placeInk,
@@ -940,10 +941,10 @@ class _ReviewEditable extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Text(
+                Text(
                   'تعديل',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontSize: 11.5,
                     fontWeight: FontWeight.w800,
                     color: placeBrass,
@@ -990,10 +991,10 @@ class _PeriodStep extends StatelessWidget {
           ),
           if (selected == ShiftType.full) ...[
             const SizedBox(height: 18),
-            const Text(
+            Text(
               'كم يوماً تريد؟',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 15,
                 fontWeight: FontWeight.w900,
                 color: placeInk,
@@ -1048,8 +1049,8 @@ class _PeriodStep extends StatelessWidget {
                       selected == ShiftType.evening
                           ? 'المسائي يوم واحد — المغادرة غداً تلقائياً'
                           : 'الصباحي يوم واحد — المغادرة غداً تلقائياً',
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: placeInk2,
@@ -1107,7 +1108,7 @@ class _DurationCard extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
                   color: selected ? Colors.white : placeInk,
@@ -1117,7 +1118,7 @@ class _DurationCard extends StatelessWidget {
               Text(
                 subtitle,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 10.5,
                   fontWeight: FontWeight.w600,
                   height: 1.35,
@@ -1268,8 +1269,8 @@ class _WizardShiftTile extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 14.5,
                           fontWeight: FontWeight.w900,
                           color: placeInk,
@@ -1278,8 +1279,8 @@ class _WizardShiftTile extends StatelessWidget {
                       if (time != null && time!.isNotEmpty)
                         Text(
                           time!,
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
+                          style: TextStyle(
+                            fontFamily: VibesFont.ui,
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
                             color: placeInk2,

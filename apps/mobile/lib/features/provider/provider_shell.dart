@@ -30,7 +30,7 @@ class ProviderShell extends ConsumerWidget {
         ref.watch(providerOverviewProvider).valueOrNull?.pendingBookings ?? 0;
 
     final dark = VibesTheme.isDark(context);
-    const p = WorldPalette.owner;
+    final p = WorldPalette.owner;
     final bottom = MediaQuery.paddingOf(context).bottom;
     return Theme(
       data: applyWorld(Theme.of(context), p),
@@ -117,7 +117,7 @@ class _OwnerTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const p = WorldPalette.owner;
+    final p = WorldPalette.owner;
     return Semantics(
       button: true,
       selected: active,
@@ -181,7 +181,7 @@ class _OwnerTab extends StatelessWidget {
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 260),
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontWeight: active ? FontWeight.w900 : FontWeight.w700,
                 color: active ? p.night : const Color(0xFF7C8594),
                 fontSize: 11,

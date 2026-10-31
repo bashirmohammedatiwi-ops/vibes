@@ -65,8 +65,8 @@ Future<bool> showReviewSheet(
                     Expanded(
                       child: Text(
                         'قيّم ${booking.propertyName ?? 'تجربتك'}',
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 19,
                           fontWeight: FontWeight.w900,
                           color: Vibes.ink,

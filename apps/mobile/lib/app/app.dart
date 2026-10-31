@@ -1,9 +1,10 @@
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibes/app/router.dart';
+import 'package:vibes/core/i18n/i18n.dart';
 import 'package:vibes/core/theme/app_theme.dart';
 import 'package:vibes/core/theme/world_theme.dart';
 import 'package:vibes/features/auth/auth_controller.dart';
@@ -46,13 +47,57 @@ class VibesScrollBehavior extends MaterialScrollBehavior {
   };
 }
 
-class VibesApp extends ConsumerWidget {
+class VibesApp extends ConsumerStatefulWidget {
   const VibesApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<VibesApp> createState() => _VibesAppState();
+}
+
+class _VibesAppState extends ConsumerState<VibesApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangePlatformBrightness() => setState(() {});
+
+  /// الرموز اللونية تقرأ المظهر مباشرة، فعند تبدّله يُعاد بناء كل الشجرة
+  /// مع الحفاظ على حالة الشاشات (بدل مفتاح جديد يعيد التنقل من البداية).
+  void _rebuildTree() {
+    void walk(Element e) {
+      e.markNeedsBuild();
+      e.visitChildren(walk);
+    }
+
+    if (mounted) (context as Element).visitChildren(walk);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final prefs = ref.watch(prefsControllerProvider);
     final router = ref.watch(appRouterProvider);
+
+    final dark = switch (prefs.themeMode) {
+      ThemeMode.dark => true,
+      ThemeMode.light => false,
+      ThemeMode.system =>
+        WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+            Brightness.dark,
+    };
+    if (dark != Appearance.isDark) {
+      Appearance.isDark = dark;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _rebuildTree());
+    }
 
     // ── العالم الحالي يلوّن الثيم كله — وMaterialApp يحرّك الانتقال ──
     final world = ref.watch(homeSectionProvider);
@@ -64,7 +109,7 @@ class VibesApp extends ConsumerWidget {
     });
     final palette = WorldPalette.of(world);
     final light = applyWorld(VibesTheme.light(), palette);
-    final dark = applyWorld(VibesTheme.dark(), palette);
+    final darkTheme = applyWorld(VibesTheme.dark(), palette);
 
     // تنشيط مراقب المكالمات الواردة مع بقاء التطبيق حياً
     ref.watch(incomingCallProvider);
@@ -73,15 +118,14 @@ class VibesApp extends ConsumerWidget {
       title: 'VIBES',
       debugShowCheckedModeBanner: false,
       theme: light,
-      darkTheme: dark,
-      themeMode: prefs.darkMode ? ThemeMode.dark : ThemeMode.light,
+      darkTheme: darkTheme,
+      themeMode: dark ? ThemeMode.dark : ThemeMode.light,
       // تبديل فوري للثيم — العناصر البارزة تتحرك بنفسها (AnimatedContainer
       // وأخواتها) فلا يُعاد رسم التطبيق كله مع كل إطار أثناء الانتقال.
       themeAnimationDuration: Duration.zero,
-      // التطبيق عربي بالكامل حالياً — نثبّت العربية حتى لو اختار مستخدم سابقاً EN
-      locale: const Locale('ar'),
-      supportedLocales: context.supportedLocales,
-      localizationsDelegates: context.localizationDelegates,
+      locale: Locale(I18n.locale),
+      supportedLocales: const [Locale('ar'), Locale('en')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       scrollBehavior: const VibesScrollBehavior(),
       routerConfig: router,
       builder: (context, child) {

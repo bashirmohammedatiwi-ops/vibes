@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -209,10 +210,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                   color: const Color(0xFFE6E8EC),
                                 ),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'تخطٍّ',
                                 style: TextStyle(
-                                  fontFamily: 'Cairo',
+                                  fontFamily: VibesFont.ui,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w800,
                                   color: _ink2,
@@ -307,10 +308,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                         ],
                       ),
                       const SizedBox(height: 10),
-                      const Text(
+                      Text(
                         'يمكنك التنقّل بين العوالم الثلاثة في أي وقت',
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: VibesFont.ui,
                           fontSize: 11.5,
                           fontWeight: FontWeight.w600,
                           color: _ink2,
@@ -436,7 +437,7 @@ class _SlideView extends StatelessWidget {
                       Text(
                         slide.kicker,
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: VibesFont.ui,
                           fontSize: 12.5,
                           fontWeight: FontWeight.w900,
                           color: p.accentDeep,
@@ -454,8 +455,8 @@ class _SlideView extends StatelessWidget {
                 offset: Offset(offset * 80, 0),
                 child: Text(
                   slide.title,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 32,
                     fontWeight: FontWeight.w900,
                     height: 1.2,
@@ -471,8 +472,8 @@ class _SlideView extends StatelessWidget {
                 offset: Offset(offset * 110, 0),
                 child: Text(
                   slide.body,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     height: 1.7,
@@ -508,8 +509,8 @@ class _SlideView extends StatelessWidget {
                             const SizedBox(width: 6),
                             Text(
                               label,
-                              style: const TextStyle(
-                                fontFamily: 'Cairo',
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w800,
                                 color: _ink,
@@ -564,7 +565,7 @@ class _GlowButton extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 16.5,
                 fontWeight: FontWeight.w900,
                 color: palette.onAccent,

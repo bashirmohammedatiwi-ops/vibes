@@ -215,7 +215,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                                               ? 'م'
                                               : c.title.trim().substring(0, 1),
                                           style: TextStyle(
-                                            fontFamily: 'Cairo',
+                                            fontFamily: VibesFont.ui,
                                             fontSize: 19,
                                             fontWeight: FontWeight.w900,
                                             color: context.world.accentDeep,

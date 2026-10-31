@@ -244,7 +244,7 @@ class _ProviderCalendarScreenState
                                         color: ownerGoldDeep,
                                       ),
                                     ),
-                                    daysOfWeekStyle: const DaysOfWeekStyle(
+                                    daysOfWeekStyle: DaysOfWeekStyle(
                                       weekdayStyle: TextStyle(
                                         color: Vibes.inkTertiary,
                                       ),
@@ -265,7 +265,7 @@ class _ProviderCalendarScreenState
                                         color: ownerGoldDeep,
                                         fontWeight: FontWeight.w800,
                                       ),
-                                      todayDecoration: const BoxDecoration(
+                                      todayDecoration: BoxDecoration(
                                         color: Vibes.surfaceMuted,
                                         borderRadius: Folio.compact,
                                       ),
@@ -336,7 +336,7 @@ class _ProviderCalendarScreenState
                                               Text(
                                                 '${day.day}',
                                                 style: TextStyle(
-                                                  fontFamily: 'Cairo',
+                                                  fontFamily: VibesFont.ui,
                                                   fontWeight: FontWeight.w800,
                                                   color: closed
                                                       ? placeInk2
@@ -534,9 +534,8 @@ class _ProviderCalendarScreenState
                                                                   b.userName ??
                                                                       b.userPhone ??
                                                                       'ضيف',
-                                                                  style: const TextStyle(
-                                                                    fontFamily:
-                                                                        'Cairo',
+                                                                  style: TextStyle(
+                                                                    fontFamily: VibesFont.ui,
                                                                     fontSize:
                                                                         15,
                                                                     fontWeight:
@@ -558,9 +557,8 @@ class _ProviderCalendarScreenState
                                                           Text(
                                                             '${ownerRelativeBookingDay(b.startDate)}${b.isExternal ? ' · خارجي' : ''}',
                                                             style:
-                                                                const TextStyle(
-                                                                  fontFamily:
-                                                                      'Cairo',
+                                                                TextStyle(
+                                                                  fontFamily: VibesFont.ui,
                                                                   fontSize: 12,
                                                                   fontWeight:
                                                                       FontWeight
@@ -584,7 +582,7 @@ class _ProviderCalendarScreenState
                                                       ),
                                                     ),
                                                     const SizedBox(width: 4),
-                                                    const Icon(
+                                                    Icon(
                                                       Icons
                                                           .chevron_left_rounded,
                                                       color: placeInk2,
@@ -1133,8 +1131,8 @@ class _ProviderPropertyCard extends ConsumerWidget {
                             const SizedBox(width: 6),
                             Text(
                               statusLabel,
-                              style: const TextStyle(
-                                fontFamily: 'Cairo',
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white,
@@ -1155,8 +1153,8 @@ class _ProviderPropertyCard extends ConsumerWidget {
                             p.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
+                            style: TextStyle(
+                              fontFamily: VibesFont.ui,
                               fontSize: 19,
                               fontWeight: FontWeight.w900,
                               color: Colors.white,
@@ -1169,7 +1167,7 @@ class _ProviderPropertyCard extends ConsumerWidget {
                               if (p.cityName?.isNotEmpty == true) p.cityName!,
                             ].join(' · '),
                             style: TextStyle(
-                              fontFamily: 'Cairo',
+                              fontFamily: VibesFont.ui,
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: Colors.white.withValues(alpha: .8),
@@ -1297,8 +1295,8 @@ class _PropStat extends StatelessWidget {
           ),
           Text(
             label,
-            style: const TextStyle(
-              fontFamily: 'Cairo',
+            style: TextStyle(
+              fontFamily: VibesFont.ui,
               fontSize: 10.5,
               fontWeight: FontWeight.w700,
               color: placeInk2,
@@ -1350,8 +1348,8 @@ class _PropAction extends StatelessWidget {
             const SizedBox(height: 5),
             Text(
               label,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 11.5,
                 fontWeight: FontWeight.w800,
                 color: ownerNavy,
@@ -1418,7 +1416,7 @@ class _ProviderEarningsScreenState
 
   @override
   Widget build(BuildContext context) {
-    const p = WorldPalette.owner;
+    final p = WorldPalette.owner;
     final revenue = ref.watch(providerRevenueProvider(_months));
     final month = ref.watch(providerOverviewProvider);
 
@@ -1631,7 +1629,7 @@ class _PeriodToggle extends StatelessWidget {
                 child: Text(
                   '$m أشهر',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontSize: 11.5,
                     fontWeight: FontWeight.w800,
                     color: value == m ? ownerGoldLight : placeInk2,
@@ -1673,8 +1671,8 @@ class _MonthRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: ownerNavy,
@@ -1683,8 +1681,8 @@ class _MonthRow extends StatelessWidget {
               ),
               Text(
                 '$bookings حجز',
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: placeInk2,
@@ -1732,13 +1730,13 @@ class _RevenueChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (rows.isEmpty || rows.every((r) => r.revenue == 0)) {
-      return const Center(
+      return Center(
         child: Directionality(
           textDirection: TextDirection.rtl,
           child: Text(
             'لا أرباح بعد — ستظهر هنا مع أول حجز مؤكد',
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               color: placeInk2,
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -1798,7 +1796,7 @@ class _RevenueChart extends StatelessWidget {
                   child: Text(
                     rows.length > 8 ? label.substring(0, 3) : label,
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       color: selected == i ? ownerGoldDeep : placeInk2,
                       fontSize: 10.5,
                       fontWeight: FontWeight.w700,
@@ -1966,8 +1964,8 @@ class ProviderPricingScreen extends ConsumerWidget {
                                     ),
                                     child: Text(
                                       d['ruleName'] as String,
-                                      style: const TextStyle(
-                                        fontFamily: 'Cairo',
+                                      style: TextStyle(
+                                        fontFamily: VibesFont.ui,
                                         fontSize: 10,
                                         fontWeight: FontWeight.w800,
                                         color: ownerGoldDeep,
@@ -2032,7 +2030,7 @@ class _ProviderPriceRuleRow extends ConsumerWidget {
                   Text(
                     name?.isNotEmpty == true ? name! : 'قاعدة أسعار',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
                       color: active ? ownerNavy : placeInk2,
@@ -2042,8 +2040,8 @@ class _ProviderPriceRuleRow extends ConsumerWidget {
                     full != null
                         ? '${PriceText.format(full is num ? full : num.tryParse('$full') ?? 0)} د.ع · يوم كامل'
                         : 'أسعار شفتات مخصّصة',
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: placeInk2,
@@ -2078,7 +2076,7 @@ class _ProviderPriceRuleRow extends ConsumerWidget {
                   }
                 }
               },
-              icon: const Icon(Icons.delete_outline_rounded, color: placeInk2),
+              icon: Icon(Icons.delete_outline_rounded, color: placeInk2),
             ),
           ],
         ),
@@ -2304,8 +2302,8 @@ class _AvailabilityClosedRow extends ConsumerWidget {
                   ),
                   Text(
                     shiftLabel,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: placeInk2,
@@ -2339,10 +2337,10 @@ class _AvailabilityClosedRow extends ConsumerWidget {
                   }
                 }
               },
-              child: const Text(
+              child: Text(
                 'فتح',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -2475,7 +2473,7 @@ Future<void> _openRuleSheet(
                             borderRadius: Folio.compact,
                             side: active
                                 ? const BorderSide(color: Color(0x73A87F33))
-                                : const BorderSide(color: Vibes.hairline),
+                                : BorderSide(color: Vibes.hairline),
                           ),
                         ),
                         child: Text(

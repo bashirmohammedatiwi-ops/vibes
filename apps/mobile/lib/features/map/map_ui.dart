@@ -126,8 +126,8 @@ class MapHud extends StatelessWidget {
                           focusNode: searchFocus,
                           onChanged: onQueryChanged,
                           textInputAction: TextInputAction.search,
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
+                          style: TextStyle(
+                            fontFamily: VibesFont.ui,
                             fontWeight: FontWeight.w700,
                             fontSize: 13,
                             color: mapInk,
@@ -136,7 +136,7 @@ class MapHud extends StatelessWidget {
                             isDense: true,
                             hintText: 'ابحث…',
                             hintStyle: TextStyle(
-                              fontFamily: 'Cairo',
+                              fontFamily: VibesFont.ui,
                               fontWeight: FontWeight.w600,
                               fontSize: 12.5,
                               color: mapInk2.withValues(alpha: 0.7),
@@ -436,7 +436,7 @@ class _FilterPill extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontFamily: 'Cairo',
+            fontFamily: VibesFont.ui,
             fontSize: compact ? 10 : 12,
             fontWeight: FontWeight.w800,
             color: active
@@ -563,8 +563,8 @@ class _MapIconBtn extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   label!,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 8.5,
                     fontWeight: FontWeight.w800,
                     color: mapInk2,
@@ -610,10 +610,10 @@ class MapPlaceRail extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'أماكن قريبة',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
                   color: mapInk,
@@ -710,7 +710,7 @@ class MapPlaceRail extends StatelessWidget {
                             Text(
                               p.typeLabelAr,
                               style: TextStyle(
-                                fontFamily: 'Cairo',
+                                fontFamily: VibesFont.ui,
                                 fontSize: 9.5,
                                 fontWeight: FontWeight.w800,
                                 color: accent.withValues(alpha: 0.95),
@@ -720,8 +720,8 @@ class MapPlaceRail extends StatelessWidget {
                               p.name,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontFamily: 'Cairo',
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.w900,
                                 height: 1.12,
@@ -734,7 +734,7 @@ class MapPlaceRail extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontFamily: 'Cairo',
+                                  fontFamily: VibesFont.ui,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.white.withValues(alpha: 0.78),
@@ -861,8 +861,8 @@ class MapSelectedCard extends StatelessWidget {
                     property.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 19,
                       fontWeight: FontWeight.w900,
                       height: 1.15,
@@ -880,8 +880,8 @@ class MapSelectedCard extends StatelessWidget {
                             place,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
+                            style: TextStyle(
+                              fontFamily: VibesFont.ui,
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: mapInk2,
@@ -938,8 +938,8 @@ class MapSelectedCard extends StatelessWidget {
                                 ),
                                 child: Text(
                                   a,
-                                  style: const TextStyle(
-                                    fontFamily: 'Cairo',
+                                  style: TextStyle(
+                                    fontFamily: VibesFont.ui,
                                     fontSize: 10.5,
                                     fontWeight: FontWeight.w700,
                                     color: mapInk2,
@@ -957,8 +957,8 @@ class MapSelectedCard extends StatelessWidget {
                       desc,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 12.5,
                         height: 1.45,
                         fontWeight: FontWeight.w600,
@@ -979,10 +979,10 @@ class MapSelectedCard extends StatelessWidget {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'يبدأ من',
                               style: TextStyle(
-                                fontFamily: 'Cairo',
+                                fontFamily: VibesFont.ui,
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w700,
                                 color: mapInk2,
@@ -990,10 +990,10 @@ class MapSelectedCard extends StatelessWidget {
                             ),
                             PlaceFullPriceText(property.pricePerDay, size: 22),
                             const SizedBox(height: 2),
-                            const Text(
+                            Text(
                               'د.ع / يوم',
                               style: TextStyle(
-                                fontFamily: 'Cairo',
+                                fontFamily: VibesFont.ui,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
                                 color: mapInk2,
@@ -1011,8 +1011,8 @@ class MapSelectedCard extends StatelessWidget {
                                     'مساء ${placeFullPrice(property.priceEveningShift!)}',
                                 ].join(' · '),
                                 maxLines: 2,
-                                style: const TextStyle(
-                                  fontFamily: 'Cairo',
+                                style: TextStyle(
+                                  fontFamily: VibesFont.ui,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                   color: mapInk2,
@@ -1038,10 +1038,10 @@ class MapSelectedCard extends StatelessWidget {
                             ),
                             elevation: 0,
                           ),
-                          child: const Text(
+                          child: Text(
                             'احجز',
                             style: TextStyle(
-                              fontFamily: 'Cairo',
+                              fontFamily: VibesFont.ui,
                               fontWeight: FontWeight.w900,
                               fontSize: 14,
                             ),
@@ -1100,7 +1100,7 @@ class _MapBadge extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontFamily: 'Cairo',
+          fontFamily: VibesFont.ui,
           fontSize: 10,
           fontWeight: FontWeight.w800,
           color: foreground,
@@ -1164,7 +1164,7 @@ class _MapStatChip extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 11,
               fontWeight: FontWeight.w800,
               color: mapInk,
@@ -1411,10 +1411,10 @@ class _MapListHero extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'دليل الأماكن',
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: VibesFont.ui,
                           fontSize: 19,
                           fontWeight: FontWeight.w900,
                           height: 1.05,
@@ -1424,8 +1424,8 @@ class _MapListHero extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         'اسحب الخريطة واكتشف ما حولك',
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 11.5,
                           fontWeight: FontWeight.w600,
                           color: mapInk2,
@@ -1548,8 +1548,8 @@ class _MapTypeStat extends StatelessWidget {
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 10.5,
                   fontWeight: FontWeight.w800,
                   color: mapInk,
@@ -1600,7 +1600,7 @@ class _MapSortChip extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 11,
               fontWeight: FontWeight.w800,
               color: active ? Colors.white : mapInk2,
@@ -1634,8 +1634,8 @@ class _MapListSectionHeader extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: const TextStyle(
-              fontFamily: 'Cairo',
+            style: TextStyle(
+              fontFamily: VibesFont.ui,
               fontSize: 14,
               fontWeight: FontWeight.w900,
               color: mapInk,
@@ -1734,7 +1734,7 @@ class _MapListTile extends StatelessWidget {
                               child: Text(
                                 property.typeLabelAr,
                                 style: TextStyle(
-                                  fontFamily: 'Cairo',
+                                  fontFamily: VibesFont.ui,
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w800,
                                   color: accent,
@@ -1762,8 +1762,8 @@ class _MapListTile extends StatelessWidget {
                           property.name,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
+                          style: TextStyle(
+                            fontFamily: VibesFont.ui,
                             fontSize: 15,
                             fontWeight: FontWeight.w900,
                             height: 1.12,
@@ -1776,8 +1776,8 @@ class _MapListTile extends StatelessWidget {
                             place,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
+                            style: TextStyle(
+                              fontFamily: VibesFont.ui,
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               color: mapInk2,
@@ -1808,10 +1808,10 @@ class _MapListTile extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(width: 3),
-                                  const Text(
+                                  Text(
                                     'د.ع',
                                     style: TextStyle(
-                                      fontFamily: 'Cairo',
+                                      fontFamily: VibesFont.ui,
                                       fontSize: 9.5,
                                       fontWeight: FontWeight.w700,
                                       color: mapInk2,
@@ -1940,8 +1940,8 @@ class _MapListMessageCard extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: 'Cairo',
+            style: TextStyle(
+              fontFamily: VibesFont.ui,
               fontSize: 17,
               fontWeight: FontWeight.w900,
               color: mapInk,
@@ -1951,8 +1951,8 @@ class _MapListMessageCard extends StatelessWidget {
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: 'Cairo',
+            style: TextStyle(
+              fontFamily: VibesFont.ui,
               fontSize: 13,
               fontWeight: FontWeight.w600,
               height: 1.4,
@@ -1976,8 +1976,8 @@ class _MapListMessageCard extends StatelessWidget {
               ),
               child: Text(
                 actionLabel!,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -2028,8 +2028,8 @@ class MapEmptyState extends StatelessWidget {
                 ? 'لا نتائج مطابقة'
                 : 'لا مواقع بعد',
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: 'Cairo',
+            style: TextStyle(
+              fontFamily: VibesFont.ui,
               fontSize: 16,
               fontWeight: FontWeight.w900,
               color: mapInk,

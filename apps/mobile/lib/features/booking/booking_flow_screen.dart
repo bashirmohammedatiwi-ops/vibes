@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter/services.dart';
@@ -377,7 +378,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
     final property = ref.watch(propertyDetailProvider(widget.propertyId));
 
     return property.when(
-      loading: () => const Scaffold(
+      loading: () => Scaffold(
         backgroundColor: placePaper,
         body: Center(child: CircularProgressIndicator(strokeWidth: 2)),
       ),
@@ -434,11 +435,11 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                           onPressed: () => context.pop(),
                           icon: const Icon(Icons.arrow_back_ios_new_rounded),
                         ),
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             'إتمام الحجز',
                             style: TextStyle(
-                              fontFamily: 'Cairo',
+                              fontFamily: VibesFont.ui,
                               fontSize: 20,
                               fontWeight: FontWeight.w900,
                               color: placeInk,
@@ -470,10 +471,10 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
                           ),
                         ),
                         onPressed: () => _openWizard(p),
-                        child: const Text(
+                        child: Text(
                           'اختر الموعد — فترة ثم ضيوف ثم تاريخ',
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: VibesFont.ui,
                             fontSize: 14.5,
                             fontWeight: FontWeight.w900,
                           ),
@@ -661,8 +662,8 @@ class _PlaceMiniHeader extends StatelessWidget {
                     property.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 15,
                       fontWeight: FontWeight.w900,
                       color: placeInk,
@@ -673,8 +674,8 @@ class _PlaceMiniHeader extends StatelessWidget {
                     '${property.typeLabelAr} · ${property.cityName ?? ''}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: placeInk2,
@@ -728,7 +729,7 @@ class _RowDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
+    return Padding(
       padding: EdgeInsetsDirectional.only(start: 62),
       child: Divider(height: 1, color: placeLine),
     );
@@ -777,8 +778,8 @@ class _DecisionRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: placeInk2,
@@ -802,7 +803,7 @@ class _DecisionRow extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.end,
                             style: TextStyle(
-                              fontFamily: 'Cairo',
+                              fontFamily: VibesFont.ui,
                               fontSize: 14,
                               fontWeight: strong
                                   ? FontWeight.w900
@@ -820,8 +821,8 @@ class _DecisionRow extends StatelessWidget {
                     if (hint != null)
                       Text(
                         hint!,
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: placeBrass,

@@ -645,7 +645,7 @@ class _Tabs extends StatelessWidget {
               AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 220),
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 16,
                   fontWeight: active ? FontWeight.w900 : FontWeight.w700,
                   color: active ? on : off,
@@ -723,7 +723,7 @@ class _WorldChip extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w800,
                 color: fg,
@@ -1168,7 +1168,7 @@ class _ReelOverlay extends ConsumerWidget {
                             child: Text(
                               property.typeLabelAr,
                               style: TextStyle(
-                                fontFamily: 'Cairo',
+                                fontFamily: VibesFont.ui,
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w900,
                                 color: palette.onAccent,
@@ -1189,8 +1189,8 @@ class _ReelOverlay extends ConsumerWidget {
                                   const SizedBox(width: 3),
                                   Text(
                                     property.ratingAvg.toStringAsFixed(1),
-                                    style: const TextStyle(
-                                      fontFamily: 'Cairo',
+                                    style: TextStyle(
+                                      fontFamily: VibesFont.ui,
                                       fontSize: 11.5,
                                       fontWeight: FontWeight.w800,
                                       color: Colors.white,
@@ -1209,8 +1209,8 @@ class _ReelOverlay extends ConsumerWidget {
                           property.name,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
+                          style: TextStyle(
+                            fontFamily: VibesFont.ui,
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
                             color: Colors.white,
@@ -1238,7 +1238,7 @@ class _ReelOverlay extends ConsumerWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    fontFamily: 'Cairo',
+                                    fontFamily: VibesFont.ui,
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white.withValues(alpha: .85),
@@ -1256,7 +1256,7 @@ class _ReelOverlay extends ConsumerWidget {
                           Text(
                             'يبدأ من ',
                             style: TextStyle(
-                              fontFamily: 'Cairo',
+                              fontFamily: VibesFont.ui,
                               fontSize: 11.5,
                               fontWeight: FontWeight.w700,
                               color: Colors.white.withValues(alpha: .7),
@@ -1275,7 +1275,7 @@ class _ReelOverlay extends ConsumerWidget {
                           Text(
                             'د.ع $unit',
                             style: TextStyle(
-                              fontFamily: 'Cairo',
+                              fontFamily: VibesFont.ui,
                               fontSize: 11.5,
                               fontWeight: FontWeight.w700,
                               color: Colors.white.withValues(alpha: .7),
@@ -1357,7 +1357,7 @@ class _ReelOverlay extends ConsumerWidget {
                           Text(
                             'احجز الآن',
                             style: TextStyle(
-                              fontFamily: 'Cairo',
+                              fontFamily: VibesFont.ui,
                               fontSize: 15.5,
                               fontWeight: FontWeight.w900,
                               color: palette.accentDeep,
@@ -1446,8 +1446,8 @@ class _SideAction extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               label,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 10.5,
                 fontWeight: FontWeight.w800,
                 color: Colors.white,
@@ -1530,8 +1530,8 @@ class _NoReels extends StatelessWidget {
                     ? 'لا جولات فيديو بعد'
                     : 'لا جولات فيديو لـ${world!.label} بعد',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 19,
                   fontWeight: FontWeight.w900,
                   color: Colors.white,
@@ -1542,7 +1542,7 @@ class _NoReels extends StatelessWidget {
                 'تظهر هنا الأماكن التي نشرت جولة فيديو عمودية — نضيف جولات جديدة باستمرار',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: Colors.white.withValues(alpha: .75),

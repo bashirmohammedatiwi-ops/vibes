@@ -1,9 +1,12 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/i18n/app_restart.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/network/api_client.dart';
 import '../../core/storage/token_storage.dart';
 import '../../core/utils/data_saver.dart';
@@ -222,48 +225,67 @@ final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
 
 class PrefsState {
   const PrefsState({
-    this.darkMode = false,
+    this.themeMode = ThemeMode.system,
     this.localeCode = 'ar',
     this.dataSaver = false,
   });
-  final bool darkMode;
+  final ThemeMode themeMode;
   final String localeCode;
   final bool dataSaver;
 
-  PrefsState copyWith({bool? darkMode, String? localeCode, bool? dataSaver}) =>
-      PrefsState(
-        darkMode: darkMode ?? this.darkMode,
-        localeCode: localeCode ?? this.localeCode,
-        dataSaver: dataSaver ?? this.dataSaver,
-      );
+  PrefsState copyWith({
+    ThemeMode? themeMode,
+    String? localeCode,
+    bool? dataSaver,
+  }) => PrefsState(
+    themeMode: themeMode ?? this.themeMode,
+    localeCode: localeCode ?? this.localeCode,
+    dataSaver: dataSaver ?? this.dataSaver,
+  );
 }
 
 class PrefsController extends StateNotifier<PrefsState> {
-  PrefsController() : super(const PrefsState()) {
+  PrefsController() : super(PrefsState(localeCode: I18n.locale)) {
     _load();
+  }
+
+  static ThemeMode _modeFrom(SharedPreferences prefs) {
+    final saved = prefs.getString('themeMode');
+    if (saved != null) {
+      return ThemeMode.values.firstWhere(
+        (m) => m.name == saved,
+        orElse: () => ThemeMode.system,
+      );
+    }
+    // المستخدم الذي اختار سابقاً عبر المفتاح القديم يبقى على اختياره
+    final legacy = prefs.getBool('darkMode');
+    if (legacy == null) return ThemeMode.system;
+    return legacy ? ThemeMode.dark : ThemeMode.light;
   }
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
     state = PrefsState(
-      darkMode:
-          prefs.getBool('darkMode') ?? false, // الفاتح الدافئ هو الافتراضي
-      localeCode: prefs.getString('locale') ?? 'ar',
+      themeMode: _modeFrom(prefs),
+      localeCode: I18n.locale,
       dataSaver: prefs.getBool('dataSaver') ?? false,
     );
     DataSaver.forced = state.dataSaver;
   }
 
-  Future<void> setDarkMode(bool value) async {
-    state = state.copyWith(darkMode: value);
+  Future<void> setThemeMode(ThemeMode mode) async {
+    state = state.copyWith(themeMode: mode);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('darkMode', value);
+    await prefs.setString('themeMode', mode.name);
   }
 
+  /// يحفظ اللغة ويعيد تشغيل الواجهة: كل البيانات تُجلب باللغة الجديدة.
   Future<void> setLocale(String code) async {
-    state = state.copyWith(localeCode: code);
+    if (code == I18n.locale) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('locale', code);
+    I18n.locale = code;
+    AppRestart.trigger();
   }
 
   Future<void> setDataSaver(bool value) async {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -45,8 +46,8 @@ class ProviderAccountScreen extends ConsumerWidget {
                                   ? user!.name!.trim()[0]
                                   : 'م')
                               .toUpperCase(),
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
+                          style: TextStyle(
+                            fontFamily: VibesFont.ui,
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
                             color: ownerNavy,
@@ -62,8 +63,8 @@ class ProviderAccountScreen extends ConsumerWidget {
                               user?.name?.trim().isNotEmpty == true
                                   ? user!.name!
                                   : 'مالك VIBES',
-                              style: const TextStyle(
-                                fontFamily: 'Cairo',
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
                                 fontSize: 18,
                                 fontWeight: FontWeight.w900,
                                 color: ownerNavy,
@@ -71,8 +72,8 @@ class ProviderAccountScreen extends ConsumerWidget {
                             ),
                             Text(
                               user?.phone ?? '',
-                              style: const TextStyle(
-                                fontFamily: 'Cairo',
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: placeInk2,
@@ -100,15 +101,15 @@ class ProviderAccountScreen extends ConsumerWidget {
                               Expanded(
                                 child: Text(
                                   '${o.propertyCount} مكان مربوط · ${o.activeBookings} حجز نشط',
-                                  style: const TextStyle(
-                                    fontFamily: 'Cairo',
+                                  style: TextStyle(
+                                    fontFamily: VibesFont.ui,
                                     fontSize: 14,
                                     fontWeight: FontWeight.w800,
                                     color: ownerNavy,
                                   ),
                                 ),
                               ),
-                              const Icon(
+                              Icon(
                                 Icons.chevron_left_rounded,
                                 color: placeInk2,
                               ),
@@ -130,10 +131,10 @@ class ProviderAccountScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'ألوان التقويم',
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: VibesFont.ui,
                             fontSize: 13,
                             fontWeight: FontWeight.w900,
                             color: ownerNavy,
@@ -142,10 +143,10 @@ class ProviderAccountScreen extends ConsumerWidget {
                         const SizedBox(height: 8),
                         const OwnerCalendarLegend(),
                         const SizedBox(height: 6),
-                        const Text(
+                        Text(
                           'الشرائط أسفل اليوم تعرض الشفتات المحجوزة — صباح، مساء، أو يوم كامل.',
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: VibesFont.ui,
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: placeInk2,
@@ -207,10 +208,10 @@ class ProviderAccountScreen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'تسجيل الخروج',
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: VibesFont.ui,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -223,10 +224,10 @@ class ProviderAccountScreen extends ConsumerWidget {
                       size: 18,
                       color: Color(0xFFC2402F),
                     ),
-                    label: const Text(
+                    label: Text(
                       'حذف الحساب',
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: VibesFont.ui,
                         fontWeight: FontWeight.w800,
                         color: Color(0xFFC2402F),
                       ),

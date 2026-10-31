@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import 'package:flutter/services.dart';
 
 import '../../features/property/place_experience_ui.dart';
@@ -103,7 +104,7 @@ class _ModeTransitionCard extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
                   color: toProvider ? Colors.white : placeInk,
@@ -114,7 +115,7 @@ class _ModeTransitionCard extends StatelessWidget {
                 subtitle,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: toProvider

@@ -46,13 +46,13 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
-          title: const Text(
+          title: Text(
             'إلغاء هذا الحجز؟',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w900),
+            style: TextStyle(fontFamily: VibesFont.ui, fontWeight: FontWeight.w900),
           ),
-          content: const Text(
+          content: Text(
             'سيُبلَّغ الضيف ويعود اليوم متاحاً في التقويم.',
-            style: TextStyle(fontFamily: 'Cairo', height: 1.5),
+            style: TextStyle(fontFamily: VibesFont.ui, height: 1.5),
           ),
           actions: [
             TextButton(
@@ -168,10 +168,10 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(color: ownerLine),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'حجز خارجي',
                                 style: TextStyle(
-                                  fontFamily: 'Cairo',
+                                  fontFamily: VibesFont.ui,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,
                                   color: placeInk2,
@@ -186,8 +186,8 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
                             context.push('/property/${booking.propertyId}'),
                         child: Text(
                           booking.propertyName ?? 'مكان',
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
+                          style: TextStyle(
+                            fontFamily: VibesFont.ui,
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
                             color: ownerNavy,
@@ -204,8 +204,8 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
                       const SizedBox(height: 8),
                       Text(
                         '${_dateAr(booking.startDate)} · $guest',
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: placeInk2,
@@ -248,10 +248,10 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
                         const SizedBox(height: 14),
                         _DetailCard(
                           children: [
-                            const Text(
+                            Text(
                               'ملاحظات',
                               style: TextStyle(
-                                fontFamily: 'Cairo',
+                                fontFamily: VibesFont.ui,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w800,
                                 color: placeInk2,
@@ -260,8 +260,8 @@ class ProviderBookingDetailScreen extends ConsumerWidget {
                             const SizedBox(height: 6),
                             Text(
                               booking.notes!,
-                              style: const TextStyle(
-                                fontFamily: 'Cairo',
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: ownerNavy,
@@ -416,8 +416,8 @@ class _DetailRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              fontFamily: 'Cairo',
+            style: TextStyle(
+              fontFamily: VibesFont.ui,
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: placeInk2,
@@ -427,7 +427,7 @@ class _DetailRow extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: valueBold ? 16 : 14,
               fontWeight: valueBold ? FontWeight.w900 : FontWeight.w800,
               color: valueColor ?? ownerNavy,
@@ -471,8 +471,8 @@ class _ContactChip extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 label,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
                   color: ownerNavy,

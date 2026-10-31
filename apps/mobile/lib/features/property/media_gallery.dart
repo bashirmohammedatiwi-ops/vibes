@@ -288,7 +288,7 @@ class _MediaPageState extends State<_MediaPage> {
                           width: 1.2,
                         ),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.play_arrow_rounded,
                         color: Vibes.coral,
                         size: 38,
@@ -430,7 +430,7 @@ class _FullscreenVideoState extends State<_FullscreenVideo> {
       );
     }
     if (!_ready) {
-      return const Center(child: CircularProgressIndicator(color: Vibes.coral));
+      return Center(child: CircularProgressIndicator(color: Vibes.coral));
     }
     return AspectRatio(
       aspectRatio: _controller.value.aspectRatio,
@@ -649,7 +649,7 @@ class _PanoHint extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.threed_rotation_rounded,
                 size: 15,
                 color: Vibes.tealBright,

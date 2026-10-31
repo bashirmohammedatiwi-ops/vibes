@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/api_constants.dart';
+import '../../core/i18n/i18n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/world_theme.dart';
 import '../../shared/data/property_providers.dart';
@@ -142,16 +143,26 @@ class ProfileScreen extends ConsumerWidget {
             MaisonMenuGroup(
               children: [
                 MaisonMenuRow(
-                  icon: prefs.darkMode
-                      ? Icons.dark_mode_outlined
-                      : Icons.light_mode_outlined,
-                  label: 'المظهر الداكن',
-                  trailing: _ToggleMini(
-                    value: prefs.darkMode,
-                    onChanged: (v) => ref
-                        .read(prefsControllerProvider.notifier)
-                        .setDarkMode(v),
+                  icon: switch (prefs.themeMode) {
+                    ThemeMode.dark => Icons.dark_mode_outlined,
+                    ThemeMode.light => Icons.light_mode_outlined,
+                    ThemeMode.system => Icons.brightness_auto_outlined,
+                  },
+                  label: 'المظهر'.tr,
+                  trailing: _ValueMark(
+                    switch (prefs.themeMode) {
+                      ThemeMode.dark => 'داكن'.tr,
+                      ThemeMode.light => 'فاتح'.tr,
+                      ThemeMode.system => 'حسب الجهاز'.tr,
+                    },
                   ),
+                  onTap: () => _pickTheme(context, ref),
+                ),
+                MaisonMenuRow(
+                  icon: Icons.language_rounded,
+                  label: 'اللغة'.tr,
+                  trailing: _ValueMark(I18n.isEn ? 'English' : 'العربية'),
+                  onTap: () => _pickLanguage(context, ref),
                 ),
                 MaisonMenuRow(
                   icon: Icons.data_saver_on_outlined,
@@ -223,7 +234,7 @@ class ProfileScreen extends ConsumerWidget {
                 label: Text(
                   'حذف الحساب',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontWeight: FontWeight.w800,
                     color: Theme.of(context).colorScheme.error,
                   ),
@@ -530,7 +541,7 @@ class _MemberCard extends ConsumerWidget {
             Text(
               label,
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 11.5,
                 fontWeight: FontWeight.w700,
                 color: Colors.white.withValues(alpha: .75),
@@ -593,7 +604,7 @@ class _MemberCard extends ConsumerWidget {
                               child: Text(
                                 n.characters.first,
                                 style: TextStyle(
-                                  fontFamily: 'Cairo',
+                                  fontFamily: VibesFont.ui,
                                   fontSize: 24,
                                   fontWeight: FontWeight.w900,
                                   color: p.accentDeep,
@@ -610,7 +621,7 @@ class _MemberCard extends ConsumerWidget {
                           Text(
                             'عضو VIBES',
                             style: TextStyle(
-                              fontFamily: 'Cairo',
+                              fontFamily: VibesFont.ui,
                               fontSize: 11.5,
                               fontWeight: FontWeight.w800,
                               color: Colors.white.withValues(alpha: .75),
@@ -620,8 +631,8 @@ class _MemberCard extends ConsumerWidget {
                             n.isEmpty ? 'أضف اسمك' : n,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
+                            style: TextStyle(
+                              fontFamily: VibesFont.ui,
                               fontSize: 20,
                               fontWeight: FontWeight.w900,
                               color: Colors.white,
@@ -712,4 +723,114 @@ class _MemberCard extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _ValueMark extends StatelessWidget {
+  const _ValueMark(this.value);
+
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(
+        value,
+        style: TextStyle(
+          fontFamily: VibesFont.ui,
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: Vibes.inkSecondary,
+        ),
+      ),
+      const SizedBox(width: 4),
+      Icon(Icons.chevron_right_rounded, size: 18, color: Vibes.inkTertiary),
+    ],
+  );
+}
+
+void _pickTheme(BuildContext context, WidgetRef ref) {
+  final prefs = ref.read(prefsControllerProvider);
+  _pickOne<ThemeMode>(
+    context,
+    title: 'المظهر'.tr,
+    current: prefs.themeMode,
+    options: {
+      ThemeMode.system: ('حسب الجهاز'.tr, Icons.brightness_auto_outlined),
+      ThemeMode.light: ('فاتح'.tr, Icons.light_mode_outlined),
+      ThemeMode.dark: ('داكن'.tr, Icons.dark_mode_outlined),
+    },
+    onPick: ref.read(prefsControllerProvider.notifier).setThemeMode,
+  );
+}
+
+void _pickLanguage(BuildContext context, WidgetRef ref) {
+  _pickOne<String>(
+    context,
+    title: 'اللغة'.tr,
+    current: I18n.locale,
+    options: const {
+      'ar': ('العربية', Icons.translate_rounded), // i18n-ok
+      'en': ('English', Icons.translate_rounded),
+    },
+    onPick: ref.read(prefsControllerProvider.notifier).setLocale,
+  );
+}
+
+void _pickOne<T>(
+  BuildContext context, {
+  required String title,
+  required T current,
+  required Map<T, (String, IconData)> options,
+  required void Function(T) onPick,
+}) {
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Vibes.surface,
+    showDragHandle: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (sheet) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontFamily: VibesFont.ui,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              color: Vibes.ink,
+            ),
+          ),
+          const SizedBox(height: 10),
+          for (final e in options.entries)
+            ListTile(
+              leading: Icon(e.value.$2, color: Vibes.inkSecondary),
+              title: Text(
+                e.value.$1,
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                  color: Vibes.ink,
+                ),
+              ),
+              trailing: e.key == current
+                  ? Icon(
+                      Icons.check_circle_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                    )
+                  : null,
+              onTap: () {
+                Navigator.pop(sheet);
+                onPick(e.key);
+              },
+            ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
 }

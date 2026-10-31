@@ -377,7 +377,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                       child: Opacity(
                         opacity:
                             .08 + _engineState.peerLevel.clamp(0.0, 1.0) * 0.12,
-                        child: const VibesMonogram(
+                        child: VibesMonogram(
                           size: 260,
                           color: Vibes.tealBright,
                         ),
@@ -550,7 +550,7 @@ class _PulseMonogramState extends State<_PulseMonogram>
   Widget build(BuildContext context) {
     final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     if (reduce) {
-      return const Opacity(
+      return Opacity(
         opacity: .3,
         child: VibesMonogram(size: 150, color: Vibes.teal),
       );
@@ -571,7 +571,7 @@ class _PulseMonogramState extends State<_PulseMonogram>
                   scale: scale,
                   child: Opacity(
                     opacity: opacity,
-                    child: const VibesMonogram(
+                    child: VibesMonogram(
                       size: 150,
                       color: Vibes.teal,
                       strokeWidth: 2,
@@ -579,7 +579,7 @@ class _PulseMonogramState extends State<_PulseMonogram>
                   ),
                 );
               }(),
-            const Opacity(
+            Opacity(
               opacity: .55,
               child: VibesMonogram(size: 96, color: Vibes.tealBright),
             ),

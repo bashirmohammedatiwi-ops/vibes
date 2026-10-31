@@ -124,7 +124,7 @@ class NotificationsScreen extends ConsumerWidget {
                       Text(
                         'قراءة الكل',
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: VibesFont.ui,
                           fontSize: 12.5,
                           fontWeight: FontWeight.w800,
                           color: context.world.accentDeep,

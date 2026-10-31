@@ -409,8 +409,8 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
                     children: [
                       Text(
                         _ready ? 'ملخص حجزك' : 'احجز هذا المكان',
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 17,
                           fontWeight: FontWeight.w900,
                           color: Vibes.ink,
@@ -421,8 +421,8 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
                         _ready
                             ? 'اضغط أي بند لتعديله فوراً'
                             : 'ثلاث خطوات فقط وتنتهي',
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 11.5,
                           fontWeight: FontWeight.w600,
                           color: Vibes.inkSecondary,
@@ -437,7 +437,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
                     Text(
                       'يبدأ من',
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: VibesFont.ui,
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         color: world.accentDeep,
@@ -568,8 +568,8 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
                 child: Text(
                   _quoteError!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFFB45309),
@@ -581,10 +581,10 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
               child: Center(
                 child: TextButton(
                   onPressed: () => _startWizard(),
-                  child: const Text(
+                  child: Text(
                     'إعادة اختيار الموعد من البداية',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 11.5,
                       fontWeight: FontWeight.w800,
                       color: placeInk2,
@@ -599,7 +599,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
             child: Text(
               '🔒 لن تُخصم أي رسوم الآن',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 10.5,
                 fontWeight: FontWeight.w600,
                 color: placeInk2.withValues(alpha: .8),
@@ -614,10 +614,10 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
                   property: widget.property,
                   days: widget.dayPrices,
                 ),
-                child: const Text(
+                child: Text(
                   'أسعار بتواريخ محددة',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                     color: placeInk2,
@@ -638,8 +638,8 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontFamily: 'Cairo',
+          style: TextStyle(
+            fontFamily: VibesFont.ui,
             fontSize: 12,
             fontWeight: FontWeight.w600,
             color: placeInk2,
@@ -647,7 +647,7 @@ class PlaceBookingCardState extends ConsumerState<PlaceBookingCard> {
         ),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'Montserrat',
             fontSize: 12.5,
             fontWeight: FontWeight.w800,
@@ -725,10 +725,10 @@ class _StayTimelineCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(color: placeLine),
                 ),
-                child: const Text(
+                child: Text(
                   'تعديل',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
                     color: placeInk,
@@ -753,8 +753,8 @@ class _StayTimelineCard extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 10.5,
                   fontWeight: FontWeight.w700,
                   color: placeInk2,
@@ -764,8 +764,8 @@ class _StayTimelineCard extends StatelessWidget {
                 value,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
                   color: placeInk,
@@ -858,8 +858,8 @@ class _EmptyBookingStart extends StatelessWidget {
                     const SizedBox(height: 5),
                     Text(
                       '${i + 1}. ${steps[i].$2}',
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 11.5,
                         fontWeight: FontWeight.w800,
                         color: Vibes.ink,
@@ -937,8 +937,8 @@ class _EditableChip extends StatelessWidget {
                     children: [
                       Text(
                         label,
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: placeInk2,
@@ -948,8 +948,8 @@ class _EditableChip extends StatelessWidget {
                         value,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 14,
                           fontWeight: FontWeight.w900,
                           color: placeInk,
@@ -970,7 +970,7 @@ class _EditableChip extends StatelessWidget {
                   child: Text(
                     'تعديل',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                       color: context.world.accentDeep,

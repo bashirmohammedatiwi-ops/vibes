@@ -643,7 +643,7 @@ class EmptyCanvas extends StatelessWidget {
                   title,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
                     color: VibesTheme.textPrimaryOf(context),

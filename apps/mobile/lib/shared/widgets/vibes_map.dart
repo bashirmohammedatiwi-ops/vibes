@@ -529,7 +529,7 @@ class _VibesMapViewState extends State<VibesMapView> {
       text: TextSpan(
         text: m.label ?? '',
         style: TextStyle(
-          fontFamily: 'Cairo',
+          fontFamily: VibesFont.ui,
           fontSize: (selected ? 12.5 : 11.5) * s,
           fontWeight: FontWeight.w900,
           color: selected ? Colors.white : Color.lerp(accent, Vibes.ink, .35),
@@ -701,7 +701,7 @@ class _VibesMapViewState extends State<VibesMapView> {
       text: TextSpan(
         text: text,
         style: TextStyle(
-          fontFamily: 'Cairo',
+          fontFamily: VibesFont.ui,
           fontSize: (selected ? 13 : 12) * s,
           fontWeight: FontWeight.w900,
           color: selected ? Colors.white : Vibes.ink,

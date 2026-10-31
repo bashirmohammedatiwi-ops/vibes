@@ -16,14 +16,15 @@ class VibesMonogram extends StatelessWidget {
   const VibesMonogram({
     super.key,
     this.size = 64,
-    this.color = Vibes.teal,
+    Color? color,
     this.strokeWidth,
     this.progress = 1,
     this.showV = true,
-  });
+  }) : _color = color;
 
   final double size;
-  final Color color;
+  final Color? _color;
+  Color get color => _color ?? Vibes.teal;
   final double? strokeWidth;
 
   /// 0→1 لميزانية «الرسم الحي» — 1 يعني مكتمل.
@@ -140,13 +141,14 @@ class MonogramDraw extends StatefulWidget {
   const MonogramDraw({
     super.key,
     this.size = 96,
-    this.color = Vibes.teal,
+    Color? color,
     this.duration = const Duration(milliseconds: 1400),
     this.onDone,
-  });
+  }) : _color = color;
 
   final double size;
-  final Color color;
+  final Color? _color;
+  Color get color => _color ?? Vibes.teal;
   final Duration duration;
   final VoidCallback? onDone;
 
@@ -243,7 +245,7 @@ class _ConfettiBurstState extends State<ConfettiBurst>
       return;
     }
     final rng = math.Random(7);
-    const palette = [
+    final palette = [
       Vibes.teal,
       Vibes.tealBright,
       Vibes.coral,
@@ -513,13 +515,14 @@ class VibesCategoryIcon extends StatelessWidget {
     super.key,
     required this.category,
     this.size = 28,
-    this.color = Vibes.teal,
+    Color? color,
     this.strokeWidth,
-  });
+  }) : _color = color;
 
   final VibesCategory category;
   final double size;
-  final Color color;
+  final Color? _color;
+  Color get color => _color ?? Vibes.teal;
   final double? strokeWidth;
 
   @override
@@ -715,13 +718,14 @@ class HeartBurst extends StatefulWidget {
     super.key,
     required this.trigger,
     this.size = 96,
-    this.color = Vibes.mapple,
-  });
+    Color? color,
+  }) : _color = color;
 
   /// يزيد كل مرة ليعاد إطلاق الانفجار.
   final int trigger;
   final double size;
-  final Color color;
+  final Color? _color;
+  Color get color => _color ?? Vibes.mapple;
 
   @override
   State<HeartBurst> createState() => _HeartBurstState();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -127,16 +128,16 @@ Future<bool> showModerationSheet(
         children: [
           ListTile(
             leading: const Icon(Icons.flag_outlined, color: Color(0xFFC2402F)),
-            title: const Text(
+            title: Text(
               'إبلاغ عن محتوى غير لائق',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontWeight: FontWeight.w800,
               ),
             ),
-            subtitle: const Text(
+            subtitle: Text(
               'يراجعه فريق VIBES خلال 24 ساعة',
-              style: TextStyle(fontFamily: 'Cairo'),
+              style: TextStyle(fontFamily: VibesFont.ui),
             ),
             onTap: () => Navigator.pop(ctx, 'report'),
           ),
@@ -150,14 +151,14 @@ Future<bool> showModerationSheet(
                 userName == null || userName.isEmpty
                     ? 'حظر هذا المستخدم'
                     : 'حظر $userName',
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              subtitle: const Text(
+              subtitle: Text(
                 'لن ترى محتواه أو رسائله بعد الآن',
-                style: TextStyle(fontFamily: 'Cairo'),
+                style: TextStyle(fontFamily: VibesFont.ui),
               ),
               onTap: () => Navigator.pop(ctx, 'block'),
             ),
@@ -177,12 +178,12 @@ Future<bool> showModerationSheet(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(bottom: 6),
               child: Text(
                 'ما المشكلة؟',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
                 ),
@@ -192,8 +193,8 @@ Future<bool> showModerationSheet(
               ListTile(
                 title: Text(
                   r,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

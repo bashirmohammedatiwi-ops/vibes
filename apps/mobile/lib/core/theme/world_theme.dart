@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../features/home/home_sections.dart';
+import '../i18n/i18n.dart';
 import 'app_theme.dart';
 
 /// ═══════════════════════════════════════════════════════════
@@ -25,9 +26,10 @@ class WorldPalette {
     required this.night,
     required this.nightHigh,
     required this.glow,
-    required this.mood,
-    required this.verb,
-  });
+    required String mood,
+    required String verb,
+  }) : _mood = mood,
+       _verb = verb;
 
   final HomeSection world;
 
@@ -57,10 +59,13 @@ class WorldPalette {
   final Color glow;
 
   /// جملة الجوّ — تُستخدم في الترحيب والهيرو.
-  final String mood;
+  final String _mood;
 
   /// فعل الدعوة — «احجز مزرعتك» ...
-  final String verb;
+  final String _verb;
+
+  String get mood => _mood.tr;
+  String get verb => _verb.tr;
 
   Color get accentSoft => accent.withValues(alpha: .12);
   Color get accentFaint => accent.withValues(alpha: .07);
@@ -77,7 +82,7 @@ class WorldPalette {
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
     stops: const [0, .45, 1],
-    colors: [canvasTint, canvas, Colors.white],
+    colors: [canvasTint, canvas, Appearance.isDark ? canvas : Colors.white],
   );
 
   /// تدرج الليل الغامر.
@@ -95,7 +100,7 @@ class WorldPalette {
     ),
   ];
 
-  static const farm = WorldPalette(
+  static const _farmLight = WorldPalette(
     world: HomeSection.farm,
     accent: Color(0xFFC89844),
     accentDeep: Color(0xFF8D6324),
@@ -110,7 +115,7 @@ class WorldPalette {
     verb: 'احجز مزرعتك',
   );
 
-  static const hall = WorldPalette(
+  static const _hallLight = WorldPalette(
     world: HomeSection.hall,
     accent: Color(0xFF1B3857),
     accentDeep: Color(0xFF0F2138),
@@ -125,7 +130,7 @@ class WorldPalette {
     verb: 'احجز قاعتك',
   );
 
-  static const decoration = WorldPalette(
+  static const _decorationLight = WorldPalette(
     world: HomeSection.decoration,
     accent: Color(0xFFED5477),
     accentDeep: Color(0xFFC93A5C),
@@ -141,7 +146,7 @@ class WorldPalette {
   );
 
   /// بوابة المالك — هوية تنفيذية: كحلي عميق وذهب، مستقلة عن عوالم الضيف.
-  static const owner = WorldPalette(
+  static const _ownerLight = WorldPalette(
     world: HomeSection.hall,
     accent: Color(0xFFC89844),
     accentDeep: Color(0xFF8D6324),
@@ -155,6 +160,72 @@ class WorldPalette {
     mood: 'إدارة أماكنك بثقة',
     verb: 'أدِر أماكنك',
   );
+
+  static const _farmDark = WorldPalette(
+    world: HomeSection.farm,
+    accent: Color(0xFFE0B568),
+    accentDeep: Color(0xFFE9C685),
+    accentLight: Color(0xFFF0D7A4),
+    onAccent: Color(0xFF1C1405),
+    canvas: Color(0xFF0C1624),
+    canvasTint: Color(0xFF1A2230),
+    night: Color(0xFF2A1F0E),
+    nightHigh: Color(0xFF4A3718),
+    glow: Color(0xFFC89844),
+    mood: 'ضيافة الأرض والشمس',
+    verb: 'احجز مزرعتك',
+  );
+
+  static const _hallDark = WorldPalette(
+    world: HomeSection.hall,
+    accent: Color(0xFF8FB4D4),
+    accentDeep: Color(0xFFB4CFE6),
+    accentLight: Color(0xFFD9E5F1),
+    onAccent: Color(0xFF071120),
+    canvas: Color(0xFF0A1626),
+    canvasTint: Color(0xFF12263E),
+    night: Color(0xFF0F2138),
+    nightHigh: Color(0xFF1B3857),
+    glow: Color(0xFF5E8AB0),
+    mood: 'ليلة العمر تستحق قاعة',
+    verb: 'احجز قاعتك',
+  );
+
+  static const _decorationDark = WorldPalette(
+    world: HomeSection.decoration,
+    accent: Color(0xFFF58AA3),
+    accentDeep: Color(0xFFF9AEC0),
+    accentLight: Color(0xFFFBC6D3),
+    onAccent: Color(0xFF2B0A16),
+    canvas: Color(0xFF0D1524),
+    canvasTint: Color(0xFF221B2E),
+    night: Color(0xFF3A1020),
+    nightHigh: Color(0xFF6A1F3A),
+    glow: Color(0xFFED5477),
+    mood: 'تفاصيل تصنع الفرح',
+    verb: 'زيّن مناسبتك',
+  );
+
+  static const _ownerDark = WorldPalette(
+    world: HomeSection.hall,
+    accent: Color(0xFFE0B568),
+    accentDeep: Color(0xFFE9C685),
+    accentLight: Color(0xFFF0D7A4),
+    onAccent: Color(0xFF0F2138),
+    canvas: Color(0xFF0A1626),
+    canvasTint: Color(0xFF12263E),
+    night: Color(0xFF0B1A2E),
+    nightHigh: Color(0xFF1B3857),
+    glow: Color(0xFFC89844),
+    mood: 'إدارة أماكنك بثقة',
+    verb: 'أدِر أماكنك',
+  );
+
+  static WorldPalette get farm => Appearance.isDark ? _farmDark : _farmLight;
+  static WorldPalette get hall => Appearance.isDark ? _hallDark : _hallLight;
+  static WorldPalette get decoration =>
+      Appearance.isDark ? _decorationDark : _decorationLight;
+  static WorldPalette get owner => Appearance.isDark ? _ownerDark : _ownerLight;
 
   static WorldPalette of(HomeSection world) => switch (world) {
     HomeSection.farm => farm,
@@ -180,8 +251,8 @@ class WorldPalette {
       night: c(a.night, b.night),
       nightHigh: c(a.nightHigh, b.nightHigh),
       glow: c(a.glow, b.glow),
-      mood: t < .5 ? a.mood : b.mood,
-      verb: t < .5 ? a.verb : b.verb,
+      mood: t < .5 ? a._mood : b._mood,
+      verb: t < .5 ? a._verb : b._verb,
     );
   }
 }
@@ -271,7 +342,7 @@ ThemeData applyWorld(ThemeData base, WorldPalette p) {
     ),
     iconButtonTheme: IconButtonThemeData(
       style: IconButton.styleFrom(
-        foregroundColor: dark ? VibesDark.ink : Vibes.ink,
+        foregroundColor: dark ? VibesDark.ink : VibesLight.ink,
       ),
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -309,7 +380,7 @@ ThemeData applyWorld(ThemeData base, WorldPalette p) {
       trackColor: WidgetStateProperty.resolveWith(
         (s) => s.contains(WidgetState.selected)
             ? accent
-            : (dark ? VibesDark.hairlineStrong : Vibes.hairlineStrong),
+            : (dark ? VibesDark.hairlineStrong : VibesLight.hairlineStrong),
       ),
       trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
     ),
@@ -341,7 +412,7 @@ ThemeData applyWorld(ThemeData base, WorldPalette p) {
     bottomSheetTheme: base.bottomSheetTheme.copyWith(
       dragHandleColor: accent.withValues(alpha: .4),
     ),
-    dividerColor: dark ? VibesDark.hairline : Vibes.hairline,
+    dividerColor: dark ? VibesDark.hairline : VibesLight.hairline,
     splashColor: accent.withValues(alpha: .10),
     highlightColor: accent.withValues(alpha: .06),
   );

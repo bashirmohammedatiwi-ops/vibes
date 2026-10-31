@@ -84,7 +84,7 @@ class WorldButton extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: VibesFont.ui,
                           fontSize: 16,
                           fontWeight: FontWeight.w900,
                           color: p.onAccent,
@@ -147,7 +147,7 @@ class WorldGhostButton extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: fg,
@@ -217,8 +217,8 @@ class WorldPageHeader extends StatelessWidget {
                       children: [
                         Text(
                           title,
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
+                          style: TextStyle(
+                            fontFamily: VibesFont.ui,
                             fontSize: 26,
                             fontWeight: FontWeight.w900,
                             color: Colors.white,
@@ -231,7 +231,7 @@ class WorldPageHeader extends StatelessWidget {
                             child: Text(
                               subtitle!,
                               style: TextStyle(
-                                fontFamily: 'Cairo',
+                                fontFamily: VibesFont.ui,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white.withValues(alpha: .72),
@@ -334,7 +334,7 @@ class WorldPillTabs extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: VibesFont.ui,
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
                             color: i == index ? p.accentDeep : Colors.white,
@@ -433,8 +433,8 @@ class WorldEmpty extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: 'Cairo',
+            style: TextStyle(
+              fontFamily: VibesFont.ui,
               fontSize: 18,
               fontWeight: FontWeight.w900,
               color: Vibes.ink,
@@ -445,8 +445,8 @@ class WorldEmpty extends StatelessWidget {
             Text(
               subtitle!,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 13.5,
                 fontWeight: FontWeight.w500,
                 color: Vibes.inkSecondary,
@@ -509,7 +509,7 @@ class WorldStatusChip extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 11.5,
               fontWeight: FontWeight.w800,
               color: color,

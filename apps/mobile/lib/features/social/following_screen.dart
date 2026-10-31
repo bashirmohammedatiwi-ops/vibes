@@ -79,7 +79,7 @@ class FollowingScreen extends ConsumerWidget {
                                           height: 52,
                                           memCacheWidth: 104,
                                         )
-                                      : const Icon(
+                                      : Icon(
                                           Icons.storefront_outlined,
                                           color: Vibes.coral,
                                         ),
@@ -115,7 +115,7 @@ class FollowingScreen extends ConsumerWidget {
                                 ),
                               ),
                               if (p.verified)
-                                const Icon(
+                                Icon(
                                   Icons.verified_rounded,
                                   size: 18,
                                   color: Vibes.teal,

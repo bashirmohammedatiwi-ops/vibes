@@ -276,8 +276,8 @@ class _CardBody extends StatelessWidget {
             children: [
               Text(
                 _propertyKicker(property.type),
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   color: Color(0xFFA5813A),
@@ -294,8 +294,8 @@ class _CardBody extends StatelessWidget {
                 const SizedBox(width: 3),
                 Text(
                   property.ratingAvg.toStringAsFixed(1),
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                     color: Color(0xFF141C2B),
@@ -310,8 +310,8 @@ class _CardBody extends StatelessWidget {
             property.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontFamily: 'Cairo',
+            style: TextStyle(
+              fontFamily: VibesFont.ui,
               fontSize: 16,
               fontWeight: FontWeight.w900,
               height: 1.15,
@@ -328,8 +328,8 @@ class _CardBody extends StatelessWidget {
                   meta.isEmpty ? property.typeLabelAr : meta,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF5C6778),
@@ -339,8 +339,8 @@ class _CardBody extends StatelessWidget {
               const SizedBox(width: 10),
               Text(
                 PriceText.format(property.pricePerDay),
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
                   color: Color(0xFF141C2B),
@@ -349,12 +349,12 @@ class _CardBody extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 4),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(bottom: 1),
                 child: Text(
                   'د.ع',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF5C6778),

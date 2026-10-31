@@ -147,10 +147,10 @@ class _DirectionsSheet extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'الاتجاهات إلى المكان',
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: VibesFont.ui,
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
                         color: Vibes.ink,
@@ -160,8 +160,8 @@ class _DirectionsSheet extends StatelessWidget {
                       name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
                         color: Vibes.inkTertiary,
@@ -265,8 +265,8 @@ class _AppRow extends StatelessWidget {
                   children: [
                     Text(
                       app.title,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
                         color: Vibes.ink,
@@ -274,8 +274,8 @@ class _AppRow extends StatelessWidget {
                     ),
                     Text(
                       app.subtitle,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
+                        fontFamily: VibesFont.ui,
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,
                         color: Vibes.inkTertiary,
@@ -284,7 +284,7 @@ class _AppRow extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.open_in_new_rounded,
                 size: 18,
                 color: Vibes.inkTertiary,
@@ -328,7 +328,7 @@ class _SmallAction extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
                 color: p.accentDeep,

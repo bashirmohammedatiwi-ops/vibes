@@ -39,7 +39,7 @@ class MaisonChip extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontFamily: 'Cairo',
+            fontFamily: VibesFont.ui,
             fontSize: 12.5,
             fontWeight: FontWeight.w800,
             color: active ? p.onAccent : VibesTheme.textSecondaryOf(context),
@@ -270,7 +270,7 @@ class MaisonPageHeader extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: Color(0xFFF2F3F5),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.arrow_back_rounded,
                   size: 20,
                   color: Vibes.ink,
@@ -289,7 +289,7 @@ class MaisonPageHeader extends StatelessWidget {
                   Text(
                     kicker!,
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                       color: tint,
@@ -301,7 +301,7 @@ class MaisonPageHeader extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
                     color: VibesTheme.textPrimaryOf(context),
@@ -451,7 +451,7 @@ class MaisonMenuRow extends StatelessWidget {
               child: Text(
                 label,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 14.5,
                   fontWeight: FontWeight.w800,
                   color: VibesTheme.textPrimaryOf(context),
@@ -651,7 +651,7 @@ class MaisonInviteDock extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const ColoredBox(
+          ColoredBox(
             color: Vibes.teal,
             child: SizedBox(height: 2, width: double.infinity),
           ),

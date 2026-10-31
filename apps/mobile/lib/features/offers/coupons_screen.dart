@@ -85,7 +85,7 @@ class _CouponCard extends StatelessWidget {
       shadows: Vibes.card,
       child: Stack(
         children: [
-          const PositionedDirectional(
+          PositionedDirectional(
             end: 14,
             top: 10,
             child: IgnorePointer(
@@ -102,7 +102,7 @@ class _CouponCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const MaisonIconWell(
+                    MaisonIconWell(
                       icon: Icons.confirmation_number_outlined,
                       color: Vibes.teal,
                       background: Colors.white,

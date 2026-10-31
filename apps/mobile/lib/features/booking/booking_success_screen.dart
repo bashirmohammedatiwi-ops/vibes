@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/services.dart'
     show HapticFeedback, SystemUiOverlayStyle;
 import 'package:flutter_animate/flutter_animate.dart';
@@ -95,11 +96,11 @@ class _BookingSuccessScreenState extends ConsumerState<BookingSuccessScreen> {
                         ),
                   ),
                   const SizedBox(height: 26),
-                  const Text(
+                  Text(
                         'تمّ استلام حجزك 🎉',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: VibesFont.ui,
                           fontSize: 28,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
@@ -113,7 +114,7 @@ class _BookingSuccessScreenState extends ConsumerState<BookingSuccessScreen> {
                     'خطوة أخيرة: أكمل الدفع ليتأكد حجزك فوراً',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: Colors.white.withValues(alpha: .75),
@@ -178,7 +179,7 @@ class _BookingSuccessScreenState extends ConsumerState<BookingSuccessScreen> {
                     child: Text(
                       'العودة للرئيسية',
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: VibesFont.ui,
                         fontWeight: FontWeight.w700,
                         color: Colors.white.withValues(alpha: .6),
                       ),
@@ -239,8 +240,8 @@ class _Ticket extends StatelessWidget {
                             booking.propertyName ?? 'حجزك',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
+                            style: TextStyle(
+                              fontFamily: VibesFont.ui,
                               fontSize: 17,
                               fontWeight: FontWeight.w900,
                               color: Color(0xFF141C2B),
@@ -249,8 +250,8 @@ class _Ticket extends StatelessWidget {
                           if ((booking.cityName ?? '').isNotEmpty)
                             Text(
                               booking.cityName!,
-                              style: const TextStyle(
-                                fontFamily: 'Cairo',
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
                                 color: Color(0xFF5A6678),
@@ -314,8 +315,8 @@ class _Cell extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              fontFamily: 'Cairo',
+            style: TextStyle(
+              fontFamily: VibesFont.ui,
               fontSize: 11,
               fontWeight: FontWeight.w700,
               color: Color(0xFF8A9099),
@@ -327,7 +328,7 @@ class _Cell extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 13.5,
               fontWeight: FontWeight.w900,
               color: color ?? const Color(0xFF141C2B),
@@ -400,7 +401,7 @@ class _Steps extends StatelessWidget {
               Text(
                 steps[i].$1,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w700,
                   color: Colors.white.withValues(alpha: steps[i].$2 ? .95 : .6),

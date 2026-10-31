@@ -1,4 +1,5 @@
 import '../../core/theme/world_theme.dart';
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -418,8 +419,8 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
                             : _singleDay
                             ? 'اختر اليوم'
                             : 'اختر مدة الإقامة',
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 17,
                           fontWeight: FontWeight.w900,
                           color: placeInk,
@@ -430,8 +431,8 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
                         widget.propertyName,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 11.5,
                           fontWeight: FontWeight.w600,
                           color: placeInk2,
@@ -442,7 +443,7 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
                 ),
                 IconButton(
                   onPressed: widget.onCancel,
-                  icon: const Icon(Icons.close_rounded, color: placeInk2),
+                  icon: Icon(Icons.close_rounded, color: placeInk2),
                 ),
               ],
             ),
@@ -454,8 +455,8 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
               alignment: AlignmentDirectional.centerStart,
               child: Text(
                 _shiftHintLabel(),
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
                   color: placeInk2,
@@ -497,8 +498,8 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
               ),
               child: Text(
                 _error!,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFFB45309),
@@ -508,7 +509,7 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
           ),
         Expanded(
           child: groups.isEmpty
-              ? const Center(
+              ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -521,7 +522,7 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
                       Text(
                         'لا مواعيد متاحة',
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: VibesFont.ui,
                           fontSize: 15,
                           fontWeight: FontWeight.w900,
                           color: placeInk2,
@@ -531,7 +532,7 @@ class _BookingDatePickerPanelState extends State<BookingDatePickerPanel> {
                       Text(
                         'جرّب لاحقاً أو تواصل مع المضيف',
                         style: TextStyle(
-                          fontFamily: 'Cairo',
+                          fontFamily: VibesFont.ui,
                           fontSize: 11.5,
                           fontWeight: FontWeight.w600,
                           color: placeInk2,
@@ -695,8 +696,8 @@ class _MonthCalendar extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               '${_months[month.month - 1]} ${month.year}',
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 14.5,
                 fontWeight: FontWeight.w900,
                 color: placeInk,
@@ -712,8 +713,8 @@ class _MonthCalendar extends StatelessWidget {
                 child: Text(
                   label,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     color: placeInk2,
@@ -906,7 +907,7 @@ class _DayCell extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 8.5,
               fontWeight: FontWeight.w800,
               color: selected ? Colors.white.withValues(alpha: .92) : fg,
@@ -1072,7 +1073,7 @@ class _PeriodSwitcher extends StatelessWidget {
                           Text(
                             name(s),
                             style: TextStyle(
-                              fontFamily: 'Cairo',
+                              fontFamily: VibesFont.ui,
                               fontSize: 13,
                               fontWeight: FontWeight.w900,
                               color: s == selected ? placeInk : placeInk2,
@@ -1124,8 +1125,8 @@ class _AvailabilityLegend extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           t,
-          style: const TextStyle(
-            fontFamily: 'Cairo',
+          style: TextStyle(
+            fontFamily: VibesFont.ui,
             fontSize: 13,
             fontWeight: FontWeight.w800,
             color: placeInk,
@@ -1186,8 +1187,8 @@ class _AlternativeSheet extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             dateLabel,
-            style: const TextStyle(
-              fontFamily: 'Cairo',
+            style: TextStyle(
+              fontFamily: VibesFont.ui,
               fontSize: 18,
               fontWeight: FontWeight.w900,
               color: placeInk,
@@ -1196,8 +1197,8 @@ class _AlternativeSheet extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             '$unavailable محجوزة في هذا اليوم، لكن يمكنك الحجز في:',
-            style: const TextStyle(
-              fontFamily: 'Cairo',
+            style: TextStyle(
+              fontFamily: VibesFont.ui,
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: placeInk2,
@@ -1251,8 +1252,8 @@ class _AlternativeSheet extends StatelessWidget {
                             children: [
                               Text(
                                 o.name,
-                                style: const TextStyle(
-                                  fontFamily: 'Cairo',
+                                style: TextStyle(
+                                  fontFamily: VibesFont.ui,
                                   fontSize: 15,
                                   fontWeight: FontWeight.w900,
                                   color: placeInk,
@@ -1261,7 +1262,7 @@ class _AlternativeSheet extends StatelessWidget {
                               if (o.time != null)
                                 Text(
                                   o.time!,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'Montserrat',
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w700,
@@ -1280,10 +1281,10 @@ class _AlternativeSheet extends StatelessWidget {
             ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               'اختيار يوم آخر',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -1325,7 +1326,7 @@ class _SummaryBar extends StatelessWidget {
     final stay = ready && !singleDay && days > 1;
 
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: placeLine)),
         boxShadow: [
@@ -1358,8 +1359,8 @@ class _SummaryBar extends StatelessWidget {
                         periodLabel ?? '',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
                           color: placeInk2,
@@ -1388,8 +1389,8 @@ class _SummaryBar extends StatelessWidget {
                                             : 'اختر يوم الوصول')),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
+                            style: TextStyle(
+                              fontFamily: VibesFont.ui,
                               fontSize: 13,
                               fontWeight: FontWeight.w800,
                               color: placeInk,
@@ -1400,8 +1401,8 @@ class _SummaryBar extends StatelessWidget {
                               periodLabel!,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontFamily: 'Cairo',
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w800,
                                 color: placeInk2,
@@ -1410,8 +1411,8 @@ class _SummaryBar extends StatelessWidget {
                           if (ready && departureLabel != null)
                             Text(
                               'المغادرة: $departureLabel',
-                              style: const TextStyle(
-                                fontFamily: 'Cairo',
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFF15803D),
@@ -1422,8 +1423,8 @@ class _SummaryBar extends StatelessWidget {
                               days > 1
                                   ? '$days أيام'
                                   : 'لأكثر من يوم: اضغط على يوم النهاية',
-                              style: const TextStyle(
-                                fontFamily: 'Cairo',
+                              style: TextStyle(
+                                fontFamily: VibesFont.ui,
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w600,
                                 color: placeInk2,
@@ -1452,8 +1453,8 @@ class _SummaryBar extends StatelessWidget {
                   onPressed: ready ? onConfirm : null,
                   child: Text(
                     ready ? 'اعتماد الموعد' : 'اختر موعداً للمتابعة',
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 15,
                       fontWeight: FontWeight.w900,
                     ),
@@ -1526,8 +1527,8 @@ class _StayStrip extends StatelessWidget {
                   ),
                   child: Text(
                     '$days أيام',
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 11.5,
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
@@ -1564,8 +1565,8 @@ class _StayStrip extends StatelessWidget {
       children: [
         Text(
           title,
-          style: const TextStyle(
-            fontFamily: 'Cairo',
+          style: TextStyle(
+            fontFamily: VibesFont.ui,
             fontSize: 10,
             fontWeight: FontWeight.w800,
             color: greenDeep,
@@ -1577,8 +1578,8 @@ class _StayStrip extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: textAlign,
-          style: const TextStyle(
-            fontFamily: 'Cairo',
+          style: TextStyle(
+            fontFamily: VibesFont.ui,
             fontSize: 13,
             fontWeight: FontWeight.w900,
             color: placeInk,
@@ -1587,8 +1588,8 @@ class _StayStrip extends StatelessWidget {
         ),
         Text(
           weekday,
-          style: const TextStyle(
-            fontFamily: 'Cairo',
+          style: TextStyle(
+            fontFamily: VibesFont.ui,
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
             color: placeInk2,

@@ -291,7 +291,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                         Text(
                           _weekdays[d.weekday - 1],
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: VibesFont.ui,
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: Colors.white.withValues(alpha: .7),
@@ -310,7 +310,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                         Text(
                           _months[d.month - 1],
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: VibesFont.ui,
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
                             color: p.accentLight,
@@ -322,7 +322,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                             child: Text(
                               '${b.nights} أيام',
                               style: TextStyle(
-                                fontFamily: 'Cairo',
+                                fontFamily: VibesFont.ui,
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white.withValues(alpha: .7),
@@ -346,8 +346,8 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                                   b.propertyName ?? 'مكان',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontFamily: 'Cairo',
+                                  style: TextStyle(
+                                    fontFamily: VibesFont.ui,
                                     fontSize: 16,
                                     fontWeight: FontWeight.w900,
                                     color: Vibes.ink,
@@ -398,15 +398,15 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                               const SizedBox(width: 4),
                               Text(
                                 b.shiftLabelAr,
-                                style: const TextStyle(
-                                  fontFamily: 'Cairo',
+                                style: TextStyle(
+                                  fontFamily: VibesFont.ui,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
                                   color: Vibes.inkSecondary,
                                 ),
                               ),
                               const SizedBox(width: 10),
-                              const Icon(
+                              Icon(
                                 Icons.groups_outlined,
                                 size: 14,
                                 color: Vibes.inkTertiary,
@@ -414,7 +414,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                               const SizedBox(width: 4),
                               Text(
                                 '${b.guests}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'Montserrat',
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
@@ -425,7 +425,7 @@ class _BookingCardState extends ConsumerState<_BookingCard> {
                               Text(
                                 '${formatIqdShort(b.totalPrice)} د.ع',
                                 style: TextStyle(
-                                  fontFamily: 'Cairo',
+                                  fontFamily: VibesFont.ui,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w900,
                                   color: p.accentDeep,
@@ -561,7 +561,7 @@ class _CancelPill extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w800,
                 color: c,

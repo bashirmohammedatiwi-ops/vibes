@@ -518,30 +518,30 @@ class _RouteNotFound extends StatelessWidget {
                   color: Color(0xFFC89844),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'الصفحة غير متاحة',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
+                Text(
                   'ربما نُقل المحتوى أو انتهى الرابط.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     color: Color(0xFF565D68),
                   ),
                 ),
                 const SizedBox(height: 22),
                 FilledButton(
                   onPressed: () => context.go('/home'),
-                  child: const Text(
+                  child: Text(
                     'العودة للرئيسية',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontWeight: FontWeight.w800,
                     ),
                   ),

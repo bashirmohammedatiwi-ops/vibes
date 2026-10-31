@@ -62,7 +62,7 @@ class ShareablePropertyCard extends StatelessWidget {
                   FolioPanel(
                     color: Brand.midnight,
                     borderColor: Colors.transparent,
-                    child: const SizedBox(
+                    child: SizedBox(
                       width: 34,
                       height: 34,
                       child: Center(
@@ -83,14 +83,14 @@ class ShareablePropertyCard extends StatelessWidget {
                   if (property.ratingCount > 0)
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.star_rounded,
                           size: 15,
                           color: Vibes.teal,
                         ),
                         Text(
                           property.ratingAvg.toStringAsFixed(1),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Vibes.honeyDeep,
                             fontWeight: FontWeight.w800,
                           ),

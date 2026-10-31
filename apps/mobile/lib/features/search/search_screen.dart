@@ -364,7 +364,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               color: Color(0xFFF2F3F5),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.arrow_back_rounded,
                               size: 20,
                               color: placeInk,
@@ -372,11 +372,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             'استكشف الأماكن',
                             style: TextStyle(
-                              fontFamily: 'Cairo',
+                              fontFamily: VibesFont.ui,
                               fontSize: 20,
                               fontWeight: FontWeight.w900,
                               color: placeInk,
@@ -553,8 +553,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   const SizedBox(width: 8),
                   Text(
                     'النتائج',
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
                       color: placeInk,
@@ -563,8 +563,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   const Spacer(),
                   Text(
                     _filters.isEmpty ? 'الكل' : 'مطابقة لفلاترك',
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
+                    style: TextStyle(
+                      fontFamily: VibesFont.ui,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: placeInk2,
@@ -691,8 +691,8 @@ class _SearchBarState extends State<_SearchBar> {
               onChanged: widget.onChanged,
               textInputAction: TextInputAction.search,
               onSubmitted: widget.onSubmitted,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 14.5,
                 fontWeight: FontWeight.w700,
                 color: placeInk,
@@ -700,7 +700,7 @@ class _SearchBarState extends State<_SearchBar> {
               decoration: InputDecoration(
                 hintText: 'ابحث بالاسم أو المدينة…',
                 hintStyle: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 13.5,
                   fontWeight: FontWeight.w600,
                   color: placeInk2.withValues(alpha: 0.55),
@@ -722,7 +722,7 @@ class _SearchBarState extends State<_SearchBar> {
                   color: placePaper,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.close_rounded,
                   size: 15,
                   color: placeInk2,
@@ -868,7 +868,7 @@ class _FarmFeatureRow extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 12.5,
                   fontWeight: FontWeight.w800,
                   color: on ? color : placeInk,
@@ -956,7 +956,7 @@ class _TypeChip extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w800,
                 color: selected ? Colors.white : placeInk,
@@ -1030,10 +1030,10 @@ class _ActiveFiltersRow extends StatelessWidget {
         ),
         TextButton(
           onPressed: onClear,
-          child: const Text(
+          child: Text(
             'مسح',
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 12,
               fontWeight: FontWeight.w800,
               color: placeBrass,
@@ -1065,12 +1065,12 @@ class _FilterPill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.check_rounded, size: 12, color: placeBrass),
+            Icon(Icons.check_rounded, size: 12, color: placeBrass),
             const SizedBox(width: 5),
             Text(
               label,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
+              style: TextStyle(
+                fontFamily: VibesFont.ui,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
                 color: placeBrass,
@@ -1115,10 +1115,10 @@ class _SearchDiscover extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: 8),
-            const Text(
+            Text(
               'ابدأ الاكتشاف',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 15,
                 fontWeight: FontWeight.w900,
                 color: placeInk,
@@ -1127,12 +1127,12 @@ class _SearchDiscover extends ConsumerWidget {
           ],
         ).animate().fadeIn(),
         const SizedBox(height: 4),
-        const Padding(
+        Padding(
           padding: EdgeInsetsDirectional.only(start: 11),
           child: Text(
             'اختر نوع المكان أو محافظة — أو ابحث بالاسم',
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: VibesFont.ui,
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
               color: placeInk2,
@@ -1173,10 +1173,10 @@ class _SearchDiscover extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'بحوثك السابقة',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: VibesFont.ui,
                   fontSize: 15,
                   fontWeight: FontWeight.w900,
                   color: placeInk,
@@ -1246,7 +1246,7 @@ class _DiscoverTypeCard extends StatelessWidget {
             Text(
               section.label,
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w900,
                 color: accent,
@@ -1284,10 +1284,10 @@ class _ProvinceGrid extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 24),
-        const Text(
+        Text(
           'تصفح بالمحافظة',
           style: TextStyle(
-            fontFamily: 'Cairo',
+            fontFamily: VibesFont.ui,
             fontSize: 15,
             fontWeight: FontWeight.w900,
             color: placeInk,
@@ -1322,8 +1322,8 @@ class _ProvinceGrid extends ConsumerWidget {
                       const SizedBox(width: 6),
                       Text(
                         province.value,
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
+                        style: TextStyle(
+                          fontFamily: VibesFont.ui,
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
                           color: placeInk,
@@ -1371,7 +1371,7 @@ class _SavedSearchRow extends StatelessWidget {
                 color: placePaper,
                 borderRadius: BorderRadius.circular(11),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.history_rounded,
                 size: 17,
                 color: placeInk2,
@@ -1383,8 +1383,8 @@ class _SavedSearchRow extends StatelessWidget {
                 saved.label,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 12.5,
                   fontWeight: FontWeight.w800,
                   color: placeInk,
@@ -1396,7 +1396,7 @@ class _SavedSearchRow extends StatelessWidget {
               tooltip: 'حذف',
               visualDensity: VisualDensity.compact,
               onPressed: onRemove,
-              icon: const Icon(Icons.close_rounded, size: 17, color: placeInk2),
+              icon: Icon(Icons.close_rounded, size: 17, color: placeInk2),
             ),
           ],
         ),
@@ -1480,12 +1480,12 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
               ),
             ),
           ),
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(20, 14, 20, 6),
             child: Text(
               'الفلاتر',
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 17,
                 fontWeight: FontWeight.w900,
                 color: placeInk,
@@ -1630,10 +1630,10 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                   ),
                 ),
                 onPressed: _apply,
-                child: const Text(
+                child: Text(
                   'تطبيق الفلاتر',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: VibesFont.ui,
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
                   ),
@@ -1682,8 +1682,8 @@ class _FilterSection extends StatelessWidget {
               const SizedBox(width: 9),
               Text(
                 title,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 13.5,
                   fontWeight: FontWeight.w900,
                   color: placeInk,
@@ -1725,7 +1725,7 @@ class _ClearSectionButton extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(color: placeLine),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.close_rounded, size: 12, color: placeInk2),
@@ -1733,7 +1733,7 @@ class _ClearSectionButton extends StatelessWidget {
                     Text(
                       'إلغاء',
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: VibesFont.ui,
                         fontSize: 10.5,
                         fontWeight: FontWeight.w700,
                         color: placeInk2,
@@ -1798,7 +1798,7 @@ class _ProvinceTile extends StatelessWidget {
             Text(
               name,
               style: TextStyle(
-                fontFamily: 'Cairo',
+                fontFamily: VibesFont.ui,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w800,
                 color: selected ? Colors.white : placeInk,
@@ -1901,8 +1901,8 @@ class _BudgetSlider extends StatelessWidget {
               child: Text(
                 _label(value),
                 key: ValueKey(value),
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
+                style: TextStyle(
+                  fontFamily: VibesFont.ui,
                   fontSize: 13.5,
                   fontWeight: FontWeight.w900,
                   color: placeInk,
@@ -1938,8 +1938,8 @@ class _BudgetSlider extends StatelessWidget {
               for (final mark in ['0', '500 ألف', '1 مليون', 'الكل'])
                 Text(
                   mark,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
+                    fontFamily: VibesFont.ui,
                     fontSize: 9.5,
                     fontWeight: FontWeight.w600,
                     color: placeInk2,
@@ -2054,7 +2054,7 @@ class _SortTile extends StatelessWidget {
                   Text(
                     label,
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 13.5,
                       fontWeight: FontWeight.w900,
                       color: selected ? Colors.white : placeInk,
@@ -2064,7 +2064,7 @@ class _SortTile extends StatelessWidget {
                   Text(
                     description,
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: VibesFont.ui,
                       fontSize: 10.5,
                       fontWeight: FontWeight.w600,
                       color: selected

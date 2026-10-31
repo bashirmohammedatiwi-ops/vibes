@@ -274,7 +274,7 @@ class _FaqRow extends StatelessWidget {
         collapsedIconColor: VibesTheme.textTertiaryOf(context),
         title: Row(
           children: [
-            const SizedBox(
+            SizedBox(
               width: 3,
               height: 16,
               child: ColoredBox(color: Vibes.teal),
